@@ -704,6 +704,24 @@ const broadcastTargetsUser = (target: string | null | undefined, isPremium: bool
     default: return true; // "all"
   }
 };
+
+// ── Compteur simple (app_settings) pour la Super Promo : nombre de clics "J'en profite"
+//    et nombre d'ignorés ("Plus tard" / fermeture). Lecture-puis-écriture non atomique :
+//    en cas de clics quasi simultanés d'utilisateurs différents, un comptage peut se perdre.
+//    Suffisant pour un indicateur marketing approximatif, pas pour de la facturation. ──
+export const bumpPromoCounter = async (key: "promo_clicks" | "promo_ignored", token: string) => {
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}&select=value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${token}` } });
+    const d = await r.json().catch(() => []);
+    const current = Array.isArray(d) && d[0]?.value ? (parseInt(d[0].value) || 0) : 0;
+    const next = String(current + 1);
+    const patch = await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${token}`, "Prefer": "return=representation" }, body: JSON.stringify({ value: next }) });
+    const patched = await patch.json().catch(() => []);
+    if (!Array.isArray(patched) || patched.length === 0) {
+      await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ key, value: "1" }) });
+    }
+  } catch {}
+};
 export type StatusPost = { id?: string; user_id: string; image_url?: string | null; image_path?: string | null; caption?: string | null; text?: string | null; created_at?: string; expires_at?: string; profile?: Profile; is_official?: boolean; is_sponsored?: boolean; link_url?: string | null; is_feature?: boolean; target_gender?: string | null; feature_user_id?: string | null; feature_profile?: Profile };
 export type ToastState = { msg: string; type?: "success" | "error" | "premium" } | null;
 
@@ -1985,7 +2003,7 @@ function UploadRingOverlay({ active, size, ringColor, children }: { active: bool
 }
 
 function PremiumModal({ onClose, reason, userId, token, userEmail, giftFor, promo }: { onClose: () => void; reason: string; userId: string; token: string; userEmail?: string; giftFor?: { id: string; name: string } | null; promo?: { price: number; expiresAt: string } | null }) {
-  const [step, setStep] = useState<"offer" | "mtn" | "airtel" | "b1" | "b2" | "b3" | "b4">(PREMIUM_SCREEN_VARIANT === "b" ? "b1" : "offer");
+  const [step, setStep] = useState<"offer" | "mtn" | "airtel" | "b1" | "b2" | "b3" | "b4">(promo && PREMIUM_SCREEN_VARIANT === "b" ? "b2" : (PREMIUM_SCREEN_VARIANT === "b" ? "b1" : "offer"));
   // ── Congo ou diaspora ? Déterminé depuis la ville du profil ("Diaspora Europe", "Diaspora
   //    Amérique", etc. sont déjà des options existantes dans le formulaire de profil). Tant que
   //    ce n'est pas encore chargé (null), on affiche par défaut les moyens Congo (public majoritaire). ──
@@ -13616,7 +13634,7 @@ function MatchRequestButton({ auth, onShowPremium }: { auth: Auth; onShowPremium
   );
 }
 
-export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpenAdmin, adminBadgeCount, assistantEnabled = true, onToggleAssistant }: { auth: Auth; onLogout: () => void; onShowPremium: (r: string) => void; darkMode?: boolean; onToggleDark?: () => void; onOpenAdmin?: () => void; adminBadgeCount?: number; assistantEnabled?: boolean; onToggleAssistant?: () => void }) {
+export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpenAdmin, adminBadgeCount, assistantEnabled = true, onToggleAssistant, promoAvailable, onOpenSuperPromo }: { auth: Auth; onLogout: () => void; onShowPremium: (r: string) => void; darkMode?: boolean; onToggleDark?: () => void; onOpenAdmin?: () => void; adminBadgeCount?: number; assistantEnabled?: boolean; onToggleAssistant?: () => void; promoAvailable?: { price: number; expiresAt: string; message: string } | null; onOpenSuperPromo?: () => void }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [notifStatus, setNotifStatus] = useState<"default" | "granted" | "denied" | "unsupported">(() => {
     if (typeof window === "undefined" || !("Notification" in window)) return "unsupported";
@@ -14330,6 +14348,19 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
             </div>
           );
         })()}
+
+        {promoAvailable && (
+          <div onClick={onOpenSuperPromo} style={{ marginTop: 12, background: G.creme, border: `1.5px solid ${G.rouge}`, borderRadius: 16, padding: "14px 16px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ width: 40, height: 40, borderRadius: "50%", background: "rgba(192,57,43,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z" /><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6" /></svg>
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: "0.88rem", fontWeight: 800, color: G.brun }}>Super promo Premium disponible</div>
+              <div style={{ fontSize: "0.74rem", color: G.brunLight, opacity: 0.8 }}>{promoAvailable.price.toLocaleString("fr-FR")} FCFA au lieu de {PREMIUM_PRICE_FCFA.toLocaleString("fr-FR")} FCFA</div>
+            </div>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><polyline points="9 18 15 12 9 6" /></svg>
+          </div>
+        )}
 
 
         {/* Parrainage - mis en avant */}
@@ -15155,6 +15186,10 @@ export default function App() {
   const [superPromoOpen, setSuperPromoOpen] = useState(false);
   const [superPromoData, setSuperPromoData] = useState<{ price: number; expiresAt: string; message: string } | null>(null);
   const [activePromo, setActivePromo] = useState<{ price: number; expiresAt: string } | null>(null);
+  // ── Disponibilité persistante de la Super Promo : contrairement à superPromoData (qui ne sert
+  //    qu'à la fenêtre du jour), celle-ci reste connue tant que la promo est active et éligible,
+  //    pour permettre un accès permanent (bannière Profil) même après la fenêtre du jour fermée. ──
+  const [promoAvailable, setPromoAvailable] = useState<{ price: number; expiresAt: string; message: string } | null>(null);
   // ── Sondages (côté membre) ──
   const [activeSurvey, setActiveSurvey] = useState<any | null>(null);
   const [showSurveyInvite, setShowSurveyInvite] = useState(false);
@@ -16038,31 +16073,39 @@ export default function App() {
 
         if (settings["verification_prompt_enabled"] === "true" && !me.is_verified) { setVerifyPromptMe({ age: me.age, gender: me.gender }); setVerifyPromptOpen(true); return; }
 
-        if (settings["promo_active"] === "true" && !me.is_premium) {
+        if (settings["promo_active"] === "true") {
           const expiresAt = settings["promo_expires_at"];
           const notExpired = !expiresAt || new Date(expiresAt).getTime() > Date.now();
-          const target = settings["promo_target"] || "all";
-          const matchesPromoTarget =
-            target === "all" ? true :
-            target === "femmes" ? me.gender === "Femme" :
-            target === "hommes" ? me.gender === "Homme" :
-            target === "nouveaux" ? (me.created_at ? (Date.now() - new Date(me.created_at).getTime()) < 30 * 24 * 3600 * 1000 : false) :
-            target === "inactifs" ? (me.last_seen ? (Date.now() - new Date(me.last_seen).getTime()) > 30 * 24 * 3600 * 1000 : false) :
-            target === "actifs" ? (me.last_seen ? (Date.now() - new Date(me.last_seen).getTime()) < 7 * 24 * 3600 * 1000 : false) :
-            target === "verifies" ? !!me.is_verified :
-            true;
+          const target = settings["promo_target"] || "all|all";
+          // Ciblage dédié à la promo : genre (all/femmes/hommes) × tous/nouveaux (<30j)/gratuits.
+          // Vocabulaire différent de broadcastTargetsUser (qui gère all/premium/gratuit), donc pas
+          // de réutilisation directe ici — même structure "genre|plan", mais parsing propre.
+          const [tg, tp] = target.split("|");
+          const genderOk = !tg || tg === "all" || (tg === "femmes" && me.gender === "Femme") || (tg === "hommes" && me.gender === "Homme");
+          const planOk = !tp || tp === "all" ||
+            (tp === "nouveaux" && !!me.created_at && (Date.now() - new Date(me.created_at).getTime()) < 30 * 24 * 3600 * 1000) ||
+            (tp === "gratuit" && !me.is_premium);
+          const matchesPromoTarget = genderOk && planOk;
           const promoPrice = parseInt(settings["promo_price_fcfa"] || "0") || 0;
           if (notExpired && matchesPromoTarget && promoPrice > 0) {
+            const promoInfo = { price: promoPrice, expiresAt: expiresAt || "", message: settings["promo_message"] || "1 mois d'accès complet à Moyo Dating, à prix réduit." };
+            // Disponibilité persistante (bannière Profil) — connue dès que la promo est éligible,
+            // peu importe si la fenêtre du jour a déjà été vue ou fermée.
+            setPromoAvailable(promoInfo);
             const seenKey = `moyo_super_promo_seen_${auth.userId}`;
             const lastSeen = localStorage.getItem(seenKey);
             const today = new Date().toDateString();
             if (lastSeen !== today) {
-              setSuperPromoData({ price: promoPrice, expiresAt: expiresAt || "", message: settings["promo_message"] || "1 mois d'accès complet à Moyo Dating, à prix réduit." });
+              setSuperPromoData(promoInfo);
               setSuperPromoOpen(true);
               localStorage.setItem(seenKey, today);
               return;
             }
+          } else {
+            setPromoAvailable(null);
           }
+        } else {
+          setPromoAvailable(null);
         }
 
         if (settings["premium_nudge_enabled"] === "true" && !me.is_premium) {
@@ -16186,7 +16229,7 @@ export default function App() {
       {tab === "visitors" && <LikesPage auth={auth} onShowPremium={showPremium} mode="visitors" onBadgeUpdate={() => refreshBadgesRef.current?.()} />}
       {tab === "matches" && <Matches auth={auth} onShowPremium={showPremium} onNotifCount={setNotifCount} jumpToProposals={propJump} onGoMessages={(pid) => { setOpenConvPartnerId(pid || null); setTab("messages"); }} onUnmatchStart={() => { isUnmatchingRef.current = true; }} onUnmatchEnd={() => { setTimeout(() => { isUnmatchingRef.current = false; }, 2000); }} />}
       {tab === "messages" && <Messages auth={auth} onUnreadCount={setUnreadCount} onShowPremium={showPremium} onShowGiftPremium={showGiftPremium} initialPartnerId={openConvPartnerId} onConvOpen={setInConv} onStatusStackChange={setStatusStackData} onGoDiscover={() => setTab("discover")} />}
-      {tab === "profile" && <Profile auth={auth} onLogout={handleLogout} onShowPremium={showPremium} darkMode={darkMode} onToggleDark={() => { const v = !darkMode; setDarkMode(v); localStorage.setItem("moyo_dark", v ? "1" : "0"); }} onOpenAdmin={auth.isAdmin ? () => openAdminPanel(() => setTab("admin")) : undefined} adminBadgeCount={adminBadgeCount} assistantEnabled={assistantEnabled} onToggleAssistant={toggleAssistant} />}
+      {tab === "profile" && <Profile auth={auth} onLogout={handleLogout} onShowPremium={showPremium} darkMode={darkMode} onToggleDark={() => { const v = !darkMode; setDarkMode(v); localStorage.setItem("moyo_dark", v ? "1" : "0"); }} onOpenAdmin={auth.isAdmin ? () => openAdminPanel(() => setTab("admin")) : undefined} adminBadgeCount={adminBadgeCount} assistantEnabled={assistantEnabled} onToggleAssistant={toggleAssistant} promoAvailable={promoAvailable} onOpenSuperPromo={() => { if (!promoAvailable) return; setActivePromo({ price: promoAvailable.price, expiresAt: promoAvailable.expiresAt }); showPremium("Super promo Premium"); }} />}
       {tab === "admin" && <Suspense fallback={<AdminLoadingFallback />}><AdminPinGate auth={auth} onBack={() => setTab("discover")} onBadgeCount={setAdminBadgeCount} /></Suspense>}
       </div>
     </AppShell>
@@ -16286,7 +16329,7 @@ export default function App() {
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 20500, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
           <div style={{ width: "100%", maxWidth: 320, borderRadius: 28, padding: 3, background: `linear-gradient(160deg,${G.rouge},${G.rougeDark})` }}>
             <div style={{ background: G.creme, borderRadius: 26, padding: "26px 22px", textAlign: "center", position: "relative" }}>
-              <button onClick={() => setSuperPromoOpen(false)} aria-label="Fermer" style={{ position: "absolute", top: 12, right: 12, background: "none", border: "none", color: G.brunLight, opacity: 0.5, cursor: "pointer", padding: 4 }}>
+              <button onClick={() => { setSuperPromoOpen(false); bumpPromoCounter("promo_ignored", auth.token); }} aria-label="Fermer" style={{ position: "absolute", top: 12, right: 12, background: "none", border: "none", color: G.brunLight, opacity: 0.5, cursor: "pointer", padding: 4 }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
               </button>
               {daysLeft !== null && (
@@ -16309,8 +16352,8 @@ export default function App() {
                 <div style={{ fontSize: "0.82rem", color: "#9a9086", textDecoration: "line-through", marginBottom: 8 }}>{PREMIUM_PRICE_FCFA.toLocaleString("fr-FR")} FCFA</div>
                 {pct > 0 && <span style={{ display: "inline-block", fontSize: "0.7rem", fontWeight: 600, color: "#1a5c3a", background: "rgba(26,92,58,0.1)", padding: "4px 12px", borderRadius: 999 }}>-{pct}% ce mois-ci</span>}
               </div>
-              <button onClick={() => { setSuperPromoOpen(false); setActivePromo({ price: superPromoData.price, expiresAt: superPromoData.expiresAt }); showPremium("Super promo Premium"); }} style={{ width: "100%", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: "#fff", border: "none", padding: 14, fontSize: "0.9rem", fontWeight: 700, borderRadius: 999, marginBottom: 10, cursor: "pointer" }}>J'en profite</button>
-              <button onClick={() => setSuperPromoOpen(false)} style={{ background: "none", border: "none", color: G.brunLight, opacity: 0.55, fontSize: "0.78rem", padding: 4, cursor: "pointer" }}>Plus tard</button>
+              <button onClick={() => { setSuperPromoOpen(false); setActivePromo({ price: superPromoData.price, expiresAt: superPromoData.expiresAt }); showPremium("Super promo Premium"); bumpPromoCounter("promo_clicks", auth.token); }} style={{ width: "100%", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: "#fff", border: "none", padding: 14, fontSize: "0.9rem", fontWeight: 700, borderRadius: 999, marginBottom: 10, cursor: "pointer" }}>J'en profite</button>
+              <button onClick={() => { setSuperPromoOpen(false); bumpPromoCounter("promo_ignored", auth.token); }} style={{ background: "none", border: "none", color: G.brunLight, opacity: 0.55, fontSize: "0.78rem", padding: 4, cursor: "pointer" }}>Plus tard</button>
             </div>
           </div>
         </div>

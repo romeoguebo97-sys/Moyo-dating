@@ -446,10 +446,11 @@ export function AdminDesktopPage() {
     mm_auto_propose_enabled: false,
     spontaneous_auto_propose_enabled: false,
     auto_warn_ban_contact_enabled: false,
+    promo_active: false,
   });
   React.useEffect(() => {
     if (!auth) return;
-    const keys: AutoShortcutKey[] = ["phone_completion_prompt_enabled", "verification_prompt_enabled", "premium_nudge_enabled", "mm_auto_propose_enabled", "spontaneous_auto_propose_enabled", "auto_warn_ban_contact_enabled"];
+    const keys: AutoShortcutKey[] = ["phone_completion_prompt_enabled", "verification_prompt_enabled", "premium_nudge_enabled", "mm_auto_propose_enabled", "spontaneous_auto_propose_enabled", "auto_warn_ban_contact_enabled", "promo_active"];
     fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(${keys.join(",")})&select=key,value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } })
       .then(r => r.json()).then(rows => {
         if (!Array.isArray(rows)) return;
@@ -466,6 +467,15 @@ export function AdminDesktopPage() {
     if (!auth) return;
     try {
       await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: next ? "true" : "false" }) });
+    } catch {}
+  };
+  // ── Mise à jour explicite (contrairement à toggleAutoShortcut qui inverse la valeur en cours) —
+  //    nécessaire quand la valeur cible est déjà connue, ex. depuis l'onglet Promotion lui-même. ──
+  const setAutoShortcutValue = async (key: AutoShortcutKey, value: boolean) => {
+    setAutoShortcuts(cur => ({ ...cur, [key]: value }));
+    if (!auth) return;
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: value ? "true" : "false" }) });
     } catch {}
   };
   const [appConfig, setAppConfig] = React.useState({
@@ -721,10 +731,14 @@ export function AdminDesktopPage() {
               </div>
             </OffCanvasSection>}
             {configTab === "auto" && <OffCanvasSection title="Monétisation">
-              <div style={{ fontSize: "0.72rem", color: "#999", marginBottom: 10, lineHeight: 1.5 }}>Raccourci — modifier ici change le même réglage que dans Marketing → Inciter au Premium.</div>
+              <div style={{ fontSize: "0.72rem", color: "#999", marginBottom: 10, lineHeight: 1.5 }}>Raccourci — modifier ici change le même réglage que dans Marketing → Inciter au Premium / Promotion.</div>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 4px" }}>
                 <span style={{ fontSize: "0.82rem", fontWeight: 600, color: "#333" }}>Inciter à passer Premium</span>
                 <SwitchBtn on={autoShortcuts.premium_nudge_enabled} onToggle={() => toggleAutoShortcut("premium_nudge_enabled")} />
+              </div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 4px" }}>
+                <span style={{ fontSize: "0.82rem", fontWeight: 600, color: "#333" }}>Super promo Premium</span>
+                <SwitchBtn on={autoShortcuts.promo_active} onToggle={() => toggleAutoShortcut("promo_active")} />
               </div>
             </OffCanvasSection>}
             {configTab === "auto" && <OffCanvasSection title="Auto-propositions">
@@ -1087,7 +1101,7 @@ export function AdminDesktopPage() {
       )}
       <div style={{ maxWidth: 1760, margin: "0 auto", padding: "28px 32px 60px", boxSizing: "border-box" as const }}>
         <div className="adm-wrap">
-          <AdminPinGate auth={auth} onBack={() => window.close()} onBadgeCount={() => {}} autoShortcuts={autoShortcuts} onToggleAutoShortcut={toggleAutoShortcut} />
+          <AdminPinGate auth={auth} onBack={() => window.close()} onBadgeCount={() => {}} autoShortcuts={autoShortcuts} onToggleAutoShortcut={toggleAutoShortcut} onSetAutoShortcut={setAutoShortcutValue} />
         </div>
       </div>
     </div>
@@ -2542,7 +2556,7 @@ function AdminNotes({ auth, targetType, targetId }: { auth: Auth; targetType: "u
   );
 }
 
-export function AdminPinGate({ auth, onBack, onBadgeCount, autoShortcuts: autoShortcutsProp, onToggleAutoShortcut: onToggleAutoShortcutProp }: { auth: Auth; onBack: () => void; onBadgeCount: (n: number) => void; autoShortcuts?: Record<AutoShortcutKeyShared, boolean>; onToggleAutoShortcut?: (key: AutoShortcutKeyShared) => void }) {
+export function AdminPinGate({ auth, onBack, onBadgeCount, autoShortcuts: autoShortcutsProp, onToggleAutoShortcut: onToggleAutoShortcutProp, onSetAutoShortcut: onSetAutoShortcutProp }: { auth: Auth; onBack: () => void; onBadgeCount: (n: number) => void; autoShortcuts?: Record<AutoShortcutKeyShared, boolean>; onToggleAutoShortcut?: (key: AutoShortcutKeyShared) => void; onSetAutoShortcut?: (key: AutoShortcutKeyShared, value: boolean) => void }) {
   const [pinVerified, setPinVerified] = useState(false);
   const [pinInput, setPinInput] = useState("");
   const [pinError, setPinError] = useState("");
@@ -2556,10 +2570,11 @@ export function AdminPinGate({ auth, onBack, onBadgeCount, autoShortcuts: autoSh
     mm_auto_propose_enabled: false,
     spontaneous_auto_propose_enabled: false,
     auto_warn_ban_contact_enabled: false,
+    promo_active: false,
   });
   useEffect(() => {
     if (autoShortcutsProp || !auth) return;
-    const keys: AutoShortcutKeyShared[] = ["phone_completion_prompt_enabled", "verification_prompt_enabled", "premium_nudge_enabled", "mm_auto_propose_enabled", "spontaneous_auto_propose_enabled", "auto_warn_ban_contact_enabled"];
+    const keys: AutoShortcutKeyShared[] = ["phone_completion_prompt_enabled", "verification_prompt_enabled", "premium_nudge_enabled", "mm_auto_propose_enabled", "spontaneous_auto_propose_enabled", "auto_warn_ban_contact_enabled", "promo_active"];
     fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(${keys.join(",")})&select=key,value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } })
       .then(r => r.json()).then(rows => {
         if (!Array.isArray(rows)) return;
@@ -2578,8 +2593,16 @@ export function AdminPinGate({ auth, onBack, onBadgeCount, autoShortcuts: autoSh
       await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: next ? "true" : "false" }) });
     } catch {}
   };
+  const setLocalAutoShortcutValue = async (key: AutoShortcutKeyShared, value: boolean) => {
+    setLocalAutoShortcuts(cur => ({ ...cur, [key]: value }));
+    if (!auth) return;
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: value ? "true" : "false" }) });
+    } catch {}
+  };
   const autoShortcuts = autoShortcutsProp ?? localAutoShortcuts;
   const onToggleAutoShortcut = onToggleAutoShortcutProp ?? toggleLocalAutoShortcut;
+  const onSetAutoShortcut = onSetAutoShortcutProp ?? setLocalAutoShortcutValue;
   const verifyPin = async () => {
     if (pinInput.length < 4) return;
     setPinLoading(true);
@@ -2598,7 +2621,7 @@ export function AdminPinGate({ auth, onBack, onBadgeCount, autoShortcuts: autoSh
     } catch { setPinError("Erreur réseau. Réessayez."); }
     setPinLoading(false);
   };
-  if (pinVerified) return <Admin auth={auth} onBack={() => { setPinVerified(false); onBack(); }} onBadgeCount={onBadgeCount} autoShortcuts={autoShortcuts} onToggleAutoShortcut={onToggleAutoShortcut} />;
+  if (pinVerified) return <Admin auth={auth} onBack={() => { setPinVerified(false); onBack(); }} onBadgeCount={onBadgeCount} autoShortcuts={autoShortcuts} onToggleAutoShortcut={onToggleAutoShortcut} onSetAutoShortcut={onSetAutoShortcut} />;
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
       <div style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 320, maxHeight: "85vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}>
@@ -3218,8 +3241,8 @@ function AdminHelpModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-type AutoShortcutKeyShared = "phone_completion_prompt_enabled" | "verification_prompt_enabled" | "premium_nudge_enabled" | "mm_auto_propose_enabled" | "spontaneous_auto_propose_enabled" | "auto_warn_ban_contact_enabled";
-function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut }: { auth: Auth; onBack: () => void; onBadgeCount?: (n: number) => void; autoShortcuts: Record<AutoShortcutKeyShared, boolean>; onToggleAutoShortcut: (key: AutoShortcutKeyShared) => void }) {
+type AutoShortcutKeyShared = "phone_completion_prompt_enabled" | "verification_prompt_enabled" | "premium_nudge_enabled" | "mm_auto_propose_enabled" | "spontaneous_auto_propose_enabled" | "auto_warn_ban_contact_enabled" | "promo_active";
+function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut, onSetAutoShortcut }: { auth: Auth; onBack: () => void; onBadgeCount?: (n: number) => void; autoShortcuts: Record<AutoShortcutKeyShared, boolean>; onToggleAutoShortcut: (key: AutoShortcutKeyShared) => void; onSetAutoShortcut: (key: AutoShortcutKeyShared, value: boolean) => void }) {
   // ── Sécurité : redirection si non-admin ──
   useEffect(() => {
     if (!auth.isAdmin) {
@@ -3935,6 +3958,12 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
   const [proposeResults2, setProposeResults2] = useState<AdminProfile[]>([]);
   const [proposeSelected1, setProposeSelected1] = useState<AdminProfile | null>(null);
   const [proposeSelected2, setProposeSelected2] = useState<AdminProfile | null>(null);
+  // ── Règle d'affichage globale : la femme toujours à gauche, l'homme toujours à droite,
+  //    quel que soit l'ordre dans lequel l'admin les a recherchés/sélectionnés (slot 1 ou 2).
+  //    On ne touche pas à quel slot contient quoi (la recherche reste liée à son propre state),
+  //    seul l'ordre visuel (CSS order) est inversé si besoin. ──
+  const swapCreateOrder = !!(createSelected1 && createSelected2 && createSelected1.gender === "Homme" && createSelected2.gender === "Femme");
+  const swapProposeOrder = !!(proposeSelected1 && proposeSelected2 && proposeSelected1.gender === "Homme" && proposeSelected2.gender === "Femme");
   const [proposeP1Locked, setProposeP1Locked] = useState(false);
   const [proposeDuration, setProposeDuration] = useState("48");
   // ── Sélection multiple sur la liste des propositions (Réactiver/Archiver en masse) ──
@@ -5527,10 +5556,13 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
   const [mktTab, setMktTab] = useState<"statuts" | "features" | "event" | "promo" | "phoneprompt" | "premiumnudge">("statuts");
   // ── SUPER PROMO (formule 1 mois à prix réduit, ciblée, affichée côté membre max 1x/jour) ──
   const PROMO_LABEL = "Super promo (1 mois)"; // doit rester identique au label envoyé par PremiumModal (subscription_selected)
-  const [promoActive, setPromoActive] = useState(false);
+  // promoActive n'est plus un state local : on lit désormais autoShortcuts.promo_active,
+  // la même source que le raccourci "Promotion" de l'onglet Automatisations — pour que
+  // les deux endroits restent toujours synchronisés, sans décalage possible entre eux.
   const [promoPrice, setPromoPrice] = useState("2500");
   const [promoExpiresAt, setPromoExpiresAt] = useState("");
-  const [promoTarget, setPromoTarget] = useState("all");
+  const [promoGender, setPromoGender] = useState<"all" | "femmes" | "hommes">("all");
+  const [promoPlan, setPromoPlan] = useState<"all" | "nouveaux" | "gratuit">("all");
   const [promoMessage, setPromoMessage] = useState("1 mois d'accès complet à Moyo Dating, à prix réduit.");
   const [promoCount, setPromoCount] = useState<number | null>(null);
   const [promoCountLoading, setPromoCountLoading] = useState(false);
@@ -5539,23 +5571,29 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
   const [promoHistory, setPromoHistory] = useState<any[]>([]);
   const [promoShowAll, setPromoShowAll] = useState(false);
   const [promoStart, setPromoStart] = useState<string | null>(null);
+  const [promoClicks, setPromoClicks] = useState<number | null>(null);
+  const [promoIgnored, setPromoIgnored] = useState<number | null>(null);
 
   useEffect(() => {
     if (!auth) return;
     (async () => {
       try {
-        const r = await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(promo_active,promo_price_fcfa,promo_expires_at,promo_target,promo_message,promo_start,promo_history)&select=key,value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(promo_price_fcfa,promo_expires_at,promo_target,promo_message,promo_start,promo_history)&select=key,value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
         const rows = await r.json().catch(() => []);
         const map: Record<string, string> = {};
         (Array.isArray(rows) ? rows : []).forEach((row: any) => { map[row.key] = row.value; });
-        setPromoActive(map["promo_active"] === "true");
+        // promo_active est géré par autoShortcuts (Automatisations) — pas relu ici, voir plus haut.
         if (map["promo_price_fcfa"]) setPromoPrice(map["promo_price_fcfa"]);
         if (map["promo_expires_at"]) {
           const d = new Date(map["promo_expires_at"]);
           const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
           setPromoExpiresAt(local.toISOString().slice(0, 16));
         }
-        if (map["promo_target"]) setPromoTarget(map["promo_target"]);
+        if (map["promo_target"]) {
+          const [g, p] = map["promo_target"].split("|");
+          if (g === "femmes" || g === "hommes" || g === "all") setPromoGender(g);
+          if (p === "nouveaux" || p === "gratuit" || p === "all") setPromoPlan(p);
+        }
         if (map["promo_message"]) setPromoMessage(map["promo_message"]);
         if (map["promo_start"]) setPromoStart(map["promo_start"]);
         if (map["promo_history"]) { try { const p = JSON.parse(map["promo_history"]); if (Array.isArray(p)) setPromoHistory(p); } catch {} }
@@ -5569,14 +5607,34 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
     setPromoCountLoading(true);
     (async () => {
       try {
-        const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?${campFilter(promoTarget)}&select=id`, { method: "HEAD", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "count=exact", "Range": "0-0" } });
+        let q = "select=id";
+        if (promoGender === "femmes") q += "&gender=eq.Femme";
+        else if (promoGender === "hommes") q += "&gender=eq.Homme";
+        if (promoPlan === "nouveaux") { const d30 = new Date(Date.now() - 30 * 86400000).toISOString(); q += `&created_at=gte.${d30}`; }
+        else if (promoPlan === "gratuit") q += "&is_premium=eq.false";
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?${q}`, { method: "HEAD", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "count=exact", "Range": "0-0" } });
         const cr = r.headers.get("content-range"); const total = cr ? parseInt((cr.split("/")[1] || "0"), 10) : 0;
         if (!cancelled) setPromoCount(isNaN(total) ? 0 : total);
       } catch { if (!cancelled) setPromoCount(null); }
       finally { if (!cancelled) setPromoCountLoading(false); }
     })();
+    (async () => {
+      try {
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(promo_clicks,promo_ignored)&select=key,value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+        const rows = await r.json().catch(() => []);
+        const map: Record<string, string> = {};
+        (Array.isArray(rows) ? rows : []).forEach((row: any) => { map[row.key] = row.value; });
+        if (!cancelled) { setPromoClicks(parseInt(map["promo_clicks"] || "0") || 0); setPromoIgnored(parseInt(map["promo_ignored"] || "0") || 0); }
+      } catch {}
+    })();
     return () => { cancelled = true; };
-  }, [promoTarget, activeTab, mktTab]);
+  }, [promoGender, promoPlan, activeTab, mktTab]);
+
+  const promoTargetLabel = (g: string, p: string) => {
+    const gl = g === "femmes" ? "Femmes" : g === "hommes" ? "Hommes" : "Tout le monde";
+    const pl = p === "nouveaux" ? "Nouveaux inscrits (< 30j)" : p === "gratuit" ? "Gratuits" : "Tous";
+    return `${gl} · ${pl}`;
+  };
 
   const savePromo = async () => {
     if (!promoExpiresAt) { showToast("Choisis une date de fin.", "error"); return; }
@@ -5585,17 +5643,19 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
     setPromoSaving(true);
     try {
       const endISO = new Date(promoExpiresAt).toISOString();
-      const startISO = promoActive && promoStart ? promoStart : new Date().toISOString();
+      const startISO = autoShortcuts.promo_active && promoStart ? promoStart : new Date().toISOString();
+      const isNewActivation = !autoShortcuts.promo_active;
       await Promise.all([
         saveSetting("promo_price_fcfa", String(price), auth.token),
         saveSetting("promo_expires_at", endISO, auth.token),
-        saveSetting("promo_target", promoTarget, auth.token),
+        saveSetting("promo_target", `${promoGender}|${promoPlan}`, auth.token),
         saveSetting("promo_message", promoMessage, auth.token),
         saveSetting("promo_start", startISO, auth.token),
-        saveSetting("promo_active", "true", auth.token),
+        onSetAutoShortcut("promo_active", true),
+        ...(isNewActivation ? [saveSetting("promo_clicks", "0", auth.token), saveSetting("promo_ignored", "0", auth.token)] : []),
       ]);
-      setPromoActive(true);
       setPromoStart(startISO);
+      if (isNewActivation) { setPromoClicks(0); setPromoIgnored(0); }
       showToast("Super promo activée.", "success");
     } catch { showToast("Erreur lors de l'enregistrement de la promo.", "error"); }
     finally { setPromoSaving(false); }
@@ -5613,17 +5673,34 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
         const r = await fetch(`${SUPABASE_URL}/rest/v1/payment_verification_requests?subscription_selected=eq.${encodeURIComponent(PROMO_LABEL)}&created_at=gte.${startISO}&select=id`, { method: "HEAD", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "count=exact", "Range": "0-0" } });
         const cr = r.headers.get("content-range"); conversions = cr ? parseInt((cr.split("/")[1] || "0"), 10) : 0;
       } catch {}
-      const rec = { id: `p_${Date.now()}`, price: parseInt(promoPrice) || 0, standardPrice: PREMIUM_PRICE_FCFA, target: promoTarget, targetLabel: CAMP_TARGETS.find(x => x.key === promoTarget)?.label || "Tous les utilisateurs gratuits", start: startISO, end: nowISO, message: promoMessage, conversions: isNaN(conversions) ? 0 : conversions };
+      const rec = { id: `p_${Date.now()}`, price: parseInt(promoPrice) || 0, standardPrice: PREMIUM_PRICE_FCFA, target: `${promoGender}|${promoPlan}`, targetLabel: promoTargetLabel(promoGender, promoPlan), start: startISO, end: nowISO, message: promoMessage, conversions: isNaN(conversions) ? 0 : conversions, clicked: promoClicks ?? 0, ignored: promoIgnored ?? 0 };
       const next = [rec, ...promoHistory].slice(0, 50);
       setPromoHistory(next);
       await Promise.all([
-        saveSetting("promo_active", "false", auth.token),
+        onSetAutoShortcut("promo_active", false),
         saveSetting("promo_history", JSON.stringify(next), auth.token),
+        saveSetting("promo_clicks", "0", auth.token),
+        saveSetting("promo_ignored", "0", auth.token),
       ]);
-      setPromoActive(false);
+      setPromoClicks(0);
+      setPromoIgnored(0);
       showToast(`Promo arrêtée : ${rec.conversions} conversion${rec.conversions > 1 ? "s" : ""}.`, "success");
     } catch { showToast("Erreur lors de l'arrêt de la promo.", "error"); }
     finally { setPromoSaving(false); }
+  };
+
+  const [promoDeleteConfirm, setPromoDeleteConfirm] = useState<"all" | string | null>(null);
+  const deletePromoHistoryEntry = async (id: string) => {
+    const next = promoHistory.filter(h => h.id !== id);
+    setPromoHistory(next);
+    setPromoDeleteConfirm(null);
+    await saveSetting("promo_history", JSON.stringify(next), auth.token);
+  };
+  const clearPromoHistory = async () => {
+    setPromoHistory([]);
+    setPromoDeleteConfirm(null);
+    await saveSetting("promo_history", "[]", auth.token);
+    showToast("Historique des promotions vidé.", "success");
   };
 
     const [phonePromptMissingCount, setPhonePromptMissingCount] = useState<number | null>(null);
@@ -5735,6 +5812,8 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
   const [autoLogReports, setAutoLogReports] = useState<{ id: string; reason: string; created_at: string; reporter_id?: string }[]>([]);
   const [autoLogLoading, setAutoLogLoading] = useState(false);
   const [autoLogCount, setAutoLogCount] = useState<number | null>(null);
+  const [selectedAutoLog, setSelectedAutoLog] = useState<Set<string>>(new Set());
+  const [autoLogBulkArchiving, setAutoLogBulkArchiving] = useState(false);
   const loadAutoLogCount = async () => {
     if (!auth) return;
     try {
@@ -5746,6 +5825,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
   const loadAutoLogReports = async () => {
     if (!auth) return;
     setAutoLogLoading(true);
+    setSelectedAutoLog(new Set());
     try {
       const r = await fetch(`${SUPABASE_URL}/rest/v1/reports?status=eq.auto_log&order=created_at.desc&limit=200&select=id,reason,created_at,reporter_id`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
       const d = await r.json().catch(() => []);
@@ -5795,6 +5875,34 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
     }
     setReportActionLoading(null);
   };
+  // ── Archivage groupé : archive toutes les entrées sélectionnées en un seul appel. ──
+  const archiveSelectedAutoLog = async () => {
+    if (!auth.isAdmin) { showToast("Accès refusé", "error"); return; }
+    const ids = Array.from(selectedAutoLog);
+    if (ids.length === 0) return;
+    setAutoLogBulkArchiving(true);
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/reports?id=in.(${ids.join(",")})`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" },
+        body: JSON.stringify({ status: "auto_log_archived" }),
+      });
+      if (!r.ok) {
+        const err = await r.json().catch(() => null);
+        showToast(`Erreur archivage : ${err?.message || r.status}`, "error");
+        setAutoLogBulkArchiving(false);
+        return;
+      }
+      const idSet = new Set(ids);
+      setAutoLogReports(prev => prev.filter(x => !idSet.has(x.id)));
+      setAutoLogCount(prev => (prev !== null ? Math.max(0, prev - ids.length) : prev));
+      setSelectedAutoLog(new Set());
+      showToast(`${ids.length} entrée${ids.length > 1 ? "s" : ""} archivée${ids.length > 1 ? "s" : ""}.`, "success");
+    } catch (e: any) {
+      showToast("Erreur réseau : " + (e?.message || "inconnue"), "error");
+    }
+    setAutoLogBulkArchiving(false);
+  };
   const [archiveSearch, setArchiveSearch] = useState("");
   const [archiveTypeFilter, setArchiveTypeFilter] = useState<"all" | "messaging" | "system" | "profile">("all");
   const [archiveActionFilter, setArchiveActionFilter] = useState<"all" | "reviewed" | "rejected" | "banned" | "archived">("all");
@@ -5837,6 +5945,36 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
     showToast(`Catégorie « ${name} » créée`, "success");
   };
   const [tplMenu, setTplMenu] = useState<string | null>(null);
+  // ── Modification / suppression des catégories personnalisées (les 8 catégories fixes ne
+  //    sont ni renommables ni supprimables, car elles sont structurelles). ──
+  const [catMenu, setCatMenu] = useState<string | null>(null);
+  const [renameCatModal, setRenameCatModal] = useState<string | null>(null);
+  const [renameCatName, setRenameCatName] = useState("");
+  const [deleteCatConfirm, setDeleteCatConfirm] = useState<string | null>(null);
+  const renameTemplateCat = () => {
+    const oldName = renameCatModal;
+    const newName = renameCatName.trim();
+    if (!oldName) return;
+    if (!newName || newName === oldName) { setRenameCatModal(null); setRenameCatName(""); return; }
+    if (allTemplateCats.includes(newName)) { showToast("Cette catégorie existe déjà.", "error"); return; }
+    const nextCats = customTemplateCats.map(c => c === oldName ? newName : c);
+    const nextTemplates = supportTemplates.map(t => t.category === oldName ? { ...t, category: newName } : t);
+    persistTemplateCats(nextCats);
+    persistTemplates(nextTemplates);
+    if (templateCat === oldName) setTemplateCat(newName);
+    setRenameCatModal(null);
+    setRenameCatName("");
+    showToast(`Catégorie renommée en « ${newName} ».`, "success");
+  };
+  const deleteTemplateCat = (name: string) => {
+    const nextCats = customTemplateCats.filter(c => c !== name);
+    const nextTemplates = supportTemplates.map(t => t.category === name ? { ...t, category: "Autre" } : t);
+    persistTemplateCats(nextCats);
+    persistTemplates(nextTemplates);
+    if (templateCat === name) setTemplateCat("all");
+    setDeleteCatConfirm(null);
+    showToast(`Catégorie « ${name} » supprimée. Ses modèles sont passés dans « Autre ».`, "success");
+  };
   useEffect(() => {
     if (!auth) return;
     (async () => {
@@ -5880,6 +6018,8 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
   const [mktShowAll, setMktShowAll] = useState(false);
   const [featureRequests, setFeatureRequests] = useState<Array<{ id: string; user_id: string; gender?: string; status: string; created_at: string; profile?: any; _usedThisMonth?: number }>>([]);
   const [featureStatuses, setFeatureStatuses] = useState<Array<StatusPost & { profile?: any; _views?: number; _replies?: number; _likes?: number }>>([]);
+  const [featureDetail, setFeatureDetail] = useState<{ status: StatusPost & { profile?: any }; viewers: any[]; likers: any[] } | null>(null);
+  const [featureDetailLoading, setFeatureDetailLoading] = useState(false);
   const [frProcessing, setFrProcessing] = useState<string | null>(null);
   const [stFile, setStFile] = useState<File | null>(null);
   const [stPreview, setStPreview] = useState<string | null>(null);
@@ -6004,6 +6144,41 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
         return { ...s, profile: profilesById[s.feature_user_id || ""], _views: viewsBy[s.id || ""] || 0, _replies: repliesBy[s.id || ""] || 0, _likes: likes };
       }));
     } catch { setFeatureStatuses([]); }
+  };
+  // ── Détail nominatif d'une mise en avant : qui l'a vue, qui a liké le profil mis en avant.
+  //    Les vues viennent de status_status_views (spécifique au statut), les likes viennent
+  //    directement de la table likes (le like sur un profil mis en avant EST un vrai like,
+  //    identique à ceux de Découvrir — voir likeFeatureProfile côté App.tsx). ──
+  const openFeatureDetail = async (s: StatusPost & { profile?: any }) => {
+    setFeatureDetail({ status: s, viewers: [], likers: [] });
+    setFeatureDetailLoading(true);
+    try {
+      const since = s.created_at ? new Date(s.created_at).toISOString() : "1970-01-01";
+      const [viewRows, likeRows] = await Promise.all([
+        sb.query<{ viewer_id: string }>(auth.token, "status_status_views", `?status_id=eq.${s.id}&select=viewer_id`).catch(() => [] as { viewer_id: string }[]),
+        s.feature_user_id
+          ? sb.query<{ from_user: string; created_at: string }>(auth.token, "likes", `?to_user=eq.${s.feature_user_id}&created_at=gte.${since}&select=from_user,created_at`).catch(() => [] as { from_user: string; created_at: string }[])
+          : Promise.resolve([] as { from_user: string; created_at: string }[]),
+      ]);
+      const viewerIds = Array.from(new Set((Array.isArray(viewRows) ? viewRows : []).map(v => v.viewer_id).filter(Boolean)));
+      const likerIds = Array.from(new Set((Array.isArray(likeRows) ? likeRows : []).map(l => l.from_user).filter(Boolean)));
+      const allIds = Array.from(new Set([...viewerIds, ...likerIds]));
+      const profilesById: Record<string, any> = {};
+      if (allIds.length) {
+        const profs = await sb.query<any>(auth.token, "profiles", `?id=in.(${allIds.join(",")})&select=id,name,age,city,photo_url`).catch(() => [] as any[]);
+        (Array.isArray(profs) ? profs : []).forEach((p: any) => { profilesById[p.id] = p; });
+      }
+      const likedAtById: Record<string, string> = {};
+      (Array.isArray(likeRows) ? likeRows : []).forEach(l => { likedAtById[l.from_user] = l.created_at; });
+      setFeatureDetail({
+        status: s,
+        viewers: viewerIds.map(id => profilesById[id]).filter(Boolean),
+        likers: likerIds.map(id => ({ ...profilesById[id], _likedAt: likedAtById[id] })).filter(p => p.id),
+      });
+    } catch {
+      setFeatureDetail({ status: s, viewers: [], likers: [] });
+    }
+    setFeatureDetailLoading(false);
   };
   const loadFeatureRequests = async () => {
     try {
@@ -7881,6 +8056,32 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
         </div>
       )}
 
+      {renameCatModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10002, display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }} onClick={() => { setRenameCatModal(null); setRenameCatName(""); }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 360, boxShadow: "0 24px 64px rgba(0,0,0,0.3)", overflow: "hidden" }}>
+            <div style={{ padding: "16px 20px", borderBottom: `1px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ fontWeight: 900, fontSize: "1.02rem", color: G.brun }}>Renommer la catégorie</div>
+              <button onClick={() => { setRenameCatModal(null); setRenameCatName(""); }} style={{ border: "none", background: G.creme, borderRadius: "50%", width: 30, height: 30, cursor: "pointer", color: "#666" }}>✕</button>
+            </div>
+            <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 14 }}>
+              <input autoFocus value={renameCatName} onChange={e => setRenameCatName(e.target.value)} onKeyDown={e => { if (e.key === "Enter") renameTemplateCat(); }} placeholder="Nom de la catégorie" style={{ width: "100%", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.86rem", outline: "none", fontFamily: "inherit" }} />
+              <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+                <button onClick={() => { setRenameCatModal(null); setRenameCatName(""); }} style={{ background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 12, padding: "11px 20px", fontSize: "0.84rem", fontWeight: 700, cursor: "pointer" }}>Annuler</button>
+                <button onClick={renameTemplateCat} disabled={!renameCatName.trim() || (allTemplateCats.includes(renameCatName.trim()) && renameCatName.trim() !== renameCatModal)} style={{ background: (!renameCatName.trim() || (allTemplateCats.includes(renameCatName.trim()) && renameCatName.trim() !== renameCatModal)) ? "rgba(192,57,43,0.4)" : G.rouge, color: "#fff", border: "none", borderRadius: 12, padding: "11px 20px", fontSize: "0.84rem", fontWeight: 800, cursor: (!renameCatName.trim() || (allTemplateCats.includes(renameCatName.trim()) && renameCatName.trim() !== renameCatModal)) ? "not-allowed" : "pointer" }}>Enregistrer</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {deleteCatConfirm && (
+        <ConfirmModal
+          msg={`Supprimer la catégorie « ${deleteCatConfirm} » ?\n\nLes modèles qui y sont classés seront déplacés dans « Autre ». Cette action est irréversible.`}
+          confirmLabel="Supprimer"
+          danger
+          onConfirm={() => deleteTemplateCat(deleteCatConfirm)}
+          onCancel={() => setDeleteCatConfirm(null)}
+        />
+      )}
       {newCatModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10002, display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }} onClick={() => { setNewCatModal(false); setNewCatName(""); }}>
           <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 360, boxShadow: "0 24px 64px rgba(0,0,0,0.3)", overflow: "hidden" }}>
@@ -9532,14 +9733,37 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               {effectiveFilter === "auto" ? (() => {
                 if (autoLogLoading) return <p style={{ textAlign: "center", color: "#aaa", fontSize: "0.85rem", padding: 30 }}>Chargement…</p>;
                 if (autoLogReports.length === 0) return <p style={{ textAlign: "center", color: "#bbb", fontSize: "0.85rem", padding: 30 }}>Aucune activité automatique enregistrée pour l'instant.</p>;
+                const allSelected = autoLogReports.length > 0 && autoLogReports.every(r => selectedAutoLog.has(r.id));
                 return (
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 2, flexWrap: "wrap" }}>
+                      <button onClick={() => setSelectedAutoLog(allSelected ? new Set() : new Set(autoLogReports.map(r => r.id)))} style={{ display: "flex", alignItems: "center", gap: 6, background: "transparent", border: "none", color: "#7c3aed", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer", padding: "4px 2px" }}>
+                        <div style={{ width: 15, height: 15, borderRadius: 4, border: `1.5px solid ${allSelected ? "#7c3aed" : G.gris}`, background: allSelected ? "#7c3aed" : "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                          {allSelected && <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
+                        </div>
+                        {allSelected ? "Tout désélectionner" : "Tout sélectionner"}
+                      </button>
+                      {selectedAutoLog.size > 0 && (
+                        <button onClick={archiveSelectedAutoLog} disabled={autoLogBulkArchiving} style={{ display: "flex", alignItems: "center", gap: 6, background: "#7c3aed", border: "none", borderRadius: 50, padding: "6px 14px", fontSize: "0.74rem", fontWeight: 700, color: "#fff", cursor: autoLogBulkArchiving ? "not-allowed" : "pointer", opacity: autoLogBulkArchiving ? 0.6 : 1 }}>
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+                          {autoLogBulkArchiving ? "Archivage…" : `Archiver la sélection (${selectedAutoLog.size})`}
+                        </button>
+                      )}
+                    </div>
                     {autoLogReports.map(r => {
                       const isBan = r.reason.includes("Banni automatiquement");
                       const p = r.reporter_id ? reportProfilesCache[r.reporter_id] : null;
                       const isArchiving = reportActionLoading === r.id;
+                      const isSelected = selectedAutoLog.has(r.id);
                       return (
                         <div key={r.id} style={{ background: G.blanc, borderRadius: 12, padding: "12px 14px", boxShadow: "0 1px 4px rgba(0,0,0,0.05)", borderLeft: `3px solid ${isBan ? "#e74c3c" : "#7c3aed"}`, display: "flex", gap: 10, alignItems: "flex-start" }}>
+                          <div
+                            onClick={() => setSelectedAutoLog(prev => { const next = new Set(prev); if (next.has(r.id)) next.delete(r.id); else next.add(r.id); return next; })}
+                            title="Sélectionner"
+                            style={{ width: 17, height: 17, borderRadius: 5, border: `1.5px solid ${isSelected ? "#7c3aed" : G.gris}`, background: isSelected ? "#7c3aed" : "#fff", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, marginTop: 2 }}
+                          >
+                            {isSelected && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
+                          </div>
                           <div
                             onClick={() => { if (p) setReportProfilePreview(p); }}
                             style={{ cursor: p ? "pointer" : "default", flexShrink: 0 }}
@@ -10067,7 +10291,21 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
                   {(["all", ...allTemplateCats]).map(c => {
                     const active = templateCat === c;
-                    return <button key={c} onClick={() => setTemplateCat(c)} style={{ padding: "5px 11px", borderRadius: 999, border: `1.5px solid ${active ? G.rouge : G.gris}`, background: active ? "rgba(192,57,43,0.08)" : "#fff", color: active ? G.rouge : "#666", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}>{c === "all" ? `Tous (${supportTemplates.length})` : c}</button>;
+                    const isCustom = c !== "all" && !TEMPLATE_CATS.includes(c);
+                    return (
+                      <div key={c} style={{ position: "relative", display: "inline-flex" }}>
+                        <button onClick={() => setTemplateCat(c)} style={{ padding: isCustom ? "5px 24px 5px 11px" : "5px 11px", borderRadius: 999, border: `1.5px solid ${active ? G.rouge : G.gris}`, background: active ? "rgba(192,57,43,0.08)" : "#fff", color: active ? G.rouge : "#666", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}>{c === "all" ? `Tous (${supportTemplates.length})` : c}</button>
+                        {isCustom && (
+                          <button onClick={e => { e.stopPropagation(); setCatMenu(catMenu === c ? null : c); }} aria-label="Options de la catégorie" style={{ position: "absolute", right: 2, top: "50%", transform: "translateY(-50%)", border: "none", background: "transparent", cursor: "pointer", color: active ? G.rouge : "#999", fontSize: "0.85rem", lineHeight: 1, padding: "2px 5px" }}>⋮</button>
+                        )}
+                        {catMenu === c && (
+                          <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, background: G.blanc, borderRadius: 10, boxShadow: "0 6px 20px rgba(0,0,0,0.15)", border: `1px solid ${G.gris}`, zIndex: 6, overflow: "hidden", minWidth: 130 }}>
+                            <button onClick={() => { setRenameCatModal(c); setRenameCatName(c); setCatMenu(null); }} style={{ display: "block", width: "100%", textAlign: "left", border: "none", background: G.blanc, padding: "9px 13px", fontSize: "0.76rem", color: G.brun, cursor: "pointer" }}>✏️ Renommer</button>
+                            <button onClick={() => { setDeleteCatConfirm(c); setCatMenu(null); }} style={{ display: "block", width: "100%", textAlign: "left", border: "none", borderTop: `1px solid ${G.gris}`, background: G.blanc, padding: "9px 13px", fontSize: "0.76rem", color: "#e74c3c", cursor: "pointer" }}>🗑 Supprimer</button>
+                          </div>
+                        )}
+                      </div>
+                    );
                   })}
                 </div>
                 {(() => {
@@ -10402,6 +10640,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                             </div>
                           </div>
                           <div style={{ display: "flex", flexDirection: "column", gap: 8, flexShrink: 0 }}>
+                            <button onClick={() => openFeatureDetail(s)} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, border: `1px solid ${G.gris}`, background: G.blanc, color: "#8e44ad", borderRadius: 10, padding: "8px 16px", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Voir qui</button>
                             <button onClick={() => (s.profile?.photo_url || s.image_url) && window.open(s.profile?.photo_url || s.image_url || "", "_blank")} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, border: `1px solid ${G.gris}`, background: G.blanc, color: G.brun, borderRadius: 10, padding: "8px 16px", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>Aperçu</button>
                             <button onClick={() => setConfirmDeleteStatus(s)} disabled={stDeleting === s.id} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, border: `1.5px solid rgba(231,76,60,0.4)`, background: G.blanc, color: "#e74c3c", borderRadius: 10, padding: "8px 16px", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>Retirer</button>
                           </div>
@@ -10545,85 +10784,152 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
             const visiblePromoHistory = promoShowAll ? promoHistory : promoHistory.slice(0, 3);
             const price = parseInt(promoPrice) || 0;
             const pct = PREMIUM_PRICE_FCFA > 0 && price > 0 ? Math.floor((1 - price / PREMIUM_PRICE_FCFA) * 100) : 0;
+            const kpiIconWrap = (bg: string): React.CSSProperties => ({ width: 44, height: 44, borderRadius: "50%", background: bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 });
             return (
-              <div style={{ background: G.blanc, borderRadius: 18, padding: 20, boxShadow: "0 2px 10px rgba(0,0,0,0.05)", maxWidth: 640 }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18, flexWrap: "wrap", gap: 10 }}>
+              <div style={{ background: G.blanc, borderRadius: 18, padding: 22, boxShadow: "0 2px 10px rgba(0,0,0,0.05)" }}>
+                {/* ── En-tête ── */}
+                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 14, marginBottom: 18 }}>
                   <div>
-                    <div style={{ fontSize: "0.95rem", fontWeight: 800, color: G.brun }}>Super promo Premium</div>
-                    <div style={{ fontSize: "0.78rem", color: "#888", marginTop: 4, lineHeight: 1.5, maxWidth: 420 }}>Offre une formule "1 mois" à prix réduit aux membres non-premium ciblés. L'écran s'affiche à l'ouverture de l'app, au maximum une fois par jour, jusqu'à la date de fin.</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <span style={{ fontSize: "1.15rem", fontWeight: 900, color: G.brun }}>Super promo Premium</span>
+                      <span style={{ fontSize: "0.68rem", fontWeight: 800, padding: "3px 10px", borderRadius: 999, background: autoShortcuts.promo_active ? "rgba(230,126,34,0.14)" : "rgba(136,136,136,0.12)", color: autoShortcuts.promo_active ? "#E67E22" : "#888" }}>{autoShortcuts.promo_active ? "Active" : "Inactive"}</span>
+                    </div>
+                    <div style={{ fontSize: "0.78rem", color: "#888", marginTop: 6, lineHeight: 1.5, maxWidth: 460 }}>Offre une formule "1 mois" à prix réduit aux membres non-premium ciblés.<br />L'écran s'affiche à l'ouverture de l'app, au maximum une fois par jour, jusqu'à la date de fin.</div>
                   </div>
-                  <span style={{ fontSize: "0.72rem", fontWeight: 800, padding: "5px 12px", borderRadius: 999, background: promoActive ? "rgba(26,92,58,0.1)" : "rgba(136,136,136,0.12)", color: promoActive ? "#1a5c3a" : "#888" }}>{promoActive ? "Active" : "Inactive"}</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 7, fontSize: "0.78rem", fontWeight: 800, padding: "8px 16px", borderRadius: 999, background: autoShortcuts.promo_active ? "rgba(39,174,96,0.12)" : "rgba(136,136,136,0.12)", color: autoShortcuts.promo_active ? "#1e8449" : "#888" }}><span style={{ width: 8, height: 8, borderRadius: "50%", background: autoShortcuts.promo_active ? "#27ae60" : "#aaa" }} />{autoShortcuts.promo_active ? "Active" : "Inactive"}</span>
+                    <button onClick={savePromo} disabled={promoSaving} style={{ display: "flex", alignItems: "center", gap: 8, background: promoSaving ? "#aaa" : `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: "#fff", border: "none", borderRadius: 10, padding: "11px 18px", fontSize: "0.82rem", fontWeight: 800, cursor: promoSaving ? "not-allowed" : "pointer" }}>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
+                      {promoSaving ? "…" : (autoShortcuts.promo_active ? "Mettre à jour la promo" : "Activer la promo")}
+                    </button>
+                    {autoShortcuts.promo_active && (
+                      <button onClick={() => setPromoStopConfirm(true)} disabled={promoSaving} style={{ display: "flex", alignItems: "center", gap: 8, background: G.blanc, color: "#c0392b", border: "1.5px solid rgba(192,57,43,0.35)", borderRadius: 10, padding: "11px 18px", fontSize: "0.82rem", fontWeight: 800, cursor: "pointer" }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="4" y="4" width="16" height="16" rx="2" /></svg>
+                        Arrêter la promo
+                      </button>
+                    )}
+                  </div>
                 </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12, marginBottom: 18 }}>
-                  <div style={{ background: G.creme, borderRadius: 12, padding: "12px 14px" }}>
-                    <div style={{ fontSize: "0.72rem", color: "#888", fontWeight: 700 }}>Prix promo</div>
-                    <div style={{ fontSize: "1.3rem", fontWeight: 900, color: G.rouge }}>{price.toLocaleString("fr-FR")} FCFA</div>
+                <div style={{ borderTop: `1px solid ${G.gris}`, marginBottom: 18 }} />
+
+                {/* ── Cartes KPI ── */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 14, marginBottom: 20 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, background: G.creme, borderRadius: 14, padding: "14px 16px" }}>
+                    <div style={kpiIconWrap("rgba(192,57,43,0.12)")}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" /><line x1="7" y1="7" x2="7.01" y2="7" /></svg></div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ fontSize: "0.72rem", color: "#888", fontWeight: 700 }}>Prix promo</span>
+                        {pct > 0 && <span style={{ fontSize: "0.62rem", fontWeight: 800, color: "#1a5c3a", background: "rgba(26,92,58,0.12)", padding: "1px 7px", borderRadius: 999 }}>-{pct}%</span>}
+                      </div>
+                      <div style={{ fontSize: "1.25rem", fontWeight: 900, color: G.rouge, whiteSpace: "nowrap" }}>{price.toLocaleString("fr-FR")} FCFA</div>
+                    </div>
                   </div>
-                  <div style={{ background: G.creme, borderRadius: 12, padding: "12px 14px" }}>
-                    <div style={{ fontSize: "0.72rem", color: "#888", fontWeight: 700 }}>Bénéficiaires ciblés</div>
-                    <div style={{ fontSize: "1.3rem", fontWeight: 900, color: G.brun }}>{promoCountLoading ? "…" : (promoCount ?? "—")}</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, background: G.creme, borderRadius: 14, padding: "14px 16px" }}>
+                    <div style={kpiIconWrap("rgba(212,168,67,0.16)")}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.or} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" /><line x1="1" y1="10" x2="23" y2="10" /></svg></div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: "0.72rem", color: "#888", fontWeight: 700 }}>Prix standard (1 mois)</div>
+                      <div style={{ fontSize: "1.25rem", fontWeight: 900, color: G.brun, whiteSpace: "nowrap" }}>{PREMIUM_PRICE_FCFA.toLocaleString("fr-FR")} FCFA</div>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, background: G.creme, borderRadius: 14, padding: "14px 16px" }}>
+                    <div style={kpiIconWrap("rgba(41,128,185,0.14)")}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2980b9" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg></div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: "0.72rem", color: "#888", fontWeight: 700 }}>Bénéficiaires ciblés</div>
+                      <div style={{ fontSize: "1.25rem", fontWeight: 900, color: G.brun }}>{promoCountLoading ? "…" : (promoCount ?? "—")}</div>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, background: G.creme, borderRadius: 14, padding: "14px 16px" }}>
+                    <div style={kpiIconWrap("rgba(39,174,96,0.14)")}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#27ae60" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg></div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: "0.72rem", color: "#888", fontWeight: 700 }}>Se termine le</div>
+                      <div style={{ fontSize: "1.02rem", fontWeight: 900, color: G.brun, whiteSpace: "nowrap" }}>{promoExpiresAt ? new Date(promoExpiresAt).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}</div>
+                    </div>
                   </div>
                 </div>
 
-                <div style={{ marginBottom: 14 }}>
-                  <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#999", marginBottom: 6 }}>Prix standard (1 mois)</div>
-                  <input type="text" disabled value={`${PREMIUM_PRICE_FCFA.toLocaleString("fr-FR")} FCFA`} style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.85rem", background: G.creme, color: "#888" }} />
-                </div>
+                <div style={{ borderTop: `1px solid ${G.gris}`, marginBottom: 20 }} />
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
+                {/* ── Formulaire : prix / date / bénéficiaires ── */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 14, marginBottom: 22 }}>
                   <div>
-                    <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#999", marginBottom: 6 }}>Prix promo (FCFA){pct > 0 && <span style={{ color: "#1a5c3a", fontWeight: 800 }}> · -{pct}%</span>}</div>
+                    <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#999", marginBottom: 6, display: "flex", alignItems: "center", gap: 7 }}>Prix promo (FCFA){pct > 0 && <span style={{ fontSize: "0.62rem", fontWeight: 800, color: "#1a5c3a", background: "rgba(26,92,58,0.12)", padding: "1px 7px", borderRadius: 999 }}>-{pct}%</span>}</div>
                     <input type="number" value={promoPrice} onChange={e => setPromoPrice(e.target.value)} style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.85rem" }} />
                   </div>
                   <div>
-                    <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#999", marginBottom: 6 }}>Se termine le</div>
+                    <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#999", marginBottom: 6 }}>Prix standard (1 mois)</div>
+                    <input type="text" disabled value={`${PREMIUM_PRICE_FCFA.toLocaleString("fr-FR")} FCFA`} style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.85rem", background: G.creme, color: "#888" }} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#999", marginBottom: 6 }}>Date et heure de fin</div>
                     <input type="datetime-local" value={promoExpiresAt} onChange={e => setPromoExpiresAt(e.target.value)} style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.85rem" }} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#999", marginBottom: 6 }}>Bénéficiaires ciblés</div>
+                    <input type="text" disabled value={promoCountLoading ? "…" : String(promoCount ?? 0)} style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.85rem", background: G.creme, color: "#888" }} />
                   </div>
                 </div>
 
-                <div style={{ marginBottom: 14 }}>
-                  <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#999", marginBottom: 6 }}>Cible</div>
-                  <select value={promoTarget} onChange={e => setPromoTarget(e.target.value)} style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.85rem", background: G.blanc }}>
-                    {CAMP_TARGETS.map(t => <option key={t.key} value={t.key}>{t.label}</option>)}
-                  </select>
-                </div>
-
-                <div style={{ marginBottom: 18 }}>
-                  <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#999", marginBottom: 6 }}>Message affiché sur l'écran</div>
-                  <textarea value={promoMessage} onChange={e => setPromoMessage(e.target.value)} rows={2} style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.85rem", fontFamily: "inherit", resize: "vertical" }} />
-                </div>
-
-                <div style={{ display: "flex", gap: 10 }}>
-                  <button onClick={savePromo} disabled={promoSaving} style={{ flex: 1, background: promoSaving ? "#aaa" : `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: "#fff", border: "none", borderRadius: 10, padding: "11px", fontSize: "0.82rem", fontWeight: 800, cursor: promoSaving ? "not-allowed" : "pointer" }}>{promoSaving ? "…" : (promoActive ? "Mettre à jour" : "Activer la promo")}</button>
-                  {promoActive && (
-                    <button onClick={() => setPromoStopConfirm(true)} disabled={promoSaving} style={{ flex: 1, background: G.blanc, color: "#c0392b", border: "1px solid rgba(192,57,43,0.3)", borderRadius: 10, padding: "11px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer" }}>Arrêter la promo</button>
-                  )}
-                </div>
-
-                <div style={{ borderTop: `1px solid ${G.gris}`, marginTop: 20, paddingTop: 16 }}>
-                  <div style={{ fontWeight: 900, fontSize: "1rem", color: G.brun, marginBottom: 14 }}>Promotions précédentes</div>
-                  {promoHistory.length === 0 ? (
-                    <div style={{ fontSize: "0.8rem", color: "#999", textAlign: "center", padding: "16px 0" }}>Aucune promotion terminée pour le moment.</div>
-                  ) : (
-                    <>
-                      <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr 1fr 0.8fr", gap: 8, fontSize: "0.68rem", fontWeight: 800, color: "#999", padding: "0 4px 8px", textTransform: "uppercase" }}>
-                        <span>Cible</span><span>Prix promo</span><span>Période</span><span>Conversions</span>
-                      </div>
-                      {visiblePromoHistory.map(h => (
-                        <div key={h.id} style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr 1fr 0.8fr", gap: 8, alignItems: "center", padding: "10px 4px", borderTop: `1px solid ${G.gris}`, fontSize: "0.78rem" }}>
-                          <span style={{ fontWeight: 700, color: G.brun }}>{h.targetLabel}</span>
-                          <span>{(h.price || 0).toLocaleString("fr-FR")} FCFA</span>
-                          <span style={{ color: "#888", fontSize: "0.72rem" }}>{fmtDate(h.start)} → {fmtDate(h.end)}</span>
-                          <span style={{ fontWeight: 800, color: "#1a5c3a" }}>{h.conversions ?? 0}</span>
-                        </div>
+                {/* ── Cible + message ── */}
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 24, marginBottom: 22 }}>
+                  <div style={{ flex: "1 1 320px", minWidth: 0 }}>
+                    <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#999", marginBottom: 8 }}>Cible</div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
+                      {([["all", "Tout le monde", <svg key="i" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></svg>], ["femmes", "Femmes", <svg key="i" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="5" /><line x1="12" y1="13" x2="12" y2="22" /><line x1="9" y1="18" x2="15" y2="18" /></svg>], ["hommes", "Hommes", <svg key="i" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="10" cy="14" r="5" /><line x1="13.5" y1="10.5" x2="20" y2="4" /><polyline points="15 4 20 4 20 9" /></svg>]] as ["all" | "femmes" | "hommes", string, React.ReactElement][]).map(([val, lbl, ico]) => (
+                        <button key={val} type="button" onClick={() => setPromoGender(val)} style={{ display: "flex", alignItems: "center", gap: 7, padding: "9px 15px", borderRadius: 999, border: `1.5px solid ${promoGender === val ? G.rouge : G.gris}`, background: promoGender === val ? "rgba(192,57,43,0.08)" : "#fff", color: promoGender === val ? G.rouge : "#666", fontWeight: 700, fontSize: "0.78rem", cursor: "pointer" }}>{ico}{lbl}</button>
                       ))}
-                      {promoHistory.length > 3 && (
-                        <div style={{ textAlign: "center", marginTop: 10 }}>
-                          <button onClick={() => setPromoShowAll(s => !s)} style={{ background: "transparent", border: "none", color: G.rouge, fontSize: "0.78rem", fontWeight: 700, cursor: "pointer" }}>{promoShowAll ? "Voir moins" : `Voir toutes les promotions (${promoHistory.length})`}</button>
+                    </div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                      {([["all", "Tous", <svg key="i" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 20h20l-2-9-5 4-3-7-3 7-5-4-2 9z" /></svg>], ["nouveaux", "Nouveaux inscrits (< 30j)", <svg key="i" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="8.5" cy="7" r="4" /><line x1="20" y1="8" x2="20" y2="14" /><line x1="17" y1="11" x2="23" y2="11" /></svg>], ["gratuit", "Gratuits", <svg key="i" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>]] as ["all" | "nouveaux" | "gratuit", string, React.ReactElement][]).map(([val, lbl, ico]) => (
+                        <button key={val} type="button" onClick={() => setPromoPlan(val)} style={{ display: "flex", alignItems: "center", gap: 7, padding: "9px 15px", borderRadius: 999, border: `1.5px solid ${promoPlan === val ? G.rouge : G.gris}`, background: promoPlan === val ? "rgba(192,57,43,0.08)" : "#fff", color: promoPlan === val ? G.rouge : "#666", fontWeight: 700, fontSize: "0.78rem", cursor: "pointer" }}>{ico}{lbl}</button>
+                      ))}
+                    </div>
+                  </div>
+                  <div style={{ flex: "1 1 320px", minWidth: 0 }}>
+                    <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#999", marginBottom: 8 }}>Message affiché sur l'écran</div>
+                    <textarea value={promoMessage} onChange={e => setPromoMessage(e.target.value)} rows={5} style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.85rem", fontFamily: "inherit", resize: "vertical" }} />
+                  </div>
+                </div>
+
+                {/* ── Historique ── */}
+                <div style={{ borderTop: `1px solid ${G.gris}`, paddingTop: 18 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+                    <div style={{ fontWeight: 900, fontSize: "1.05rem", color: G.brun }}>Promotions précédentes</div>
+                    {promoHistory.length > 0 && (
+                      <button onClick={() => setPromoDeleteConfirm("all")} style={{ background: "transparent", border: "none", color: "#c0392b", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer" }}>Vider l'historique</button>
+                    )}
+                  </div>
+                  {promoHistory.length === 0 ? (
+                    <div style={{ fontSize: "0.8rem", color: "#999", textAlign: "center", padding: "20px 0" }}>Aucune promotion terminée pour le moment.</div>
+                  ) : (
+                    <div style={{ overflowX: "auto" }}>
+                      <div style={{ minWidth: 880 }}>
+                        <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr 1fr 1.5fr 0.9fr 0.9fr 0.9fr 0.9fr 0.9fr 40px", gap: 8, fontSize: "0.64rem", fontWeight: 800, color: "#999", padding: "0 4px 10px", textTransform: "uppercase" }}>
+                          <span>Cible</span><span>Prix promo</span><span>Prix standard</span><span>Période</span><span>Bénéficiaires</span><span>Conversions</span><span>J'en profite</span><span>Ignoré</span><span>Statut</span><span></span>
                         </div>
-                      )}
-                    </>
+                        {visiblePromoHistory.map(h => (
+                          <div key={h.id} style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr 1fr 1.5fr 0.9fr 0.9fr 0.9fr 0.9fr 0.9fr 40px", gap: 8, alignItems: "center", padding: "12px 4px", borderTop: `1px solid ${G.gris}`, fontSize: "0.78rem" }}>
+                            <span style={{ fontWeight: 700, color: G.brun }}>{h.targetLabel}</span>
+                            <span>{(h.price || 0).toLocaleString("fr-FR")} FCFA</span>
+                            <span style={{ color: "#888" }}>{(h.standardPrice || PREMIUM_PRICE_FCFA).toLocaleString("fr-FR")} FCFA</span>
+                            <span style={{ color: "#888", fontSize: "0.72rem" }}>{fmtDate(h.start)} → {fmtDate(h.end)}</span>
+                            <span>{h.beneficiaries ?? promoCount ?? "—"}</span>
+                            <span style={{ fontWeight: 800, color: "#1a5c3a" }}>{h.conversions ?? 0}</span>
+                            <span style={{ fontWeight: 700, color: "#1e8449" }}>{h.clicked ?? 0}</span>
+                            <span style={{ fontWeight: 700, color: "#888" }}>{h.ignored ?? 0}</span>
+                            <span style={{ display: "inline-block", fontSize: "0.68rem", fontWeight: 800, padding: "3px 10px", borderRadius: 999, background: "rgba(39,174,96,0.12)", color: "#1e8449" }}>Terminée</span>
+                            <button onClick={() => setPromoDeleteConfirm(h.id)} aria-label="Supprimer" style={{ background: "none", border: `1px solid ${G.gris}`, borderRadius: 8, color: "#c0392b", cursor: "pointer", padding: 6, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {promoHistory.length > 3 && (
+                    <div style={{ textAlign: "center", marginTop: 12 }}>
+                      <button onClick={() => setPromoShowAll(s => !s)} style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "transparent", border: "none", color: G.rouge, fontSize: "0.78rem", fontWeight: 700, cursor: "pointer" }}>{promoShowAll ? "Voir moins" : "Voir plus d'historique"}<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: promoShowAll ? "rotate(180deg)" : "none" }}><polyline points="6 9 12 15 18 9" /></svg></button>
+                    </div>
                   )}
                 </div>
 
@@ -10634,6 +10940,15 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     danger
                     onConfirm={stopPromo}
                     onCancel={() => setPromoStopConfirm(false)}
+                  />
+                )}
+                {promoDeleteConfirm && (
+                  <ConfirmModal
+                    msg={promoDeleteConfirm === "all" ? "Vider tout l'historique des promotions ?\n\nCette action est irréversible." : "Supprimer cette entrée de l'historique ?\n\nCette action est irréversible."}
+                    confirmLabel={promoDeleteConfirm === "all" ? "Vider l'historique" : "Supprimer"}
+                    danger
+                    onConfirm={() => promoDeleteConfirm === "all" ? clearPromoHistory() : deletePromoHistoryEntry(promoDeleteConfirm)}
+                    onCancel={() => setPromoDeleteConfirm(null)}
                   />
                 )}
               </div>
@@ -10656,6 +10971,56 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               onConfirm={() => { const s = confirmDeleteStatus; setConfirmDeleteStatus(null); deleteOfficialStatus(s); }}
               onCancel={() => setConfirmDeleteStatus(null)}
             />
+          )}
+          {featureDetail && (
+            <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10002, display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }} onClick={() => setFeatureDetail(null)}>
+              <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 460, maxHeight: "85vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
+                <div style={{ padding: "16px 20px", borderBottom: `1px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, background: G.blanc, zIndex: 1 }}>
+                  <div>
+                    <div style={{ fontWeight: 900, fontSize: "1.02rem", color: G.brun }}>{featureDetail.status.profile?.name || "Profil"}{featureDetail.status.profile?.age ? `, ${featureDetail.status.profile.age} ans` : ""}</div>
+                    <div style={{ fontSize: "0.72rem", color: "#888" }}>Qui a vu et qui a aimé cette mise en avant</div>
+                  </div>
+                  <button onClick={() => setFeatureDetail(null)} style={{ border: "none", background: G.creme, borderRadius: "50%", width: 30, height: 30, cursor: "pointer", color: "#666", flexShrink: 0 }}>✕</button>
+                </div>
+                <div style={{ padding: 20 }}>
+                  {featureDetailLoading ? (
+                    <div style={{ textAlign: "center", color: "#aaa", fontSize: "0.82rem", padding: "24px 0" }}>Chargement…</div>
+                  ) : (
+                    <>
+                      <div style={{ fontSize: "0.78rem", fontWeight: 800, color: "#8e44ad", marginBottom: 10, display: "flex", alignItems: "center", gap: 6 }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>A vu ({featureDetail.viewers.length})</div>
+                      {featureDetail.viewers.length === 0 ? (
+                        <div style={{ fontSize: "0.78rem", color: "#bbb", marginBottom: 18 }}>Personne pour l'instant.</div>
+                      ) : (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 18 }}>
+                          {featureDetail.viewers.map(p => (
+                            <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                              {p.photo_url ? <img src={p.photo_url} alt="" style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "cover" }} /> : <div style={{ width: 36, height: 36, borderRadius: "50%", background: G.creme }} />}
+                              <span style={{ fontSize: "0.84rem", fontWeight: 700, color: G.brun }}>{p.name}{p.age ? `, ${p.age} ans` : ""}</span>
+                              {p.city && <span style={{ fontSize: "0.72rem", color: "#999" }}>· {p.city}</span>}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <div style={{ fontSize: "0.78rem", fontWeight: 800, color: "#e74c3c", marginBottom: 10, display: "flex", alignItems: "center", gap: 6 }}><svg width="14" height="14" viewBox="0 0 24 24" fill="#e74c3c" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>A aimé ({featureDetail.likers.length})</div>
+                      {featureDetail.likers.length === 0 ? (
+                        <div style={{ fontSize: "0.78rem", color: "#bbb" }}>Personne pour l'instant.</div>
+                      ) : (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                          {featureDetail.likers.map(p => (
+                            <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                              {p.photo_url ? <img src={p.photo_url} alt="" style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "cover" }} /> : <div style={{ width: 36, height: 36, borderRadius: "50%", background: G.creme }} />}
+                              <span style={{ fontSize: "0.84rem", fontWeight: 700, color: G.brun }}>{p.name}{p.age ? `, ${p.age} ans` : ""}</span>
+                              {p.city && <span style={{ fontSize: "0.72rem", color: "#999" }}>· {p.city}</span>}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <div style={{ background: "rgba(142,68,173,0.06)", borderRadius: 12, padding: "10px 13px", marginTop: 18, fontSize: "0.72rem", color: "#8e44ad", lineHeight: 1.5 }}>Un like ici est un vrai like : il apparaît dans l'onglet Likes de {featureDetail.status.profile?.name || "la personne"} et déclenche un match en cas de like réciproque, exactement comme dans Découvrir.</div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
           )}
         </div>
       )}
@@ -12054,7 +12419,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
             <div style={{ background: G.blanc, borderRadius: 16, padding: 20, boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
               <div style={{ fontSize: "0.78rem", color: "#888", marginBottom: 16, background: "rgba(142,68,173,0.06)", borderRadius: 10, padding: "10px 12px" }}>Le match est créé immédiatement. Un message de bienvenue est envoyé automatiquement.</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 40px 1fr", gap: 12, alignItems: "start", marginBottom: 16 }}>
-                <div>
+                <div style={{ order: swapCreateOrder ? 3 : 1 }}>
                   <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#555", marginBottom: 6 }}>Personne 1</div>
                   {createSelected1 ? (
                     <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(142,68,173,0.08)", borderRadius: 12, padding: "10px 12px", border: "1.5px solid rgba(142,68,173,0.3)" }}>
@@ -12069,8 +12434,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     </div>
                   )}
                 </div>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", paddingTop: 28 }}><svg width="24" height="24" viewBox="0 0 24 24" fill="#8e44ad" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div>
-                <div>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", paddingTop: 28, order: 2 }}><svg width="24" height="24" viewBox="0 0 24 24" fill="#8e44ad" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div>
+                <div style={{ order: swapCreateOrder ? 1 : 3 }}>
                   <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#555", marginBottom: 6 }}>Personne 2</div>
                   {createSelected2 ? (
                     <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(142,68,173,0.08)", borderRadius: 12, padding: "10px 12px", border: "1.5px solid rgba(142,68,173,0.3)" }}>
@@ -12731,7 +13096,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
             <div style={{ flex: 1, overflowY: "auto", padding: "20px 20px 24px" }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 40px 1fr", gap: 12, alignItems: "start", marginBottom: 20 }}>
                 {/* Profil 1 */}
-                <div>
+                <div style={{ order: swapCreateOrder ? 3 : 1 }}>
                   <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#555", marginBottom: 6 }}>Personne 1</div>
                   {createSelected1 ? (
                     <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(142,68,173,0.08)", borderRadius: 12, padding: "10px 12px", border: "1.5px solid rgba(142,68,173,0.3)" }}>
@@ -12763,11 +13128,11 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   )}
                 </div>
                 {/* Icône centre */}
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", paddingTop: 28 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", paddingTop: 28, order: 2 }}>
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="#8e44ad" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
                 </div>
                 {/* Profil 2 */}
-                <div>
+                <div style={{ order: swapCreateOrder ? 1 : 3 }}>
                   <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#555", marginBottom: 6 }}>Personne 2</div>
                   {createSelected2 ? (
                     <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(142,68,173,0.08)", borderRadius: 12, padding: "10px 12px", border: "1.5px solid rgba(142,68,173,0.3)" }}>
@@ -12823,7 +13188,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
             <div style={{ flex: 1, overflowY: "auto", padding: "20px 20px 24px" }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 40px 1fr", gap: 12, alignItems: "start", marginBottom: 16 }}>
                 {/* Profil 1 */}
-                <div>
+                <div style={{ order: swapProposeOrder ? 3 : 1 }}>
                   <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#555", marginBottom: 6 }}>Personne 1</div>
                   {proposeSelected1 ? (
                     <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(230,126,34,0.08)", borderRadius: 12, padding: "10px 12px", border: "1.5px solid rgba(230,126,34,0.3)" }}>
@@ -12861,11 +13226,11 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   )}
                 </div>
                 {/* Icône centre */}
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", paddingTop: 28 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", paddingTop: 28, order: 2 }}>
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#e67e22" strokeWidth="2" strokeLinecap="round"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>
                 </div>
                 {/* Profil 2 */}
-                <div>
+                <div style={{ order: swapProposeOrder ? 1 : 3 }}>
                   <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#555", marginBottom: 6 }}>Personne 2</div>
                   {proposeSelected2 ? (
                     <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(230,126,34,0.08)", borderRadius: 12, padding: "10px 12px", border: "1.5px solid rgba(230,126,34,0.3)" }}>
