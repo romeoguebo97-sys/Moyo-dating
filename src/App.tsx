@@ -6684,7 +6684,7 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages }: { auth:
 }} style={{ margin: "0 -16px", padding: isWide ? "0 20px" : "0 10px 0", maxHeight: isWide ? "calc(100vh - 20px)" : "100%", height: isWide ? "calc(100vh - 20px)" : "100%", overflowY: "auto", scrollSnapType: "y mandatory", WebkitOverflowScrolling: "touch", background: "var(--c-shell-bg)", willChange: "scroll-position", WebkitTransform: "translateZ(0)" }}>
   <style>{`.moyo-fullscreen-view img{filter:none!important} .moyo-status-view *{-webkit-tap-highlight-color:transparent;outline:none;user-select:none;-webkit-user-select:none;}`}</style>
   {fullscreenProfiles.map((prof, idx) => (
-    <div key={`${prof.id}-${idx}`} style={{ position: "relative", height: "calc(103% - 12px)", minHeight: 560, borderRadius: 28, overflow: "hidden", marginBottom: 12, background: "var(--c-shell-bg)", boxShadow: "0 8px 32px rgba(44,26,14,0.22)", scrollSnapAlign: "start", willChange: "transform", WebkitTransform: "translateZ(0)" }}>
+    <div key={`${prof.id}-${idx}`} style={{ position: "relative", height: "calc(100% - 12px)", minHeight: 480, borderRadius: 28, overflow: "hidden", marginBottom: 12, background: "var(--c-shell-bg)", boxShadow: "0 8px 32px rgba(44,26,14,0.22)", scrollSnapAlign: "start", willChange: "transform", WebkitTransform: "translateZ(0)" }}>
       {prof.photo_url ? <img src={prof.photo_url ?? undefined} alt={prof.name} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} loading={idx === 0 ? "eager" : "lazy"} /> : <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.75)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>}
       <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.48) 32%, rgba(0,0,0,0.05) 66%, rgba(0,0,0,0.22) 100%)", pointerEvents: "none" }} />
       {/* ✕ haut droite - sur chaque carte */}
@@ -6712,13 +6712,13 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages }: { auth:
           {prof.hobbies && <span style={{ background: "rgba(26,92,58,0.38)", color: "#fff", border: "1px solid rgba(255,255,255,0.18)", borderRadius: 50, padding: "4px 10px", fontSize: "0.76rem", fontWeight: 700, backdropFilter: "blur(6px)", maxWidth: 170, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{prof.hobbies}</span>}
         </div>
         <div style={{ fontSize: "0.86rem", lineHeight: 1.45, opacity: 0.92, textShadow: "0 1px 8px rgba(0,0,0,0.5)", overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", minHeight: 38 }}>{prof.bio || ""}</div>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 18 }}>
-          <button onClick={() => handleLike(prof)} style={{ width: 68, height: 68, minWidth: 68, minHeight: 68, borderRadius: "50%", border: "none", background: likedIds.has(prof.id) ? `linear-gradient(135deg,${G.rouge},${G.rougeDark})` : "rgba(255,255,255,0.92)", color: likedIds.has(prof.id) ? "#fff" : G.rouge, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 10px 28px rgba(0,0,0,0.35)", cursor: "pointer", padding: 0, flexShrink: 0 }}><svg width="32" height="32" viewBox="0 0 24 24" fill={likedIds.has(prof.id) ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg></button>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 28 }}>
+          <button onClick={() => handleLike(prof)} style={{ width: 56, height: 56, minWidth: 56, minHeight: 56, borderRadius: "50%", border: "none", background: likedIds.has(prof.id) ? `linear-gradient(135deg,${G.rouge},${G.rougeDark})` : "rgba(255,255,255,0.92)", color: likedIds.has(prof.id) ? "#fff" : G.rouge, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 10px 28px rgba(0,0,0,0.35)", cursor: "pointer", padding: 0, flexShrink: 0 }}><svg width="26" height="26" viewBox="0 0 24 24" fill={likedIds.has(prof.id) ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg></button>
           <button
             onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); openBottomSheet(prof); }}
-            style={{ width: 68, height: 68, minWidth: 68, minHeight: 68, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.28)", background: "rgba(0,0,0,0.55)", color: "#fff", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 5, boxShadow: "0 10px 28px rgba(0,0,0,0.35)", cursor: "pointer", backdropFilter: "blur(8px)", padding: 0, flexShrink: 0, WebkitTapHighlightColor: "transparent", touchAction: "manipulation" }}
+            style={{ width: 56, height: 56, minWidth: 56, minHeight: 56, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.28)", background: "rgba(0,0,0,0.55)", color: "#fff", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 5, boxShadow: "0 10px 28px rgba(0,0,0,0.35)", cursor: "pointer", backdropFilter: "blur(8px)", padding: 0, flexShrink: 0, WebkitTapHighlightColor: "transparent", touchAction: "manipulation" }}
           >
-            {[0,1,2].map(i => <div key={i} style={{ width: 22, height: 2.5, borderRadius: 2, background: "white" }} />)}
+            {[0,1,2].map(i => <div key={i} style={{ width: 18, height: 2.5, borderRadius: 2, background: "white" }} />)}
           </button>
         </div>
       </div>
@@ -8993,6 +8993,16 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [pendingPreview, setPendingPreview] = useState<string | null>(null);
   const [pendingViewOnce, setPendingViewOnce] = useState(false);
+  // ── Recadrage optionnel avant envoi : rectangle de sélection ajustable par l'utilisateur,
+  //    sur l'image affichée à sa taille réelle (pas de object-fit à compenser). Coordonnées du
+  //    rectangle en pixels d'affichage ; converties en pixels réels de l'image au moment du
+  //    rognage (cropImgRef.naturalWidth/Height). ──
+  const [cropModalOpen, setCropModalOpen] = useState(false);
+  const [cropDisplaySize, setCropDisplaySize] = useState<{ w: number; h: number } | null>(null);
+  const [cropRect, setCropRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
+  const [cropSaving, setCropSaving] = useState(false);
+  const cropImgRef = useRef<HTMLImageElement>(null);
+  const cropDragRef = useRef<{ mode: "move" | "tl" | "tr" | "bl" | "br"; startX: number; startY: number; rect: { x: number; y: number; w: number; h: number } } | null>(null);
   const [showDestroyed, setShowDestroyed] = useState(false);
   const [burnMsg, setBurnMsg] = useState<Message | null>(null);
   const [toast, setToast] = useState<ToastState>(null);
@@ -10123,6 +10133,82 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
     setPendingPreview(prev => { if (prev) URL.revokeObjectURL(prev); return null; });
     setPendingFile(null);
     setPendingViewOnce(false);
+    setCropModalOpen(false);
+    setCropDisplaySize(null);
+    setCropRect(null);
+  };
+  // ── Recadrage : ouverture, calcule la taille d'affichage (contenue dans l'écran, pas de
+  //    letterboxing à gérer puisqu'on impose w/h explicites au lieu de object-fit) et initialise
+  //    le rectangle de sélection sur l'image entière. ──
+  const openCropModal = () => {
+    if (!pendingPreview) return;
+    const img = new Image();
+    img.onload = () => {
+      const maxW = Math.min(window.innerWidth - 32, 480);
+      const maxH = window.innerHeight * 0.58;
+      let w = img.naturalWidth, h = img.naturalHeight;
+      const scale = Math.min(maxW / w, maxH / h, 1);
+      w = Math.round(w * scale); h = Math.round(h * scale);
+      setCropDisplaySize({ w, h });
+      setCropRect({ x: 0, y: 0, w, h });
+      setCropModalOpen(true);
+    };
+    img.src = pendingPreview;
+  };
+  const closeCropModal = () => { setCropModalOpen(false); cropDragRef.current = null; };
+  const MIN_CROP = 40;
+  const onCropPointerDown = (mode: "move" | "tl" | "tr" | "bl" | "br") => (e: React.PointerEvent) => {
+    if (!cropRect) return;
+    e.preventDefault(); e.stopPropagation();
+    (e.target as Element).setPointerCapture?.(e.pointerId);
+    cropDragRef.current = { mode, startX: e.clientX, startY: e.clientY, rect: { ...cropRect } };
+  };
+  const onCropPointerMove = (e: React.PointerEvent) => {
+    const drag = cropDragRef.current;
+    if (!drag || !cropDisplaySize) return;
+    const dx = e.clientX - drag.startX, dy = e.clientY - drag.startY;
+    const { w: maxW, h: maxH } = cropDisplaySize;
+    let { x, y, w, h } = drag.rect;
+    if (drag.mode === "move") {
+      x = Math.min(Math.max(0, drag.rect.x + dx), maxW - w);
+      y = Math.min(Math.max(0, drag.rect.y + dy), maxH - h);
+    } else {
+      let left = drag.rect.x, top = drag.rect.y, right = drag.rect.x + drag.rect.w, bottom = drag.rect.y + drag.rect.h;
+      if (drag.mode === "tl" || drag.mode === "bl") left = Math.min(Math.max(0, drag.rect.x + dx), right - MIN_CROP);
+      if (drag.mode === "tr" || drag.mode === "br") right = Math.max(Math.min(maxW, drag.rect.x + drag.rect.w + dx), left + MIN_CROP);
+      if (drag.mode === "tl" || drag.mode === "tr") top = Math.min(Math.max(0, drag.rect.y + dy), bottom - MIN_CROP);
+      if (drag.mode === "bl" || drag.mode === "br") bottom = Math.max(Math.min(maxH, drag.rect.y + drag.rect.h + dy), top + MIN_CROP);
+      x = left; y = top; w = right - left; h = bottom - top;
+    }
+    setCropRect({ x, y, w, h });
+  };
+  const onCropPointerUp = () => { cropDragRef.current = null; };
+  // Applique le rognage : dessine la portion sélectionnée dans un canvas à la résolution réelle,
+  // remplace pendingFile/pendingPreview par le résultat, referme la modale de recadrage —
+  // l'utilisateur retrouve l'écran d'aperçu habituel, avec l'image recadrée, et envoie normalement.
+  const confirmCrop = async () => {
+    if (!cropRect || !cropDisplaySize || !cropImgRef.current || !pendingFile) { closeCropModal(); return; }
+    setCropSaving(true);
+    try {
+      const natW = cropImgRef.current.naturalWidth, natH = cropImgRef.current.naturalHeight;
+      const scale = natW / cropDisplaySize.w;
+      const sx = Math.round(cropRect.x * scale), sy = Math.round(cropRect.y * scale);
+      const sw = Math.round(cropRect.w * scale), sh = Math.round(cropRect.h * scale);
+      const canvas = document.createElement("canvas");
+      canvas.width = sw; canvas.height = sh;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) { closeCropModal(); setCropSaving(false); return; }
+      ctx.drawImage(cropImgRef.current, sx, sy, sw, sh, 0, 0, sw, sh);
+      const mime = pendingFile.type || "image/jpeg";
+      const blob: Blob | null = await new Promise(resolve => canvas.toBlob(resolve, mime, 0.92));
+      if (blob) {
+        const newFile = new File([blob], pendingFile.name, { type: mime });
+        setPendingPreview(prev => { if (prev) URL.revokeObjectURL(prev); return URL.createObjectURL(newFile); });
+        setPendingFile(newFile);
+      }
+    } catch {}
+    setCropSaving(false);
+    closeCropModal();
   };
   // Étape 2 : envoi depuis l'écran d'aperçu (avec l'option vue unique choisie)
   const confirmSendImage = async () => {
@@ -11746,6 +11832,10 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
         <div style={{ position: "fixed", inset: 0, background: "#000", zIndex: 510, display: "flex", flexDirection: "column" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 18px" }}>
             <div onClick={cancelPending} style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(255,255,255,0.12)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#fff", fontSize: "1.1rem" }}>✕</div>
+            <div onClick={openCropModal} style={{ display: "flex", alignItems: "center", gap: 6, color: "#fff", fontWeight: 700, fontSize: "0.85rem", cursor: "pointer", padding: "6px 10px", borderRadius: 50, background: "rgba(255,255,255,0.12)" }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M18 22V8a2 2 0 0 0-2-2H2"/></svg>
+              Recadrer
+            </div>
             <div onClick={confirmSendImage} style={{ color: "#fff", fontWeight: 700, fontSize: "0.95rem", cursor: "pointer", padding: "6px 4px" }}>Envoyer</div>
           </div>
           <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", padding: "0 12px", minHeight: 0 }}>
@@ -11765,6 +11855,50 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
               </div>
             </div>
             <Btn variant="primary" onClick={confirmSendImage} style={{ width: "100%" }}>Envoyer</Btn>
+          </div>
+        </div>
+      )}
+
+      {/* Modale de recadrage : rectangle de sélection ajustable, optionnel — "Envoyer" sur
+          l'aperçu fonctionne sans jamais passer par ici. */}
+      {cropModalOpen && pendingPreview && cropDisplaySize && cropRect && (
+        <div style={{ position: "fixed", inset: 0, background: "#000", zIndex: 520, display: "flex", flexDirection: "column" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 18px" }}>
+            <div onClick={closeCropModal} style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(255,255,255,0.12)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#fff", fontSize: "1.1rem" }}>✕</div>
+            <div style={{ color: "#fff", fontWeight: 700, fontSize: "0.9rem" }}>Recadrer</div>
+            <div onClick={cropSaving ? undefined : confirmCrop} style={{ color: cropSaving ? "rgba(255,255,255,0.5)" : "#fff", fontWeight: 700, fontSize: "0.95rem", cursor: cropSaving ? "default" : "pointer", padding: "6px 4px" }}>{cropSaving ? "…" : "Valider"}</div>
+          </div>
+          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", minHeight: 0 }}>
+            <div
+              style={{ position: "relative", width: cropDisplaySize.w, height: cropDisplaySize.h, touchAction: "none" }}
+              onPointerMove={onCropPointerMove}
+              onPointerUp={onCropPointerUp}
+              onPointerCancel={onCropPointerUp}
+            >
+              <img ref={cropImgRef} src={pendingPreview} alt="à recadrer" style={{ width: cropDisplaySize.w, height: cropDisplaySize.h, display: "block", userSelect: "none", WebkitUserSelect: "none" }} draggable={false} />
+              <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.55)", clipPath: `polygon(0 0, 0 100%, ${cropRect.x}px 100%, ${cropRect.x}px ${cropRect.y}px, ${cropRect.x + cropRect.w}px ${cropRect.y}px, ${cropRect.x + cropRect.w}px ${cropRect.y + cropRect.h}px, ${cropRect.x}px ${cropRect.y + cropRect.h}px, ${cropRect.x}px 100%, 100% 100%, 100% 0)`, pointerEvents: "none" }} />
+              <div
+                onPointerDown={onCropPointerDown("move")}
+                style={{ position: "absolute", left: cropRect.x, top: cropRect.y, width: cropRect.w, height: cropRect.h, border: "2px solid #fff", cursor: "move" }}
+              >
+                <div style={{ position: "absolute", left: "33.33%", top: 0, bottom: 0, width: 1, background: "rgba(255,255,255,0.5)" }} />
+                <div style={{ position: "absolute", left: "66.66%", top: 0, bottom: 0, width: 1, background: "rgba(255,255,255,0.5)" }} />
+                <div style={{ position: "absolute", top: "33.33%", left: 0, right: 0, height: 1, background: "rgba(255,255,255,0.5)" }} />
+                <div style={{ position: "absolute", top: "66.66%", left: 0, right: 0, height: 1, background: "rgba(255,255,255,0.5)" }} />
+                {([["tl", 0, 0], ["tr", 1, 0], ["bl", 0, 1], ["br", 1, 1]] as [ "tl" | "tr" | "bl" | "br", number, number][]).map(([mode, hx, hy]) => (
+                  <div
+                    key={mode}
+                    onPointerDown={onCropPointerDown(mode)}
+                    style={{ position: "absolute", left: `calc(${hx * 100}% - 14px)`, top: `calc(${hy * 100}% - 14px)`, width: 28, height: 28, cursor: mode === "tl" || mode === "br" ? "nwse-resize" : "nesw-resize", display: "flex", alignItems: "center", justifyContent: "center" }}
+                  >
+                    <div style={{ width: 18, height: 18, borderRadius: 4, background: "#fff", boxShadow: "0 2px 6px rgba(0,0,0,0.4)" }} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div style={{ padding: "14px 18px 26px", textAlign: "center" }}>
+            <span style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.76rem" }}>Faites glisser les coins pour ajuster, ou le cadre pour le déplacer</span>
           </div>
         </div>
       )}
@@ -12238,7 +12372,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
 // démettre un modérateur). Pas de note vocale, pas de citation en réponse, pas de "vue unique" pour
 // l'instant — voir l'explication donnée au développeur en fin de réponse.
 // ═══════════════════════════════════════════════════════════════════════
-type GroupMessage = { id?: string; sender_id: string; content: string; created_at?: string; reactions?: Record<string, string[]>; deleted_for?: string[] };
+type GroupMessage = { id?: string; sender_id: string; content: string; created_at?: string; reactions?: Record<string, string[]>; deleted_for?: string[]; is_view_once?: boolean };
 type GroupMemberRow = { user_id: string; role: "admin" | "moderator" | "member"; status: "pending" | "approved" | "rejected"; removed_at?: string | null };
 
 function GroupChat({ auth, onBack, onShowPremium, onOpenPrivateChat }: { auth: Auth; onBack: () => void; onShowPremium: (r: string) => void; onOpenPrivateChat: (partnerId: string) => void }) {
@@ -12254,6 +12388,21 @@ function GroupChat({ auth, onBack, onShowPremium, onOpenPrivateChat }: { auth: A
   const [imgLoading, setImgLoading] = useState(false);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [pendingPreview, setPendingPreview] = useState<string | null>(null);
+  // ── Recadrage optionnel avant envoi (même principe que dans la messagerie privée). ──
+  const [cropModalOpen, setCropModalOpen] = useState(false);
+  const [cropDisplaySize, setCropDisplaySize] = useState<{ w: number; h: number } | null>(null);
+  const [cropRect, setCropRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
+  const [cropSaving, setCropSaving] = useState(false);
+  const cropImgRef = useRef<HTMLImageElement>(null);
+  const cropDragRef = useRef<{ mode: "move" | "tl" | "tr" | "bl" | "br"; startX: number; startY: number; rect: { x: number; y: number; w: number; h: number } } | null>(null);
+  // ── Vue unique dans le groupe : contrairement à la messagerie privée (un seul destinataire
+  //    possible, donc le fichier est réellement supprimé du Storage après lecture), un groupe a
+  //    plusieurs membres qui doivent encore pouvoir la voir — le fichier N'EST PAS supprimé.
+  //    "Vue unique" = chaque personne ne peut ouvrir la photo qu'une fois ; suivi individuellement
+  //    via la table group_message_views (message_id, viewer_id). ──
+  const [pendingViewOnce, setPendingViewOnce] = useState(false);
+  const [myGroupViews, setMyGroupViews] = useState<Set<string>>(new Set());
+  const [groupViewOnceLoading, setGroupViewOnceLoading] = useState<string | null>(null);
   const [imgViewer, setImgViewer] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -12330,6 +12479,23 @@ function GroupChat({ auth, onBack, onShowPremium, onOpenPrivateChat }: { auth: A
     const iv = setInterval(load, 15000); // filet de sécurité, indépendant du WebSocket
     return () => { alive = false; ws?.close(); clearInterval(iv); };
   }, [auth.token]);
+
+  // Mes vues personnelles des photos "vue unique" du groupe — chargées uniquement pour les
+  // messages concernés que je n'ai pas encore vérifiés, pour ne pas refaire l'appel à chaque poll.
+  const checkedGroupViewIdsRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const ids = msgs.filter(m => m.is_view_once && m.id && m.sender_id !== auth.userId && !checkedGroupViewIdsRef.current.has(m.id)).map(m => m.id as string);
+    if (!ids.length) return;
+    ids.forEach(id => checkedGroupViewIdsRef.current.add(id));
+    (async () => {
+      try {
+        const rows = await sb.query<{ message_id: string }>(auth.token, "group_message_views", `?viewer_id=eq.${auth.userId}&message_id=in.(${ids.join(",")})&select=message_id`);
+        if (Array.isArray(rows) && rows.length) {
+          setMyGroupViews(prev => { const next = new Set(prev); rows.forEach(r => next.add(r.message_id)); return next; });
+        }
+      } catch {}
+    })();
+  }, [msgs, auth.userId]);
 
   // Profils des expéditeurs affichés (nom + photo), chargés au fil des besoins
   useEffect(() => {
@@ -12429,10 +12595,91 @@ function GroupChat({ auth, onBack, onShowPremium, onOpenPrivateChat }: { auth: A
     setPendingPreview(URL.createObjectURL(file));
     setPendingFile(file);
   };
-  const cancelPending = () => { setPendingPreview(p => { if (p) URL.revokeObjectURL(p); return null; }); setPendingFile(null); };
+  const cancelPending = () => { setPendingPreview(p => { if (p) URL.revokeObjectURL(p); return null; }); setPendingFile(null); setPendingViewOnce(false); setCropModalOpen(false); setCropDisplaySize(null); setCropRect(null); };
+  // ── Ouvre une photo "vue unique" du groupe : ne supprime PAS le fichier (d'autres membres n'ont
+  //    peut-être pas encore vu), enregistre juste que CE membre l'a vue, une fois pour toutes. ──
+  const openGroupViewOnce = async (m: GroupMessage) => {
+    if (!m.id || myGroupViews.has(m.id) || groupViewOnceLoading) return;
+    setGroupViewOnceLoading(m.id);
+    try {
+      const url = getImageUrl(m.content);
+      setImgViewer(url);
+      setMyGroupViews(prev => new Set(prev).add(m.id as string));
+      await sb.insert(auth.token, "group_message_views", { message_id: m.id, viewer_id: auth.userId }).catch(() => {});
+    } catch {}
+    setGroupViewOnceLoading(null);
+  };
+  const openCropModal = () => {
+    if (!pendingPreview) return;
+    const img = new Image();
+    img.onload = () => {
+      const maxW = Math.min(window.innerWidth - 32, 480);
+      const maxH = window.innerHeight * 0.58;
+      let w = img.naturalWidth, h = img.naturalHeight;
+      const scale = Math.min(maxW / w, maxH / h, 1);
+      w = Math.round(w * scale); h = Math.round(h * scale);
+      setCropDisplaySize({ w, h });
+      setCropRect({ x: 0, y: 0, w, h });
+      setCropModalOpen(true);
+    };
+    img.src = pendingPreview;
+  };
+  const closeCropModal = () => { setCropModalOpen(false); cropDragRef.current = null; };
+  const MIN_CROP = 40;
+  const onCropPointerDown = (mode: "move" | "tl" | "tr" | "bl" | "br") => (e: React.PointerEvent) => {
+    if (!cropRect) return;
+    e.preventDefault(); e.stopPropagation();
+    (e.target as Element).setPointerCapture?.(e.pointerId);
+    cropDragRef.current = { mode, startX: e.clientX, startY: e.clientY, rect: { ...cropRect } };
+  };
+  const onCropPointerMove = (e: React.PointerEvent) => {
+    const drag = cropDragRef.current;
+    if (!drag || !cropDisplaySize) return;
+    const dx = e.clientX - drag.startX, dy = e.clientY - drag.startY;
+    const { w: maxW, h: maxH } = cropDisplaySize;
+    let { x, y, w, h } = drag.rect;
+    if (drag.mode === "move") {
+      x = Math.min(Math.max(0, drag.rect.x + dx), maxW - w);
+      y = Math.min(Math.max(0, drag.rect.y + dy), maxH - h);
+    } else {
+      let left = drag.rect.x, top = drag.rect.y, right = drag.rect.x + drag.rect.w, bottom = drag.rect.y + drag.rect.h;
+      if (drag.mode === "tl" || drag.mode === "bl") left = Math.min(Math.max(0, drag.rect.x + dx), right - MIN_CROP);
+      if (drag.mode === "tr" || drag.mode === "br") right = Math.max(Math.min(maxW, drag.rect.x + drag.rect.w + dx), left + MIN_CROP);
+      if (drag.mode === "tl" || drag.mode === "tr") top = Math.min(Math.max(0, drag.rect.y + dy), bottom - MIN_CROP);
+      if (drag.mode === "bl" || drag.mode === "br") bottom = Math.max(Math.min(maxH, drag.rect.y + drag.rect.h + dy), top + MIN_CROP);
+      x = left; y = top; w = right - left; h = bottom - top;
+    }
+    setCropRect({ x, y, w, h });
+  };
+  const onCropPointerUp = () => { cropDragRef.current = null; };
+  const confirmCrop = async () => {
+    if (!cropRect || !cropDisplaySize || !cropImgRef.current || !pendingFile) { closeCropModal(); return; }
+    setCropSaving(true);
+    try {
+      const natW = cropImgRef.current.naturalWidth, natH = cropImgRef.current.naturalHeight;
+      const scale = natW / cropDisplaySize.w;
+      const sx = Math.round(cropRect.x * scale), sy = Math.round(cropRect.y * scale);
+      const sw = Math.round(cropRect.w * scale), sh = Math.round(cropRect.h * scale);
+      const canvas = document.createElement("canvas");
+      canvas.width = sw; canvas.height = sh;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) { closeCropModal(); setCropSaving(false); return; }
+      ctx.drawImage(cropImgRef.current, sx, sy, sw, sh, 0, 0, sw, sh);
+      const mime = pendingFile.type || "image/jpeg";
+      const blob: Blob | null = await new Promise(resolve => canvas.toBlob(resolve, mime, 0.92));
+      if (blob) {
+        const newFile = new File([blob], pendingFile.name, { type: mime });
+        setPendingPreview(prev => { if (prev) URL.revokeObjectURL(prev); return URL.createObjectURL(newFile); });
+        setPendingFile(newFile);
+      }
+    } catch {}
+    setCropSaving(false);
+    closeCropModal();
+  };
   const confirmSendImage = async () => {
     if (!pendingFile) return;
     const file = pendingFile;
+    const once = pendingViewOnce;
     cancelPending();
     setImgLoading(true);
     try {
@@ -12445,7 +12692,9 @@ function GroupChat({ auth, onBack, onShowPremium, onOpenPrivateChat }: { auth: A
       });
       if (r.ok) {
         const url = `${SUPABASE_URL}/storage/v1/object/public/messages/${path}`;
-        const res = await sb.insert<GroupMessage>(auth.token, "group_messages", { sender_id: auth.userId, content: `[img]${url}[/img]` });
+        const row: Record<string, unknown> = { sender_id: auth.userId, content: `[img]${url}[/img]` };
+        if (once) row.is_view_once = true;
+        const res = await sb.insert<GroupMessage>(auth.token, "group_messages", row);
         if (res[0]) setMsgs(m => [...m, res[0]]);
       }
     } catch {}
@@ -12616,7 +12865,41 @@ function GroupChat({ auth, onBack, onShowPremium, onOpenPrivateChat }: { auth: A
                       </div>
                     )}
                     {isImg ? (
-                      <img src={getImageUrl(bubbleBody)} onClick={() => setImgViewer(getImageUrl(bubbleBody))} style={{ maxWidth: 220, borderRadius: 12, display: "block", cursor: "pointer" }} />
+                      m.is_view_once ? (
+                        isMine ? (
+                          <div style={{ display: "flex", alignItems: "center", gap: 9, padding: "8px 11px", minWidth: 170 }}>
+                            <div style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                            </div>
+                            <div style={{ minWidth: 0 }}>
+                              <div style={{ fontWeight: 700, fontSize: "0.82rem", color: "#fff" }}>Photo vue unique</div>
+                              <div style={{ fontSize: "0.68rem", color: "rgba(255,255,255,0.8)" }}>Envoyée</div>
+                            </div>
+                          </div>
+                        ) : myGroupViews.has(m.id || "") ? (
+                          <div style={{ display: "flex", alignItems: "center", gap: 9, padding: "8px 11px", minWidth: 170 }}>
+                            <div style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(0,0,0,0.06)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.brunLight} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                            </div>
+                            <div style={{ minWidth: 0 }}>
+                              <div style={{ fontWeight: 700, fontSize: "0.82rem", color: G.brun }}>Photo vue unique</div>
+                              <div style={{ fontSize: "0.68rem", color: "#999" }}>Déjà vue</div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div onClick={() => openGroupViewOnce(m)} style={{ display: "flex", alignItems: "center", gap: 9, padding: "8px 11px", minWidth: 170, cursor: "pointer" }}>
+                            <div style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(192,57,43,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                            </div>
+                            <div style={{ minWidth: 0 }}>
+                              <div style={{ fontWeight: 700, fontSize: "0.82rem", color: G.brun }}>Photo vue unique</div>
+                              <div style={{ fontSize: "0.68rem", color: G.rouge, fontWeight: 600 }}>{groupViewOnceLoading === m.id ? "…" : "Appuie pour voir"}</div>
+                            </div>
+                          </div>
+                        )
+                      ) : (
+                        <img src={getImageUrl(bubbleBody)} onClick={() => setImgViewer(getImageUrl(bubbleBody))} style={{ maxWidth: 220, borderRadius: 12, display: "block", cursor: "pointer" }} />
+                      )
                     ) : bubbleBody}
                     {/* Petite flèche : ouvre le menu (réagir, répondre, copier, supprimer) */}
                     <div onClick={(e) => { e.stopPropagation(); setContextMenu({ msg: m }); }} style={{ position: "absolute", top: 6, right: 6, width: 20, height: 20, borderRadius: "50%", background: isMine ? "rgba(255,255,255,0.16)" : "rgba(0,0,0,0.07)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
@@ -12733,11 +13016,76 @@ function GroupChat({ auth, onBack, onShowPremium, onOpenPrivateChat }: { auth: A
 
       {/* Aperçu photo avant envoi */}
       {pendingPreview && (
-        <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 610, display: "flex", flexDirection: "column" }}>
-          <img src={pendingPreview} style={{ flex: 1, objectFit: "contain", width: "100%" }} />
-          <div style={{ display: "flex", gap: 10, padding: 16 }}>
-            <Btn variant="ghost" onClick={cancelPending} style={{ flex: 1 }}>Annuler</Btn>
-            <Btn variant="primary" onClick={confirmSendImage} loading={imgLoading} style={{ flex: 1 }}>Envoyer</Btn>
+        <div style={{ position: "fixed", inset: 0, background: "#000", zIndex: 610, display: "flex", flexDirection: "column" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 18px" }}>
+            <div onClick={cancelPending} style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(255,255,255,0.12)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#fff", fontSize: "1.1rem" }}>✕</div>
+            <div onClick={openCropModal} style={{ display: "flex", alignItems: "center", gap: 6, color: "#fff", fontWeight: 700, fontSize: "0.85rem", cursor: "pointer", padding: "6px 10px", borderRadius: 50, background: "rgba(255,255,255,0.12)" }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M18 22V8a2 2 0 0 0-2-2H2"/></svg>
+              Recadrer
+            </div>
+            <div onClick={confirmSendImage} style={{ color: "#fff", fontWeight: 700, fontSize: "0.95rem", cursor: "pointer", padding: "6px 4px" }}>Envoyer</div>
+          </div>
+          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", padding: "0 12px", minHeight: 0 }}>
+            <img src={pendingPreview} alt="aperçu" style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", borderRadius: 14 }} />
+          </div>
+          <div style={{ padding: "16px 18px 26px" }}>
+            <div onClick={() => setPendingViewOnce(v => !v)} style={{ display: "flex", alignItems: "center", gap: 13, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.14)", borderRadius: 16, padding: "13px 15px", marginBottom: 14, cursor: "pointer" }}>
+              <div style={{ width: 40, height: 40, borderRadius: "50%", background: pendingViewOnce ? G.rouge : "rgba(255,255,255,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "background 0.15s" }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ color: "#fff", fontWeight: 700, fontSize: "0.9rem" }}>Vue unique</div>
+                <div style={{ color: "#aaa", fontSize: "0.76rem" }}>Chaque membre ne pourra l'ouvrir qu'une fois.</div>
+              </div>
+              <div style={{ width: 46, height: 27, borderRadius: 50, background: pendingViewOnce ? G.rouge : "rgba(255,255,255,0.25)", position: "relative", flexShrink: 0, transition: "background 0.15s" }}>
+                <div style={{ position: "absolute", top: 3, left: pendingViewOnce ? 22 : 3, width: 21, height: 21, borderRadius: "50%", background: G.blanc, transition: "left 0.15s" }} />
+              </div>
+            </div>
+            <Btn variant="primary" onClick={confirmSendImage} loading={imgLoading} style={{ width: "100%" }}>Envoyer</Btn>
+          </div>
+        </div>
+      )}
+
+      {/* Modale de recadrage : rectangle de sélection ajustable, optionnel — "Envoyer" sur
+          l'aperçu fonctionne sans jamais passer par ici. */}
+      {cropModalOpen && pendingPreview && cropDisplaySize && cropRect && (
+        <div style={{ position: "fixed", inset: 0, background: "#000", zIndex: 620, display: "flex", flexDirection: "column" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 18px" }}>
+            <div onClick={closeCropModal} style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(255,255,255,0.12)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#fff", fontSize: "1.1rem" }}>✕</div>
+            <div style={{ color: "#fff", fontWeight: 700, fontSize: "0.9rem" }}>Recadrer</div>
+            <div onClick={cropSaving ? undefined : confirmCrop} style={{ color: cropSaving ? "rgba(255,255,255,0.5)" : "#fff", fontWeight: 700, fontSize: "0.95rem", cursor: cropSaving ? "default" : "pointer", padding: "6px 4px" }}>{cropSaving ? "…" : "Valider"}</div>
+          </div>
+          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", minHeight: 0 }}>
+            <div
+              style={{ position: "relative", width: cropDisplaySize.w, height: cropDisplaySize.h, touchAction: "none" }}
+              onPointerMove={onCropPointerMove}
+              onPointerUp={onCropPointerUp}
+              onPointerCancel={onCropPointerUp}
+            >
+              <img ref={cropImgRef} src={pendingPreview} alt="à recadrer" style={{ width: cropDisplaySize.w, height: cropDisplaySize.h, display: "block", userSelect: "none", WebkitUserSelect: "none" }} draggable={false} />
+              <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.55)", clipPath: `polygon(0 0, 0 100%, ${cropRect.x}px 100%, ${cropRect.x}px ${cropRect.y}px, ${cropRect.x + cropRect.w}px ${cropRect.y}px, ${cropRect.x + cropRect.w}px ${cropRect.y + cropRect.h}px, ${cropRect.x}px ${cropRect.y + cropRect.h}px, ${cropRect.x}px 100%, 100% 100%, 100% 0)`, pointerEvents: "none" }} />
+              <div
+                onPointerDown={onCropPointerDown("move")}
+                style={{ position: "absolute", left: cropRect.x, top: cropRect.y, width: cropRect.w, height: cropRect.h, border: "2px solid #fff", cursor: "move" }}
+              >
+                <div style={{ position: "absolute", left: "33.33%", top: 0, bottom: 0, width: 1, background: "rgba(255,255,255,0.5)" }} />
+                <div style={{ position: "absolute", left: "66.66%", top: 0, bottom: 0, width: 1, background: "rgba(255,255,255,0.5)" }} />
+                <div style={{ position: "absolute", top: "33.33%", left: 0, right: 0, height: 1, background: "rgba(255,255,255,0.5)" }} />
+                <div style={{ position: "absolute", top: "66.66%", left: 0, right: 0, height: 1, background: "rgba(255,255,255,0.5)" }} />
+                {([["tl", 0, 0], ["tr", 1, 0], ["bl", 0, 1], ["br", 1, 1]] as [ "tl" | "tr" | "bl" | "br", number, number][]).map(([mode, hx, hy]) => (
+                  <div
+                    key={mode}
+                    onPointerDown={onCropPointerDown(mode)}
+                    style={{ position: "absolute", left: `calc(${hx * 100}% - 14px)`, top: `calc(${hy * 100}% - 14px)`, width: 28, height: 28, cursor: mode === "tl" || mode === "br" ? "nwse-resize" : "nesw-resize", display: "flex", alignItems: "center", justifyContent: "center" }}
+                  >
+                    <div style={{ width: 18, height: 18, borderRadius: 4, background: "#fff", boxShadow: "0 2px 6px rgba(0,0,0,0.4)" }} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div style={{ padding: "14px 18px 26px", textAlign: "center" }}>
+            <span style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.76rem" }}>Faites glisser les coins pour ajuster, ou le cadre pour le déplacer</span>
           </div>
         </div>
       )}
@@ -16061,7 +16409,7 @@ export default function App() {
       try {
         const [settingRows, profileRows] = await Promise.all([
           sb.query<{ key: string; value: string }>(auth.token, "app_settings", `?key=in.(phone_completion_prompt_enabled,verification_prompt_enabled,premium_nudge_enabled,premium_nudge_target,premium_nudge_message,promo_active,promo_price_fcfa,promo_expires_at,promo_target,promo_message)&select=key,value`),
-          sb.query<{ phone: string | null; age?: number; gender?: string; is_verified?: boolean; is_premium?: boolean; created_at?: string; last_seen?: string }>(auth.token, "profiles", `?id=eq.${auth.userId}&select=phone,age,gender,is_verified,is_premium,created_at,last_seen`),
+          sb.query<{ phone: string | null; age?: number; gender?: string; is_verified?: boolean; is_premium?: boolean; created_at?: string; last_seen?: string; city?: string }>(auth.token, "profiles", `?id=eq.${auth.userId}&select=phone,age,gender,is_verified,is_premium,created_at,last_seen,city`),
         ]);
         const settings: Record<string, string> = {};
         (Array.isArray(settingRows) ? settingRows : []).forEach(r => { settings[r.key] = r.value; });
@@ -16085,7 +16433,14 @@ export default function App() {
           const planOk = !tp || tp === "all" ||
             (tp === "nouveaux" && !!me.created_at && (Date.now() - new Date(me.created_at).getTime()) < 30 * 24 * 3600 * 1000) ||
             (tp === "gratuit" && !me.is_premium);
-          const matchesPromoTarget = genderOk && planOk;
+          // Deux exclusions absolues, indépendantes du ciblage choisi par l'admin :
+          // - déjà Premium : proposer un renouvellement à prix réduit n'a aucun sens ici
+          //   (la formule promo n'est qu'un mois, elle ne fait qu'écraser un abonnement en cours) ;
+          // - diaspora : ces membres paient un prix fixe en euros quelle que soit la formule
+          //   choisie (voir PremiumModal), donc le prix promo en FCFA ne s'applique jamais à eux —
+          //   leur montrer l'offre serait trompeur puisqu'ils ne peuvent pas en bénéficier.
+          const isDiaspora = /diaspora/i.test(me.city || "");
+          const matchesPromoTarget = genderOk && planOk && !me.is_premium && !isDiaspora;
           const promoPrice = parseInt(settings["promo_price_fcfa"] || "0") || 0;
           if (notExpired && matchesPromoTarget && promoPrice > 0) {
             const promoInfo = { price: promoPrice, expiresAt: expiresAt || "", message: settings["promo_message"] || "1 mois d'accès complet à Moyo Dating, à prix réduit." };
