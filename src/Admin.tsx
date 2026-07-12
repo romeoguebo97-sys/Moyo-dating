@@ -5524,7 +5524,104 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
       default: return base;
     }
   };
-    const [mktTab, setMktTab] = useState<"statuts" | "features" | "event" | "phoneprompt" | "premiumnudge">("statuts");
+  const [mktTab, setMktTab] = useState<"statuts" | "features" | "event" | "promo" | "phoneprompt" | "premiumnudge">("statuts");
+  // ── SUPER PROMO (formule 1 mois à prix réduit, ciblée, affichée côté membre max 1x/jour) ──
+  const PROMO_LABEL = "Super promo (1 mois)"; // doit rester identique au label envoyé par PremiumModal (subscription_selected)
+  const [promoActive, setPromoActive] = useState(false);
+  const [promoPrice, setPromoPrice] = useState("2500");
+  const [promoExpiresAt, setPromoExpiresAt] = useState("");
+  const [promoTarget, setPromoTarget] = useState("all");
+  const [promoMessage, setPromoMessage] = useState("1 mois d'accès complet à Moyo Dating, à prix réduit.");
+  const [promoCount, setPromoCount] = useState<number | null>(null);
+  const [promoCountLoading, setPromoCountLoading] = useState(false);
+  const [promoSaving, setPromoSaving] = useState(false);
+  const [promoStopConfirm, setPromoStopConfirm] = useState(false);
+  const [promoHistory, setPromoHistory] = useState<any[]>([]);
+  const [promoShowAll, setPromoShowAll] = useState(false);
+  const [promoStart, setPromoStart] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!auth) return;
+    (async () => {
+      try {
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(promo_active,promo_price_fcfa,promo_expires_at,promo_target,promo_message,promo_start,promo_history)&select=key,value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+        const rows = await r.json().catch(() => []);
+        const map: Record<string, string> = {};
+        (Array.isArray(rows) ? rows : []).forEach((row: any) => { map[row.key] = row.value; });
+        setPromoActive(map["promo_active"] === "true");
+        if (map["promo_price_fcfa"]) setPromoPrice(map["promo_price_fcfa"]);
+        if (map["promo_expires_at"]) setPromoExpiresAt(map["promo_expires_at"].slice(0, 16));
+        if (map["promo_target"]) setPromoTarget(map["promo_target"]);
+        if (map["promo_message"]) setPromoMessage(map["promo_message"]);
+        if (map["promo_start"]) setPromoStart(map["promo_start"]);
+        if (map["promo_history"]) { try { const p = JSON.parse(map["promo_history"]); if (Array.isArray(p)) setPromoHistory(p); } catch {} }
+      } catch {}
+    })();
+  }, [auth?.userId]);
+
+  useEffect(() => {
+    if (activeTab !== "marketing" || mktTab !== "promo") return;
+    let cancelled = false;
+    setPromoCountLoading(true);
+    (async () => {
+      try {
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?${campFilter(promoTarget)}&select=id`, { method: "HEAD", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "count=exact", "Range": "0-0" } });
+        const cr = r.headers.get("content-range"); const total = cr ? parseInt((cr.split("/")[1] || "0"), 10) : 0;
+        if (!cancelled) setPromoCount(isNaN(total) ? 0 : total);
+      } catch { if (!cancelled) setPromoCount(null); }
+      finally { if (!cancelled) setPromoCountLoading(false); }
+    })();
+    return () => { cancelled = true; };
+  }, [promoTarget, activeTab, mktTab]);
+
+  const savePromo = async () => {
+    if (!promoExpiresAt) { showToast("Choisis une date de fin.", "error"); return; }
+    const price = parseInt(promoPrice) || 0;
+    if (price <= 0 || price >= PREMIUM_PRICE_FCFA) { showToast("Le prix promo doit être inférieur au prix standard (" + PREMIUM_PRICE_FCFA.toLocaleString() + " FCFA).", "error"); return; }
+    setPromoSaving(true);
+    try {
+      const endISO = new Date(promoExpiresAt).toISOString();
+      const startISO = promoActive && promoStart ? promoStart : new Date().toISOString();
+      await Promise.all([
+        saveSetting("promo_price_fcfa", String(price), auth.token),
+        saveSetting("promo_expires_at", endISO, auth.token),
+        saveSetting("promo_target", promoTarget, auth.token),
+        saveSetting("promo_message", promoMessage, auth.token),
+        saveSetting("promo_start", startISO, auth.token),
+        saveSetting("promo_active", "true", auth.token),
+      ]);
+      setPromoActive(true);
+      setPromoStart(startISO);
+      showToast("Super promo activée.", "success");
+    } catch { showToast("Erreur lors de l'enregistrement de la promo.", "error"); }
+    finally { setPromoSaving(false); }
+  };
+
+  const stopPromo = async () => {
+    setPromoStopConfirm(false);
+    setPromoSaving(true);
+    try {
+      const startISO = promoStart || new Date().toISOString();
+      const nowISO = new Date().toISOString();
+      // Conversions = paiements enregistrés avec le label promo depuis le début de cette promo
+      let conversions = 0;
+      try {
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/payment_verification_requests?subscription_selected=eq.${encodeURIComponent(PROMO_LABEL)}&created_at=gte.${startISO}&select=id`, { method: "HEAD", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "count=exact", "Range": "0-0" } });
+        const cr = r.headers.get("content-range"); conversions = cr ? parseInt((cr.split("/")[1] || "0"), 10) : 0;
+      } catch {}
+      const rec = { id: `p_${Date.now()}`, price: parseInt(promoPrice) || 0, standardPrice: PREMIUM_PRICE_FCFA, target: promoTarget, targetLabel: CAMP_TARGETS.find(x => x.key === promoTarget)?.label || "Tous les utilisateurs gratuits", start: startISO, end: nowISO, message: promoMessage, conversions: isNaN(conversions) ? 0 : conversions };
+      const next = [rec, ...promoHistory].slice(0, 50);
+      setPromoHistory(next);
+      await Promise.all([
+        saveSetting("promo_active", "false", auth.token),
+        saveSetting("promo_history", JSON.stringify(next), auth.token),
+      ]);
+      setPromoActive(false);
+      showToast(`Promo arrêtée : ${rec.conversions} conversion${rec.conversions > 1 ? "s" : ""}.`, "success");
+    } catch { showToast("Erreur lors de l'arrêt de la promo.", "error"); }
+    finally { setPromoSaving(false); }
+  };
+
     const [phonePromptMissingCount, setPhonePromptMissingCount] = useState<number | null>(null);
     const [verifyPromptMissingCount, setVerifyPromptMissingCount] = useState<number | null>(null);
     const [premiumNudgeTarget, setPremiumNudgeTarget] = useState("all");
@@ -10011,13 +10108,13 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
       {activeTab === "marketing" && (
         <div style={{ padding: "16px" }}>
           <div style={{ display: "flex", gap: 10, marginBottom: 16, overflowX: "auto", paddingBottom: 2 }}>
-            {([["statuts", "Statuts Moyo Dating", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>], ["features", "Mises en avant", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>], ["event", "Campagnes Premium", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>], ["phoneprompt", "Profil incomplet", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>], ["premiumnudge", "Inciter au Premium", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>]] as [("statuts" | "features" | "event" | "phoneprompt" | "premiumnudge"), string, React.ReactElement][]).map(([k, lbl, ico]) => (
+            {([["statuts", "Statuts Moyo Dating", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>], ["features", "Mises en avant", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>], ["event", "Campagnes Premium", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>], ["promo", "Promotion", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/><line x1="9" y1="9" x2="9" y2="9"/></svg>], ["phoneprompt", "Profil incomplet", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>], ["premiumnudge", "Inciter au Premium", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>]] as [("statuts" | "features" | "event" | "promo" | "phoneprompt" | "premiumnudge"), string, React.ReactElement][]).map(([k, lbl, ico]) => (
               <button key={k} onClick={() => setMktTab(k)} style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 7, padding: "9px 18px", borderRadius: 999, cursor: "pointer", fontSize: "0.82rem", fontWeight: 800, background: mktTab === k ? "#E67E22" : "#fff", color: mktTab === k ? "#fff" : "#555", border: mktTab === k ? "none" : `1.5px solid ${G.gris}`, boxShadow: mktTab === k ? "0 4px 12px rgba(230,126,34,0.25)" : "none" }}>{ico}{lbl}{k === "features" && featurePendingCount > 0 && <span style={{ background: mktTab === k ? "#fff" : "#E67E22", color: mktTab === k ? "#E67E22" : "#fff", borderRadius: 50, fontSize: "0.6rem", fontWeight: 800, padding: "1px 6px", lineHeight: 1.5 }}>{featurePendingCount > 99 ? "99+" : featurePendingCount}</span>}</button>
             ))}
           </div>
 
           {/* ── Cartes KPI (contextuelles selon le sous-onglet, masquées sur Événement Premium) ── */}
-          {mktTab !== "event" && mktTab !== "phoneprompt" && mktTab !== "premiumnudge" && (
+          {mktTab !== "event" && mktTab !== "promo" && mktTab !== "phoneprompt" && mktTab !== "premiumnudge" && (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: 12, marginBottom: 16 }}>
             {(mktTab === "statuts" ? [
               { ic: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>, bg: "rgba(192,57,43,0.12)", label: "Statuts actifs", value: officialStatuses.length, sub: "En ligne actuellement", subColor: G.rouge },
@@ -10439,6 +10536,106 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               </div>
             );
           })()}
+
+          {mktTab === "promo" && (() => {
+            const visiblePromoHistory = promoShowAll ? promoHistory : promoHistory.slice(0, 3);
+            const price = parseInt(promoPrice) || 0;
+            const pct = PREMIUM_PRICE_FCFA > 0 && price > 0 ? Math.floor((1 - price / PREMIUM_PRICE_FCFA) * 100) : 0;
+            return (
+              <div style={{ background: G.blanc, borderRadius: 18, padding: 20, boxShadow: "0 2px 10px rgba(0,0,0,0.05)", maxWidth: 640 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18, flexWrap: "wrap", gap: 10 }}>
+                  <div>
+                    <div style={{ fontSize: "0.95rem", fontWeight: 800, color: G.brun }}>Super promo Premium</div>
+                    <div style={{ fontSize: "0.78rem", color: "#888", marginTop: 4, lineHeight: 1.5, maxWidth: 420 }}>Offre une formule "1 mois" à prix réduit aux membres non-premium ciblés. L'écran s'affiche à l'ouverture de l'app, au maximum une fois par jour, jusqu'à la date de fin.</div>
+                  </div>
+                  <span style={{ fontSize: "0.72rem", fontWeight: 800, padding: "5px 12px", borderRadius: 999, background: promoActive ? "rgba(26,92,58,0.1)" : "rgba(136,136,136,0.12)", color: promoActive ? "#1a5c3a" : "#888" }}>{promoActive ? "Active" : "Inactive"}</span>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12, marginBottom: 18 }}>
+                  <div style={{ background: G.creme, borderRadius: 12, padding: "12px 14px" }}>
+                    <div style={{ fontSize: "0.72rem", color: "#888", fontWeight: 700 }}>Prix promo</div>
+                    <div style={{ fontSize: "1.3rem", fontWeight: 900, color: G.rouge }}>{price.toLocaleString("fr-FR")} FCFA</div>
+                  </div>
+                  <div style={{ background: G.creme, borderRadius: 12, padding: "12px 14px" }}>
+                    <div style={{ fontSize: "0.72rem", color: "#888", fontWeight: 700 }}>Bénéficiaires ciblés</div>
+                    <div style={{ fontSize: "1.3rem", fontWeight: 900, color: G.brun }}>{promoCountLoading ? "…" : (promoCount ?? "—")}</div>
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#999", marginBottom: 6 }}>Prix standard (1 mois)</div>
+                  <input type="text" disabled value={`${PREMIUM_PRICE_FCFA.toLocaleString("fr-FR")} FCFA`} style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.85rem", background: G.creme, color: "#888" }} />
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
+                  <div>
+                    <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#999", marginBottom: 6 }}>Prix promo (FCFA){pct > 0 && <span style={{ color: "#1a5c3a", fontWeight: 800 }}> · -{pct}%</span>}</div>
+                    <input type="number" value={promoPrice} onChange={e => setPromoPrice(e.target.value)} style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.85rem" }} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#999", marginBottom: 6 }}>Se termine le</div>
+                    <input type="datetime-local" value={promoExpiresAt} onChange={e => setPromoExpiresAt(e.target.value)} style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.85rem" }} />
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#999", marginBottom: 6 }}>Cible</div>
+                  <select value={promoTarget} onChange={e => setPromoTarget(e.target.value)} style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.85rem", background: G.blanc }}>
+                    {CAMP_TARGETS.map(t => <option key={t.key} value={t.key}>{t.label}</option>)}
+                  </select>
+                </div>
+
+                <div style={{ marginBottom: 18 }}>
+                  <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#999", marginBottom: 6 }}>Message affiché sur l'écran</div>
+                  <textarea value={promoMessage} onChange={e => setPromoMessage(e.target.value)} rows={2} style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.85rem", fontFamily: "inherit", resize: "vertical" }} />
+                </div>
+
+                <div style={{ display: "flex", gap: 10 }}>
+                  <button onClick={savePromo} disabled={promoSaving} style={{ flex: 1, background: promoSaving ? "#aaa" : `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: "#fff", border: "none", borderRadius: 10, padding: "11px", fontSize: "0.82rem", fontWeight: 800, cursor: promoSaving ? "not-allowed" : "pointer" }}>{promoSaving ? "…" : (promoActive ? "Mettre à jour" : "Activer la promo")}</button>
+                  {promoActive && (
+                    <button onClick={() => setPromoStopConfirm(true)} disabled={promoSaving} style={{ flex: 1, background: G.blanc, color: "#c0392b", border: "1px solid rgba(192,57,43,0.3)", borderRadius: 10, padding: "11px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer" }}>Arrêter la promo</button>
+                  )}
+                </div>
+
+                <div style={{ borderTop: `1px solid ${G.gris}`, marginTop: 20, paddingTop: 16 }}>
+                  <div style={{ fontWeight: 900, fontSize: "1rem", color: G.brun, marginBottom: 14 }}>Promotions précédentes</div>
+                  {promoHistory.length === 0 ? (
+                    <div style={{ fontSize: "0.8rem", color: "#999", textAlign: "center", padding: "16px 0" }}>Aucune promotion terminée pour le moment.</div>
+                  ) : (
+                    <>
+                      <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr 1fr 0.8fr", gap: 8, fontSize: "0.68rem", fontWeight: 800, color: "#999", padding: "0 4px 8px", textTransform: "uppercase" }}>
+                        <span>Cible</span><span>Prix promo</span><span>Période</span><span>Conversions</span>
+                      </div>
+                      {visiblePromoHistory.map(h => (
+                        <div key={h.id} style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr 1fr 0.8fr", gap: 8, alignItems: "center", padding: "10px 4px", borderTop: `1px solid ${G.gris}`, fontSize: "0.78rem" }}>
+                          <span style={{ fontWeight: 700, color: G.brun }}>{h.targetLabel}</span>
+                          <span>{(h.price || 0).toLocaleString("fr-FR")} FCFA</span>
+                          <span style={{ color: "#888", fontSize: "0.72rem" }}>{fmtDate(h.start)} → {fmtDate(h.end)}</span>
+                          <span style={{ fontWeight: 800, color: "#1a5c3a" }}>{h.conversions ?? 0}</span>
+                        </div>
+                      ))}
+                      {promoHistory.length > 3 && (
+                        <div style={{ textAlign: "center", marginTop: 10 }}>
+                          <button onClick={() => setPromoShowAll(s => !s)} style={{ background: "transparent", border: "none", color: G.rouge, fontSize: "0.78rem", fontWeight: 700, cursor: "pointer" }}>{promoShowAll ? "Voir moins" : `Voir toutes les promotions (${promoHistory.length})`}</button>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+
+                {promoStopConfirm && (
+                  <ConfirmModal
+                    msg={"Arrêter la Super Promo ?\n\nLes membres ne verront plus l'écran promo. Cette action est définitive pour cette campagne (elle passe dans l'historique)."}
+                    confirmLabel="Arrêter la promo"
+                    danger
+                    onConfirm={stopPromo}
+                    onCancel={() => setPromoStopConfirm(false)}
+                  />
+                )}
+              </div>
+            );
+          })()}
+
           {campConfirm && (
             <ConfirmModal
               msg={`Lancer cette campagne ?\n\n${(campCount || 0).toLocaleString("fr-FR")} utilisateur(s) ciblé(s) (${campTargetLabel(campTarget)}) recevront le Premium gratuitement pendant ${campDays} jours, jusqu'au ${campEndDate ? new Date(campEndDate).toLocaleDateString("fr-FR") : "—"}.\n\nLes abonnés payants ne sont pas affectés.`}

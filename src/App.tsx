@@ -1984,7 +1984,7 @@ function UploadRingOverlay({ active, size, ringColor, children }: { active: bool
   );
 }
 
-function PremiumModal({ onClose, reason, userId, token, userEmail, giftFor }: { onClose: () => void; reason: string; userId: string; token: string; userEmail?: string; giftFor?: { id: string; name: string } | null }) {
+function PremiumModal({ onClose, reason, userId, token, userEmail, giftFor, promo }: { onClose: () => void; reason: string; userId: string; token: string; userEmail?: string; giftFor?: { id: string; name: string } | null; promo?: { price: number; expiresAt: string } | null }) {
   const [step, setStep] = useState<"offer" | "mtn" | "airtel" | "b1" | "b2" | "b3" | "b4">(PREMIUM_SCREEN_VARIANT === "b" ? "b1" : "offer");
   // ── Congo ou diaspora ? Déterminé depuis la ville du profil ("Diaspora Europe", "Diaspora
   //    Amérique", etc. sont déjà des options existantes dans le formulaire de profil). Tant que
@@ -2013,12 +2013,16 @@ function PremiumModal({ onClose, reason, userId, token, userEmail, giftFor }: { 
   const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null);
   const [screenshotUploading, setScreenshotUploading] = useState(false);
   const [screenshotSent, setScreenshotSent] = useState(false);
+  // Formule promo (1 mois à prix réduit) : n'apparaît que si un contexte promo actif a été
+  // transmis (venant de la fenêtre Super Promo). Mêmes jours qu'un mois standard.
+  const promoDays = Math.round(PREMIUM_30_DAYS_MS / 86400000) || 31;
   const PREMIUM_PLANS = [
+    promo && { id: "promo", label: "Super promo (1 mois)", per: "mois", amount: promo.price, days: promoDays, popular: true, badge: PREMIUM_PRICE_FCFA > 0 ? `-${Math.floor((1 - promo.price / PREMIUM_PRICE_FCFA) * 100)}%` : null },
     PLAN_WEEK_ENABLED && { id: "1sem", label: "1 semaine", per: "semaine", amount: PREMIUM_PRICE_WEEK_FCFA, days: PREMIUM_DAYS_WEEK },
-    PLAN_MONTH_ENABLED && { id: "1mois", label: "1 mois", per: "mois", amount: PREMIUM_PRICE_FCFA, days: Math.round(PREMIUM_30_DAYS_MS / 86400000) || 31, popular: true },
+    PLAN_MONTH_ENABLED && { id: "1mois", label: "1 mois", per: "mois", amount: PREMIUM_PRICE_FCFA, days: Math.round(PREMIUM_30_DAYS_MS / 86400000) || 31, popular: !promo },
     PLAN_2MONTH_ENABLED && { id: "2mois", label: "2 mois", per: "2 mois", amount: PREMIUM_PRICE_2MONTH_FCFA, days: PREMIUM_DAYS_2MONTH, badge: (PREMIUM_PRICE_FCFA > 0 && PREMIUM_PRICE_2MONTH_FCFA < PREMIUM_PRICE_FCFA * 2) ? `-${Math.floor((1 - PREMIUM_PRICE_2MONTH_FCFA / (PREMIUM_PRICE_FCFA * 2)) * 100)}%` : null },
   ].filter(Boolean) as { id: string; label: string; per: string; amount: number; days: number; popular?: boolean; badge?: string | null }[];
-  const [planId, setPlanId] = useState("1mois");
+  const [planId, setPlanId] = useState(promo ? "promo" : "1mois");
   const selectedPlan = PREMIUM_PLANS.find(p => p.id === planId) || PREMIUM_PLANS[0];
   const planAmount = selectedPlan.amount;
   const [txRef, setTxRef] = useState("");
@@ -15137,6 +15141,12 @@ export default function App() {
   const [verifyPromptMe, setVerifyPromptMe] = useState<{ age?: number; gender?: string }>({});
   const [premiumNudgeOpen, setPremiumNudgeOpen] = useState(false);
   const [premiumNudgeMessage, setPremiumNudgeMessage] = useState("");
+  // ── Fenêtre "Super promo" : offre Premium 1 mois à prix réduit, ciblée par segment,
+  //    affichée au max une fois par jour. Le prix/l'expiration/le message viennent de
+  //    app_settings (promo_*) et sont transmis à PremiumModal pour appliquer le tarif réduit. ──
+  const [superPromoOpen, setSuperPromoOpen] = useState(false);
+  const [superPromoData, setSuperPromoData] = useState<{ price: number; expiresAt: string; message: string } | null>(null);
+  const [activePromo, setActivePromo] = useState<{ price: number; expiresAt: string } | null>(null);
   // ── Sondages (côté membre) ──
   const [activeSurvey, setActiveSurvey] = useState<any | null>(null);
   const [showSurveyInvite, setShowSurveyInvite] = useState(false);
@@ -16007,7 +16017,7 @@ export default function App() {
     (async () => {
       try {
         const [settingRows, profileRows] = await Promise.all([
-          sb.query<{ key: string; value: string }>(auth.token, "app_settings", `?key=in.(phone_completion_prompt_enabled,verification_prompt_enabled,premium_nudge_enabled,premium_nudge_target,premium_nudge_message)&select=key,value`),
+          sb.query<{ key: string; value: string }>(auth.token, "app_settings", `?key=in.(phone_completion_prompt_enabled,verification_prompt_enabled,premium_nudge_enabled,premium_nudge_target,premium_nudge_message,promo_active,promo_price_fcfa,promo_expires_at,promo_target,promo_message)&select=key,value`),
           sb.query<{ phone: string | null; age?: number; gender?: string; is_verified?: boolean; is_premium?: boolean; created_at?: string; last_seen?: string }>(auth.token, "profiles", `?id=eq.${auth.userId}&select=phone,age,gender,is_verified,is_premium,created_at,last_seen`),
         ]);
         const settings: Record<string, string> = {};
@@ -16019,6 +16029,33 @@ export default function App() {
         if (settings["phone_completion_prompt_enabled"] === "true" && !hasPhone) { setPhonePromptOpen(true); return; }
 
         if (settings["verification_prompt_enabled"] === "true" && !me.is_verified) { setVerifyPromptMe({ age: me.age, gender: me.gender }); setVerifyPromptOpen(true); return; }
+
+        if (settings["promo_active"] === "true" && !me.is_premium) {
+          const expiresAt = settings["promo_expires_at"];
+          const notExpired = !expiresAt || new Date(expiresAt).getTime() > Date.now();
+          const target = settings["promo_target"] || "all";
+          const matchesPromoTarget =
+            target === "all" ? true :
+            target === "femmes" ? me.gender === "Femme" :
+            target === "hommes" ? me.gender === "Homme" :
+            target === "nouveaux" ? (me.created_at ? (Date.now() - new Date(me.created_at).getTime()) < 30 * 24 * 3600 * 1000 : false) :
+            target === "inactifs" ? (me.last_seen ? (Date.now() - new Date(me.last_seen).getTime()) > 30 * 24 * 3600 * 1000 : false) :
+            target === "actifs" ? (me.last_seen ? (Date.now() - new Date(me.last_seen).getTime()) < 7 * 24 * 3600 * 1000 : false) :
+            target === "verifies" ? !!me.is_verified :
+            true;
+          const promoPrice = parseInt(settings["promo_price_fcfa"] || "0") || 0;
+          if (notExpired && matchesPromoTarget && promoPrice > 0) {
+            const seenKey = `moyo_super_promo_seen_${auth.userId}`;
+            const lastSeen = localStorage.getItem(seenKey);
+            const today = new Date().toDateString();
+            if (lastSeen !== today) {
+              setSuperPromoData({ price: promoPrice, expiresAt: expiresAt || "", message: settings["promo_message"] || "1 mois d'accès complet à Moyo Dating, à prix réduit." });
+              setSuperPromoOpen(true);
+              localStorage.setItem(seenKey, today);
+              return;
+            }
+          }
+        }
 
         if (settings["premium_nudge_enabled"] === "true" && !me.is_premium) {
           const target = settings["premium_nudge_target"] || "all";
@@ -16146,7 +16183,7 @@ export default function App() {
       </div>
     </AppShell>
     {auth && <RelationalNudge auth={auth} onGoProfile={() => setTab("profile")} />}
-    {premiumModal && <PremiumModal reason={premiumModal} onClose={() => { setPremiumModal(null); setGiftTarget(null); }} userId={auth?.userId || ""} token={auth?.token || ""} userEmail={auth?.email || ""} giftFor={giftTarget} />}
+    {premiumModal && <PremiumModal reason={premiumModal} onClose={() => { setPremiumModal(null); setGiftTarget(null); setActivePromo(null); }} userId={auth?.userId || ""} token={auth?.token || ""} userEmail={auth?.email || ""} giftFor={giftTarget} promo={giftTarget ? null : activePromo} />}
     {privacyNotice && <PrivacyNoticeModal gender={privacyNotice.gender} onClose={ackPrivacyNotice} />}
     {premiumSuccess && (
       <div onClick={() => setPremiumSuccess(false)} className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100000, padding: 20, backdropFilter: "blur(3px)" }}>
@@ -16231,8 +16268,49 @@ export default function App() {
       </div>
     )}
 
+    {/* ── Fenêtre : Super Promo (offre 1 mois à prix réduit, ciblée, une fois par jour max) ── */}
+    {superPromoOpen && superPromoData && !phonePromptOpen && !verifyPromptOpen && (() => {
+      const msLeft = superPromoData.expiresAt ? new Date(superPromoData.expiresAt).getTime() - Date.now() : null;
+      const daysLeft = msLeft !== null && msLeft > 0 ? Math.floor(msLeft / (24 * 3600 * 1000)) : null;
+      const hoursLeft = msLeft !== null && msLeft > 0 ? Math.floor((msLeft % (24 * 3600 * 1000)) / (3600 * 1000)) : null;
+      const pct = PREMIUM_PRICE_FCFA > 0 ? Math.floor((1 - superPromoData.price / PREMIUM_PRICE_FCFA) * 100) : 0;
+      return (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 20500, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div style={{ width: "100%", maxWidth: 320, borderRadius: 28, padding: 3, background: `linear-gradient(160deg,${G.rouge},${G.rougeDark})` }}>
+            <div style={{ background: G.creme, borderRadius: 26, padding: "26px 22px", textAlign: "center", position: "relative" }}>
+              <button onClick={() => setSuperPromoOpen(false)} aria-label="Fermer" style={{ position: "absolute", top: 12, right: 12, background: "none", border: "none", color: G.brunLight, opacity: 0.5, cursor: "pointer", padding: 4 }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+              </button>
+              {daysLeft !== null && (
+                <div style={{ display: "inline-block", fontSize: "0.68rem", fontWeight: 700, color: G.rougeDark, background: "rgba(192,57,43,0.1)", borderRadius: 999, padding: "5px 12px", marginBottom: 14, letterSpacing: "0.3px" }}>
+                  OFFRE LIMITÉE · SE TERMINE DANS {daysLeft}J {hoursLeft}H
+                </div>
+              )}
+              <div style={{ position: "relative", width: 92, height: 92, margin: "4px auto 16px" }}>
+                <div style={{ position: "absolute", inset: 0, borderRadius: "50%", background: "rgba(192,57,43,0.12)" }} />
+                <div style={{ position: "absolute", inset: 12, borderRadius: "50%", background: "rgba(192,57,43,0.18)" }} />
+                <div style={{ position: "absolute", inset: 20, borderRadius: "50%", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: "rotate(-8deg)" }}><path d="M3 11l18-5v12L3 14v-3z" /><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6" /></svg>
+                </div>
+              </div>
+              <h3 style={{ margin: "0 0 2px", fontSize: "1.7rem", fontWeight: 800, color: G.brun, lineHeight: 1.1, letterSpacing: "-0.5px" }}>Super promo</h3>
+              <h3 style={{ margin: "0 0 14px", fontSize: "1.8rem", fontWeight: 800, color: G.rouge, lineHeight: 1.1, letterSpacing: "-0.5px" }}>Premium</h3>
+              <p style={{ fontSize: "0.82rem", color: G.brunLight, opacity: 0.85, margin: "0 auto 20px", maxWidth: 220, lineHeight: 1.6 }}>{superPromoData.message}</p>
+              <div style={{ background: G.blanc, border: `1px solid ${G.gris}`, borderRadius: 16, padding: "18px 16px", marginBottom: 20 }}>
+                <div style={{ fontSize: "1.9rem", fontWeight: 800, color: G.rouge, letterSpacing: "-0.5px" }}>{superPromoData.price.toLocaleString("fr-FR")} FCFA</div>
+                <div style={{ fontSize: "0.82rem", color: "#9a9086", textDecoration: "line-through", marginBottom: 8 }}>{PREMIUM_PRICE_FCFA.toLocaleString("fr-FR")} FCFA</div>
+                {pct > 0 && <span style={{ display: "inline-block", fontSize: "0.7rem", fontWeight: 600, color: "#1a5c3a", background: "rgba(26,92,58,0.1)", padding: "4px 12px", borderRadius: 999 }}>-{pct}% ce mois-ci</span>}
+              </div>
+              <button onClick={() => { setSuperPromoOpen(false); setActivePromo({ price: superPromoData.price, expiresAt: superPromoData.expiresAt }); showPremium("Super promo Premium"); }} style={{ width: "100%", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: "#fff", border: "none", padding: 14, fontSize: "0.9rem", fontWeight: 700, borderRadius: 999, marginBottom: 10, cursor: "pointer" }}>J'en profite</button>
+              <button onClick={() => setSuperPromoOpen(false)} style={{ background: "none", border: "none", color: G.brunLight, opacity: 0.55, fontSize: "0.78rem", padding: 4, cursor: "pointer" }}>Plus tard</button>
+            </div>
+          </div>
+        </div>
+      );
+    })()}
+
     {/* ── Fenêtre : incitation à passer Premium (dismissible, "Plus tard") ── */}
-    {premiumNudgeOpen && !phonePromptOpen && !verifyPromptOpen && (
+    {premiumNudgeOpen && !phonePromptOpen && !verifyPromptOpen && !superPromoOpen && (
       <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 19000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
         <div style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 340, textAlign: "center" }}>
           <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(230,126,34,0.12)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
