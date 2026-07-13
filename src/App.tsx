@@ -9088,8 +9088,21 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
   const [burnMsg, setBurnMsg] = useState<Message | null>(null);
   const [toast, setToast] = useState<ToastState>(null);
   const [moderationAlert, setModerationAlert] = useState<"insult" | "scam" | "sexual" | null>(null);
+  // ── Fiche plein écran du partenaire (clic sur sa photo dans l'en-tête) : même style visuel que
+  //    le mode plein écran de Découvrir (photo pleine page, dégradé, infos en bas), mais sans
+  //    bouton liker ni menu — juste une croix pour fermer. `open.partner` ne contient pas déjà
+  //    bio/religion/profession/hobbies/city (chargés en léger pour la liste des conversations),
+  //    donc on les récupère à l'ouverture et on les fusionne une fois arrivés. ──
   const [showPartnerProfile, setShowPartnerProfile] = useState(false);
-  const [partnerMenuOpen, setPartnerMenuOpen] = useState(false);
+  const [partnerFullProfile, setPartnerFullProfile] = useState<Profile | null>(null);
+  const openPartnerFullProfile = () => {
+    if (!open.partner) return;
+    setPartnerFullProfile(open.partner);
+    setShowPartnerProfile(true);
+    sb.query<Profile>(auth.token, "profiles", `?id=eq.${open.partner.id}&select=city,bio,religion,profession,hobbies`)
+      .then(res => { const extra = res?.[0]; if (extra) setPartnerFullProfile(p => p ? { ...p, ...extra } : p); })
+      .catch(() => {});
+  };
   const [partnerReportOpen, setPartnerReportOpen] = useState(false);
   const [confirmUnmatchPartner, setConfirmUnmatchPartner] = useState(false);
   const [confirmGiftRequest, setConfirmGiftRequest] = useState(false);
@@ -10008,7 +10021,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
     try {
       await sb.insert(auth.token, "blocks", { blocker_id: auth.userId, blocked_id: open.partner.id });
       setToast({ msg: `${open.partner.name} a été bloqué(e).`, type: "success" });
-      setPartnerMenuOpen(false); setShowPartnerProfile(false);
+      setShowPartnerProfile(false);
       closeChat();
     } catch { setToast({ msg: "Impossible de bloquer pour le moment.", type: "error" }); }
     setPartnerActionLoading(false);
@@ -10019,7 +10032,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
     try {
       await sb.insert(auth.token, "reports", { reporter_id: auth.userId, reported_id: open.partner.id, reason, status: "pending" });
       setToast({ msg: "Signalement envoyé. Merci, notre équipe va vérifier.", type: "success" });
-      setPartnerReportOpen(false); setPartnerMenuOpen(false); setShowPartnerProfile(false);
+      setPartnerReportOpen(false); setShowPartnerProfile(false);
     } catch { setToast({ msg: "Impossible d'envoyer le signalement.", type: "error" }); }
     setPartnerActionLoading(false);
   };
@@ -10068,7 +10081,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
       await sb.delete(auth.token, "likes", `?from_user=eq.${partnerId}&to_user=eq.${auth.userId}`);
       setToast({ msg: "Match annulé.", type: "success" });
     } catch { setToast({ msg: "Impossible d'annuler le match.", type: "error" }); }
-    setConfirmUnmatchPartner(false); setPartnerMenuOpen(false); setShowPartnerProfile(false);
+    setConfirmUnmatchPartner(false); setShowPartnerProfile(false);
     closeChat();
     setPartnerActionLoading(false);
   };
@@ -11187,7 +11200,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
             <path d="M19 12H5M12 19l-7-7 7-7"/>
           </svg>
         </div>
-        <div onClick={() => setShowPartnerProfile(true)} style={{ cursor: "pointer" }}>
+        <div onClick={openPartnerFullProfile} style={{ cursor: "pointer" }}>
           <Avatar url={open.partner?.photo_url} gender={open.partner?.gender} size={38} premium={open.partner?.is_premium} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -12120,6 +12133,24 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
                   <div style={{ fontWeight: 700, fontSize: "0.93rem", color: G.brun }}>Demander Premium</div>
                 </div>
               )}
+              <div onPointerDown={() => { setConvMenuOpen(false); setTimeout(() => setConfirmUnmatchPartner(true), 50); }} style={{ padding: "15px 20px", display: "flex", alignItems: "center", gap: 14, cursor: "pointer", borderBottom: "1px solid #F8F8F8", WebkitTapHighlightColor: "transparent" }}>
+                <div style={{ width: 42, height: 42, borderRadius: "50%", background: "#F5F5F5", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={G.brun} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z" /><line x1="4" y1="4" x2="20" y2="20" /></svg>
+                </div>
+                <div style={{ fontWeight: 700, fontSize: "0.93rem", color: G.brun }}>Annuler le match</div>
+              </div>
+              <div onPointerDown={() => { setConvMenuOpen(false); setTimeout(blockPartnerNow, 50); }} style={{ padding: "15px 20px", display: "flex", alignItems: "center", gap: 14, cursor: partnerActionLoading ? "wait" : "pointer", borderBottom: "1px solid #F8F8F8", WebkitTapHighlightColor: "transparent" }}>
+                <div style={{ width: 42, height: 42, borderRadius: "50%", background: "#F5F5F5", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={G.brun} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="4.93" y1="4.93" x2="19.07" y2="19.07" /></svg>
+                </div>
+                <div style={{ fontWeight: 700, fontSize: "0.93rem", color: G.brun }}>Bloquer</div>
+              </div>
+              <div onPointerDown={() => { setConvMenuOpen(false); setTimeout(() => setPartnerReportOpen(true), 50); }} style={{ padding: "15px 20px", display: "flex", alignItems: "center", gap: 14, cursor: "pointer", borderBottom: "1px solid #F8F8F8", WebkitTapHighlightColor: "transparent" }}>
+                <div style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(231,76,60,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>
+                </div>
+                <div style={{ fontWeight: 700, fontSize: "0.93rem", color: "#e74c3c" }}>Signaler</div>
+              </div>
               <div onPointerDown={() => { setConvMenuOpen(false); setTimeout(() => setShowDeleteConv(true), 50); }} style={{ padding: "15px 20px", display: "flex", alignItems: "center", gap: 14, cursor: "pointer", WebkitTapHighlightColor: "transparent" }}>
                 <div style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                   <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" /></svg>
@@ -12131,53 +12162,45 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
         </div>
       )}
 
-      {/* Modal profil partenaire */}
-      {showPartnerProfile && open.partner && (
-        <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 500, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={() => setShowPartnerProfile(false)}>
-          <div className="moyo-sheet-in" style={{ background: G.blanc, borderRadius: "24px 24px 0 0", width: "100%", maxWidth: 500, maxHeight: "90vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
-            <div style={{ height: 270, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", position: "relative", overflow: "hidden" }}>
-              {open.partner.photo_url
-                ? <img src={open.partner.photo_url} alt={open.partner.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" />
-                : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
-              }
-              <div onClick={() => setShowPartnerProfile(false)} style={{ position: "absolute", top: 14, right: 14, background: "rgba(0,0,0,0.4)", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#fff", fontWeight: 700 }}>✕</div>
-              {open.partner.id !== SUPPORT_TEAM_ID && (
-                <div onClick={() => setPartnerMenuOpen(v => !v)} style={{ position: "absolute", top: 14, right: 58, background: "rgba(0,0,0,0.4)", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#fff" }} title="Options">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.6" strokeLinecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
-                </div>
-              )}
-              {partnerMenuOpen && (
-                <>
-                  <div onClick={() => setPartnerMenuOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 1 }} />
-                  <div style={{ position: "absolute", top: 54, right: 58, background: G.blanc, borderRadius: 14, overflow: "hidden", boxShadow: "0 8px 28px rgba(0,0,0,0.25)", zIndex: 2, minWidth: 185 }}>
-                    {auth.isPremium && !open.partner.is_premium && (
-                      <div onClick={() => { setPartnerMenuOpen(false); setShowPartnerProfile(false); if (open.partner) onShowGiftPremium?.({ id: open.partner.id, name: open.partner.name }); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#B8860B", cursor: "pointer", borderBottom: "1px solid #F5F5F5", display: "flex", alignItems: "center", gap: 8 }}>
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#B8860B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 12v10H4V12"/><rect x="2" y="7" width="20" height="5" rx="1"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
-                        Offrir Premium
-                      </div>
-                    )}
-                    <div onClick={() => { setPartnerMenuOpen(false); setConfirmUnmatchPartner(true); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: G.brun, cursor: "pointer", borderBottom: "1px solid #F5F5F5" }}>Annuler le match</div>
-                    <div onClick={blockPartnerNow} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: G.brun, cursor: partnerActionLoading ? "wait" : "pointer", borderBottom: "1px solid #F5F5F5" }}>Bloquer</div>
-                    <div onClick={() => { setPartnerMenuOpen(false); setPartnerReportOpen(true); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#e74c3c", cursor: "pointer" }}>Signaler</div>
-                  </div>
-                </>
-              )}
-              <div style={{ position: "absolute", bottom: 14, left: 16, color: "#fff" }}>
-                <div style={{ fontSize: "1.5rem", fontWeight: 700, textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>{open.partner.name}{open.partner.id === SUPPORT_TEAM_ID ? "" : `, ${open.partner.age} ans`}</div>
-                <div style={{ fontSize: "0.82rem", opacity: 0.9 }}>{open.partner.id === SUPPORT_TEAM_ID ? "Équipe officielle" : open.partner.city}</div>
-              </div>
+      {/* Fiche plein écran du partenaire — même style visuel que le mode plein écran de
+          Découvrir, sans bouton liker ni menu, juste une croix pour fermer. */}
+      {showPartnerProfile && partnerFullProfile && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 500, background: "var(--c-shell-bg)" }}>
+          {partnerFullProfile.photo_url ? (
+            <img src={partnerFullProfile.photo_url} alt={partnerFullProfile.name} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+          ) : (
+            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.75)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
             </div>
-            <div style={{ padding: "18px 20px 32px" }}>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
-                {open.partner.gender && <span style={{ background: "rgba(192,57,43,0.08)", color: G.rouge, borderRadius: 50, padding: "4px 12px", fontSize: "0.78rem", fontWeight: 600 }}>{open.partner.gender}</span>}
-                {open.partner.religion && <span style={{ background: "rgba(212,168,67,0.1)", border: "1px solid rgba(212,168,67,0.3)", color: "#555", borderRadius: 50, padding: "4px 12px", fontSize: "0.78rem" }}>{open.partner.religion}</span>}
-                {open.partner.is_premium && <span style={{ background: "rgba(212,168,67,0.12)", color: "#555", borderRadius: 50, padding: "4px 12px", fontSize: "0.78rem", fontWeight: 600 }}>Premium</span>}
-              </div>
-              {open.partner.bio && <p style={{ fontSize: "0.88rem", color: "#555", lineHeight: 1.6 }}>{open.partner.bio}</p>}
+          )}
+          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.48) 32%, rgba(0,0,0,0.05) 66%, rgba(0,0,0,0.22) 100%)", pointerEvents: "none" }} />
+          <button onClick={() => setShowPartnerProfile(false)} style={{ position: "absolute", top: 16, right: 16, width: 44, height: 44, minWidth: 44, minHeight: 44, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.35)", background: "rgba(0,0,0,0.48)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 16px rgba(0,0,0,0.3)", cursor: "pointer", backdropFilter: "blur(8px)", padding: 0 }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+          </button>
+          {partnerFullProfile.id !== SUPPORT_TEAM_ID && !partnerFullProfile.hide_online_status && getOnlineStatus(partnerFullProfile.last_seen).label === "En ligne" && (
+            <div style={{ position: "absolute", top: 16, left: 16, display: "flex", alignItems: "center", gap: 7, background: "rgba(0,0,0,0.48)", border: "1px solid rgba(255,255,255,0.35)", borderRadius: 50, padding: "9px 14px", boxShadow: "0 4px 16px rgba(0,0,0,0.3)", backdropFilter: "blur(8px)", color: "#fff", fontSize: "0.8rem", fontWeight: 700 }}>
+              <span style={{ width: 9, height: 9, borderRadius: "50%", background: "#27ae60", boxShadow: "0 0 0 3px rgba(39,174,96,0.35)", flexShrink: 0 }} />
+              En ligne
             </div>
+          )}
+          <div style={{ position: "absolute", left: 18, right: 18, bottom: "calc(env(safe-area-inset-bottom, 0px) + 22px)", color: "#fff" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, minWidth: 0 }}>
+              <div style={{ fontSize: "1.85rem", fontWeight: 800, lineHeight: 1.05, textShadow: "0 2px 10px rgba(0,0,0,0.5)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}>{partnerFullProfile.name}{partnerFullProfile.id === SUPPORT_TEAM_ID ? "" : `, ${partnerFullProfile.age} ans`}</div>
+              {partnerFullProfile.is_premium && <PremiumBadge size={20} />}
+              {partnerFullProfile.is_verified && <VerifiedBadge size={20} />}
+            </div>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
+              {partnerFullProfile.gender && <span style={{ background: "rgba(255,255,255,0.18)", color: "#fff", borderRadius: 50, padding: "4px 10px", fontSize: "0.76rem", fontWeight: 700, backdropFilter: "blur(6px)" }}>{partnerFullProfile.gender}</span>}
+              {partnerFullProfile.city && <span style={{ background: "rgba(255,255,255,0.18)", color: "#fff", borderRadius: 50, padding: "4px 10px", fontSize: "0.76rem", fontWeight: 700, backdropFilter: "blur(6px)", maxWidth: 150, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{partnerFullProfile.city}</span>}
+              {partnerFullProfile.religion && <span style={{ background: "rgba(212,168,67,0.28)", color: "#fff", border: "1px solid rgba(212,168,67,0.55)", borderRadius: 50, padding: "4px 10px", fontSize: "0.76rem", fontWeight: 700, backdropFilter: "blur(6px)", maxWidth: 170, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{partnerFullProfile.religion}</span>}
+              {partnerFullProfile.profession && <span style={{ background: "rgba(255,255,255,0.16)", color: "#fff", borderRadius: 50, padding: "4px 10px", fontSize: "0.76rem", fontWeight: 700, backdropFilter: "blur(6px)", maxWidth: 170, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{partnerFullProfile.profession}</span>}
+              {partnerFullProfile.hobbies && <span style={{ background: "rgba(26,92,58,0.38)", color: "#fff", border: "1px solid rgba(255,255,255,0.18)", borderRadius: 50, padding: "4px 10px", fontSize: "0.76rem", fontWeight: 700, backdropFilter: "blur(6px)", maxWidth: 170, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{partnerFullProfile.hobbies}</span>}
+            </div>
+            {partnerFullProfile.bio && <div style={{ fontSize: "0.86rem", lineHeight: 1.45, opacity: 0.92, textShadow: "0 1px 8px rgba(0,0,0,0.5)", overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical" }}>{partnerFullProfile.bio}</div>}
           </div>
         </div>
       )}
+
       {/* Sous-menu : raison du signalement */}
       {partnerReportOpen && open.partner && (
         <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 510, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={() => !partnerActionLoading && setPartnerReportOpen(false)}>
@@ -14453,9 +14476,6 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
         <label style={{ display: "block", fontWeight: 600, marginBottom: 7, fontSize: "0.88rem", color: "#555" }}>Bio</label>
         <textarea value={form.bio || ""} onChange={e => setForm(f => ({ ...f, bio: e.target.value.slice(0, 160) }))} rows={3} maxLength={160} style={{ width: "100%", boxSizing: "border-box", display: "block", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, marginBottom: 4, fontSize: "0.93rem", resize: "none", fontFamily: "inherit" }} />
         <div style={{ textAlign: "right", fontSize: "0.75rem", color: (form.bio || "").length >= 150 ? G.rouge : "#aaa", marginBottom: 16 }}>{(form.bio || "").length}/160</div>
-        <label style={{ display: "block", fontWeight: 600, marginBottom: 7, fontSize: "0.88rem", color: "#555" }}>Numéro WhatsApp <span style={{ color: "#aaa", fontSize: "0.78rem", fontWeight: 400 }}>(privé)</span></label>
-        <input value={form.phone || ""} onChange={e => setForm(f => ({ ...f, phone: e.target.value.slice(0, 25) }))} placeholder="+242 06 513 20 12" style={{ width: "100%", boxSizing: "border-box", display: "block", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, marginBottom: 6, fontSize: "0.93rem", fontFamily: "inherit" }} />
-        <div style={{ fontSize: "0.74rem", color: "#999", lineHeight: 1.5, marginBottom: 16 }}>Jamais visible par les autres membres. Sert à la récupération de ton compte et aux notifications WhatsApp.</div>
         <div style={{ display: "flex", gap: 10 }}>
           <Btn variant="ghost" onClick={() => setEditing(false)} style={{ flex: 1 }}>Annuler</Btn>
           <Btn variant="primary" onClick={saveProfile} style={{ flex: 2 }}>Sauvegarder ✓</Btn>
@@ -14629,11 +14649,6 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
               </span>
             )}
           </div>
-          {profile?.bio && (
-            <div style={{ display: "inline-block", background: "rgba(0,0,0,0.04)", borderRadius: 14, padding: "10px 18px", maxWidth: 280 }}>
-              <div style={{ fontSize: "0.85rem", color: "#555", fontStyle: "italic", lineHeight: 1.6 }}>"{profile.bio}"</div>
-            </div>
-          )}
         </div>
 
         {/* 4 Boutons : extérieurs au niveau normal, centraux descendent sur la vague */}
@@ -14884,6 +14899,42 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
           );
         })()}
 
+        {/* Numéro WhatsApp — affichage/édition ET réglage de visibilité réunis dans une seule
+            carte, plutôt que deux cartes séparées qui portaient sur la même donnée avec un
+            message contradictoire ("privé" écrit en dur alors que le réglage peut le rendre
+            visible aux matchs Premium). */}
+        {(!isWideProfile || activeSection === "main") && (
+          <div style={{ background: G.blanc, borderRadius: 18, border: profile?.phone ? "1.5px solid rgba(37,211,102,0.3)" : "1.5px dashed rgba(192,57,43,0.35)", boxShadow: "0 2px 10px rgba(0,0,0,0.06)", overflow: "hidden" }}>
+            <div onClick={() => { if (!profile?.phone) setEditing(true); }} style={{ padding: "15px 18px", display: "flex", alignItems: "center", gap: 14, cursor: profile?.phone ? "default" : "pointer" }}>
+              <div style={{ width: 44, height: 44, borderRadius: "50%", background: profile?.phone ? "rgba(37,211,102,0.12)" : "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill={profile?.phone ? "#25D366" : G.rouge}><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24z"/></svg>
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: "0.7rem", color: "#888", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 2 }}>Mon numéro WhatsApp</div>
+                {profile?.phone
+                  ? <div style={{ fontSize: "0.87rem", color: "#333", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{profile.phone}</div>
+                  : <div style={{ fontSize: "0.87rem", color: G.rouge, fontWeight: 700 }}>Ajouter mon numéro</div>}
+              </div>
+              {profile?.phone
+                ? <div onClick={(e) => { e.stopPropagation(); setEditing(true); }} style={{ cursor: "pointer", color: "#bbb", flexShrink: 0, padding: 4 }}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div>
+                : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>}
+            </div>
+            {profile?.phone && (
+              <div onClick={async () => {
+                const newShared = !profile.share_phone_with_matches;
+                await sb.update(auth.token, "profiles", auth.userId, { share_phone_with_matches: newShared });
+                setProfile(p => p ? { ...p, share_phone_with_matches: newShared } : null);
+                setToast({ msg: newShared ? "Numéro visible par tes matchs Premium" : "Numéro masqué", type: "success" });
+              }} style={{ padding: "13px 18px", borderTop: "1px solid #F5F5F5", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
+                <div style={{ fontSize: "0.83rem", fontWeight: 600, color: G.brun }}>Visible par mes matchs Premium</div>
+                <div style={{ width: 46, height: 26, borderRadius: 50, background: profile.share_phone_with_matches ? "#27ae60" : G.gris, position: "relative", transition: "background 0.3s", flexShrink: 0 }}>
+                  <div style={{ position: "absolute", top: 3, left: profile.share_phone_with_matches ? 23 : 3, width: 20, height: 20, borderRadius: "50%", background: G.blanc, boxShadow: "0 2px 6px rgba(0,0,0,0.2)", transition: "left 0.3s" }} />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {promoAvailable && (
           <div onClick={onOpenSuperPromo} style={{ marginTop: 12, background: G.creme, border: `1.5px solid ${G.rouge}`, borderRadius: 16, padding: "14px 16px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12 }}>
             <div style={{ width: 40, height: 40, borderRadius: "50%", background: "rgba(192,57,43,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -15055,26 +15106,6 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
 
 
 
-        {/* Numéro WhatsApp (privé) */}
-        {(!isWideProfile || activeSection === "main") && (
-          <div onClick={() => { if (!profile?.phone) setEditing(true); }} style={{ background: G.blanc, borderRadius: 18, border: profile?.phone ? "1.5px solid rgba(37,211,102,0.3)" : "1.5px dashed rgba(192,57,43,0.35)", boxShadow: "0 2px 10px rgba(0,0,0,0.06)", overflow: "hidden", cursor: profile?.phone ? "default" : "pointer" }}>
-            <div style={{ padding: "15px 18px", display: "flex", alignItems: "center", gap: 14 }}>
-              <div style={{ width: 44, height: 44, borderRadius: "50%", background: profile?.phone ? "rgba(37,211,102,0.12)" : "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <svg width="22" height="22" viewBox="0 0 24 24" fill={profile?.phone ? "#25D366" : G.rouge}><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24z"/></svg>
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: "0.7rem", color: "#888", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 2 }}>Mon numéro WhatsApp</div>
-                {profile?.phone
-                  ? <div style={{ fontSize: "0.87rem", color: "#333", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{profile.phone} <span style={{ fontSize: "0.7rem", color: "#aaa", fontWeight: 500 }}>· privé</span></div>
-                  : <div style={{ fontSize: "0.87rem", color: G.rouge, fontWeight: 700 }}>Ajouter mon numéro</div>}
-              </div>
-              {profile?.phone
-                ? <div onClick={(e) => { e.stopPropagation(); setEditing(true); }} style={{ cursor: "pointer", color: "#bbb", flexShrink: 0, padding: 4 }}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div>
-                : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>}
-            </div>
-          </div>
-        )}
-
         {/* Demande de vérification */}
         {(!isWideProfile || ["verification","main"].includes(activeSection)) && (!profile?.is_verified ? (
           <a href={`https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent(`Bonjour, je souhaite faire vérifier mon compte Moyo Dating.\n\n👤 Nom : ${profile?.name || auth.name}\n🎂 Âge : ${profile?.age} ans\n⚥ Genre : ${profile?.gender}\n📧 Email : ${auth.email}\n\nMerci !`)}`} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
@@ -15151,32 +15182,6 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
                 setToast({ msg: newHidden ? "Statut en ligne masqué 🔒" : "Statut en ligne visible ✅" });
               }} style={{ width: 52, height: 28, borderRadius: 50, background: !hidden ? "#27ae60" : G.gris, cursor: "pointer", position: "relative", transition: "background 0.3s", flexShrink: 0 }}>
                 <div style={{ position: "absolute", top: 3, left: !hidden ? 27 : 3, width: 22, height: 22, borderRadius: "50%", background: G.blanc, boxShadow: "0 2px 6px rgba(0,0,0,0.2)", transition: "left 0.3s" }} />
-              </div>
-            </div>
-          );
-        })()}
-
-        {/* Partage du numéro avec les matchs Premium (confidentialité) */}
-        {(!isWideProfile || ["visibility","main"].includes(activeSection)) && profile && (() => {
-          const shared = !!profile.share_phone_with_matches;
-          return (
-            <div style={{ background: G.blanc, borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: `1px solid var(--c-card-bd)`, marginTop: 12 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                <div style={{ width: 42, height: 42, borderRadius: "50%", background: shared ? "rgba(39,174,96,0.1)" : "rgba(150,150,150,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={shared ? "#27ae60" : "#999"} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.53a16 16 0 0 0 6.06 6.06l1.09-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" /></svg>
-                </div>
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: "0.95rem", color: G.brun }}>Numéro visible par mes matchs</div>
-                  <div style={{ fontSize: "0.82rem", color: "#888", marginTop: 2, maxWidth: 200 }}>{shared ? "Tes matchs Premium peuvent voir ton numéro" : "Personne ne peut voir ton numéro"}</div>
-                </div>
-              </div>
-              <div onClick={async () => {
-                const newShared = !shared;
-                await sb.update(auth.token, "profiles", auth.userId, { share_phone_with_matches: newShared });
-                setProfile(p => p ? { ...p, share_phone_with_matches: newShared } : null);
-                setToast({ msg: newShared ? "Numéro visible par tes matchs Premium" : "Numéro masqué", type: "success" });
-              }} style={{ width: 52, height: 28, borderRadius: 50, background: shared ? "#27ae60" : G.gris, cursor: "pointer", position: "relative", transition: "background 0.3s", flexShrink: 0 }}>
-                <div style={{ position: "absolute", top: 3, left: shared ? 27 : 3, width: 22, height: 22, borderRadius: "50%", background: G.blanc, boxShadow: "0 2px 6px rgba(0,0,0,0.2)", transition: "left 0.3s" }} />
               </div>
             </div>
           );
