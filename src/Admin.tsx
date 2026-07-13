@@ -6852,7 +6852,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
   const [premiumGrantModal, setPremiumGrantModal] = useState<AdminProfile | null>(null);
   const [grantFreeDate, setGrantFreeDate] = useState("");
   const [grantOperator, setGrantOperator] = useState<"MTN" | "Airtel" | null>(null);
-  const [grantTab, setGrantTab] = useState<"paid" | "free">("paid");
+  const [grantTab, setGrantTab] = useState<"paid" | "promo" | "free">("paid");
   const [grantSelectedPlan, setGrantSelectedPlan] = useState<{ label: string; days: number; amount: number } | null>(null);
   const [grantTxRef, setGrantTxRef] = useState("");
   const [banHours, setBanHours] = useState("24");
@@ -7217,6 +7217,17 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
       if (!r.ok || !created?.id) {
         const errMsg = (data as any)?.message || (data as any)?.hint || (data as any)?.code || `HTTP ${r.status}`;
         throw new Error(errMsg);
+      }
+      // Alimente aussi le suivi "Conversions" de l'onglet Promotion, sur le même principe que
+      // les paiements faits directement par le client (subscription_selected = label de la
+      // formule) — sinon les activations manuelles pendant une promo restent invisibles dans
+      // ces statistiques, alors que le CA (Budget/Paiements), lui, est bien correct.
+      if (grantSelectedPlan.label === PROMO_LABEL) {
+        fetch(`${SUPABASE_URL}/rest/v1/payment_verification_requests`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` },
+          body: JSON.stringify({ user_id: user.id, transaction_id: grantTxRef.trim(), phone_number: null, subscription_selected: PROMO_LABEL, status: "pending" }),
+        }).catch(() => {});
       }
       logAdminAction(auth.token, auth.userId, auth.name, `Demande de paiement manuelle envoyée pour ${user.name}, formule ${grantSelectedPlan.label} (${grantSelectedPlan.amount.toLocaleString()} FCFA, ${grantOperator}, réf. ${grantTxRef.trim()}), en attente de validation Super Admin.`, user.id);
       showToast(`Demande envoyée pour ${user.name}. Un Super Admin doit la valider dans Budget/Paiements.`, "success");
@@ -8675,6 +8686,9 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               {/* ── Sélecteur d'onglets (façon Windows) ── */}
               <div style={{ display: "flex", background: G.creme, borderRadius: 12, padding: 4, marginBottom: 20, gap: 4 }}>
                 <button onClick={() => setGrantTab("paid")} style={{ flex: 1, background: grantTab === "paid" ? G.blanc : "transparent", boxShadow: grantTab === "paid" ? "0 1px 4px rgba(0,0,0,0.12)" : "none", border: "none", borderRadius: 9, padding: "9px 6px", fontSize: "0.78rem", fontWeight: 800, color: grantTab === "paid" ? G.brun : "#999", cursor: "pointer" }}>💳 Paiement</button>
+                {autoShortcuts.promo_active && (
+                  <button onClick={() => { setGrantTab("promo"); const promoPlan = plans.find(p => p.label === "Mois"); setGrantSelectedPlan({ label: PROMO_LABEL, days: promoPlan?.days || 31, amount: parseInt(promoPrice) || 0 }); }} style={{ flex: 1, background: grantTab === "promo" ? G.blanc : "transparent", boxShadow: grantTab === "promo" ? "0 1px 4px rgba(0,0,0,0.12)" : "none", border: "none", borderRadius: 9, padding: "9px 6px", fontSize: "0.78rem", fontWeight: 800, color: grantTab === "promo" ? G.rouge : "#999", cursor: "pointer" }}>🏷️ Promotion</button>
+                )}
                 <button onClick={() => setGrantTab("free")} style={{ flex: 1, background: grantTab === "free" ? G.blanc : "transparent", boxShadow: grantTab === "free" ? "0 1px 4px rgba(0,0,0,0.12)" : "none", border: "none", borderRadius: 9, padding: "9px 6px", fontSize: "0.78rem", fontWeight: 800, color: grantTab === "free" ? G.brun : "#999", cursor: "pointer" }}>🎁 Offrir gratuitement</button>
               </div>
 
@@ -8712,6 +8726,34 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     Envoyer la demande →
                   </button>
                   {(!grantOperator || !grantTxRef.trim() || !grantSelectedPlan) && <div style={{ fontSize: "0.66rem", color: "#bbb", marginTop: 6 }}>Renseignez l'opérateur, la référence et la formule pour envoyer.</div>}
+                </div>
+              )}
+
+              {/* ── Onglet Promotion : même flux que Paiement, mais prix figé sur la promo en
+                  cours (récupéré automatiquement), pour ne jamais facturer le prix normal à un
+                  client qui a payé pendant une promotion. ── */}
+              {grantTab === "promo" && (
+                <div>
+                  <div style={{ fontSize: "0.78rem", fontWeight: 800, color: G.brun, marginBottom: 8 }}>🏷️ Le client a payé le prix promo (capture WhatsApp)</div>
+                  <div style={{ fontSize: "0.68rem", color: "#888", marginBottom: 10 }}>Renseignez l'opérateur et la référence visibles sur la preuve de paiement. Le prix de la Super Promo en cours est déjà appliqué automatiquement. Un <strong>Super Admin</strong> devra vérifier et activer depuis Budget/Paiements.</div>
+
+                  <div style={{ background: "rgba(192,57,43,0.06)", border: "1.5px solid rgba(192,57,43,0.25)", borderRadius: 12, padding: "12px 14px", marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontSize: "0.85rem", fontWeight: 700, color: G.brun }}>Super promo (1 mois)</span>
+                    <span style={{ fontSize: "0.95rem", fontWeight: 800, color: G.rouge }}>{(parseInt(promoPrice) || 0).toLocaleString()} FCFA</span>
+                  </div>
+
+                  <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+                    <button onClick={() => setGrantOperator("MTN")} style={{ flex: 1, background: grantOperator === "MTN" ? "#FFCC00" : G.creme, border: `1.5px solid ${grantOperator === "MTN" ? "#FFCC00" : G.gris}`, borderRadius: 10, padding: "9px", fontSize: "0.8rem", fontWeight: 800, color: "#1a1a1a", cursor: "pointer" }}>MTN MoMo</button>
+                    <button onClick={() => setGrantOperator("Airtel")} style={{ flex: 1, background: grantOperator === "Airtel" ? "#E40000" : G.creme, border: `1.5px solid ${grantOperator === "Airtel" ? "#E40000" : G.gris}`, borderRadius: 10, padding: "9px", fontSize: "0.8rem", fontWeight: 800, color: grantOperator === "Airtel" ? "#fff" : G.brun, cursor: "pointer" }}>Airtel Money</button>
+                  </div>
+                  <input value={grantTxRef} onChange={e => setGrantTxRef(e.target.value)} placeholder="Référence de transaction (ID reçu par SMS)"
+                    style={{ width: "100%", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.82rem", outline: "none", fontFamily: "inherit", marginBottom: 12 }} />
+
+                  <button disabled={!grantOperator || !grantTxRef.trim() || !grantSelectedPlan || actionLoading === u.id} onClick={sendPremiumPaymentRequest}
+                    style={{ width: "100%", background: (!grantOperator || !grantTxRef.trim() || !grantSelectedPlan) ? "#ccc" : `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: "#fff", border: "none", borderRadius: 12, padding: "12px", fontSize: "0.85rem", fontWeight: 800, cursor: (!grantOperator || !grantTxRef.trim() || !grantSelectedPlan) ? "not-allowed" : "pointer" }}>
+                    Envoyer la demande →
+                  </button>
+                  {(!grantOperator || !grantTxRef.trim()) && <div style={{ fontSize: "0.66rem", color: "#bbb", marginTop: 6 }}>Renseignez l'opérateur et la référence pour envoyer.</div>}
                 </div>
               )}
 

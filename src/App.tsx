@@ -706,7 +706,7 @@ export type Auth = {
   refreshToken?: string;
   expiresAt?: number;
 };
-export type Profile = { id: string; name: string; age: number; city: string; gender: string; bio: string; religion?: string; profession?: string; hobbies?: string; phone?: string | null; photo_url?: string | null; is_premium: boolean; is_admin?: boolean; is_visible?: boolean; is_verified?: boolean; is_certified?: boolean; last_seen?: string; hide_online_status?: boolean; warning_count?: number; is_banned?: boolean; ban_until?: string | null; ban_reason?: string | null; last_notice_acknowledged?: boolean; last_notice_at?: string | null; has_installed_pwa?: boolean; account_deleted?: boolean };
+export type Profile = { id: string; name: string; age: number; city: string; gender: string; bio: string; religion?: string; profession?: string; hobbies?: string; phone?: string | null; photo_url?: string | null; is_premium: boolean; is_admin?: boolean; is_visible?: boolean; is_verified?: boolean; is_certified?: boolean; last_seen?: string; hide_online_status?: boolean; warning_count?: number; is_banned?: boolean; ban_until?: string | null; ban_reason?: string | null; last_notice_acknowledged?: boolean; last_notice_at?: string | null; has_installed_pwa?: boolean; account_deleted?: boolean; share_phone_with_matches?: boolean };
 export type Match = { id: string; user1: string; user2: string; partner?: Profile; lastMsg?: Message; unreadCount?: number; created_at?: string };
 export type Message = { id?: string; match_id: string; sender_id: string; content: string; is_read: boolean; is_delivered?: boolean; is_edited?: boolean; created_at?: string; reactions?: Record<string, string[]>; is_view_once?: boolean; viewed_at?: string | null; is_destroyed?: boolean; destroyed_at?: string | null };
 // Ciblage des diffusions générales : décide si une diffusion (target) concerne un utilisateur donné.
@@ -9052,6 +9052,23 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
   const [loading, setLoading] = useState(true);
   const [msgCount, setMsgCount] = useState(0);
   const [showDeleteConv, setShowDeleteConv] = useState(false);
+  const [convMenuOpen, setConvMenuOpen] = useState(false);
+  // ── Voir le numéro d'un match : gratuit → mur Premium direct (aucun état local nécessaire).
+  //    Premium → on va chercher le profil à jour (phone + consentement), puisque `open.partner`
+  //    peut être une version mise en cache qui ne reflète pas un changement récent de réglage. ──
+  const [phoneReveal, setPhoneReveal] = useState<{ name: string; status: "loading" | "revealed" | "unavailable"; number?: string } | null>(null);
+  const openPhoneReveal = (partner?: Profile | null) => {
+    if (!partner) return;
+    if (!auth.isPremium) { onShowPremium(`Passe Premium pour voir le numéro de ${partner.name}`); return; }
+    setPhoneReveal({ name: partner.name, status: "loading" });
+    sb.query<{ phone: string | null; share_phone_with_matches?: boolean }>(auth.token, "profiles", `?id=eq.${partner.id}&select=phone,share_phone_with_matches`)
+      .then(res => {
+        const p = res?.[0];
+        if (p?.share_phone_with_matches && p.phone) setPhoneReveal({ name: partner.name, status: "revealed", number: p.phone });
+        else setPhoneReveal({ name: partner.name, status: "unavailable" });
+      })
+      .catch(() => setPhoneReveal({ name: partner.name, status: "unavailable" }));
+  };
   const [imgLoading, setImgLoading] = useState(false);
   const [previewImg, setPreviewImg] = useState<string | null>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
@@ -10066,28 +10083,25 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
     sendingRef.current = true;
     try {
     try { (navigator as any).vibrate?.(12); } catch {}
-    // ── Mode édition : on met à jour le message existant au lieu d'en créer un nouveau ──
-    if (editingMsg && editingMsg.id) {
-      const msgId = editingMsg.id;
-      // On conserve un éventuel préfixe de citation/réponse présent dans le message d'origine
-      const quotePrefix = (editingMsg.content.match(/^\[↩ .+? : .+?\]\n/) || [""])[0];
-      const newContent = quotePrefix + text.trim();
-      setMsgs(prev => prev.map(m => m.id === msgId ? { ...m, content: newContent, is_edited: true } : m));
-      setText(""); setEditingMsg(null);
-      try { await sb.update(auth.token, "messages", msgId, { content: newContent, is_edited: true }); } catch {}
-      return;
-    }
     if (open.id === "__support__") {
       const msgText = text.trim();
-      setText("");
+      setText(""); setEditingMsg(null);
       const res = await sb.insert<ReportRowLike>(auth.token, "reports", { reporter_id: auth.userId, reported_id: null, reason: `${SUPPORT_PREFIX_USER} ${msgText}`, status: "pending" });
       const saved = res[0];
       setMsgs(prev => [...prev, { id: saved?.id, match_id: "__support__", sender_id: auth.userId, content: msgText, is_read: true, created_at: saved?.created_at || new Date().toISOString() }]);
       loadConvs();
       return;
     }
+    // ── Modération : s'applique désormais AUSSI à une modification de message, pas seulement à
+    //    un envoi. Avant ce correctif, éditer un message contournait totalement la modération
+    //    (insultes, arnaques, ET détection de partage de contact pour les gratuits) — quelqu'un
+    //    pouvait envoyer un message anodin puis le modifier ensuite pour y glisser un numéro ou
+    //    un renvoi vers un autre réseau, sans jamais être détecté. On vérifie donc le texte final
+    //    (celui qui sera réellement enregistré, citation comprise) avant d'autoriser l'édition. ──
+    const quotePrefixForCheck = editingMsg ? (editingMsg.content.match(/^\[↩ .+? : .+?\]\n/) || [""])[0] : "";
+    const textToCheck = editingMsg ? text.trim() : text;
     // Modération : insultes, arnaques, contenu interdit — les admins sont exemptés (tests internes)
-    const mod = (FEATURE_MODERATION_INSULTS && !auth.isAdmin) ? moderateMessage(text) : { blocked: false };
+    const mod = (FEATURE_MODERATION_INSULTS && !auth.isAdmin) ? moderateMessage(textToCheck) : { blocked: false };
     if (mod.blocked && mod.type) {
       setModerationAlert(mod.type);
       // ── Alerte système auto-mod : ce n'est PAS un signalement utilisateur contre un autre profil.
@@ -10098,7 +10112,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
         await sb.insert(auth.token, "reports", {
           reporter_id: auth.userId,
           reported_id: null,
-          reason: `[AUTO-MOD ${mod.type.toUpperCase()}] ${text.substring(0, 100)}`,
+          reason: `[AUTO-MOD ${mod.type.toUpperCase()}] ${textToCheck.substring(0, 100)}`,
           status: "pending",
         });
         console.log("[Moyo][AutoMod] ✅ Alerte système enregistrée");
@@ -10108,7 +10122,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
       }
       return;
     }
-    if (FEATURE_MODERATION_CONTACT && !auth.isAdmin && !auth.isPremium && hasContactInfo(text)) {
+    if (FEATURE_MODERATION_CONTACT && !auth.isAdmin && !auth.isPremium && hasContactInfo(textToCheck)) {
       if (AUTO_WARN_BAN_CONTACT_ENABLED) {
         // ── Nouveau comportement : avertissement officiel (1/3, 2/3, 3/3) + bannissement
         //    automatique au 3e, une seule fois par session pour ne pas spammer la personne. ──
@@ -10118,7 +10132,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
             const autoWarnRes = await fetch(`${SUPABASE_URL}/functions/v1/auto-warn-contact`, {
               method: "POST",
               headers: { "Content-Type": "application/json", "Authorization": `Bearer ${auth.token}` },
-              body: JSON.stringify({ user_id: auth.userId, message_text: text.trim() }),
+              body: JSON.stringify({ user_id: auth.userId, message_text: textToCheck.trim() }),
             });
             // ── La fonction Edge auto-warn-contact écrit elle-même l'avertissement, le bannissement
             //    éventuel ET la trace "reports" (status "auto_log") — rien à dupliquer ici.
@@ -10154,7 +10168,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
           await sb.insert(auth.token, "reports", {
             reporter_id: auth.userId,
             reported_id: null,
-            reason: `[AUTO-MOD CONTACT] Tentative de partage de contact (gratuit)${open.partner?.name ? ` vers ${open.partner.name}` : ""} : ${text.trim()} · Réponse auto envoyée`,
+            reason: `[AUTO-MOD CONTACT] Tentative de partage de contact (gratuit)${open.partner?.name ? ` vers ${open.partner.name}` : ""} : ${textToCheck.trim()} · Réponse auto envoyée`,
             status: "pending",
           });
           await sb.insert(auth.token, "reports", {
@@ -10166,6 +10180,16 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
         } catch {}
       }
       onShowPremium("Pour partager tes coordonnées, passe à Premium. Cela protège aussi ta sécurité !");
+      return;
+    }
+    // ── Mode édition : le texte a déjà passé la modération ci-dessus, on peut enregistrer.
+    //    On conserve un éventuel préfixe de citation/réponse présent dans le message d'origine. ──
+    if (editingMsg && editingMsg.id) {
+      const msgId = editingMsg.id;
+      const newContent = quotePrefixForCheck + textToCheck;
+      setMsgs(prev => prev.map(m => m.id === msgId ? { ...m, content: newContent, is_edited: true } : m));
+      setText(""); setEditingMsg(null);
+      try { await sb.update(auth.token, "messages", msgId, { content: newContent, is_edited: true }); } catch {}
       return;
     }
     if (!auth.isPremium && msgCount >= FREE_LIMITS.messages) { onShowPremium(`Tu as envoyé tes ${FREE_LIMITS.messages} messages gratuits avec ${open.partner?.name}. Passe Premium !`); return; }
@@ -11166,31 +11190,35 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
         <div onClick={() => setShowPartnerProfile(true)} style={{ cursor: "pointer" }}>
           <Avatar url={open.partner?.photo_url} gender={open.partner?.gender} size={38} premium={open.partner?.is_premium} />
         </div>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontWeight: 700, fontSize: "0.92rem", color: G.brun }}>{open.partner?.name}</div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontWeight: 700, fontSize: "0.92rem", color: G.brun, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{open.partner?.name}</div>
           {open.partner?.id === SUPPORT_TEAM_ID ? <div style={{ fontSize: "0.7rem", color: "#27ae60", fontWeight: 600 }}>● Répond sous 24h</div> : open.partner?.hide_online_status ? null : (() => { const s = getOnlineStatus(open.partner?.last_seen); return <div style={{ fontSize: "0.7rem", color: s.color, fontWeight: 600 }}>● {s.label}</div>; })()}
         </div>
-        {!auth.isPremium && <div style={{ fontSize: "0.7rem", color: "#555", background: G.creme, padding: "4px 8px", borderRadius: 50 }}>{Math.max(0, FREE_LIMITS.messages - msgCount)}/{FREE_LIMITS.messages} msg</div>}
-        {/* Bouton "Demander Premium" (💝, rouge Moyo Dating) : visible si JE ne suis pas Premium et que mon interlocuteur l'est */}
-        {FEATURE_GIFT_PREMIUM && !auth.isPremium && open.partner?.is_premium && open.partner?.id !== SUPPORT_TEAM_ID && (
-          <div onClick={() => setConfirmGiftRequest(true)} title="Demander à recevoir Premium" style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(192,57,43,0.12)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, fontSize: "1.05rem" }}>
-            💝
+        {!auth.isPremium && <div style={{ fontSize: "0.7rem", color: "#555", background: G.creme, padding: "4px 8px", borderRadius: 50, flexShrink: 0 }}>{Math.max(0, FREE_LIMITS.messages - msgCount)}/{FREE_LIMITS.messages} msg</div>}
+        {/* Voir le numéro du match : uniquement pour un vrai match (pas la conversation Assistant),
+            toujours visible pour tout le monde. Gratuit → ouvre directement le mur Premium.
+            Premium → révèle le numéro si le match l'a autorisé et l'a renseigné, sinon message
+            clair expliquant pourquoi ce n'est pas possible. */}
+        {open.partner?.id !== SUPPORT_TEAM_ID && (
+          <div onClick={() => openPhoneReveal(open.partner)} title="Voir le numéro" style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(39,174,96,0.12)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a8a4a" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.53a16 16 0 0 0 6.06 6.06l1.09-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
           </div>
         )}
-        {/* Bouton cadeau - offrir Premium : visible UNIQUEMENT aux utilisateurs Premium */}
-        {FEATURE_GIFT_PREMIUM && auth.isPremium && !open.partner?.is_premium && (
-          <div onClick={() => open.partner && onShowGiftPremium?.({ id: open.partner.id, name: open.partner.name })} style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(212,168,67,0.12)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }} title="Offrir Premium">
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#B8860B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M20 12v10H4V12"/><rect x="2" y="7" width="20" height="5" rx="1"/>
-              <path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/>
+        {/* Menu "plus d'actions" : ouvre un menu du bas (même famille que les autres menus de
+            l'app), qui regroupe Demander/Offrir Premium et Supprimer la conversation — plutôt que
+            de les afficher tous en icônes séparées dans l'en-tête, ce qui devenait trop chargé. */}
+        {open.partner?.id !== SUPPORT_TEAM_ID && (
+          <div onClick={() => setConvMenuOpen(true)} title="Plus d'actions" style={{ width: 34, height: 34, borderRadius: "50%", background: G.creme, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={G.brun} strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="5" r="1" /><circle cx="12" cy="12" r="1" /><circle cx="12" cy="19" r="1" /></svg>
+          </div>
+        )}
+        {open.partner?.id === SUPPORT_TEAM_ID && (
+          <div onClick={() => setShowDeleteConv(true)} style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(180,60,60,0.08)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }} title="Supprimer la conversation">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
             </svg>
           </div>
         )}
-        <div onClick={() => setShowDeleteConv(true)} style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(180,60,60,0.08)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }} title="Supprimer la conversation">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-          </svg>
-        </div>
       </div>
 
       {/* Zone messages */}
@@ -12018,6 +12046,90 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
           </div>
         </div>
       </div>}
+
+      {phoneReveal && (
+        <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 400, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }} onClick={() => setPhoneReveal(null)}>
+          <div className="moyo-card-in" onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 300, textAlign: "center", boxShadow: "0 20px 60px rgba(44,26,14,0.2)" }}>
+            {phoneReveal.status === "loading" ? (
+              <div style={{ padding: "16px 0", color: "#999", fontSize: "0.86rem" }}>Chargement…</div>
+            ) : phoneReveal.status === "revealed" ? (
+              <>
+                <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(39,174,96,0.12)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a8a4a" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.53a16 16 0 0 0 6.06 6.06l1.09-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" /></svg>
+                </div>
+                <div style={{ fontSize: "0.78rem", color: "#999", marginBottom: 4 }}>Numéro de {phoneReveal.name}</div>
+                <div style={{ fontSize: "1.15rem", fontWeight: 800, color: G.brun, fontFamily: "monospace", marginBottom: 18 }}>{phoneReveal.number}</div>
+                <Btn variant="ghost" onClick={() => setPhoneReveal(null)} style={{ width: "100%" }}>Fermer</Btn>
+              </>
+            ) : (
+              <>
+                <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(180,60,60,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
+                </div>
+                <h3 style={{ fontSize: "1rem", fontWeight: 700, marginBottom: 8, color: G.brun }}>Numéro non disponible</h3>
+                <p style={{ fontSize: "0.84rem", color: "#666", marginBottom: 18, lineHeight: 1.6 }}>{phoneReveal.name} n'a pas encore renseigné de numéro, ou n'a pas autorisé ses matchs Premium à le voir.</p>
+                <Btn variant="ghost" onClick={() => setPhoneReveal(null)} style={{ width: "100%" }}>Fermer</Btn>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Menu du bas "plus d'actions" : contenu adapté selon les droits Premium des deux côtés,
+          même famille visuelle que les autres menus du bas de l'app (poignée, en-tête avec photo,
+          liste icône + libellé). */}
+      {convMenuOpen && open.partner && (
+        <div
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9000, display: "flex", alignItems: "flex-end", justifyContent: "center" }}
+          onPointerDown={(e) => { if (e.target === e.currentTarget) setConvMenuOpen(false); }}
+        >
+          <div
+            className="moyo-sheet-in"
+            style={{ background: G.blanc, borderRadius: "24px 24px 0 0", width: "100%", maxWidth: 500, overflow: "hidden", paddingBottom: "env(safe-area-inset-bottom, 16px)", boxShadow: "0 -8px 40px rgba(0,0,0,0.25)" }}
+            onPointerDown={e => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", justifyContent: "center", paddingTop: 12, paddingBottom: 4 }}>
+              <div style={{ width: 40, height: 4, borderRadius: 99, background: "#E0D5CC" }} />
+            </div>
+            <div style={{ padding: "12px 20px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #F5F5F5" }}>
+              <Avatar url={open.partner.photo_url} gender={open.partner.gender} size={38} premium={open.partner.is_premium} />
+              <div onPointerDown={() => setConvMenuOpen(false)} style={{ width: 32, height: 32, borderRadius: "50%", background: "#F5F5F5", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+              </div>
+            </div>
+            <div style={{ padding: "8px 0 8px" }}>
+              <div onPointerDown={() => { setConvMenuOpen(false); setTimeout(() => openPhoneReveal(open.partner), 50); }} style={{ padding: "15px 20px", display: "flex", alignItems: "center", gap: 14, cursor: "pointer", borderBottom: "1px solid #F8F8F8", WebkitTapHighlightColor: "transparent" }}>
+                <div style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(39,174,96,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#1a8a4a" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.53a16 16 0 0 0 6.06 6.06l1.09-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" /></svg>
+                </div>
+                <div style={{ fontWeight: 700, fontSize: "0.93rem", color: G.brun }}>Voir le numéro de téléphone</div>
+              </div>
+              {FEATURE_GIFT_PREMIUM && auth.isPremium && !open.partner.is_premium && (
+                <div onPointerDown={() => { setConvMenuOpen(false); setTimeout(() => open.partner && onShowGiftPremium?.({ id: open.partner.id, name: open.partner.name }), 50); }} style={{ padding: "15px 20px", display: "flex", alignItems: "center", gap: 14, cursor: "pointer", borderBottom: "1px solid #F8F8F8", WebkitTapHighlightColor: "transparent" }}>
+                  <div style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(212,168,67,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#B8860B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 12v10H4V12" /><rect x="2" y="7" width="20" height="5" rx="1" /><path d="M12 22V7" /><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z" /><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" /></svg>
+                  </div>
+                  <div style={{ fontWeight: 700, fontSize: "0.93rem", color: G.brun }}>Offrir Premium</div>
+                </div>
+              )}
+              {FEATURE_GIFT_PREMIUM && !auth.isPremium && open.partner.is_premium && (
+                <div onPointerDown={() => { setConvMenuOpen(false); setTimeout(() => setConfirmGiftRequest(true), 50); }} style={{ padding: "15px 20px", display: "flex", alignItems: "center", gap: 14, cursor: "pointer", borderBottom: "1px solid #F8F8F8", WebkitTapHighlightColor: "transparent" }}>
+                  <div style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(192,57,43,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: "1.05rem" }}>
+                    💝
+                  </div>
+                  <div style={{ fontWeight: 700, fontSize: "0.93rem", color: G.brun }}>Demander Premium</div>
+                </div>
+              )}
+              <div onPointerDown={() => { setConvMenuOpen(false); setTimeout(() => setShowDeleteConv(true), 50); }} style={{ padding: "15px 20px", display: "flex", alignItems: "center", gap: 14, cursor: "pointer", WebkitTapHighlightColor: "transparent" }}>
+                <div style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" /></svg>
+                </div>
+                <div style={{ fontWeight: 700, fontSize: "0.93rem", color: "#C0392B" }}>Supprimer la conversation</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal profil partenaire */}
       {showPartnerProfile && open.partner && (
@@ -15039,6 +15151,32 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
                 setToast({ msg: newHidden ? "Statut en ligne masqué 🔒" : "Statut en ligne visible ✅" });
               }} style={{ width: 52, height: 28, borderRadius: 50, background: !hidden ? "#27ae60" : G.gris, cursor: "pointer", position: "relative", transition: "background 0.3s", flexShrink: 0 }}>
                 <div style={{ position: "absolute", top: 3, left: !hidden ? 27 : 3, width: 22, height: 22, borderRadius: "50%", background: G.blanc, boxShadow: "0 2px 6px rgba(0,0,0,0.2)", transition: "left 0.3s" }} />
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Partage du numéro avec les matchs Premium (confidentialité) */}
+        {(!isWideProfile || ["visibility","main"].includes(activeSection)) && profile && (() => {
+          const shared = !!profile.share_phone_with_matches;
+          return (
+            <div style={{ background: G.blanc, borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: `1px solid var(--c-card-bd)`, marginTop: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                <div style={{ width: 42, height: 42, borderRadius: "50%", background: shared ? "rgba(39,174,96,0.1)" : "rgba(150,150,150,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={shared ? "#27ae60" : "#999"} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.53a16 16 0 0 0 6.06 6.06l1.09-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" /></svg>
+                </div>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: "0.95rem", color: G.brun }}>Numéro visible par mes matchs</div>
+                  <div style={{ fontSize: "0.82rem", color: "#888", marginTop: 2, maxWidth: 200 }}>{shared ? "Tes matchs Premium peuvent voir ton numéro" : "Personne ne peut voir ton numéro"}</div>
+                </div>
+              </div>
+              <div onClick={async () => {
+                const newShared = !shared;
+                await sb.update(auth.token, "profiles", auth.userId, { share_phone_with_matches: newShared });
+                setProfile(p => p ? { ...p, share_phone_with_matches: newShared } : null);
+                setToast({ msg: newShared ? "Numéro visible par tes matchs Premium" : "Numéro masqué", type: "success" });
+              }} style={{ width: 52, height: 28, borderRadius: 50, background: shared ? "#27ae60" : G.gris, cursor: "pointer", position: "relative", transition: "background 0.3s", flexShrink: 0 }}>
+                <div style={{ position: "absolute", top: 3, left: shared ? 27 : 3, width: 22, height: 22, borderRadius: "50%", background: G.blanc, boxShadow: "0 2px 6px rgba(0,0,0,0.2)", transition: "left 0.3s" }} />
               </div>
             </div>
           );
