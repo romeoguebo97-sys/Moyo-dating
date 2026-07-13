@@ -5907,6 +5907,31 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
 
   // ── Reports ──
   const [reports, setReports] = useState<ReportRow[]>([]);
+  // ── Modification d'un message envoyé via l'Assistant Moyo Dating : contrairement aux messages
+  //    privés entre membres (qui affichent "modifié" après édition), ces messages n'ont aucun
+  //    indicateur d'édition — le client voit simplement le texte corrigé, sans savoir qu'il a
+  //    changé. C'est voulu : ce sont des messages officiels de l'équipe, pas des échanges entre
+  //    utilisateurs, et une simple faute de frappe corrigée n'a pas besoin d'être tracée pour eux. ──
+  const [editingSupportMsg, setEditingSupportMsg] = useState<{ id: string; text: string } | null>(null);
+  const [savingSupportMsgEdit, setSavingSupportMsgEdit] = useState(false);
+  const saveSupportMsgEdit = async () => {
+    if (!editingSupportMsg) return;
+    const newText = editingSupportMsg.text.trim();
+    if (!newText) return;
+    setSavingSupportMsgEdit(true);
+    try {
+      const newReason = `${SUPPORT_PREFIX_REPLY} ${newText}`;
+      await fetch(`${SUPABASE_URL}/rest/v1/reports?id=eq.${editingSupportMsg.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" },
+        body: JSON.stringify({ reason: newReason }),
+      });
+      setReports(prev => prev.map(r => r.id === editingSupportMsg.id ? { ...r, reason: newReason } : r));
+      setEditingSupportMsg(null);
+      showToast("Message modifié.", "success");
+    } catch { showToast("Erreur lors de la modification.", "error"); }
+    setSavingSupportMsgEdit(false);
+  };
   const [reportFilter, setReportFilter] = useState<"all" | "user" | "system" | "messaging" | "archived" | "auto">("all");
   const [autoLogReports, setAutoLogReports] = useState<{ id: string; reason: string; created_at: string; reporter_id?: string }[]>([]);
   const [autoLogLoading, setAutoLogLoading] = useState(false);
@@ -9951,12 +9976,28 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                           <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 12 }}>
                             {ordered.map((r, mi) => {
                               const isAdminMsg = r.reason?.startsWith(SUPPORT_PREFIX_REPLY);
+                              const isEditingThis = editingSupportMsg?.id === r.id;
                               return (
-                                <div key={r.id || mi} style={{ display: "flex", justifyContent: isAdminMsg ? "flex-end" : "flex-start" }}>
-                                  <div style={{ maxWidth: "min(80%, 460px)", background: isAdminMsg ? G.rouge : "#f0f0f0", color: isAdminMsg ? "#fff" : "#1a1a1a", borderRadius: isAdminMsg ? "14px 14px 4px 14px" : "14px 14px 14px 4px", padding: "7px 12px", fontSize: "0.78rem", lineHeight: 1.5, wordBreak: "break-word", overflowWrap: "anywhere" }}>
-                                    {cleanSupportReason(r.reason || "")}
-                                    <div style={{ fontSize: "0.62rem", opacity: 0.65, marginTop: 3, textAlign: isAdminMsg ? "right" : "left" }}>{formatDateTime(r.created_at || "")}</div>
-                                  </div>
+                                <div key={r.id || mi} style={{ display: "flex", justifyContent: isAdminMsg ? "flex-end" : "flex-start", alignItems: "flex-start", gap: 6 }}>
+                                  {isAdminMsg && !isEditingThis && r.id && (
+                                    <button onClick={() => setEditingSupportMsg({ id: r.id as string, text: cleanSupportReason(r.reason || "") })} title="Modifier ce message" style={{ background: "none", border: "none", color: "#bbb", cursor: "pointer", padding: 4, marginTop: 4, flexShrink: 0 }}>
+                                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                                    </button>
+                                  )}
+                                  {isEditingThis ? (
+                                    <div style={{ maxWidth: "min(80%, 460px)", width: "100%", background: G.creme, border: `1.5px solid ${G.rouge}`, borderRadius: "14px 14px 4px 14px", padding: "8px 10px" }}>
+                                      <textarea autoFocus value={editingSupportMsg.text} onChange={e => setEditingSupportMsg(cur => cur ? { ...cur, text: e.target.value } : cur)} rows={2} style={{ width: "100%", boxSizing: "border-box", border: "none", background: "transparent", fontSize: "0.78rem", fontFamily: "inherit", resize: "vertical", outline: "none" }} />
+                                      <div style={{ display: "flex", gap: 6, justifyContent: "flex-end", marginTop: 4 }}>
+                                        <button onClick={() => setEditingSupportMsg(null)} style={{ background: "none", border: "none", color: "#888", fontSize: "0.68rem", fontWeight: 700, cursor: "pointer", padding: "3px 8px" }}>Annuler</button>
+                                        <button onClick={saveSupportMsgEdit} disabled={savingSupportMsgEdit || !editingSupportMsg.text.trim()} style={{ background: G.rouge, color: "#fff", border: "none", borderRadius: 20, fontSize: "0.68rem", fontWeight: 700, cursor: "pointer", padding: "3px 10px" }}>{savingSupportMsgEdit ? "…" : "Enregistrer"}</button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div style={{ maxWidth: "min(80%, 460px)", background: isAdminMsg ? G.rouge : "#f0f0f0", color: isAdminMsg ? "#fff" : "#1a1a1a", borderRadius: isAdminMsg ? "14px 14px 4px 14px" : "14px 14px 14px 4px", padding: "7px 12px", fontSize: "0.78rem", lineHeight: 1.5, wordBreak: "break-word", overflowWrap: "anywhere", whiteSpace: "pre-wrap" }}>
+                                      {cleanSupportReason(r.reason || "")}
+                                      <div style={{ fontSize: "0.62rem", opacity: 0.65, marginTop: 3, textAlign: isAdminMsg ? "right" : "left" }}>{formatDateTime(r.created_at || "")}</div>
+                                    </div>
+                                  )}
                                 </div>
                               );
                             })}

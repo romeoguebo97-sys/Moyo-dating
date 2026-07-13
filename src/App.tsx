@@ -97,6 +97,12 @@ const CONTACT_PATTERNS = [
   /@[a-z0-9._]{2,}/i,                                         // pseudos précédés de @ (@instagram, @gmail, @snapchat…)
   /(https?:\/\/|www\.|wa\.me|t\.me|\.me\/|bit\.ly|tinyurl|tiktok\.com)/i, // liens
   /z[ée]ro\s?(six|sept)/i,                                    // « zéro six » / « zéro sept »
+  // ── Chiffres dispersés dans une phrase pour contourner la détection (ex. "Viens me 913
+  //    découvrir 79 tu 32 verras" = 9137932 caché) : 3 groupes de 1 à 3 chiffres ou plus,
+  //    séparés par des mots courts (max ~20 caractères entre chaque). Les nombres à 4 chiffres
+  //    seuls (années : 1990, 2010…) ne sont volontairement PAS capturés par \d{1,3}\b, pour
+  //    limiter les faux positifs sur les bios mentionnant une année. ──
+  /\b\d{1,3}\b(?:\D{1,20}\b\d{1,3}\b){2,}/,
 ];
 // ── Mots-clés "contacts" désactivables individuellement depuis l'admin (comme les mots interdits),
 //    séparés de CONTACT_PATTERNS ci-dessus qui reste toujours actif (détection technique). ──
@@ -729,6 +735,22 @@ export const bumpPromoCounter = async (key: "promo_clicks" | "promo_ignored", to
       body: JSON.stringify({ counter_key: key }),
     });
   } catch {}
+};
+// ── Suppression d'un message de la conversation Assistant Moyo Dating (table reports, pas
+//    messages) : un membre normal n'a probablement pas le droit de DELETE directement sur
+//    reports (RLS réservée à l'admin), donc un DELETE direct échouait silencieusement — le
+//    message disparaissait à l'écran (mémoire locale) mais réapparaissait après reconnexion
+//    puisqu'il n'avait jamais vraiment été supprimé en base. Passe par une fonction RPC dédiée,
+//    qui vérifie que le message appartient bien à l'appelant avant de le supprimer pour de bon. ──
+export const deleteOwnSupportMessage = async (reportId: string, token: string): Promise<boolean> => {
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/delete_own_support_message`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${token}` },
+      body: JSON.stringify({ target_id: reportId }),
+    });
+    return r.ok;
+  } catch { return false; }
 };
 export type StatusPost = { id?: string; user_id: string; image_url?: string | null; image_path?: string | null; caption?: string | null; text?: string | null; created_at?: string; expires_at?: string; profile?: Profile; is_official?: boolean; is_sponsored?: boolean; link_url?: string | null; is_feature?: boolean; target_gender?: string | null; feature_user_id?: string | null; feature_profile?: Profile };
 export type ToastState = { msg: string; type?: "success" | "error" | "premium" } | null;
@@ -11810,10 +11832,14 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
                 const msgId = contextMenu.msg.id;
                 setContextMenu(null);
                 if (!msgId) return;
-                // Conversation support : les messages sont dans la table "reports", pas "messages"
+                // Conversation support : les messages sont dans la table "reports", pas "messages".
+                // Passe par une fonction RPC dédiée (droits élevés côté serveur, avec vérification
+                // de propriété) plutôt qu'un DELETE direct, qui échouait silencieusement pour un
+                // membre normal faute de droits — le message revenait après reconnexion.
                 if (open?.id === "__support__") {
                   deletedSupportIds.current.add(String(msgId));
-                  await sb.delete(auth.token, "reports", `?id=eq.${msgId}`).catch(() => {});
+                  const ok = await deleteOwnSupportMessage(String(msgId), auth.token);
+                  if (!ok) { deletedSupportIds.current.delete(String(msgId)); setToast({ msg: "Impossible de supprimer ce message, réessayez.", type: "error" }); return; }
                 } else {
                   await sb.delete(auth.token, "messages", `?id=eq.${msgId}`);
                 }
