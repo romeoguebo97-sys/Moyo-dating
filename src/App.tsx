@@ -392,6 +392,12 @@ export function setAUTO_WARN_BAN_CONTACT_ENABLED(v: any) { AUTO_WARN_BAN_CONTACT
 //    qui n'ont pas encore cette clé en base. ──
 let BROADCAST_ENABLED = true;
 export function setBROADCAST_ENABLED(v: any) { BROADCAST_ENABLED = v !== "false" && v !== false; }
+// ── Textes de l'écran "C'est un match", configurables (Config → Contenus & Modals), utilisés au
+//    niveau App puisque l'écran est désormais centralisé là plutôt que dans chaque écran séparé. ──
+export let MATCH_TITLE = "C'est un Match !";
+export let MATCH_SUBTITLE = "Toi et {name} vous plaisez mutuellement !";
+export function setMATCH_TITLE(v: string) { MATCH_TITLE = v; }
+export function setMATCH_SUBTITLE(v: string) { MATCH_SUBTITLE = v; }
 // Garde-fou "une seule fois par session" — se réinitialise naturellement à chaque nouveau
 // chargement de l'app (nouvelle session), pas besoin de le stocker ailleurs.
 let autoWarnContactTriggeredThisSession = false;
@@ -456,7 +462,7 @@ export function dedupeMatchesByCouple<T extends { user1?: string; user2?: string
 }
 
 // Charger les settings dynamiques depuis Supabase au démarrage
-fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,pay_wero_enabled,pay_paypal_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,feature_show_likes_views_free,feature_group_premium,feature_group_photos,feature_moderation_insults,feature_moderation_contact,premium_screen_variant,custom_banned_words,contact_banned_words,disabled_builtin_words,disabled_builtin_contact_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,pay_wero_number,pay_paypal_number,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,store_link_android,store_link_ios,plan_week_enabled,plan_month_enabled,plan_2month_enabled,discover_default_mode,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,auto_warn_ban_contact_enabled,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price,privacy_notice_enabled,premium_boost_enabled,assistant_photo_url,broadcast_enabled)&select=key,value`, {
+fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,pay_wero_enabled,pay_paypal_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,feature_show_likes_views_free,feature_group_premium,feature_group_photos,feature_moderation_insults,feature_moderation_contact,premium_screen_variant,custom_banned_words,contact_banned_words,disabled_builtin_words,disabled_builtin_contact_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,pay_wero_number,pay_paypal_number,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,store_link_android,store_link_ios,plan_week_enabled,plan_month_enabled,plan_2month_enabled,discover_default_mode,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,auto_warn_ban_contact_enabled,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price,privacy_notice_enabled,premium_boost_enabled,assistant_photo_url,broadcast_enabled,modal_match_title,modal_match_subtitle)&select=key,value`, {
   headers: { "apikey": SUPABASE_KEY },
 }).then(r => r.json()).then((data: { key: string; value: string }[]) => {
   if (!Array.isArray(data)) return;
@@ -476,6 +482,8 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
   if (map["feature_moderation_contact"] !== undefined) FEATURE_MODERATION_CONTACT = map["feature_moderation_contact"] !== "false";
   if (map["auto_warn_ban_contact_enabled"] !== undefined) setAUTO_WARN_BAN_CONTACT_ENABLED(map["auto_warn_ban_contact_enabled"]);
   if (map["broadcast_enabled"] !== undefined) setBROADCAST_ENABLED(map["broadcast_enabled"]);
+  if (map["modal_match_title"] !== undefined) setMATCH_TITLE(map["modal_match_title"]);
+  if (map["modal_match_subtitle"] !== undefined) setMATCH_SUBTITLE(map["modal_match_subtitle"]);
   if (map["appointments_enabled"] !== undefined) APPOINTMENTS_ENABLED = map["appointments_enabled"] !== "false";
   if (map["phone_appointments_enabled"] !== undefined) APPT_PHONE_ENABLED = map["phone_appointments_enabled"] !== "false";
   if (map["physical_appointments_enabled"] !== undefined) APPT_PHYSICAL_ENABLED = map["physical_appointments_enabled"] !== "false";
@@ -6164,7 +6172,7 @@ const PremiumEngagementCarousel = React.memo(function PremiumEngagementCarousel(
   );
 });
 
-function Discover({ auth, onShowPremium, isWide = false, onGoMessages }: { auth: Auth; onShowPremium: (r: string) => void; isWide?: boolean; onGoMessages?: (pid: string) => void }) {
+function Discover({ auth, onShowPremium, isWide = false, onGoMessages, onMatch }: { auth: Auth; onShowPremium: (r: string) => void; isWide?: boolean; onGoMessages?: (pid: string) => void; onMatch: (p: Profile) => void }) {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   // ── Statut "en ligne" en direct : rafraîchit last_seen des profils affichés toutes les 30s ──
   const onlineProfilesRef = useRef<Profile[]>([]);
@@ -6204,7 +6212,6 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages }: { auth:
   const [likedIds, setLikedIds] = useState(new Set<string>());
   const [blockedIds, setBlockedIds] = useState(new Set<string>());
   const [current, setCurrent] = useState(0);
-  const [matchPop, setMatchPop] = useState<Profile | null>(null);
   const [confirmUnlike, setConfirmUnlike] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [likesToday, setLikesToday] = useState(0);
@@ -6447,15 +6454,15 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages }: { auth:
       ]);
       const alreadyExists = (existFwd?.[0]?.id || existRev?.[0]?.id) ? true : false;
       if (alreadyExists) {
-        setMatchPop(p);
+        onMatch(p);
       } else {
         const matchRes = await sb.insert<{id: string}>(auth.token, "matches", { user1: auth.userId, user2: p.id });
         const matchId = matchRes?.[0]?.id;
         if (matchId) await sendMatchWelcomeMessage(auth.token, matchId, auth.name, p.name);
-        setMatchPop(p);
+        onMatch(p);
       }
     }
-  }, [auth, likedIds, likesToday, myGender, onShowPremium]);
+  }, [auth, likedIds, likesToday, myGender, onShowPremium, onMatch]);
 
   // ── Retrait effectif du like (cascade : like + match + messages + vues), après confirmation ──
   const doUnlike = useCallback(async (p: Profile) => {
@@ -6918,7 +6925,7 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages }: { auth:
       )}
     </div>
   </div>
-</div>}{matchPop && <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.88)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", padding: 24 }}><div className="moyo-card-in" style={{ textAlign: "center", color: "#fff" }}><div style={{ marginBottom: 16 }}><svg width="64" height="64" viewBox="0 0 24 24" fill="#C0392B" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg></div><h2 style={{  fontSize: "2.2rem", color: G.or, marginBottom: 8 }}>{modalTexts.matchTitle}</h2><p style={{ color: "rgba(255,255,255,0.75)", marginBottom: 28 }}>{modalTexts.matchSubtitle.replace("{name}", matchPop.name)}</p><Btn variant="white" onClick={() => setMatchPop(null)}>Continuer →</Btn></div></div>}
+</div>}
     {/* ── Modal confirmation delike (vue Découvrir) ── */}
     {confirmUnlike && (
       <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 600, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
@@ -7174,7 +7181,7 @@ const EmptyState = memo(function EmptyState({ icon, title, subtitle }: { icon: R
   );
 });
 
-function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMessages, onGoDiscover }: { auth: Auth; onShowPremium: (r: string) => void; mode?: "likes" | "visitors"; onBadgeUpdate?: () => void; onGoMessages?: (partnerId?: string) => void; onGoDiscover?: () => void }) {
+function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMessages, onGoDiscover, onMatch }: { auth: Auth; onShowPremium: (r: string) => void; mode?: "likes" | "visitors"; onBadgeUpdate?: () => void; onGoMessages?: (partnerId?: string) => void; onGoDiscover?: () => void; onMatch?: (p: Profile) => void }) {
   // ── Sub-tab state ──
   const [likesSubTab, setLikesSubTab] = useState<"received" | "sent">("received");
   const [visitorsSubTab, setVisitorsSubTab] = useState<"visitors" | "visited">("visitors");
@@ -7377,9 +7384,20 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMes
       await sb.insert(auth.token, "likes", { from_user: auth.userId, to_user: p.id });
       const mutual = await sb.query<object>(auth.token, "likes", `?from_user=eq.${p.id}&to_user=eq.${auth.userId}`);
       if (Array.isArray(mutual) && mutual.length > 0) {
-        const matchRes = await sb.insert<{id: string}>(auth.token, "matches", { user1: auth.userId, user2: p.id });
-        const matchId = matchRes?.[0]?.id;
-        if (matchId) await sendMatchWelcomeMessage(auth.token, matchId, auth.name, p.name);
+        // ── Anti-doublon : même vérification que Découvrir, pour ne jamais créer deux fois le
+        //    même match si un match existait déjà (ex. après un délike + relike). L'écran de
+        //    match doit s'afficher dans tous les cas, existant ou nouveau. ──
+        const [existFwd, existRev] = await Promise.all([
+          sb.query<{ id: string }>(auth.token, "matches", `?user1=eq.${auth.userId}&user2=eq.${p.id}&select=id&limit=1`),
+          sb.query<{ id: string }>(auth.token, "matches", `?user1=eq.${p.id}&user2=eq.${auth.userId}&select=id&limit=1`),
+        ]);
+        const alreadyExists = (existFwd?.[0]?.id || existRev?.[0]?.id) ? true : false;
+        if (!alreadyExists) {
+          const matchRes = await sb.insert<{id: string}>(auth.token, "matches", { user1: auth.userId, user2: p.id });
+          const matchId = matchRes?.[0]?.id;
+          if (matchId) await sendMatchWelcomeMessage(auth.token, matchId, auth.name, p.name);
+        }
+        if (onMatch) onMatch(p);
       }
     } catch {}
     setLiking(false);
@@ -8942,7 +8960,7 @@ const VoiceMessage = React.memo(function VoiceMessage({ m, isMine, onOpenOnce, o
 
 type ReportRowLike = { id?: string; reason: string; reporter_id: string; reported_id: string | null; status?: string; created_at?: string };
 
-export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium, initialPartnerId, onConvOpen, onStatusStackChange, onGoDiscover }: { auth: Auth; onUnreadCount: (n: number) => void; onShowPremium: (r: string) => void; onShowGiftPremium?: (partner: { id: string; name: string }) => void; initialPartnerId?: string | null; onConvOpen?: (open: boolean) => void; onStatusStackChange?: (data: { count: number; groups: { userId: string; photo_url?: string; gender?: string }[]; newCount: number } | null) => void; onGoDiscover?: () => void }) {
+export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium, initialPartnerId, onConvOpen, onStatusStackChange, onGoDiscover, onMatch }: { auth: Auth; onUnreadCount: (n: number) => void; onShowPremium: (r: string) => void; onShowGiftPremium?: (partner: { id: string; name: string }) => void; initialPartnerId?: string | null; onConvOpen?: (open: boolean) => void; onStatusStackChange?: (data: { count: number; groups: { userId: string; photo_url?: string; gender?: string }[]; newCount: number } | null) => void; onGoDiscover?: () => void; onMatch?: (p: Profile) => void }) {
   const [convs, setConvs] = useState<Match[]>([]);
   const [open, setOpen] = useState<Match | null>(null);
   const [showGroup, setShowGroup] = useState(false); // Groupe Premium : écran séparé, indépendant de la logique 1-à-1
@@ -9808,8 +9826,15 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
         ]);
         const exists = (existFwd?.[0]?.id || existRev?.[0]?.id) ? true : false;
         if (!exists) await sb.insert(auth.token, "matches", { user1: auth.userId, user2: targetId }).catch(() => {});
-        setToast({ msg: "C'est un match !", type: "success" });
         loadConvs();
+        if (onMatch) {
+          // L'écran de match a besoin du profil complet (nom, photo), pas juste de l'id.
+          const targetProfile = await sb.query<Profile>(auth.token, "profiles", `?id=eq.${targetId}&select=id,name,age,city,gender,bio,photo_url,is_premium&limit=1`).catch(() => [] as Profile[]);
+          if (targetProfile?.[0]) onMatch(targetProfile[0]);
+          else setToast({ msg: "C'est un match !", type: "success" });
+        } else {
+          setToast({ msg: "C'est un match !", type: "success" });
+        }
       } else {
         setToast({ msg: "Profil liké ! S'il vous like aussi, ce sera un match.", type: "success" });
       }
@@ -13289,7 +13314,7 @@ function GroupChat({ auth, onBack, onShowPremium, onOpenPrivateChat }: { auth: A
   );
 }
 
-function CropModal({ src, onConfirm, onCancel }: { src: string; onConfirm: (blob: Blob) => void; onCancel: () => void }) {
+export function CropModal({ src, onConfirm, onCancel }: { src: string; onConfirm: (blob: Blob) => void; onCancel: () => void }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imgRef2 = useRef<HTMLImageElement>(null);
   const canvasContainerRef = useRef<HTMLDivElement>(null);
@@ -15623,6 +15648,18 @@ export default function App() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstall, setShowInstall] = useState(false);
   const [openConvPartnerId, setOpenConvPartnerId] = useState<string | null>(null);
+  // ── Écran "C'est un match" : centralisé ici (niveau App) plutôt que dans chaque écran qui peut
+  //    créer un match (Découvrir, Vues/Likes reçus, Statuts officiels...). Avant, seul Découvrir
+  //    l'affichait vraiment ; les autres endroits ne montraient rien ou juste un petit toast. En
+  //    le centralisant, TOUT chemin qui crée un match (même après un délike + relike répété) passe
+  //    par le même déclencheur et affiche systématiquement l'écran complet. ──
+  const [matchPop, setMatchPop] = useState<Profile | null>(null);
+  const [myPhotoUrl, setMyPhotoUrl] = useState<string | null>(null);
+  useEffect(() => {
+    sb.query<Profile>(auth.token, "profiles", `?id=eq.${auth.userId}&select=photo_url`)
+      .then(res => setMyPhotoUrl(res[0]?.photo_url || null))
+      .catch(() => {});
+  }, []);
   const [inConv, setInConv] = useState(false);
   // ── Pile de statuts affichée dans l'en-tête (remplace Guide sur l'onglet Messages) : Messages
   //    remplit ces données via callback, AppShell les affiche — aucun portail/ReactDOM nécessaire,
@@ -16651,17 +16688,58 @@ export default function App() {
       if (t === "visitors") { setViewsReceived(0); try { localStorage.setItem(`moyo_visitors_seen_${auth!.userId}`, new Date().toISOString()); } catch {} }
     }} unreadCount={unreadCount} notifCount={notifCount} likesReceived={likesReceived} viewsReceived={viewsReceived} auth={auth} adminBadgeCount={adminBadgeCount} showAdminConfig={showAdminConfig} setShowAdminConfig={setShowAdminConfig} inConv={inConv} assistantEnabled={assistantEnabled} statusStackData={statusStackData}>
       <div key={tab} className="page-anim" style={{ width: "100%", height: "100%" }}>
-      {tab === "discover" && <Discover auth={auth} onShowPremium={showPremium} isWide={window.innerWidth >= 768} onGoMessages={(pid) => { setOpenConvPartnerId(pid || null); setTab("messages"); }} />}
-      {tab === "likes" && <LikesPage auth={auth} onShowPremium={showPremium} mode="likes" onBadgeUpdate={() => refreshBadgesRef.current?.()} onGoMessages={(pid) => { setOpenConvPartnerId(pid || null); setTab("messages"); }} onGoDiscover={() => setTab("discover")} />}
-      {tab === "visitors" && <LikesPage auth={auth} onShowPremium={showPremium} mode="visitors" onBadgeUpdate={() => refreshBadgesRef.current?.()} />}
+      {tab === "discover" && <Discover auth={auth} onShowPremium={showPremium} isWide={window.innerWidth >= 768} onGoMessages={(pid) => { setOpenConvPartnerId(pid || null); setTab("messages"); }} onMatch={setMatchPop} />}
+      {tab === "likes" && <LikesPage auth={auth} onShowPremium={showPremium} mode="likes" onBadgeUpdate={() => refreshBadgesRef.current?.()} onGoMessages={(pid) => { setOpenConvPartnerId(pid || null); setTab("messages"); }} onGoDiscover={() => setTab("discover")} onMatch={setMatchPop} />}
+      {tab === "visitors" && <LikesPage auth={auth} onShowPremium={showPremium} mode="visitors" onBadgeUpdate={() => refreshBadgesRef.current?.()} onMatch={setMatchPop} />}
       {tab === "matches" && <Matches auth={auth} onShowPremium={showPremium} onNotifCount={setNotifCount} jumpToProposals={propJump} onGoMessages={(pid) => { setOpenConvPartnerId(pid || null); setTab("messages"); }} onUnmatchStart={() => { isUnmatchingRef.current = true; }} onUnmatchEnd={() => { setTimeout(() => { isUnmatchingRef.current = false; }, 2000); }} />}
-      {tab === "messages" && <Messages auth={auth} onUnreadCount={setUnreadCount} onShowPremium={showPremium} onShowGiftPremium={showGiftPremium} initialPartnerId={openConvPartnerId} onConvOpen={setInConv} onStatusStackChange={setStatusStackData} onGoDiscover={() => setTab("discover")} />}
+      {tab === "messages" && <Messages auth={auth} onUnreadCount={setUnreadCount} onShowPremium={showPremium} onShowGiftPremium={showGiftPremium} initialPartnerId={openConvPartnerId} onConvOpen={setInConv} onStatusStackChange={setStatusStackData} onGoDiscover={() => setTab("discover")} onMatch={setMatchPop} />}
       {tab === "profile" && <Profile auth={auth} onLogout={handleLogout} onShowPremium={showPremium} darkMode={darkMode} onToggleDark={() => { const v = !darkMode; setDarkMode(v); localStorage.setItem("moyo_dark", v ? "1" : "0"); }} onOpenAdmin={auth.isAdmin ? () => openAdminPanel(() => setTab("admin")) : undefined} adminBadgeCount={adminBadgeCount} assistantEnabled={assistantEnabled} onToggleAssistant={toggleAssistant} promoAvailable={promoAvailable} onOpenSuperPromo={() => { if (!promoAvailable) return; setActivePromo({ price: promoAvailable.price, expiresAt: promoAvailable.expiresAt }); showPremium("Super promo Premium"); }} />}
       {tab === "admin" && <Suspense fallback={<AdminLoadingFallback />}><AdminPinGate auth={auth} onBack={() => setTab("discover")} onBadgeCount={setAdminBadgeCount} /></Suspense>}
       </div>
     </AppShell>
     {auth && <RelationalNudge auth={auth} onGoProfile={() => setTab("profile")} />}
     {premiumModal && <PremiumModal reason={premiumModal} onClose={() => { setPremiumModal(null); setGiftTarget(null); setActivePromo(null); }} userId={auth?.userId || ""} token={auth?.token || ""} userEmail={auth?.email || ""} giftFor={giftTarget} promo={giftTarget ? null : activePromo} />}
+
+    {/* ── Écran "C'est un match" : centralisé ici, au-dessus de tous les écrans, pour que TOUT
+        chemin qui crée un match (Découvrir, Vues/Likes reçus, Statuts officiels...) l'affiche
+        systématiquement, même après un délike + relike répété de la même personne. ── */}
+    {matchPop && (
+      <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.9)", zIndex: 700, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", padding: 24 }}>
+        <div className="moyo-card-in" style={{ textAlign: "center", color: "#fff", maxWidth: 320, width: "100%" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 28 }}>
+            <span style={{ fontSize: "1.9rem", fontWeight: 800, color: "#fff" }}>C'est un</span>
+            <span style={{ fontSize: "1.9rem", fontWeight: 800, color: G.or }}>Match !</span>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill={G.or} stroke="none" style={{ marginLeft: 2 }}><path d="M12 2l1.5 6.5L20 10l-6.5 1.5L12 18l-1.5-6.5L4 10l6.5-1.5L12 2z"/></svg>
+          </div>
+
+          <div style={{ position: "relative", height: 150, marginBottom: 26 }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill={G.rouge} stroke="none" style={{ position: "absolute", top: 4, left: "18%", transform: "rotate(-15deg)" }}><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill={G.rouge} stroke="none" style={{ position: "absolute", top: 20, right: "14%", transform: "rotate(12deg)", opacity: 0.8 }}><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            <div style={{ position: "absolute", left: "50%", top: 10, transform: "translateX(-50%)", display: "flex" }}>
+              <div style={{ width: 118, height: 118, borderRadius: "50%", border: "4px solid #fff", overflow: "hidden", marginRight: -22, background: G.creme, boxShadow: "0 6px 20px rgba(0,0,0,0.4)" }}>
+                {myPhotoUrl ? <img src={myPhotoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>}
+              </div>
+              <div style={{ width: 118, height: 118, borderRadius: "50%", border: "4px solid #fff", overflow: "hidden", background: G.creme, boxShadow: "0 6px 20px rgba(0,0,0,0.4)" }}>
+                {matchPop.photo_url ? <img src={matchPop.photo_url} alt={matchPop.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>}
+              </div>
+            </div>
+            <div style={{ position: "absolute", left: "50%", top: 10, transform: "translate(-50%, 42px)", width: 44, height: 44, borderRadius: "50%", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, display: "flex", alignItems: "center", justifyContent: "center", border: "3px solid #fff", boxShadow: "0 4px 12px rgba(192,57,43,0.5)" }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="#fff" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            </div>
+          </div>
+
+          <p style={{ color: "rgba(255,255,255,0.9)", fontSize: "0.98rem", lineHeight: 1.6, marginBottom: 30 }}>
+            {MATCH_SUBTITLE.replace("{name}", matchPop.name).split(matchPop.name).map((part, i, arr) => i < arr.length - 1 ? <React.Fragment key={i}>{part}<span style={{ color: G.rouge, fontWeight: 700 }}>{matchPop.name}</span></React.Fragment> : part)}
+          </p>
+
+          <button onClick={() => { const target = matchPop; setMatchPop(null); setOpenConvPartnerId(target.id); setTab("messages"); }} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 9, background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: "#fff", border: "none", borderRadius: 999, padding: "15px", fontSize: "0.95rem", fontWeight: 700, cursor: "pointer", boxShadow: "0 8px 24px rgba(192,57,43,0.45)", marginBottom: 12 }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+            Envoyer un message
+          </button>
+          <button onClick={() => setMatchPop(null)} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.55)", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer", padding: 6 }}>Continuer à explorer</button>
+        </div>
+      </div>
+    )}
     {privacyNotice && <PrivacyNoticeModal gender={privacyNotice.gender} onClose={ackPrivacyNotice} />}
     {premiumSuccess && (
       <div onClick={() => setPremiumSuccess(false)} className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100000, padding: 20, backdropFilter: "blur(3px)" }}>

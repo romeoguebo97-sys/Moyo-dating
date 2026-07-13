@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback, memo } from "react";
 import type { Auth, Match, Message, PaymentRequest, Profile, StatusPost, ToastState } from "./App";
+import { CropModal } from "./App";
 import {
   APPOINTMENT_PHYSICAL_PRICE, APPT_HOUR_MAX, APPT_HOUR_MIN, AUTO_MOD_CONTACT_REPLY, Avatar, BLOCK_SAME_GENDER, Badge, Btn, CONTACT_ADDRESS, CONTACT_EMAIL, CONTACT_WHATSAPP, ConfirmModal, DISCOVER_DEFAULT_MODE, DateTimePicker, EUR_TO_FCFA, EXPENSE_CATEGORIES, EXPENSE_CAT_COLORS, FREE_LIMITS, G, LANDING_MEMBERS, LANDING_SLOGAN, LANDING_STAT_CITIES, LANDING_STAT_COUPLES, LANDING_STAT_MEMBERS, LANDING_TITLE_END, LANDING_TITLE_HIGHLIGHT, LANDING_TITLE_START, LIFETIME_PREMIUM_UNTIL, Messages, PAY_AIRTEL_ENABLED, PAY_AIRTEL_NUMBER, PAY_AIRTEL_RESPONSABLE, PAY_CB_ENABLED, PAY_MTN_ENABLED, PAY_MTN_NUMBER, PAY_MTN_RESPONSABLE, PAY_WERO_ENABLED, PAY_WERO_NUMBER, PAY_PAYPAL_ENABLED, PAY_PAYPAL_NUMBER, PLAN_2MONTH_ENABLED, PLAN_MONTH_ENABLED, PLAN_WEEK_ENABLED, POLL_ADMIN_BADGE_MS, POLL_BADGES_MS, POLL_BROADCAST_MS, POLL_STATS_MS, POLL_SUPPORT_MS, PREMIUM_30_DAYS_MS, PREMIUM_DAYS_2MONTH, PREMIUM_DAYS_WEEK, PREMIUM_PRICE_2MONTH_FCFA, PREMIUM_PRICE_EUR, PREMIUM_PRICE_FCFA, PREMIUM_PRICE_WEEK_FCFA, PREMIUM_STAT_COUPLES, PREMIUM_STAT_MEMBERS, PremiumBadge, REFERRAL_BONUS_2MONTH, REFERRAL_BONUS_MONTH, REFERRAL_BONUS_WEEK, SOCIAL_FACEBOOK, SOCIAL_INSTAGRAM, SOCIAL_TIKTOK, SOCIAL_YOUTUBE, STORE_LINK_ANDROID, STORE_LINK_IOS, SUPABASE_KEY, SUPABASE_URL, SUPER_ADMIN_ID, SUPPORT_PREFIX_REPLY, SUPPORT_PREFIX_USER, SUPPORT_TEAM_ID, SUPPORT_TEAM_NAME, SUPPORT_TEAM_PHOTO, Toast, VerifiedBadge, apptStatusInfo, buildContactBannedRegex, buildCustomBannedRegex, setExemptedBuiltinWords, setExemptedContactWords, cleanSupportReason, dedupeMatchesByCouple, fmtApptDT, fmtDate, formatMoney, isSupportReason, logAdminAction, mmLevel, mmScore, paymentCurrency, resolveStatusImageUrl, sb, sendMatchWelcomeMessage,
   setAPPOINTMENT_PHYSICAL_PRICE, setAUTO_MOD_CONTACT_REPLY, setBLOCK_SAME_GENDER, setCONTACT_ADDRESS, setCONTACT_EMAIL, setCONTACT_WHATSAPP, setDISCOVER_DEFAULT_MODE, setEUR_TO_FCFA, setLANDING_MEMBERS, setLANDING_SLOGAN, setLANDING_STAT_CITIES, setLANDING_STAT_COUPLES, setLANDING_STAT_MEMBERS, setLANDING_TITLE_END, setLANDING_TITLE_HIGHLIGHT, setLANDING_TITLE_START, setPAY_AIRTEL_ENABLED, setPAY_AIRTEL_NUMBER, setPAY_AIRTEL_RESPONSABLE, setPAY_CB_ENABLED, setPAY_MTN_ENABLED, setPAY_MTN_NUMBER, setPAY_MTN_RESPONSABLE, setPAY_WERO_ENABLED, setPAY_WERO_NUMBER, setPAY_PAYPAL_ENABLED, setPAY_PAYPAL_NUMBER, setPLAN_2MONTH_ENABLED, setPLAN_MONTH_ENABLED, setPLAN_WEEK_ENABLED, setPOLL_ADMIN_BADGE_MS, setPOLL_BADGES_MS, setPOLL_BROADCAST_MS, setPOLL_STATS_MS, setPOLL_SUPPORT_MS, setPREMIUM_30_DAYS_MS, setPREMIUM_DAYS_2MONTH, setPREMIUM_DAYS_WEEK, setPREMIUM_PRICE_2MONTH_FCFA, setPREMIUM_PRICE_EUR, setPREMIUM_PRICE_FCFA, setPREMIUM_PRICE_WEEK_FCFA, setPREMIUM_STAT_COUPLES, setPREMIUM_STAT_MEMBERS, setPREMIUM_BOOST_ENABLED, setPREMIUM_SCREEN_VARIANT, setFEATURE_SHOW_LIKES_VIEWS_FREE, setPRIVACY_NOTICE_ENABLED, setSOCIAL_FACEBOOK, setSOCIAL_INSTAGRAM, setSOCIAL_TIKTOK, setSOCIAL_YOUTUBE, setSTORE_LINK_ANDROID, setSTORE_LINK_IOS, setSUPPORT_TEAM_PHOTO,
@@ -1985,10 +1986,13 @@ function PremiumBoostConfig({ auth }: { auth: Auth }) {
 }
 
 // ── Photo de l'Assistant Moyo Dating : upload dans le bucket Storage "assistant", clé app_settings "assistant_photo_url" ──
+// Utilise désormais le même outil de recadrage (CropModal) que les abonnés pour leur propre photo
+// de profil — même geste de pincer/zoomer/glisser, même cadre carré, cohérent partout dans l'app.
 function AssistantPhotoConfig({ auth }: { auth: Auth }) {
   const [photo, setPhoto] = React.useState(SUPPORT_TEAM_PHOTO);
   const [uploading, setUploading] = React.useState(false);
   const [error, setError] = React.useState("");
+  const [cropSrc, setCropSrc] = React.useState<string | null>(null);
   const fileRef = React.useRef<HTMLInputElement>(null);
   const H = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` };
 
@@ -1999,19 +2003,24 @@ function AssistantPhotoConfig({ auth }: { auth: Auth }) {
     setPhoto(url);
   };
 
-  const onPickFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onPickFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
     if (!file.type.startsWith("image/")) { setError("Merci de choisir une image."); return; }
+    setError("");
+    setCropSrc(URL.createObjectURL(file));
+  };
+
+  const handleCropConfirm = async (blob: Blob) => {
+    setCropSrc(null);
     setUploading(true); setError("");
     try {
-      const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-      const path = `assistant-photo-${Date.now()}.${ext}`;
+      const path = `assistant-photo-${Date.now()}.jpg`;
       const r = await fetch(`${SUPABASE_URL}/storage/v1/object/assistant/${path}`, {
         method: "POST",
-        headers: { ...H, "Content-Type": file.type || "image/jpeg", "x-upsert": "true" },
-        body: file,
+        headers: { ...H, "Content-Type": "image/jpeg", "x-upsert": "true" },
+        body: blob,
       });
       if (!r.ok) throw new Error();
       const url = `${SUPABASE_URL}/storage/v1/object/public/assistant/${path}`;
@@ -2051,6 +2060,13 @@ function AssistantPhotoConfig({ auth }: { auth: Auth }) {
         </div>
       </div>
       {error && <div style={{ marginTop: 10, fontSize: "0.72rem", color: G.rouge, fontWeight: 600 }}>{error}</div>}
+      {cropSrc && (
+        <CropModal
+          src={cropSrc}
+          onConfirm={handleCropConfirm}
+          onCancel={() => { URL.revokeObjectURL(cropSrc); setCropSrc(null); }}
+        />
+      )}
     </div>
   );
 }
@@ -3378,6 +3394,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
     photo_url?: string | null;
     admin_level?: string | null;
     account_deleted?: boolean;
+    phone?: string | null;
   };
 
   // ── Onglet actif ──
@@ -4534,9 +4551,31 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
   type UserFilterKey = "admin" | "premium" | "verified" | "banned" | "male" | "female" | "online" | "recent";
   const [usersFilters, setUsersFilters] = useState<Set<UserFilterKey>>(new Set());
   const [adminViewedProfile, setAdminViewedProfile] = useState<Profile | null>(null);
+  // ── Édition du numéro de téléphone depuis la fiche admin : certains membres n'arrivent pas à
+  //    le renseigner eux-mêmes et demandent à l'équipe de le faire pour eux. ──
+  const [editingUserPhone, setEditingUserPhone] = useState(false);
+  const [userPhoneDraft, setUserPhoneDraft] = useState("");
+  const [savingUserPhone, setSavingUserPhone] = useState(false);
+  useEffect(() => { setEditingUserPhone(false); setUserPhoneDraft(adminViewedProfile?.phone || ""); }, [adminViewedProfile?.id]);
+  const saveUserPhone = async () => {
+    if (!adminViewedProfile) return;
+    setSavingUserPhone(true);
+    try {
+      const newPhone = userPhoneDraft.trim() || null;
+      await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${adminViewedProfile.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" },
+        body: JSON.stringify({ phone: newPhone }),
+      });
+      setAdminViewedProfile(prev => prev ? { ...prev, phone: newPhone } : prev);
+      setEditingUserPhone(false);
+      showToast("Numéro de téléphone enregistré.", "success");
+    } catch { showToast("Erreur lors de l'enregistrement.", "error"); }
+    setSavingUserPhone(false);
+  };
   const openAdminProfile = async (userId: string) => {
     try {
-      const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${userId}&select=id,name,age,city,gender,bio,photo_url,is_premium,is_verified,is_admin,religion,profession,hobbies,created_at,last_seen`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${userId}&select=id,name,age,city,gender,bio,photo_url,is_premium,is_verified,is_admin,religion,profession,hobbies,created_at,last_seen,phone`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
       const data = await r.json().catch(() => []);
       if (Array.isArray(data) && data[0]) setAdminViewedProfile(data[0]);
     } catch {}
@@ -4678,7 +4717,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
   const [viewPaymentProfile, setViewPaymentProfile] = useState<Profile | null>(null);
   const openPaymentProfile = async (userId: string) => {
     try {
-      const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${userId}&select=id,name,age,city,gender,bio,photo_url,is_premium,is_verified,is_admin,religion,profession,hobbies`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${userId}&select=id,name,age,city,gender,bio,photo_url,is_premium,is_verified,is_admin,religion,profession,hobbies,phone`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
       const data = await r.json().catch(() => []);
       if (Array.isArray(data) && data[0]) setViewPaymentProfile(data[0]);
     } catch {}
@@ -9002,6 +9041,21 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     {adminViewedProfile.religion && <div style={{ background: "#F8F8F8", borderRadius: 10, padding: "8px 12px" }}><div style={{ fontSize: "0.65rem", color: "#aaa", fontWeight: 700, textTransform: "uppercase" }}>Religion</div><div style={{ fontSize: "0.83rem", fontWeight: 600, color: "#333", marginTop: 2 }}>{adminViewedProfile.religion}</div></div>}
                     {adminViewedProfile.profession && <div style={{ background: "#F8F8F8", borderRadius: 10, padding: "8px 12px" }}><div style={{ fontSize: "0.65rem", color: "#aaa", fontWeight: 700, textTransform: "uppercase" }}>Profession</div><div style={{ fontSize: "0.83rem", fontWeight: 600, color: "#333", marginTop: 2 }}>{adminViewedProfile.profession}</div></div>}
                     {adminViewedProfile.hobbies && <div style={{ background: "#F8F8F8", borderRadius: 10, padding: "8px 12px", gridColumn: "1 / -1" }}><div style={{ fontSize: "0.65rem", color: "#aaa", fontWeight: 700, textTransform: "uppercase" }}>Centres d'intérêt</div><div style={{ fontSize: "0.83rem", fontWeight: 600, color: "#333", marginTop: 2 }}>{adminViewedProfile.hobbies}</div></div>}
+                  </div>
+                  <div style={{ marginTop: 12 }}>
+                    <div style={{ fontSize: "0.7rem", fontWeight: 700, color: "#aaa", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>Téléphone</div>
+                    {editingUserPhone ? (
+                      <div style={{ display: "flex", gap: 6 }}>
+                        <input autoFocus value={userPhoneDraft} onChange={e => setUserPhoneDraft(e.target.value)} placeholder="Ex : 06 912 34 56" style={{ flex: 1, boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "8px 10px", fontSize: "0.85rem", outline: "none" }} />
+                        <button onClick={saveUserPhone} disabled={savingUserPhone} style={{ background: G.rouge, color: "#fff", border: "none", borderRadius: 10, padding: "0 14px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer" }}>{savingUserPhone ? "…" : "OK"}</button>
+                        <button onClick={() => setEditingUserPhone(false)} style={{ background: "#F0F0F0", color: "#666", border: "none", borderRadius: 10, padding: "0 12px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer" }}>✕</button>
+                      </div>
+                    ) : (
+                      <div onClick={() => setEditingUserPhone(true)} style={{ background: "#F8F8F8", borderRadius: 10, padding: "8px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
+                        <span style={{ fontSize: "0.83rem", fontWeight: 600, color: adminViewedProfile.phone ? "#333" : "#bbb" }}>{adminViewedProfile.phone || "Non renseigné — cliquer pour ajouter"}</span>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                      </div>
+                    )}
                   </div>
                   {(adminViewedProfile as any).created_at && <div style={{ marginTop: 12, fontSize: "0.72rem", color: "#bbb", textAlign: "center" }}>Inscrit le {formatDate((adminViewedProfile as any).created_at)}</div>}
                   <AdminNotes auth={auth} targetType="user" targetId={adminViewedProfile.id} />
