@@ -2384,9 +2384,8 @@ function PremiumModal({ onClose, reason, userId, token, userEmail, giftFor, prom
                     <div style={{ width: 22, height: 22, borderRadius: "50%", background: G.rouge, color: "#fff", fontSize: "0.72rem", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>1</div>
                     <div style={{ fontSize: "0.92rem", fontWeight: 800, color: G.brun }}>Compose ce code depuis ton mobile</div>
                   </div>
-                  <div style={{ background: "#F0EDE6", borderRadius: 10, padding: "13px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                  <div style={{ background: "#F0EDE6", borderRadius: 10, padding: "13px", textAlign: "center" }}>
                     <div style={{ fontSize: "1rem", fontWeight: 800, color: G.brun, fontFamily: "monospace" }}>{B3OP.ussd}</div>
-                    <div onClick={() => { navigator.clipboard?.writeText(B3OP.ussd); }} className="moyo-tactile" style={{ cursor: "pointer", background: G.brun, borderRadius: 8, padding: "7px 12px", fontSize: "0.7rem", fontWeight: 700, color: "#fff", flexShrink: 0 }}>Copier</div>
                   </div>
                 </div>
               </>
@@ -2757,10 +2756,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail, giftFor, prom
                 le menu lui-même sur son clavier. */}
             <div style={{ background: "#f2f2f3", borderRadius: 12, padding: "13px", textAlign: "center" }}>
               <div style={{ fontSize: "0.78rem", color: "#999", marginBottom: 6 }}>Composez ce code depuis votre mobile</div>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
-                <div style={{ fontSize: "1.05rem", fontWeight: 800, color: "#1a1a2e", fontFamily: "monospace", letterSpacing: 0.5 }}>{OP.ussd}</div>
-                <div onClick={() => { navigator.clipboard?.writeText(OP.ussd); }} className="moyo-tactile" style={{ cursor: "pointer", background: "#1a1a2e", borderRadius: 8, padding: "6px 11px", fontSize: "0.68rem", fontWeight: 700, color: "#fff", flexShrink: 0 }}>Copier</div>
-              </div>
+              <div style={{ fontSize: "1.05rem", fontWeight: 800, color: "#1a1a2e", fontFamily: "monospace", letterSpacing: 0.5 }}>{OP.ussd}</div>
             </div>
           </div>
 
