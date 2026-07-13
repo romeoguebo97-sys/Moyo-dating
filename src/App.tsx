@@ -729,18 +729,17 @@ const broadcastTargetsUser = (target: string | null | undefined, isPremium: bool
 //    et nombre d'ignorés ("Plus tard" / fermeture). Lecture-puis-écriture non atomique :
 //    en cas de clics quasi simultanés d'utilisateurs différents, un comptage peut se perdre.
 //    Suffisant pour un indicateur marketing approximatif, pas pour de la facturation. ──
-// ── Compteur simple pour la Super Promo : nombre de clics "J'en profite" et nombre
-//    d'ignorés ("Plus tard" / fermeture). Passe par la fonction Postgres dédiée
-//    increment_promo_counter (SECURITY DEFINER) plutôt qu'un accès direct à app_settings —
-//    un membre normal n'a pas les droits d'écrire dans app_settings (RLS réservée aux admins),
-//    donc un GET+PATCH direct échouait silencieusement pour tout le monde sauf les admins.
-//    Cette fonction est atomique côté serveur, donc pas de clic perdu en cas de clics simultanés. ──
-export const bumpPromoCounter = async (key: "promo_clicks" | "promo_ignored", token: string) => {
+// ── Journalisation nominative des interactions Super Promo ("J'en profite" / "Plus tard") :
+//    remplace l'ancien compteur anonyme — l'admin doit pouvoir voir QUI a manifesté une
+//    intention réelle de passer Premium, pas juste un chiffre total. Passe par la fonction
+//    Postgres dédiée log_promo_interaction (SECURITY DEFINER), pour les mêmes raisons que les
+//    autres écritures sensibles : un membre normal n'a pas de droit d'écriture direct élargi. ──
+export const logPromoInteraction = async (action: "clicked" | "ignored", price: number, token: string) => {
   try {
-    await fetch(`${SUPABASE_URL}/rest/v1/rpc/increment_promo_counter`, {
+    await fetch(`${SUPABASE_URL}/rest/v1/rpc/log_promo_interaction`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${token}` },
-      body: JSON.stringify({ counter_key: key }),
+      body: JSON.stringify({ p_action: action, p_price: price }),
     });
   } catch {}
 };
@@ -16835,7 +16834,7 @@ export default function App() {
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 20500, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
           <div style={{ width: "100%", maxWidth: 320, borderRadius: 28, padding: 3, background: `linear-gradient(160deg,${G.rouge},${G.rougeDark})` }}>
             <div style={{ background: G.creme, borderRadius: 26, padding: "26px 22px", textAlign: "center", position: "relative" }}>
-              <button onClick={() => { setSuperPromoOpen(false); bumpPromoCounter("promo_ignored", auth.token); }} aria-label="Fermer" style={{ position: "absolute", top: 12, right: 12, background: "none", border: "none", color: G.brunLight, opacity: 0.5, cursor: "pointer", padding: 4 }}>
+              <button onClick={() => { setSuperPromoOpen(false); logPromoInteraction("ignored", superPromoData.price, auth.token); }} aria-label="Fermer" style={{ position: "absolute", top: 12, right: 12, background: "none", border: "none", color: G.brunLight, opacity: 0.5, cursor: "pointer", padding: 4 }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
               </button>
               {daysLeft !== null && (
@@ -16858,8 +16857,8 @@ export default function App() {
                 <div style={{ fontSize: "0.82rem", color: "#9a9086", textDecoration: "line-through", marginBottom: 8 }}>{PREMIUM_PRICE_FCFA.toLocaleString("fr-FR")} FCFA</div>
                 {pct > 0 && <span style={{ display: "inline-block", fontSize: "0.7rem", fontWeight: 600, color: "#1a5c3a", background: "rgba(26,92,58,0.1)", padding: "4px 12px", borderRadius: 999 }}>-{pct}% ce mois-ci</span>}
               </div>
-              <button onClick={() => { setSuperPromoOpen(false); setActivePromo({ price: superPromoData.price, expiresAt: superPromoData.expiresAt }); showPremium("Super promo Premium"); bumpPromoCounter("promo_clicks", auth.token); }} style={{ width: "100%", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: "#fff", border: "none", padding: 14, fontSize: "0.9rem", fontWeight: 700, borderRadius: 999, marginBottom: 10, cursor: "pointer" }}>J'en profite</button>
-              <button onClick={() => { setSuperPromoOpen(false); bumpPromoCounter("promo_ignored", auth.token); }} style={{ background: "none", border: "none", color: G.brunLight, opacity: 0.55, fontSize: "0.78rem", padding: 4, cursor: "pointer" }}>Plus tard</button>
+              <button onClick={() => { setSuperPromoOpen(false); setActivePromo({ price: superPromoData.price, expiresAt: superPromoData.expiresAt }); showPremium("Super promo Premium"); logPromoInteraction("clicked", superPromoData.price, auth.token); }} style={{ width: "100%", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: "#fff", border: "none", padding: 14, fontSize: "0.9rem", fontWeight: 700, borderRadius: 999, marginBottom: 10, cursor: "pointer" }}>J'en profite</button>
+              <button onClick={() => { setSuperPromoOpen(false); logPromoInteraction("ignored", superPromoData.price, auth.token); }} style={{ background: "none", border: "none", color: G.brunLight, opacity: 0.55, fontSize: "0.78rem", padding: 4, cursor: "pointer" }}>Plus tard</button>
             </div>
           </div>
         </div>

@@ -4200,9 +4200,13 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
     setProposeResults2(list);
   };
 
-  const searchProfilesForMatch = async (query: string): Promise<AdminProfile[]> => {
+  // oppositeOfGender : si fourni, ne retourne que le genre opposé (celui déjà choisi dans l'autre
+  // case) — évite de pouvoir sélectionner deux hommes ou deux femmes par erreur en "Créer un match".
+  const searchProfilesForMatch = async (query: string, oppositeOfGender?: string): Promise<AdminProfile[]> => {
     if (!query.trim()) return [];
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?name=ilike.*${encodeURIComponent(query)}*&select=id,name,age,city,photo_url&limit=6`, {
+    const opposite = oppositeOfGender === "Homme" ? "Femme" : oppositeOfGender === "Femme" ? "Homme" : null;
+    const genderFilter = opposite ? `&gender=eq.${encodeURIComponent(opposite)}` : "";
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?name=ilike.*${encodeURIComponent(query)}*${genderFilter}&select=id,name,age,city,photo_url,gender&limit=6`, {
       headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
     });
     const data = await r.json().catch(() => []);
@@ -5758,15 +5762,17 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
     })();
     (async () => {
       try {
-        const r = await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(promo_clicks,promo_ignored)&select=key,value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
-        const rows = await r.json().catch(() => []);
-        const map: Record<string, string> = {};
-        (Array.isArray(rows) ? rows : []).forEach((row: any) => { map[row.key] = row.value; });
-        if (!cancelled) { setPromoClicks(parseInt(map["promo_clicks"] || "0") || 0); setPromoIgnored(parseInt(map["promo_ignored"] || "0") || 0); }
+        const since = promoStart || new Date(0).toISOString();
+        const [rc, ri] = await Promise.all([
+          fetch(`${SUPABASE_URL}/rest/v1/promo_interactions?action=eq.clicked&created_at=gte.${since}&select=id`, { method: "HEAD", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "count=exact", "Range": "0-0" } }),
+          fetch(`${SUPABASE_URL}/rest/v1/promo_interactions?action=eq.ignored&created_at=gte.${since}&select=id`, { method: "HEAD", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "count=exact", "Range": "0-0" } }),
+        ]);
+        const countOf = (r: Response) => { const cr = r.headers.get("content-range"); const t = cr ? parseInt((cr.split("/")[1] || "0"), 10) : 0; return isNaN(t) ? 0 : t; };
+        if (!cancelled) { setPromoClicks(countOf(rc)); setPromoIgnored(countOf(ri)); }
       } catch {}
     })();
     return () => { cancelled = true; };
-  }, [promoGender, promoPlan, activeTab, mktTab]);
+  }, [promoGender, promoPlan, activeTab, mktTab, promoStart]);
 
   const promoTargetLabel = (g: string, p: string) => {
     const gl = g === "femmes" ? "Femmes" : g === "hommes" ? "Hommes" : "Tout le monde";
@@ -5782,7 +5788,6 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
     try {
       const endISO = new Date(promoExpiresAt).toISOString();
       const startISO = autoShortcuts.promo_active && promoStart ? promoStart : new Date().toISOString();
-      const isNewActivation = !autoShortcuts.promo_active;
       await Promise.all([
         saveSetting("promo_price_fcfa", String(price), auth.token),
         saveSetting("promo_expires_at", endISO, auth.token),
@@ -5790,13 +5795,40 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
         saveSetting("promo_message", promoMessage, auth.token),
         saveSetting("promo_start", startISO, auth.token),
         onSetAutoShortcut("promo_active", true),
-        ...(isNewActivation ? [saveSetting("promo_clicks", "0", auth.token), saveSetting("promo_ignored", "0", auth.token)] : []),
       ]);
       setPromoStart(startISO);
-      if (isNewActivation) { setPromoClicks(0); setPromoIgnored(0); }
       showToast("Super promo activée.", "success");
     } catch { showToast("Erreur lors de l'enregistrement de la promo.", "error"); }
     finally { setPromoSaving(false); }
+  };
+
+  // ── Détail nominatif d'une promotion archivée : qui a cliqué "J'en profite", qui a ignoré.
+  //    Les lignes de promo_interactions restent en base indéfiniment, donc ça marche même pour
+  //    de vieilles entrées de l'historique créées avant l'ajout de cette fonctionnalité. ──
+  const [promoDetail, setPromoDetail] = useState<{ rec: any; clickers: any[]; ignorers: any[] } | null>(null);
+  const [promoDetailLoading, setPromoDetailLoading] = useState(false);
+  const openPromoDetail = async (rec: any) => {
+    setPromoDetail({ rec, clickers: [], ignorers: [] });
+    setPromoDetailLoading(true);
+    try {
+      const rows = await sb.query<{ user_id: string; action: string; created_at: string }>(auth.token, "promo_interactions", `?created_at=gte.${rec.start}&created_at=lte.${rec.end}&select=user_id,action,created_at`).catch(() => [] as { user_id: string; action: string; created_at: string }[]);
+      const clickerIds = Array.from(new Set((rows || []).filter(r => r.action === "clicked").map(r => r.user_id)));
+      const ignorerIds = Array.from(new Set((rows || []).filter(r => r.action === "ignored").map(r => r.user_id)));
+      const allIds = Array.from(new Set([...clickerIds, ...ignorerIds]));
+      const profilesById: Record<string, any> = {};
+      if (allIds.length) {
+        const profs = await sb.query<any>(auth.token, "profiles", `?id=in.(${allIds.join(",")})&select=id,name,age,city,photo_url,phone`).catch(() => [] as any[]);
+        (Array.isArray(profs) ? profs : []).forEach((p: any) => { profilesById[p.id] = p; });
+      }
+      setPromoDetail({
+        rec,
+        clickers: clickerIds.map(id => profilesById[id]).filter(Boolean),
+        ignorers: ignorerIds.map(id => profilesById[id]).filter(Boolean),
+      });
+    } catch {
+      setPromoDetail({ rec, clickers: [], ignorers: [] });
+    }
+    setPromoDetailLoading(false);
   };
 
   const stopPromo = async () => {
@@ -5811,17 +5843,26 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
         const r = await fetch(`${SUPABASE_URL}/rest/v1/payment_verification_requests?subscription_selected=eq.${encodeURIComponent(PROMO_LABEL)}&created_at=gte.${startISO}&select=id`, { method: "HEAD", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "count=exact", "Range": "0-0" } });
         const cr = r.headers.get("content-range"); conversions = cr ? parseInt((cr.split("/")[1] || "0"), 10) : 0;
       } catch {}
-      const rec = { id: `p_${Date.now()}`, price: parseInt(promoPrice) || 0, standardPrice: PREMIUM_PRICE_FCFA, target: `${promoGender}|${promoPlan}`, targetLabel: promoTargetLabel(promoGender, promoPlan), start: startISO, end: nowISO, message: promoMessage, conversions: isNaN(conversions) ? 0 : conversions, clicked: promoClicks ?? 0, ignored: promoIgnored ?? 0 };
+      // Clics/ignorés recalculés précisément pour la fenêtre exacte [startISO, nowISO] plutôt que
+      // de faire confiance à l'état affiché (qui peut être légèrement en retard) — la liste
+      // nominative détaillée est de toute façon reconsultable ensuite via "Voir qui", puisque les
+      // lignes de promo_interactions restent en base indéfiniment, indexées par date.
+      let clicked = 0, ignored = 0;
+      try {
+        const [rc, ri] = await Promise.all([
+          fetch(`${SUPABASE_URL}/rest/v1/promo_interactions?action=eq.clicked&created_at=gte.${startISO}&created_at=lte.${nowISO}&select=id`, { method: "HEAD", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "count=exact", "Range": "0-0" } }),
+          fetch(`${SUPABASE_URL}/rest/v1/promo_interactions?action=eq.ignored&created_at=gte.${startISO}&created_at=lte.${nowISO}&select=id`, { method: "HEAD", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "count=exact", "Range": "0-0" } }),
+        ]);
+        const countOf = (r: Response) => { const cr = r.headers.get("content-range"); const t = cr ? parseInt((cr.split("/")[1] || "0"), 10) : 0; return isNaN(t) ? 0 : t; };
+        clicked = countOf(rc); ignored = countOf(ri);
+      } catch {}
+      const rec = { id: `p_${Date.now()}`, price: parseInt(promoPrice) || 0, standardPrice: PREMIUM_PRICE_FCFA, target: `${promoGender}|${promoPlan}`, targetLabel: promoTargetLabel(promoGender, promoPlan), start: startISO, end: nowISO, message: promoMessage, conversions: isNaN(conversions) ? 0 : conversions, clicked, ignored };
       const next = [rec, ...promoHistory].slice(0, 50);
       setPromoHistory(next);
       await Promise.all([
         onSetAutoShortcut("promo_active", false),
         saveSetting("promo_history", JSON.stringify(next), auth.token),
-        saveSetting("promo_clicks", "0", auth.token),
-        saveSetting("promo_ignored", "0", auth.token),
       ]);
-      setPromoClicks(0);
-      setPromoIgnored(0);
       showToast(`Promo arrêtée : ${rec.conversions} conversion${rec.conversions > 1 ? "s" : ""}.`, "success");
     } catch { showToast("Erreur lors de l'arrêt de la promo.", "error"); }
     finally { setPromoSaving(false); }
@@ -6074,7 +6115,11 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
   const TEMPLATE_CATS = ["Accueil", "Abonnement", "Paiement", "Sécurité", "Fonctionnalités", "Signalements", "Mise en avant", "Autre"];
   // ── Catégories personnalisées ajoutées par l'admin, en plus des catégories fixes ci-dessus ──
   const [customTemplateCats, setCustomTemplateCats] = useState<string[]>([]);
-  const allTemplateCats = [...TEMPLATE_CATS, ...customTemplateCats.filter(c => !TEMPLATE_CATS.includes(c))];
+  // "Autre" doit toujours apparaître en dernier dans la liste, même après les catégories
+  // personnalisées créées par l'admin (sinon elle se retrouve coincée au milieu, entre les
+  // catégories fixes et les catégories ajoutées ensuite).
+  const allTemplateCatsRaw = [...TEMPLATE_CATS, ...customTemplateCats.filter(c => !TEMPLATE_CATS.includes(c))];
+  const allTemplateCats = [...allTemplateCatsRaw.filter(c => c !== "Autre"), ...(allTemplateCatsRaw.includes("Autre") ? ["Autre"] : [])];
   const persistTemplateCats = async (next: string[]) => {
     setCustomTemplateCats(next);
     try { await saveSetting("support_template_categories", JSON.stringify(next), auth.token); } catch {}
@@ -6497,6 +6542,31 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
       setPendingLikesCount(counts);
       setSentPendingLikesCount(sentCounts);
     } catch { setPendingLikesCount({}); setSentPendingLikesCount({}); }
+  };
+  // ── Détail nominatif des likes en attente (pas encore un match) : qui a liké cette personne,
+  //    ou qui cette personne a likée, en excluant les paires déjà matchées (même logique que
+  //    loadPendingLikes). ──
+  const [pendingLikesDetail, setPendingLikesDetail] = useState<{ userId: string; userName: string; direction: "received" | "sent"; profiles: any[] } | null>(null);
+  const [pendingLikesDetailLoading, setPendingLikesDetailLoading] = useState(false);
+  const openPendingLikesDetail = async (userId: string, userName: string, direction: "received" | "sent") => {
+    setPendingLikesDetail({ userId, userName, direction, profiles: [] });
+    setPendingLikesDetailLoading(true);
+    try {
+      const H = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` };
+      const q = direction === "received" ? `to_user=eq.${userId}` : `from_user=eq.${userId}`;
+      const likesRaw = await fetch(`${SUPABASE_URL}/rest/v1/likes?${q}&select=from_user,to_user&limit=500`, { headers: H }).then(r => r.json()).catch(() => []);
+      const otherIds: string[] = (Array.isArray(likesRaw) ? likesRaw : []).map((l: any) => direction === "received" ? l.from_user : l.to_user).filter(Boolean);
+      if (otherIds.length === 0) { setPendingLikesDetail({ userId, userName, direction, profiles: [] }); setPendingLikesDetailLoading(false); return; }
+      const matchesRaw = await fetch(`${SUPABASE_URL}/rest/v1/matches?or=(user1.eq.${userId},user2.eq.${userId})&select=user1,user2&limit=500`, { headers: H }).then(r => r.json()).catch(() => []);
+      const matchedOtherIds = new Set((Array.isArray(matchesRaw) ? matchesRaw : []).map((m: any) => m.user1 === userId ? m.user2 : m.user1));
+      const pendingIds = Array.from(new Set(otherIds)).filter(id => !matchedOtherIds.has(id));
+      if (pendingIds.length === 0) { setPendingLikesDetail({ userId, userName, direction, profiles: [] }); setPendingLikesDetailLoading(false); return; }
+      const profs = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=in.(${pendingIds.join(",")})&select=id,name,age,city,photo_url,phone`, { headers: H }).then(r => r.json()).catch(() => []);
+      setPendingLikesDetail({ userId, userName, direction, profiles: Array.isArray(profs) ? profs : [] });
+    } catch {
+      setPendingLikesDetail({ userId, userName, direction, profiles: [] });
+    }
+    setPendingLikesDetailLoading(false);
   };
   // Helper : premium à vie
   const isLifetimePremium = (u: AdminProfile) => !!u.premium_until && new Date(u.premium_until).getFullYear() >= 2090;
@@ -8050,6 +8120,38 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
           </div>
         </div>
       )}
+      {pendingLikesDetail && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10002, display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }} onClick={() => setPendingLikesDetail(null)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 420, maxHeight: "85vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
+            <div style={{ padding: "16px 20px", borderBottom: `1px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, background: G.blanc, zIndex: 1 }}>
+              <div>
+                <div style={{ fontWeight: 900, fontSize: "1.02rem", color: G.brun }}>{pendingLikesDetail.userName}</div>
+                <div style={{ fontSize: "0.72rem", color: pendingLikesDetail.direction === "received" ? "#e91e8c" : "#2980b9" }}>{pendingLikesDetail.direction === "received" ? "A été likée par" : "A liké"} — en attente d'un retour</div>
+              </div>
+              <button onClick={() => setPendingLikesDetail(null)} style={{ border: "none", background: G.creme, borderRadius: "50%", width: 30, height: 30, cursor: "pointer", color: "#666", flexShrink: 0 }}>✕</button>
+            </div>
+            <div style={{ padding: 20 }}>
+              {pendingLikesDetailLoading ? (
+                <div style={{ textAlign: "center", color: "#aaa", fontSize: "0.82rem", padding: "24px 0" }}>Chargement…</div>
+              ) : pendingLikesDetail.profiles.length === 0 ? (
+                <div style={{ textAlign: "center", color: "#bbb", fontSize: "0.82rem", padding: "24px 0" }}>Personne pour l'instant.</div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {pendingLikesDetail.profiles.map((p: any) => (
+                    <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      {p.photo_url ? <img src={p.photo_url} alt="" style={{ width: 38, height: 38, borderRadius: "50%", objectFit: "cover" }} /> : <div style={{ width: 38, height: 38, borderRadius: "50%", background: G.creme }} />}
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: "0.86rem", fontWeight: 700, color: G.brun }}>{p.name}{p.age ? `, ${p.age} ans` : ""}</div>
+                        <div style={{ fontSize: "0.72rem", color: "#999" }}>{[p.city, p.phone].filter(Boolean).join(" · ")}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       {/* ── Modal liste Premium ── */}
       {showPremiumList && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
@@ -9287,14 +9389,14 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                         </div>
                         {/* Likes reçus en attente de retour (pas encore devenus un match) */}
                         {!!pendingLikesCount[u.id] && (
-                          <div title="Likes reçus en attente d'un retour (pas encore un match)" style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(233,30,140,0.08)", color: "#e91e8c", borderRadius: 50, padding: "3px 9px", fontSize: "0.66rem", fontWeight: 800, flexShrink: 0, marginLeft: 6 }}>
+                          <div onClick={() => openPendingLikesDetail(u.id, u.name, "received")} title="Voir qui a liké cette personne (likes reçus en attente d'un retour)" style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(233,30,140,0.08)", color: "#e91e8c", borderRadius: 50, padding: "3px 9px", fontSize: "0.66rem", fontWeight: 800, flexShrink: 0, marginLeft: 6, cursor: "pointer" }}>
                             <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
                             {pendingLikesCount[u.id]}
                           </div>
                         )}
                         {/* Likes envoyés en attente de retour (personne likée n'a pas encore répondu) */}
                         {!!sentPendingLikesCount[u.id] && (
-                          <div title="Likes envoyés en attente d'un retour (pas encore un match)" style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(41,128,185,0.08)", color: "#2980b9", borderRadius: 50, padding: "3px 9px", fontSize: "0.66rem", fontWeight: 800, flexShrink: 0, marginLeft: 6 }}>
+                          <div onClick={() => openPendingLikesDetail(u.id, u.name, "sent")} title="Voir qui cette personne a liké (likes envoyés en attente d'un retour)" style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(41,128,185,0.08)", color: "#2980b9", borderRadius: 50, padding: "3px 9px", fontSize: "0.66rem", fontWeight: 800, flexShrink: 0, marginLeft: 6, cursor: "pointer" }}>
                             <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
                             {sentPendingLikesCount[u.id]}
                           </div>
@@ -9376,13 +9478,13 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                         </div>
                       </div>
                       {!!pendingLikesCount[u.id] && (
-                        <div title="Likes reçus en attente d'un retour (pas encore un match)" style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(233,30,140,0.08)", color: "#e91e8c", borderRadius: 50, padding: "3px 9px", fontSize: "0.7rem", fontWeight: 800, flexShrink: 0 }}>
+                        <div onClick={() => openPendingLikesDetail(u.id, u.name, "received")} title="Voir qui a liké cette personne (likes reçus en attente d'un retour)" style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(233,30,140,0.08)", color: "#e91e8c", borderRadius: 50, padding: "3px 9px", fontSize: "0.7rem", fontWeight: 800, flexShrink: 0, cursor: "pointer" }}>
                           <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
                           {pendingLikesCount[u.id]}
                         </div>
                       )}
                       {!!sentPendingLikesCount[u.id] && (
-                        <div title="Likes envoyés en attente d'un retour (pas encore un match)" style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(41,128,185,0.08)", color: "#2980b9", borderRadius: 50, padding: "3px 9px", fontSize: "0.7rem", fontWeight: 800, flexShrink: 0 }}>
+                        <div onClick={() => openPendingLikesDetail(u.id, u.name, "sent")} title="Voir qui cette personne a liké (likes envoyés en attente d'un retour)" style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(41,128,185,0.08)", color: "#2980b9", borderRadius: 50, padding: "3px 9px", fontSize: "0.7rem", fontWeight: 800, flexShrink: 0, cursor: "pointer" }}>
                           <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
                           {sentPendingLikesCount[u.id]}
                         </div>
@@ -11097,12 +11199,12 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     <div style={{ fontSize: "0.8rem", color: "#999", textAlign: "center", padding: "20px 0" }}>Aucune promotion terminée pour le moment.</div>
                   ) : (
                     <div style={{ overflowX: "auto" }}>
-                      <div style={{ minWidth: 880 }}>
-                        <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr 1fr 1.5fr 0.9fr 0.9fr 0.9fr 0.9fr 0.9fr 40px", gap: 8, fontSize: "0.64rem", fontWeight: 800, color: "#999", padding: "0 4px 10px", textTransform: "uppercase" }}>
-                          <span>Cible</span><span>Prix promo</span><span>Prix standard</span><span>Période</span><span>Bénéficiaires</span><span>Conversions</span><span>J'en profite</span><span>Ignoré</span><span>Statut</span><span></span>
+                      <div style={{ minWidth: 940 }}>
+                        <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr 1fr 1.5fr 0.9fr 0.9fr 0.9fr 0.9fr 0.9fr 34px 40px", gap: 8, fontSize: "0.64rem", fontWeight: 800, color: "#999", padding: "0 4px 10px", textTransform: "uppercase" }}>
+                          <span>Cible</span><span>Prix promo</span><span>Prix standard</span><span>Période</span><span>Bénéficiaires</span><span>Conversions</span><span>J'en profite</span><span>Ignoré</span><span>Statut</span><span></span><span></span>
                         </div>
                         {visiblePromoHistory.map(h => (
-                          <div key={h.id} style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr 1fr 1.5fr 0.9fr 0.9fr 0.9fr 0.9fr 0.9fr 40px", gap: 8, alignItems: "center", padding: "12px 4px", borderTop: `1px solid ${G.gris}`, fontSize: "0.78rem" }}>
+                          <div key={h.id} style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr 1fr 1.5fr 0.9fr 0.9fr 0.9fr 0.9fr 0.9fr 34px 40px", gap: 8, alignItems: "center", padding: "12px 4px", borderTop: `1px solid ${G.gris}`, fontSize: "0.78rem" }}>
                             <span style={{ fontWeight: 700, color: G.brun }}>{h.targetLabel}</span>
                             <span>{(h.price || 0).toLocaleString("fr-FR")} FCFA</span>
                             <span style={{ color: "#888" }}>{(h.standardPrice || PREMIUM_PRICE_FCFA).toLocaleString("fr-FR")} FCFA</span>
@@ -11112,6 +11214,9 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                             <span style={{ fontWeight: 700, color: "#1e8449" }}>{h.clicked ?? 0}</span>
                             <span style={{ fontWeight: 700, color: "#888" }}>{h.ignored ?? 0}</span>
                             <span style={{ display: "inline-block", fontSize: "0.68rem", fontWeight: 800, padding: "3px 10px", borderRadius: 999, background: "rgba(39,174,96,0.12)", color: "#1e8449" }}>Terminée</span>
+                            <button onClick={() => openPromoDetail(h)} title="Voir qui a cliqué / ignoré" style={{ background: "none", border: `1px solid ${G.gris}`, borderRadius: 8, color: "#8e44ad", cursor: "pointer", padding: 6, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                            </button>
                             <button onClick={() => setPromoDeleteConfirm(h.id)} aria-label="Supprimer" style={{ background: "none", border: `1px solid ${G.gris}`, borderRadius: 8, color: "#c0392b", cursor: "pointer", padding: 6, display: "flex", alignItems: "center", justifyContent: "center" }}>
                               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
                             </button>
@@ -11144,6 +11249,66 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     onConfirm={() => promoDeleteConfirm === "all" ? clearPromoHistory() : deletePromoHistoryEntry(promoDeleteConfirm)}
                     onCancel={() => setPromoDeleteConfirm(null)}
                   />
+                )}
+                {promoDetail && (
+                  <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10002, display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }} onClick={() => setPromoDetail(null)}>
+                    <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 460, maxHeight: "85vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
+                      <div style={{ padding: "16px 20px", borderBottom: `1px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, background: G.blanc, zIndex: 1 }}>
+                        <div>
+                          <div style={{ fontWeight: 900, fontSize: "1.02rem", color: G.brun }}>{promoDetail.rec.targetLabel}</div>
+                          <div style={{ fontSize: "0.72rem", color: "#888" }}>{fmtDate(promoDetail.rec.start)} → {fmtDate(promoDetail.rec.end)}</div>
+                        </div>
+                        <button onClick={() => setPromoDetail(null)} style={{ border: "none", background: G.creme, borderRadius: "50%", width: 30, height: 30, cursor: "pointer", color: "#666", flexShrink: 0 }}>✕</button>
+                      </div>
+                      <div style={{ padding: 20 }}>
+                        {promoDetailLoading ? (
+                          <div style={{ textAlign: "center", color: "#aaa", fontSize: "0.82rem", padding: "24px 0" }}>Chargement…</div>
+                        ) : (
+                          <>
+                            <div style={{ fontSize: "0.78rem", fontWeight: 800, color: "#1e8449", marginBottom: 10, display: "flex", alignItems: "center", gap: 6 }}>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                              A cliqué "J'en profite" ({promoDetail.clickers.length})
+                            </div>
+                            {promoDetail.clickers.length === 0 ? (
+                              <div style={{ fontSize: "0.78rem", color: "#bbb", marginBottom: 18 }}>Personne pour l'instant.</div>
+                            ) : (
+                              <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 18 }}>
+                                {promoDetail.clickers.map(p => (
+                                  <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                                    {p.photo_url ? <img src={p.photo_url} alt="" style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "cover" }} /> : <div style={{ width: 36, height: 36, borderRadius: "50%", background: G.creme }} />}
+                                    <div style={{ minWidth: 0 }}>
+                                      <div style={{ fontSize: "0.84rem", fontWeight: 700, color: G.brun }}>{p.name}{p.age ? `, ${p.age} ans` : ""}</div>
+                                      <div style={{ fontSize: "0.7rem", color: "#999" }}>{[p.city, p.phone].filter(Boolean).join(" · ")}</div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                            <div style={{ fontSize: "0.78rem", fontWeight: 800, color: "#888", marginBottom: 10, display: "flex", alignItems: "center", gap: 6 }}>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                              A ignoré ({promoDetail.ignorers.length})
+                            </div>
+                            {promoDetail.ignorers.length === 0 ? (
+                              <div style={{ fontSize: "0.78rem", color: "#bbb" }}>Personne pour l'instant.</div>
+                            ) : (
+                              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                                {promoDetail.ignorers.map(p => (
+                                  <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                                    {p.photo_url ? <img src={p.photo_url} alt="" style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "cover" }} /> : <div style={{ width: 36, height: 36, borderRadius: "50%", background: G.creme }} />}
+                                    <div style={{ minWidth: 0 }}>
+                                      <div style={{ fontSize: "0.84rem", fontWeight: 700, color: G.brun }}>{p.name}{p.age ? `, ${p.age} ans` : ""}</div>
+                                      <div style={{ fontSize: "0.7rem", color: "#999" }}>{p.city}</div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                            <div style={{ background: "rgba(142,68,173,0.06)", borderRadius: 12, padding: "10px 13px", marginTop: 18, fontSize: "0.72rem", color: "#8e44ad", lineHeight: 1.5 }}>Une personne peut apparaître dans les deux listes (elle a peut-être ignoré la promo un jour, puis cliqué "J'en profite" un autre jour).</div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 )}
               </div>
             );
@@ -12623,7 +12788,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     </div>
                   ) : (
                     <div>
-                      <input value={createSearch1} onChange={async e => { setCreateSearch1(e.target.value); setCreateResults1(await searchProfilesForMatch(e.target.value)); }} placeholder="Rechercher..." style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", outline: "none", boxSizing: "border-box" }} />
+                      <input value={createSearch1} onChange={async e => { setCreateSearch1(e.target.value); setCreateResults1(await searchProfilesForMatch(e.target.value, createSelected2?.gender)); }} placeholder="Rechercher..." style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", outline: "none", boxSizing: "border-box" }} />
                       {createResults1.length > 0 && <div style={{ border: `1px solid ${G.gris}`, borderRadius: 10, overflow: "hidden", marginTop: 4, boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }}>{createResults1.map(p => <div key={p.id} onClick={() => { setCreateSelected1(p); setCreateSearch1(""); setCreateResults1([]); }} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", cursor: "pointer", borderBottom: `1px solid ${G.gris}`, background: G.blanc }}><div style={{ width: 30, height: 30, borderRadius: "50%", overflow: "hidden", background: G.creme, flexShrink: 0 }}>{p.photo_url && <img src={p.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}</div><div><div style={{ fontWeight: 600, fontSize: "0.8rem" }}>{p.name}</div><div style={{ fontSize: "0.65rem", color: "#888" }}>{p.age} ans · {p.city}</div></div></div>)}</div>}
                     </div>
                   )}
@@ -12639,7 +12804,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     </div>
                   ) : (
                     <div>
-                      <input value={createSearch2} onChange={async e => { setCreateSearch2(e.target.value); setCreateResults2(await searchProfilesForMatch(e.target.value)); }} placeholder="Rechercher..." style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", outline: "none", boxSizing: "border-box" }} />
+                      <input value={createSearch2} onChange={async e => { setCreateSearch2(e.target.value); setCreateResults2(await searchProfilesForMatch(e.target.value, createSelected1?.gender)); }} placeholder="Rechercher..." style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", outline: "none", boxSizing: "border-box" }} />
                       {createResults2.length > 0 && <div style={{ border: `1px solid ${G.gris}`, borderRadius: 10, overflow: "hidden", marginTop: 4, boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }}>{createResults2.map(p => <div key={p.id} onClick={() => { setCreateSelected2(p); setCreateSearch2(""); setCreateResults2([]); }} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", cursor: "pointer", borderBottom: `1px solid ${G.gris}`, background: G.blanc }}><div style={{ width: 30, height: 30, borderRadius: "50%", overflow: "hidden", background: G.creme, flexShrink: 0 }}>{p.photo_url && <img src={p.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}</div><div><div style={{ fontWeight: 600, fontSize: "0.8rem" }}>{p.name}</div><div style={{ fontSize: "0.65rem", color: "#888" }}>{p.age} ans · {p.city}</div></div></div>)}</div>}
                     </div>
                   )}
@@ -13305,7 +13470,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     </div>
                   ) : (
                     <div>
-                      <input value={createSearch1} onChange={async e => { setCreateSearch1(e.target.value); setCreateResults1(await searchProfilesForMatch(e.target.value)); }} placeholder="Rechercher..." style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", outline: "none", boxSizing: "border-box" }} />
+                      <input value={createSearch1} onChange={async e => { setCreateSearch1(e.target.value); setCreateResults1(await searchProfilesForMatch(e.target.value, createSelected2?.gender)); }} placeholder="Rechercher..." style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", outline: "none", boxSizing: "border-box" }} />
                       {createResults1.length > 0 && (
                         <div style={{ border: `1px solid ${G.gris}`, borderRadius: 10, overflow: "hidden", marginTop: 4, boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }}>
                           {createResults1.map(p => (
@@ -13341,7 +13506,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     </div>
                   ) : (
                     <div>
-                      <input value={createSearch2} onChange={async e => { setCreateSearch2(e.target.value); setCreateResults2(await searchProfilesForMatch(e.target.value)); }} placeholder="Rechercher..." style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", outline: "none", boxSizing: "border-box" }} />
+                      <input value={createSearch2} onChange={async e => { setCreateSearch2(e.target.value); setCreateResults2(await searchProfilesForMatch(e.target.value, createSelected1?.gender)); }} placeholder="Rechercher..." style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", outline: "none", boxSizing: "border-box" }} />
                       {createResults2.length > 0 && (
                         <div style={{ border: `1px solid ${G.gris}`, borderRadius: 10, overflow: "hidden", marginTop: 4, boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }}>
                           {createResults2.map(p => (
