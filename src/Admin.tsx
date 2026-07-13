@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback, memo } from "react";
 import type { Auth, Match, Message, PaymentRequest, Profile, StatusPost, ToastState } from "./App";
-import { CropModal } from "./App";
 import {
   APPOINTMENT_PHYSICAL_PRICE, APPT_HOUR_MAX, APPT_HOUR_MIN, AUTO_MOD_CONTACT_REPLY, Avatar, BLOCK_SAME_GENDER, Badge, Btn, CONTACT_ADDRESS, CONTACT_EMAIL, CONTACT_WHATSAPP, ConfirmModal, DISCOVER_DEFAULT_MODE, DateTimePicker, EUR_TO_FCFA, EXPENSE_CATEGORIES, EXPENSE_CAT_COLORS, FREE_LIMITS, G, LANDING_MEMBERS, LANDING_SLOGAN, LANDING_STAT_CITIES, LANDING_STAT_COUPLES, LANDING_STAT_MEMBERS, LANDING_TITLE_END, LANDING_TITLE_HIGHLIGHT, LANDING_TITLE_START, LIFETIME_PREMIUM_UNTIL, Messages, PAY_AIRTEL_ENABLED, PAY_AIRTEL_NUMBER, PAY_AIRTEL_RESPONSABLE, PAY_CB_ENABLED, PAY_MTN_ENABLED, PAY_MTN_NUMBER, PAY_MTN_RESPONSABLE, PAY_WERO_ENABLED, PAY_WERO_NUMBER, PAY_PAYPAL_ENABLED, PAY_PAYPAL_NUMBER, PLAN_2MONTH_ENABLED, PLAN_MONTH_ENABLED, PLAN_WEEK_ENABLED, POLL_ADMIN_BADGE_MS, POLL_BADGES_MS, POLL_BROADCAST_MS, POLL_STATS_MS, POLL_SUPPORT_MS, PREMIUM_30_DAYS_MS, PREMIUM_DAYS_2MONTH, PREMIUM_DAYS_WEEK, PREMIUM_PRICE_2MONTH_FCFA, PREMIUM_PRICE_EUR, PREMIUM_PRICE_FCFA, PREMIUM_PRICE_WEEK_FCFA, PREMIUM_STAT_COUPLES, PREMIUM_STAT_MEMBERS, PremiumBadge, REFERRAL_BONUS_2MONTH, REFERRAL_BONUS_MONTH, REFERRAL_BONUS_WEEK, SOCIAL_FACEBOOK, SOCIAL_INSTAGRAM, SOCIAL_TIKTOK, SOCIAL_YOUTUBE, STORE_LINK_ANDROID, STORE_LINK_IOS, SUPABASE_KEY, SUPABASE_URL, SUPER_ADMIN_ID, SUPPORT_PREFIX_REPLY, SUPPORT_PREFIX_USER, SUPPORT_TEAM_ID, SUPPORT_TEAM_NAME, SUPPORT_TEAM_PHOTO, Toast, VerifiedBadge, apptStatusInfo, buildContactBannedRegex, buildCustomBannedRegex, setExemptedBuiltinWords, setExemptedContactWords, cleanSupportReason, dedupeMatchesByCouple, fmtApptDT, fmtDate, formatMoney, isSupportReason, logAdminAction, mmLevel, mmScore, paymentCurrency, resolveStatusImageUrl, sb, sendMatchWelcomeMessage,
   setAPPOINTMENT_PHYSICAL_PRICE, setAUTO_MOD_CONTACT_REPLY, setBLOCK_SAME_GENDER, setCONTACT_ADDRESS, setCONTACT_EMAIL, setCONTACT_WHATSAPP, setDISCOVER_DEFAULT_MODE, setEUR_TO_FCFA, setLANDING_MEMBERS, setLANDING_SLOGAN, setLANDING_STAT_CITIES, setLANDING_STAT_COUPLES, setLANDING_STAT_MEMBERS, setLANDING_TITLE_END, setLANDING_TITLE_HIGHLIGHT, setLANDING_TITLE_START, setPAY_AIRTEL_ENABLED, setPAY_AIRTEL_NUMBER, setPAY_AIRTEL_RESPONSABLE, setPAY_CB_ENABLED, setPAY_MTN_ENABLED, setPAY_MTN_NUMBER, setPAY_MTN_RESPONSABLE, setPAY_WERO_ENABLED, setPAY_WERO_NUMBER, setPAY_PAYPAL_ENABLED, setPAY_PAYPAL_NUMBER, setPLAN_2MONTH_ENABLED, setPLAN_MONTH_ENABLED, setPLAN_WEEK_ENABLED, setPOLL_ADMIN_BADGE_MS, setPOLL_BADGES_MS, setPOLL_BROADCAST_MS, setPOLL_STATS_MS, setPOLL_SUPPORT_MS, setPREMIUM_30_DAYS_MS, setPREMIUM_DAYS_2MONTH, setPREMIUM_DAYS_WEEK, setPREMIUM_PRICE_2MONTH_FCFA, setPREMIUM_PRICE_EUR, setPREMIUM_PRICE_FCFA, setPREMIUM_PRICE_WEEK_FCFA, setPREMIUM_STAT_COUPLES, setPREMIUM_STAT_MEMBERS, setPREMIUM_BOOST_ENABLED, setPREMIUM_SCREEN_VARIANT, setFEATURE_SHOW_LIKES_VIEWS_FREE, setPRIVACY_NOTICE_ENABLED, setSOCIAL_FACEBOOK, setSOCIAL_INSTAGRAM, setSOCIAL_TIKTOK, setSOCIAL_YOUTUBE, setSTORE_LINK_ANDROID, setSTORE_LINK_IOS, setSUPPORT_TEAM_PHOTO,
@@ -448,9 +447,7 @@ export function AdminDesktopPage() {
     spontaneous_auto_propose_enabled: false,
     auto_warn_ban_contact_enabled: false,
     promo_active: false,
-    // Par défaut activé (cohérent avec App.tsx : absence de réglage = diffusion générale active),
-    // contrairement aux autres raccourcis qui démarrent désactivés par défaut.
-    broadcast_enabled: true,
+    broadcast_enabled: false,
     premium_event_active: false,
   });
   React.useEffect(() => {
@@ -1988,6 +1985,242 @@ function PremiumBoostConfig({ auth }: { auth: Auth }) {
 // ── Photo de l'Assistant Moyo Dating : upload dans le bucket Storage "assistant", clé app_settings "assistant_photo_url" ──
 // Utilise désormais le même outil de recadrage (CropModal) que les abonnés pour leur propre photo
 // de profil — même geste de pincer/zoomer/glisser, même cadre carré, cohérent partout dans l'app.
+// ── CropModal dupliqué ici (pas importé depuis App.tsx) : un import statique croisé
+// App.tsx -> Admin.tsx (lazy) -> App.tsx (statique) créait une dépendance circulaire entre
+// les deux fichiers, ce qui pouvait faire échouer le build Vercel. Composant autonome,
+// sans aucune dépendance à App.tsx (juste React + canvas), donc la duplication est sûre. ──
+export function CropModal({ src, onConfirm, onCancel }: { src: string; onConfirm: (blob: Blob) => void; onCancel: () => void }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const imgRef2 = useRef<HTMLImageElement>(null);
+  const canvasContainerRef = useRef<HTMLDivElement>(null);
+  const SIZE = 280;
+
+  // Tout l'état de transform dans des refs pour éviter les re-renders pendant le drag/pinch
+  const stateRef = useRef({ scale: 1, minScale: 1, offset: { x: 0, y: 0 } });
+  const [scale, setScaleUI] = useState(1);         // uniquement pour le slider
+  const [dragging, setDragging] = useState(false);
+
+  // Refs pour drag
+  const draggingRef = useRef(false);
+  const dragStartRef = useRef({ x: 0, y: 0 });
+
+  // Refs pour pinch
+  const pinchingRef = useRef(false);
+  const lastPinchDistRef = useRef(0);
+  const lastPinchMidRef = useRef({ x: 0, y: 0 });
+
+  // ── Init image ──
+  useEffect(() => {
+    const img = new Image();
+    img.onload = () => {
+      const s = Math.max(SIZE / img.width, SIZE / img.height);
+      stateRef.current = { scale: s, minScale: s, offset: { x: (SIZE - img.width * s) / 2, y: (SIZE - img.height * s) / 2 } };
+      setScaleUI(s);
+      draw();
+    };
+    img.src = src;
+  }, [src]);
+
+  const draw = () => {
+    const canvas = canvasRef.current; if (!canvas) return;
+    const ctx = canvas.getContext("2d"); if (!ctx) return;
+    const img = imgRef2.current; if (!img || !img.complete) return;
+    const { scale, offset } = stateRef.current;
+    ctx.clearRect(0, 0, SIZE, SIZE);
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(SIZE / 2, SIZE / 2, SIZE / 2, 0, Math.PI * 2);
+    ctx.clip();
+    ctx.drawImage(img, offset.x, offset.y, img.naturalWidth * scale, img.naturalHeight * scale);
+    ctx.restore();
+  };
+
+  // ── Zoom centré sur un point (pinch mid ou centre) ──
+  const applyZoom = (newScale: number, pivotX: number, pivotY: number) => {
+    const { scale: oldScale, minScale, offset } = stateRef.current;
+    const clamped = Math.min(Math.max(newScale, minScale), minScale * 4);
+    // Zoom centré sur le pivot : on translate pour garder le point sous les doigts
+    const ratio = clamped / oldScale;
+    const newOffsetX = pivotX - (pivotX - offset.x) * ratio;
+    const newOffsetY = pivotY - (pivotY - offset.y) * ratio;
+    stateRef.current = { scale: clamped, minScale, offset: { x: newOffsetX, y: newOffsetY } };
+    setScaleUI(clamped);
+    draw();
+  };
+
+  // ── Attacher les touch events en non-passif ──
+  useEffect(() => {
+    const el = canvasContainerRef.current;
+    if (!el) return;
+
+    const onTouchStart = (e: TouchEvent) => {
+      e.preventDefault();
+      if (e.touches.length === 1) {
+        // Drag simple
+        pinchingRef.current = false;
+        draggingRef.current = true;
+        setDragging(true);
+        const t = e.touches[0];
+        dragStartRef.current = { x: t.clientX - stateRef.current.offset.x, y: t.clientY - stateRef.current.offset.y };
+      } else if (e.touches.length === 2) {
+        // Pinch
+        draggingRef.current = false;
+        pinchingRef.current = true;
+        const t0 = e.touches[0]; const t1 = e.touches[1];
+        lastPinchDistRef.current = Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY);
+        lastPinchMidRef.current = {
+          x: (t0.clientX + t1.clientX) / 2 - el.getBoundingClientRect().left,
+          y: (t0.clientY + t1.clientY) / 2 - el.getBoundingClientRect().top,
+        };
+      }
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      e.preventDefault();
+      if (e.touches.length === 1 && draggingRef.current) {
+        const t = e.touches[0];
+        stateRef.current = { ...stateRef.current, offset: { x: t.clientX - dragStartRef.current.x, y: t.clientY - dragStartRef.current.y } };
+        draw();
+      } else if (e.touches.length === 2 && pinchingRef.current) {
+        const t0 = e.touches[0]; const t1 = e.touches[1];
+        const dist = Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY);
+        const mid = {
+          x: (t0.clientX + t1.clientX) / 2 - el.getBoundingClientRect().left,
+          y: (t0.clientY + t1.clientY) / 2 - el.getBoundingClientRect().top,
+        };
+        if (lastPinchDistRef.current > 0) {
+          const ratio = dist / lastPinchDistRef.current;
+          applyZoom(stateRef.current.scale * ratio, mid.x, mid.y);
+        }
+        lastPinchDistRef.current = dist;
+        lastPinchMidRef.current = mid;
+      }
+    };
+
+    const onTouchEnd = (e: TouchEvent) => {
+      e.preventDefault();
+      if (e.touches.length === 0) {
+        draggingRef.current = false;
+        pinchingRef.current = false;
+        setDragging(false);
+      } else if (e.touches.length === 1) {
+        // Passage de pinch → drag : réinitialise l'ancre drag
+        pinchingRef.current = false;
+        draggingRef.current = true;
+        const t = e.touches[0];
+        dragStartRef.current = { x: t.clientX - stateRef.current.offset.x, y: t.clientY - stateRef.current.offset.y };
+      }
+    };
+
+    el.addEventListener("touchstart", onTouchStart, { passive: false });
+    el.addEventListener("touchmove", onTouchMove, { passive: false });
+    el.addEventListener("touchend", onTouchEnd, { passive: false });
+    return () => {
+      el.removeEventListener("touchstart", onTouchStart);
+      el.removeEventListener("touchmove", onTouchMove);
+      el.removeEventListener("touchend", onTouchEnd);
+    };
+  }, []);
+
+  // ── Mouse drag (desktop) ──
+  const onMouseDown = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    draggingRef.current = true;
+    setDragging(true);
+    dragStartRef.current = { x: e.clientX - stateRef.current.offset.x, y: e.clientY - stateRef.current.offset.y };
+  };
+  const onMouseMove = (e: React.MouseEvent) => {
+    if (!draggingRef.current) return;
+    stateRef.current = { ...stateRef.current, offset: { x: e.clientX - dragStartRef.current.x, y: e.clientY - dragStartRef.current.y } };
+    draw();
+  };
+  const onMouseUp = () => { draggingRef.current = false; setDragging(false); };
+
+  // ── Scroll wheel zoom (desktop) ──
+  const onWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    const rect = canvasContainerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const pivotX = e.clientX - rect.left;
+    const pivotY = e.clientY - rect.top;
+    const delta = e.deltaY > 0 ? 0.92 : 1.08;
+    applyZoom(stateRef.current.scale * delta, pivotX, pivotY);
+  };
+
+  // ── Slider ──
+  const onSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newScale = parseFloat(e.target.value);
+    applyZoom(newScale, SIZE / 2, SIZE / 2);
+  };
+
+  // ── Export ──
+  const handleConfirm = () => {
+    const img = imgRef2.current; if (!img || !img.complete) return;
+    const EXPORT_SIZE = 1000;
+    const ratio = EXPORT_SIZE / SIZE;
+    const { scale, offset } = stateRef.current;
+    const exportCanvas = document.createElement("canvas");
+    exportCanvas.width = EXPORT_SIZE;
+    exportCanvas.height = EXPORT_SIZE;
+    const ctx = exportCanvas.getContext("2d"); if (!ctx) return;
+    ctx.drawImage(img, offset.x * ratio, offset.y * ratio, img.naturalWidth * scale * ratio, img.naturalHeight * scale * ratio);
+    exportCanvas.toBlob(blob => { if (blob) onConfirm(blob); }, "image/jpeg", 0.82);
+  };
+
+  return (
+    <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 9000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      <div className="moyo-card-in" style={{ background: G.blanc, maxHeight: "85vh", overflowY: "auto", borderRadius: 24, padding: "24px 20px", width: "100%", maxWidth: 340, textAlign: "center" }}>
+        <div style={{ fontWeight: 700, fontSize: "1rem", marginBottom: 6, color: "#111" }}>Cadrer ta photo</div>
+        <div style={{ fontSize: "0.78rem", color: "#888", marginBottom: 16 }}>Glisse pour repositionner · Pince pour zoomer</div>
+        <div ref={canvasContainerRef} data-zoomable="true" style={{ position: "relative", width: SIZE, height: SIZE, margin: "0 auto 16px", borderRadius: 16, overflow: "hidden", background: "#e0e0e0", cursor: dragging ? "grabbing" : "grab", touchAction: "none", userSelect: "none" }}
+          onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp} onWheel={onWheel}
+        >
+          <img ref={imgRef2} src={src} alt="" onLoad={draw} style={{ display: "none" }} />
+          <canvas ref={canvasRef} width={SIZE} height={SIZE} style={{ display: "block" }} />
+          {/* Overlay : rectangle carte + grille des tiers + cercle avatar */}
+          <svg style={{ position: "absolute", inset: 0, pointerEvents: "none", width: "100%", height: "100%" }} viewBox={`0 0 ${SIZE} ${SIZE}`}>
+            {(() => {
+              const rW = SIZE;
+              const rH = Math.round(SIZE * (270 / 358));
+              const rX = 0;
+              const rY = Math.round((SIZE - rH) / 2);
+              return <>
+                <rect x={0} y={0} width={SIZE} height={rY} fill="rgba(0,0,0,0.35)" />
+                <rect x={0} y={rY + rH} width={SIZE} height={SIZE - rY - rH} fill="rgba(0,0,0,0.35)" />
+                <rect x={rX} y={rY} width={rW} height={rH} fill="none" stroke={G.or} strokeWidth="2" strokeDasharray="6 3" />
+                <line x1={rW/3} y1={rY} x2={rW/3} y2={rY+rH} stroke="rgba(255,255,255,0.45)" strokeWidth="1" />
+                <line x1={rW*2/3} y1={rY} x2={rW*2/3} y2={rY+rH} stroke="rgba(255,255,255,0.45)" strokeWidth="1" />
+                <line x1={0} y1={rY+rH/3} x2={rW} y2={rY+rH/3} stroke="rgba(255,255,255,0.45)" strokeWidth="1" />
+                <line x1={0} y1={rY+rH*2/3} x2={rW} y2={rY+rH*2/3} stroke="rgba(255,255,255,0.45)" strokeWidth="1" />
+                <circle cx={SIZE/2} cy={SIZE/2} r={SIZE*0.28} fill="none" stroke="white" strokeWidth="1.5" strokeDasharray="4 3" />
+              </>;
+            })()}
+          </svg>
+        </div>
+        {/* Légende */}
+        <div style={{ display: "flex", justifyContent: "center", gap: 16, marginBottom: 14, marginTop: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.7rem", color: "#555" }}>
+            <svg width="14" height="9" viewBox="0 0 14 9"><rect x="1" y="1" width="12" height="7" fill="none" stroke={G.or} strokeWidth="1.5" strokeDasharray="3 1.5"/></svg>
+            Zone carte
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.7rem", color: "#555" }}>
+            <svg width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="5" fill="none" stroke="#555" strokeWidth="1.5" strokeDasharray="3 2"/></svg>
+            Avatar rond
+          </div>
+        </div>
+        <input type="range" min={stateRef.current.minScale} max={stateRef.current.minScale * 4} step={0.01} value={scale}
+          onChange={onSliderChange}
+          style={{ width: "100%", marginBottom: 18, accentColor: G.rouge }}
+        />
+        <div style={{ display: "flex", gap: 10 }}>
+          <Btn variant="ghost" onClick={onCancel} style={{ flex: 1 }}>Annuler</Btn>
+          <Btn variant="primary" onClick={handleConfirm} style={{ flex: 2 }}>Confirmer</Btn>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function AssistantPhotoConfig({ auth }: { auth: Auth }) {
   const [photo, setPhoto] = React.useState(SUPPORT_TEAM_PHOTO);
   const [uploading, setUploading] = React.useState(false);
@@ -2677,7 +2910,7 @@ export function AdminPinGate({ auth, onBack, onBadgeCount, autoShortcuts: autoSh
     spontaneous_auto_propose_enabled: false,
     auto_warn_ban_contact_enabled: false,
     promo_active: false,
-    broadcast_enabled: true,
+    broadcast_enabled: false,
     premium_event_active: false,
   });
   useEffect(() => {

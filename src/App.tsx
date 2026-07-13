@@ -390,8 +390,11 @@ export function setAUTO_WARN_BAN_CONTACT_ENABLED(v: any) { AUTO_WARN_BAN_CONTACT
 // ── Interrupteur maître "Diffusion générale" : par défaut activé (true) tant que le réglage
 //    n'a jamais été explicitement désactivé, pour ne rien casser sur les installations existantes
 //    qui n'ont pas encore cette clé en base. ──
-let BROADCAST_ENABLED = true;
-export function setBROADCAST_ENABLED(v: any) { BROADCAST_ENABLED = v !== "false" && v !== false; }
+// ── Éteint par défaut, comme tous les autres réglages d'Automatisations — tant que la valeur
+//    n'a jamais été enregistrée en base, ce réglage n'a jamais été explicitement activé par un
+//    admin, donc il ne doit pas apparaître "actif" tout seul. ──
+let BROADCAST_ENABLED = false;
+export function setBROADCAST_ENABLED(v: any) { BROADCAST_ENABLED = v === true || v === "true"; }
 // ── Textes de l'écran "C'est un match", configurables (Config → Contenus & Modals), utilisés au
 //    niveau App puisque l'écran est désormais centralisé là plutôt que dans chaque écran séparé. ──
 export let MATCH_TITLE = "C'est un Match !";
@@ -2331,7 +2334,6 @@ function PremiumModal({ onClose, reason, userId, token, userEmail, giftFor, prom
       paypal: { name: "PayPal", main: "#003087", onColor: "#fff", phoneNumber: PAY_PAYPAL_NUMBER, placeholder: "Référence de la transaction PayPal", operator: "PayPal", isPhoneTransfer: true, logo: <div style={{ width: 26, height: 26, borderRadius: 6, background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: "0.62rem", fontStyle: "italic" }}>Pay</div> },
     };
     const B3OP = OPS[b2Operator];
-    const b3Tel = B3OP.ussd ? `tel:${B3OP.ussd.replace(/#/g, "%23")}` : "";
 
     return (
       <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 300, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
@@ -2374,35 +2376,17 @@ function PremiumModal({ onClose, reason, userId, token, userEmail, giftFor, prom
               </div>
             ) : (
               <>
-                {/* Carte 1 : appuyer pour payer */}
-                <div style={{ background: G.blanc, border: "1.5px solid #ece9e2", borderRadius: 16, padding: "16px", marginBottom: 8, boxShadow: "0 1px 4px rgba(0,0,0,0.03)" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-                    <div style={{ width: 22, height: 22, borderRadius: "50%", background: G.rouge, color: "#fff", fontSize: "0.72rem", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>1</div>
-                    <div style={{ fontSize: "0.92rem", fontWeight: 800, color: G.brun }}>Appuyer pour payer</div>
-                  </div>
-                  <a href={b3Tel} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", background: B3OP.main, color: B3OP.onColor, borderRadius: 12, padding: "12px 16px", textDecoration: "none", boxSizing: "border-box" as any }}>
-                    {B3OP.logo}
-                    <div style={{ width: 1, alignSelf: "stretch", background: "rgba(255,255,255,0.35)" }} />
-                    <div>
-                      <div style={{ fontSize: "0.82rem", fontWeight: 700 }}>Appuyer pour payer</div>
-                      <div style={{ fontSize: "1.05rem", fontWeight: 800 }}>{planAmount.toLocaleString("fr-FR")} FCFA</div>
-                    </div>
-                  </a>
-                </div>
-
-                {/* Séparateur "ou" en badge circulaire, à cheval entre les deux cartes */}
-                <div style={{ display: "flex", justifyContent: "center", margin: "-14px 0" }}>
-                  <div style={{ width: 34, height: 34, borderRadius: "50%", background: "#FCFBF8", border: `2px solid ${G.brun}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.7rem", fontWeight: 800, color: G.brun, zIndex: 2, position: "relative" }}>ou</div>
-                </div>
-
-                {/* Carte 2 : composer le code */}
+                {/* Carte unique : composer le code (le bouton "Appuyer pour payer" a été retiré —
+                    MTN/Airtel n'acceptent plus le format USSD "tout-en-un" en un seul appel, le
+                    client doit désormais composer et naviguer le menu lui-même sur son clavier). */}
                 <div style={{ background: G.blanc, border: "1.5px solid #ece9e2", borderRadius: 16, padding: "16px", marginTop: 8, boxShadow: "0 1px 4px rgba(0,0,0,0.03)" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-                    <div style={{ width: 22, height: 22, borderRadius: "50%", background: "#e8e4db", color: G.brun, fontSize: "0.72rem", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>2</div>
+                    <div style={{ width: 22, height: 22, borderRadius: "50%", background: G.rouge, color: "#fff", fontSize: "0.72rem", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>1</div>
                     <div style={{ fontSize: "0.92rem", fontWeight: 800, color: G.brun }}>Compose ce code depuis ton mobile</div>
                   </div>
-                  <div style={{ background: "#F0EDE6", borderRadius: 10, padding: "13px", textAlign: "center" }}>
+                  <div style={{ background: "#F0EDE6", borderRadius: 10, padding: "13px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
                     <div style={{ fontSize: "1rem", fontWeight: 800, color: G.brun, fontFamily: "monospace" }}>{B3OP.ussd}</div>
+                    <div onClick={() => { navigator.clipboard?.writeText(B3OP.ussd); }} className="moyo-tactile" style={{ cursor: "pointer", background: G.brun, borderRadius: 8, padding: "7px 12px", fontSize: "0.7rem", fontWeight: 700, color: "#fff", flexShrink: 0 }}>Copier</div>
                   </div>
                 </div>
               </>
@@ -2690,7 +2674,6 @@ function PremiumModal({ onClose, reason, userId, token, userEmail, giftFor, prom
   const OP = step === "mtn"
     ? { name: "MTN MoMo", main: "#FFCC00", onColor: "#1a1a1a", numBg: "#F5A623", numColor: "#fff", responsable: PAY_MTN_RESPONSABLE, ussd: `*105*1*1*${PAY_MTN_NUMBER}*${planAmount}#`, placeholder: "Ex : 7753031542", operator: "MTN", tint: "#fff8e6", tintBorder: "rgba(245,166,35,0.4)", tintText: "#9a6a00", logo: mtnLogo(20), subColor: "rgba(0,0,0,0.65)" }
     : { name: "Airtel Money", main: "#FF0100", onColor: "#fff", numBg: "#FF0100", numColor: "#fff", responsable: PAY_AIRTEL_RESPONSABLE, ussd: `*128*2*1*1*${PAY_AIRTEL_NUMBER}*${planAmount}#`, placeholder: "Ex de l'ID : PP260523.2232.A52074", operator: "Airtel", tint: "#fff0f0", tintBorder: "rgba(228,0,0,0.3)", tintText: "#c0392b", logo: airtelLogo(22), subColor: "rgba(255,255,255,0.9)" };
-  const tel = `tel:${OP.ussd.replace(/#/g, "%23")}`;
   const submit = async () => {
     setTxLoading(true);
     setTxErr(null);
@@ -2769,13 +2752,15 @@ function PremiumModal({ onClose, reason, userId, token, userEmail, giftFor, prom
           <div style={{ background: G.blanc, borderRadius: 16, padding: 18, marginBottom: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>{numBadge("1")}<div style={{ fontWeight: 800, fontSize: "1.02rem", color: "#1a1a2e" }}>Effectuez votre paiement</div></div>
             <div style={{ fontSize: "0.86rem", color: "#666", lineHeight: 1.55, marginBottom: 16 }}>Votre paiement {OP.name} sera reçu et traité par notre responsable des finances.<br /><span style={{ fontWeight: 700, color: "#444" }}>{OP.responsable}</span></div>
-            <a href={tel} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 9, width: "100%", background: OP.main, color: OP.onColor, borderRadius: 14, padding: "15px", fontSize: "0.95rem", fontWeight: 800, textDecoration: "none", boxSizing: "border-box" as any }}>
-              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={OP.onColor} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.53a16 16 0 0 0 6.06 6.06l1.09-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" /></svg>
-              Appuyer pour payer - {planAmount.toLocaleString("fr-FR")} FCFA
-            </a>
-            <div style={{ background: "#f2f2f3", borderRadius: 12, padding: "12px", marginTop: 12, textAlign: "center" }}>
-              <div style={{ fontSize: "0.78rem", color: "#999", marginBottom: 4 }}>ou composez ce code depuis votre mobile</div>
-              <div style={{ fontSize: "1.05rem", fontWeight: 800, color: "#1a1a2e", fontFamily: "monospace", letterSpacing: 0.5 }}>{OP.ussd}</div>
+            {/* Le bouton d'appel automatique a été retiré — MTN/Airtel n'acceptent plus le format
+                USSD "tout-en-un" en un seul appel, le client doit désormais composer et naviguer
+                le menu lui-même sur son clavier. */}
+            <div style={{ background: "#f2f2f3", borderRadius: 12, padding: "13px", textAlign: "center" }}>
+              <div style={{ fontSize: "0.78rem", color: "#999", marginBottom: 6 }}>Composez ce code depuis votre mobile</div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+                <div style={{ fontSize: "1.05rem", fontWeight: 800, color: "#1a1a2e", fontFamily: "monospace", letterSpacing: 0.5 }}>{OP.ussd}</div>
+                <div onClick={() => { navigator.clipboard?.writeText(OP.ussd); }} className="moyo-tactile" style={{ cursor: "pointer", background: "#1a1a2e", borderRadius: 8, padding: "6px 11px", fontSize: "0.68rem", fontWeight: 700, color: "#fff", flexShrink: 0 }}>Copier</div>
+              </div>
             </div>
           </div>
 
@@ -10137,7 +10122,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
             const autoWarnRes = await fetch(`${SUPABASE_URL}/functions/v1/auto-warn-contact`, {
               method: "POST",
               headers: { "Content-Type": "application/json", "Authorization": `Bearer ${auth.token}` },
-              body: JSON.stringify({ user_id: auth.userId }),
+              body: JSON.stringify({ user_id: auth.userId, message_text: text.trim() }),
             });
             // ── La fonction Edge auto-warn-contact écrit elle-même l'avertissement, le bannissement
             //    éventuel ET la trace "reports" (status "auto_log") — rien à dupliquer ici.
@@ -13313,7 +13298,7 @@ function GroupChat({ auth, onBack, onShowPremium, onOpenPrivateChat }: { auth: A
   );
 }
 
-export function CropModal({ src, onConfirm, onCancel }: { src: string; onConfirm: (blob: Blob) => void; onCancel: () => void }) {
+function CropModal({ src, onConfirm, onCancel }: { src: string; onConfirm: (blob: Blob) => void; onCancel: () => void }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imgRef2 = useRef<HTMLImageElement>(null);
   const canvasContainerRef = useRef<HTMLDivElement>(null);
