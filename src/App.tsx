@@ -15656,10 +15656,11 @@ export default function App() {
   const [matchPop, setMatchPop] = useState<Profile | null>(null);
   const [myPhotoUrl, setMyPhotoUrl] = useState<string | null>(null);
   useEffect(() => {
+    if (!auth) return;
     sb.query<Profile>(auth.token, "profiles", `?id=eq.${auth.userId}&select=photo_url`)
       .then(res => setMyPhotoUrl(res[0]?.photo_url || null))
       .catch(() => {});
-  }, []);
+  }, [auth?.userId]);
   const [inConv, setInConv] = useState(false);
   // ── Pile de statuts affichée dans l'en-tête (remplace Guide sur l'onglet Messages) : Messages
   //    remplit ces données via callback, AppShell les affiche — aucun portail/ReactDOM nécessaire,
