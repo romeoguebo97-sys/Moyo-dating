@@ -10520,17 +10520,19 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                               </button>
                             )}
                           </div>
-                          {/* Profil signalé */}
+                          {/* Profil signalé (signalement classique) OU destinataire du message (alerte auto-mod) */}
                           {!isSupport && r.reported_id && (
-                            <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(192,57,43,0.07)", borderRadius: 8, padding: "6px 10px" }}>
-                              <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#fde8e8", overflow: "hidden", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, background: isSystemAlert ? "rgba(52,152,219,0.07)" : "rgba(192,57,43,0.07)", borderRadius: 8, padding: "6px 10px" }}>
+                              <div style={{ width: 28, height: 28, borderRadius: "50%", background: isSystemAlert ? "#dbeafe" : "#fde8e8", overflow: "hidden", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
                                 {reportedP?.photo_url
                                   ? <img src={reportedP.photo_url} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                                  : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                                  : isSystemAlert
+                                    ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2980b9" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                                    : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
                                 }
                               </div>
                               <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ fontSize: "0.65rem", color: G.rouge, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>Profil signalé</div>
+                                <div style={{ fontSize: "0.65rem", color: isSystemAlert ? "#2980b9" : G.rouge, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>{isSystemAlert ? "Destinataire du message" : "Profil signalé"}</div>
                                 <div style={{ fontSize: "0.78rem", fontWeight: 700, color: G.brun, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                                   {reportedP ? `${reportedP.name}, ${reportedP.age} ans · ${reportedP.city}` : `${r.reported_id?.slice(0, 14)}…`}
                                 </div>
@@ -10538,6 +10540,10 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                               {reportedP?.is_banned && <span style={{ fontSize: "0.6rem", background: "rgba(192,57,43,0.12)", color: G.rouge, borderRadius: 4, padding: "2px 6px", fontWeight: 700, flexShrink: 0 }}>Banni</span>}
                               {(reportedP?.warning_count || 0) > 0 && <span style={{ fontSize: "0.6rem", background: "rgba(243,156,18,0.12)", color: "#e67e22", borderRadius: 4, padding: "2px 6px", fontWeight: 700, flexShrink: 0 }}>⚠️ {reportedP?.warning_count}/3</span>}
                             </div>
+                          )}
+                          {/* Alerte auto-mod sans destinataire connu (ex: message de groupe) */}
+                          {!isSupport && !r.reported_id && isSystemAlert && (
+                            <div style={{ fontSize: "0.72rem", color: "#999", paddingLeft: 4 }}>Aucun destinataire unique (message envoyé au groupe)</div>
                           )}
                           {isSupport && <span style={{ fontSize: "0.72rem", color: G.vert, paddingLeft: 4 }}>Conversation support</span>}
                           {/* Date */}

@@ -3050,6 +3050,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
       { icon: "lock2", titre: "Conservation & sécurité", desc: "Données conservées le temps nécessaire au service. Aucune revente. Prestataires techniques liés à l'hébergement uniquement." },
       { icon: "verified", titre: "Vos droits (RGPD)", desc: `Accès et modification de vos données sur demande à ${CONTACT_EMAIL}.` },
       { icon: "trash", titre: "Suppression de compte", desc: "Vous pouvez supprimer votre compte et vos données à tout moment, vous-même, sans passer par l'application : connectez-vous sur dating.moyo-congo.com → Profil → Supprimer mon compte. Cette action est définitive et irréversible." },
+      { icon: "eyeoff", titre: "Numéro WhatsApp & visibilité", desc: "Dès que vous renseignez votre numéro WhatsApp, celui-ci devient automatiquement visible par vos matchs. Vous pouvez désactiver cette visibilité à tout moment depuis votre Profil, sans supprimer le numéro enregistré." },
       { icon: "chat", titre: "CGU - Utilisation", desc: "Moyo Dating est réservé aux majeurs. Tout comportement frauduleux, haineux ou abusif entraîne la suppression du compte." },
       { icon: "alert", titre: "Contenus interdits", desc: "Faux profils, harcèlement, contenus illégaux, tentatives d'arnaque ou usurpation d'identité sont strictement interdits." },
       { icon: "shield", titre: "Sanctions & poursuites", desc: "Moyo Dating se réserve le droit de porter plainte et d'engager des poursuites judiciaires contre toute personne enfreignant les présentes conditions d'utilisation." },
@@ -10149,15 +10150,16 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
     const mod = (FEATURE_MODERATION_INSULTS && !auth.isAdmin) ? moderateMessage(textToCheck) : { blocked: false };
     if (mod.blocked && mod.type) {
       setModerationAlert(mod.type);
-      // ── Alerte système auto-mod : ce n'est PAS un signalement utilisateur contre un autre profil.
-      // reported_id = null (alerte système sans cible).
-      // Si la colonne reported_id n'accepte pas null, Supabase renverra une erreur catchée silencieusement.
+      // ── Alerte système auto-mod : générée automatiquement, pas signalée par un autre membre.
+      // reported_id = destinataire du message (celui à qui la demande était adressée), pour que
+      // l'admin sache toujours à qui c'était destiné. Le message complet est conservé, sans
+      // troncature, pour permettre une revue fiable.
       console.log(`[Moyo][AutoMod] Alerte système - type:${mod.type} auteur:${auth.userId}`);
       try {
         await sb.insert(auth.token, "reports", {
           reporter_id: auth.userId,
-          reported_id: null,
-          reason: `[AUTO-MOD ${mod.type.toUpperCase()}] ${textToCheck.substring(0, 100)}`,
+          reported_id: open.partner?.id || null,
+          reason: `[AUTO-MOD ${mod.type.toUpperCase()}]${open.partner?.name ? ` Envoyé à ${open.partner.name} :` : ""} ${textToCheck.trim()}`,
           status: "pending",
         });
         console.log("[Moyo][AutoMod] ✅ Alerte système enregistrée");
@@ -12824,7 +12826,7 @@ function GroupChat({ auth, onBack, onShowPremium, onOpenPrivateChat }: { auth: A
     if (mod.blocked && mod.type) {
       setModerationAlert(mod.type);
       try {
-        await sb.insert(auth.token, "reports", { reporter_id: auth.userId, reported_id: null, reason: `[AUTO-MOD GROUPE ${mod.type.toUpperCase()}] ${text.substring(0, 100)}`, status: "pending" });
+        await sb.insert(auth.token, "reports", { reporter_id: auth.userId, reported_id: null, reason: `[AUTO-MOD GROUPE ${mod.type.toUpperCase()}] (message au groupe) ${text.trim()}`, status: "pending" });
       } catch {}
       return;
     }
@@ -14263,10 +14265,15 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
   const [phoneCardDraft, setPhoneCardDraft] = useState("");
   const savePhoneCard = async () => {
     const newPhone = phoneCardDraft.trim().slice(0, 25) || null;
-    await sb.update(auth.token, "profiles", auth.userId, { phone: newPhone });
-    setProfile(p => p ? { ...p, phone: newPhone } : null);
+    // Dès qu'un numéro est renseigné, la visibilité auprès des matchs est activée
+    // automatiquement (la personne pourra la désactiver ensuite via le bouton dédié).
+    const updates: Partial<Profile> = newPhone
+      ? { phone: newPhone, share_phone_with_matches: true }
+      : { phone: newPhone };
+    await sb.update(auth.token, "profiles", auth.userId, updates);
+    setProfile(p => p ? { ...p, ...updates } : null);
     setEditingPhoneCard(false);
-    setToast({ msg: "Numéro mis à jour !" });
+    setToast({ msg: newPhone ? "Numéro ajouté et visible par tes matchs !" : "Numéro mis à jour !" });
   };
   const [form, setForm] = useState<Partial<Profile>>({});
   const [loading, setLoading] = useState(true);
@@ -14972,7 +14979,7 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
           <div style={{ background: G.blanc, borderRadius: 18, border: profile?.phone ? "1.5px solid rgba(37,211,102,0.3)" : "1.5px dashed rgba(192,57,43,0.35)", boxShadow: "0 2px 10px rgba(0,0,0,0.06)", overflow: "hidden" }}>
             {editingPhoneCard ? (
               <div style={{ padding: "15px 18px" }}>
-                <div style={{ fontWeight: 700, fontSize: "0.95rem", color: G.brun, marginBottom: 10 }}>Mon numéro WhatsApp</div>
+                <div style={{ fontWeight: 700, fontSize: "0.95rem", color: G.brun, marginBottom: 10 }}>Ton numéro WhatsApp</div>
                 <input autoFocus value={phoneCardDraft} onChange={e => setPhoneCardDraft(e.target.value.slice(0, 25))} placeholder="+242 06 513 20 12" style={{ width: "100%", boxSizing: "border-box", padding: "11px 13px", border: `2px solid ${G.gris}`, borderRadius: 12, fontSize: "0.9rem", fontFamily: "inherit", marginBottom: 10 }} />
                 <div style={{ display: "flex", gap: 8 }}>
                   <Btn variant="ghost" onClick={() => setEditingPhoneCard(false)} style={{ flex: 1 }}>Annuler</Btn>
@@ -14985,10 +14992,10 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
                   <svg width="22" height="22" viewBox="0 0 24 24" fill={profile?.phone ? "#25D366" : G.rouge}><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24z"/></svg>
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 700, fontSize: "0.95rem", color: G.brun }}>Mon numéro WhatsApp</div>
+                  <div style={{ fontWeight: 700, fontSize: "0.95rem", color: G.brun }}>Ton numéro WhatsApp</div>
                   {profile?.phone
                     ? <div style={{ fontSize: "0.82rem", color: "#888", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{profile.phone}</div>
-                    : <div style={{ fontSize: "0.82rem", color: G.rouge, fontWeight: 600, marginTop: 2 }}>Ajouter mon numéro</div>}
+                    : <div style={{ fontSize: "0.82rem", color: G.rouge, fontWeight: 600, marginTop: 2 }}>Clique pour ajouter ton numéro</div>}
                 </div>
                 {profile?.phone
                   ? <div onClick={(e) => { e.stopPropagation(); setPhoneCardDraft(profile.phone || ""); setEditingPhoneCard(true); }} style={{ cursor: "pointer", color: "#bbb", flexShrink: 0, padding: 4 }}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div>
