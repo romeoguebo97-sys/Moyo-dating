@@ -694,21 +694,10 @@ async function enableNotifications(auth: { token: string; userId: string }): Pro
   }
 }
 
-export type Auth = {
-  token: string;
-  userId: string;
-  name: string;
-  email: string;
-  photoUrl?: string | null;
-  isPremium: boolean;
-  isAdmin: boolean;
-  adminLevel?: "admin" | "superadmin";
-  refreshToken?: string;
-  expiresAt?: number;
-};
-export type Profile = { id: string; name: string; age: number; city: string; gender: string; bio: string; religion?: string; profession?: string; hobbies?: string; phone?: string | null; photo_url?: string | null; is_premium: boolean; is_admin?: boolean; is_visible?: boolean; is_verified?: boolean; is_certified?: boolean; last_seen?: string; hide_online_status?: boolean; warning_count?: number; is_banned?: boolean; ban_until?: string | null; ban_reason?: string | null; last_notice_acknowledged?: boolean; last_notice_at?: string | null; has_installed_pwa?: boolean; account_deleted?: boolean; share_phone_with_matches?: boolean };
-export type Match = { id: string; user1: string; user2: string; partner?: Profile; lastMsg?: Message; unreadCount?: number; created_at?: string };
-export type Message = { id?: string; match_id: string; sender_id: string; content: string; is_read: boolean; is_delivered?: boolean; is_edited?: boolean; created_at?: string; reactions?: Record<string, string[]>; is_view_once?: boolean; viewed_at?: string | null; is_destroyed?: boolean; destroyed_at?: string | null };
+// ── Types partagés : déplacés dans types.ts (refactoring — aucun changement de comportement).
+//    Import interne uniquement ici (Admin.tsx importe désormais directement depuis "./types",
+//    pas de ré-export ici pour éviter tout conflit avec le composant Profile plus bas). ──
+import type { Auth, Profile, Match, Message, StatusPost, ToastState, PaymentRequest } from "./types";
 // Ciblage des diffusions générales : décide si une diffusion (target) concerne un utilisateur donné.
 // target peut être composite "genre|abonnement" (ex. "femmes|premium") ou une ancienne valeur simple.
 const broadcastTargetsUser = (target: string | null | undefined, isPremium: boolean, gender: string): boolean => {
@@ -762,8 +751,7 @@ export const deleteOwnSupportMessage = async (reportId: string, token: string): 
     return r.ok;
   } catch { return false; }
 };
-export type StatusPost = { id?: string; user_id: string; image_url?: string | null; image_path?: string | null; caption?: string | null; text?: string | null; created_at?: string; expires_at?: string; profile?: Profile; is_official?: boolean; is_sponsored?: boolean; link_url?: string | null; is_feature?: boolean; target_gender?: string | null; feature_user_id?: string | null; feature_profile?: Profile };
-export type ToastState = { msg: string; type?: "success" | "error" | "premium" } | null;
+// (StatusPost et ToastState sont désormais importés depuis types.ts en haut du fichier)
 
 const STATUS_BUCKETS = ["statuses", "status"] as const;
 // ── Envoie un message automatique de bienvenue dans un nouveau match ──
@@ -15720,7 +15708,7 @@ function UserWarningModal({ warning, onAcknowledge }: {
   );
 }
 
-export type PaymentRequest = { id: string; user_id: string; operator: string; tx_ref: string; amount: number; status: string; created_at: string; approved_at?: string; gift_for?: string; gift_for_name?: string; archived?: boolean; currency?: string; kind?: string; appointment_id?: string; profile?: { name: string; photo_url?: string | null; gender?: string } };
+// (PaymentRequest est désormais importé depuis types.ts en haut du fichier)
 
 export function logAdminAction(token: string, adminId: string, adminName: string, action: string, targetUserId?: string) {
   try {
