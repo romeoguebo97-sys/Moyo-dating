@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.moyocongo.dating",
+      "sha256_cert_fingerprints": [
+        "E3:24:EA:E6:15:ED:39:ED:97:02:C5:E0:5D:6E:43:69:B6:05:C1:0D:4D:2D:CE:82:78:70:50:0D:BD:11:35:E8"
+      ]
+    }
+  }
+]
