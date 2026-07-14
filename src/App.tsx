@@ -12116,7 +12116,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
                 <div style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(39,174,96,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                   <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#1a8a4a" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.53a16 16 0 0 0 6.06 6.06l1.09-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" /></svg>
                 </div>
-                <div style={{ fontWeight: 700, fontSize: "0.93rem", color: G.brun }}>Voir le numéro de téléphone</div>
+                <div style={{ fontWeight: 700, fontSize: "0.93rem", color: G.brun, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, minWidth: 0 }}>Voir le numéro de téléphone de {open.partner.name}</div>
               </div>
               {FEATURE_GIFT_PREMIUM && auth.isPremium && !open.partner.is_premium && (
                 <div onPointerDown={() => { setConvMenuOpen(false); setTimeout(() => open.partner && onShowGiftPremium?.({ id: open.partner.id, name: open.partner.name }), 50); }} style={{ padding: "15px 20px", display: "flex", alignItems: "center", gap: 14, cursor: "pointer", borderBottom: "1px solid #F8F8F8", WebkitTapHighlightColor: "transparent" }}>
@@ -14689,7 +14689,7 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
             </div>
 
             {/* Modifier ma photo - descend sur la vague */}
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, cursor: "pointer", flex: 1, transform: "translateY(18px)" }} onClick={() => fileRef.current?.click()}>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, cursor: "pointer", flex: 1, transform: "translateY(10px)" }} onClick={() => fileRef.current?.click()}>
               <div style={{ width: 54, height: 54, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 16px rgba(0,0,0,0.10)", position: "relative" }}>
                 {uploadLoading ? (
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#333" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "pulse 1s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg>
@@ -14707,7 +14707,7 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
             </div>
 
             {/* Liste noire - descend sur la vague */}
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, cursor: "pointer", flex: 1, transform: "translateY(18px)" }} onClick={() => setShowBlocked(true)}>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, cursor: "pointer", flex: 1, transform: "translateY(10px)" }} onClick={() => setShowBlocked(true)}>
               <div style={{ width: 54, height: 54, borderRadius: "50%", background: G.blanc, border: `2px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 16px rgba(0,0,0,0.10)", position: "relative" }}>
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#333" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
@@ -14960,8 +14960,11 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
                 await sb.update(auth.token, "profiles", auth.userId, { share_phone_with_matches: newShared });
                 setProfile(p => p ? { ...p, share_phone_with_matches: newShared } : null);
                 setToast({ msg: newShared ? "Numéro visible par tes matchs Premium" : "Numéro masqué", type: "success" });
-              }} style={{ padding: "13px 18px", borderTop: "1px solid #F5F5F5", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
-                <div style={{ fontSize: "0.83rem", fontWeight: 600, color: G.brun }}>Visible par mes matchs Premium</div>
+              }} style={{ padding: "13px 18px", borderTop: "1px solid #F5F5F5", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, cursor: "pointer" }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: "0.83rem", fontWeight: 600, color: G.brun }}>Visible par mes matchs Premium</div>
+                  <div style={{ fontSize: "0.72rem", color: profile.share_phone_with_matches ? "#1a8a4a" : "#888", marginTop: 2, lineHeight: 1.4 }}>{profile.share_phone_with_matches ? "Ton numéro est visible par tes matchs Premium." : "Active pour que tes matchs puissent te contacter directement."}</div>
+                </div>
                 <div style={{ width: 46, height: 26, borderRadius: 50, background: profile.share_phone_with_matches ? "#27ae60" : G.gris, position: "relative", transition: "background 0.3s", flexShrink: 0 }}>
                   <div style={{ position: "absolute", top: 3, left: profile.share_phone_with_matches ? 23 : 3, width: 20, height: 20, borderRadius: "50%", background: G.blanc, boxShadow: "0 2px 6px rgba(0,0,0,0.2)", transition: "left 0.3s" }} />
                 </div>
