@@ -9105,6 +9105,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
   };
   const [partnerReportOpen, setPartnerReportOpen] = useState(false);
   const [confirmUnmatchPartner, setConfirmUnmatchPartner] = useState(false);
+  const [confirmBlockPartner, setConfirmBlockPartner] = useState(false);
   const [confirmGiftRequest, setConfirmGiftRequest] = useState(false);
   const [partnerActionLoading, setPartnerActionLoading] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ msg: Message; x: number; y: number } | null>(null);
@@ -12139,7 +12140,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
                 </div>
                 <div style={{ fontWeight: 700, fontSize: "0.93rem", color: G.brun }}>Annuler le match</div>
               </div>
-              <div onPointerDown={() => { setConvMenuOpen(false); setTimeout(blockPartnerNow, 50); }} style={{ padding: "15px 20px", display: "flex", alignItems: "center", gap: 14, cursor: partnerActionLoading ? "wait" : "pointer", borderBottom: "1px solid #F8F8F8", WebkitTapHighlightColor: "transparent" }}>
+              <div onPointerDown={() => { setConvMenuOpen(false); setTimeout(() => setConfirmBlockPartner(true), 50); }} style={{ padding: "15px 20px", display: "flex", alignItems: "center", gap: 14, cursor: "pointer", borderBottom: "1px solid #F8F8F8", WebkitTapHighlightColor: "transparent" }}>
                 <div style={{ width: 42, height: 42, borderRadius: "50%", background: "#F5F5F5", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                   <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={G.brun} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="4.93" y1="4.93" x2="19.07" y2="19.07" /></svg>
                 </div>
@@ -12224,6 +12225,18 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
             <div style={{ display: "flex", gap: 10 }}>
               <button onClick={() => setConfirmUnmatchPartner(false)} disabled={partnerActionLoading} style={{ flex: 1, padding: "12px", borderRadius: 50, border: `2px solid ${G.gris}`, background: G.blanc, color: "#555", fontWeight: 700, fontSize: "0.85rem", cursor: "pointer" }}>Retour</button>
               <button onClick={unmatchPartnerNow} disabled={partnerActionLoading} style={{ flex: 1, padding: "12px", borderRadius: 50, border: "none", background: G.rouge, color: "#fff", fontWeight: 700, fontSize: "0.85rem", cursor: partnerActionLoading ? "wait" : "pointer" }}>{partnerActionLoading ? "..." : "Annuler le match"}</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {confirmBlockPartner && open.partner && (
+        <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 520, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }} onClick={() => !partnerActionLoading && setConfirmBlockPartner(false)}>
+          <div className="moyo-card-in" onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 20, padding: "26px 22px", width: "100%", maxWidth: 340, textAlign: "center", boxShadow: "0 20px 60px rgba(44,26,14,0.2)" }}>
+            <h3 style={{ fontSize: "1.05rem", fontWeight: 800, color: G.brun, marginBottom: 8 }}>Bloquer {open.partner.name} ?</h3>
+            <p style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.6, marginBottom: 22 }}>Ce profil disparaîtra de Découvrir et ne pourra plus vous contacter. La conversation se fermera. Vous pourrez débloquer depuis votre profil.</p>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => setConfirmBlockPartner(false)} disabled={partnerActionLoading} style={{ flex: 1, padding: "12px", borderRadius: 50, border: `2px solid ${G.gris}`, background: G.blanc, color: "#555", fontWeight: 700, fontSize: "0.85rem", cursor: "pointer" }}>Retour</button>
+              <button onClick={() => { setConfirmBlockPartner(false); blockPartnerNow(); }} disabled={partnerActionLoading} style={{ flex: 1, padding: "12px", borderRadius: 50, border: "none", background: G.rouge, color: "#fff", fontWeight: 700, fontSize: "0.85rem", cursor: partnerActionLoading ? "wait" : "pointer" }}>{partnerActionLoading ? "..." : "Bloquer"}</button>
             </div>
           </div>
         </div>
@@ -14203,6 +14216,17 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
   const [warningsList, setWarningsList] = useState<{ id: string; reason: string; warning_number: number; created_at: string }[]>([]);
   const [warningsLoading, setWarningsLoading] = useState(false);
   const [editing, setEditing] = useState(false);
+  // ── Édition du numéro directement dans sa carte (Profil), sans passer par "Modifier mon
+  //    profil" — puisque ce champ a été retiré de cet écran pour tout centraliser ici. ──
+  const [editingPhoneCard, setEditingPhoneCard] = useState(false);
+  const [phoneCardDraft, setPhoneCardDraft] = useState("");
+  const savePhoneCard = async () => {
+    const newPhone = phoneCardDraft.trim().slice(0, 25) || null;
+    await sb.update(auth.token, "profiles", auth.userId, { phone: newPhone });
+    setProfile(p => p ? { ...p, phone: newPhone } : null);
+    setEditingPhoneCard(false);
+    setToast({ msg: "Numéro mis à jour !" });
+  };
   const [form, setForm] = useState<Partial<Profile>>({});
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<ToastState>(null);
@@ -14604,10 +14628,10 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
       <div style={{ width: isWideProfile ? "50%" : "100%", overflowY: "auto", height: isWideProfile ? "100%" : "auto", background: G.creme }}>
 
       {/* ── ZONE BLANCHE : photo + nom + boutons - visible si section main ou mobile ── */}
-      {(!isWideProfile || activeSection === "main") && <div style={{ background: G.blanc, textAlign: "center", paddingTop: 32, paddingBottom: 8 }}>
+      {(!isWideProfile || activeSection === "main") && <div style={{ background: G.blanc, textAlign: "center", paddingTop: 24, paddingBottom: 4 }}>
 
         {/* Photo ronde */}
-        <div style={{ position: "relative", display: "inline-block", marginBottom: 20 }}>
+        <div style={{ position: "relative", display: "inline-block", marginBottom: 14 }}>
           <UploadRingOverlay active={uploadLoading} size={120} ringColor="#fff">
             <div style={{ width: 120, height: 120, borderRadius: "50%", background: profile?.is_premium ? `conic-gradient(${G.or} 0% 100%, ${G.gris} 100%)` : `conic-gradient(${G.rouge} 0% 100%, ${G.gris} 100%)`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: profile?.is_premium ? `0 8px 32px rgba(212,168,67,0.35)` : `0 8px 32px rgba(192,57,43,0.25)` }}>
               <div style={{ width: 108, height: 108, borderRadius: "50%", overflow: "hidden", background: G.gris, border: `3px solid ${G.blanc}` }}>
@@ -14623,11 +14647,11 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
         </div>
 
         {/* Nom + infos */}
-        <div style={{ marginTop: 16, paddingBottom: 20, paddingLeft: 16, paddingRight: 16, textAlign: "center" }}>
-          <div style={{ fontSize: "1.6rem", fontWeight: 800, color: G.brun, letterSpacing: "-0.02em", marginBottom: 10 }}>
+        <div style={{ marginTop: 10, paddingBottom: 12, paddingLeft: 16, paddingRight: 16, textAlign: "center" }}>
+          <div style={{ fontSize: "1.32rem", fontWeight: 800, color: G.brun, letterSpacing: "-0.02em", marginBottom: 6 }}>
             {profile?.name}
           </div>
-          <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 6, marginBottom: 12 }}>
+          <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 6, marginBottom: 8 }}>
             <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "#F2F2F2", borderRadius: 50, padding: "5px 13px", fontSize: "0.78rem", fontWeight: 600, color: "#333" }}>
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
               {profile?.age} ans
@@ -14905,21 +14929,32 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
             visible aux matchs Premium). */}
         {(!isWideProfile || activeSection === "main") && (
           <div style={{ background: G.blanc, borderRadius: 18, border: profile?.phone ? "1.5px solid rgba(37,211,102,0.3)" : "1.5px dashed rgba(192,57,43,0.35)", boxShadow: "0 2px 10px rgba(0,0,0,0.06)", overflow: "hidden" }}>
-            <div onClick={() => { if (!profile?.phone) setEditing(true); }} style={{ padding: "15px 18px", display: "flex", alignItems: "center", gap: 14, cursor: profile?.phone ? "default" : "pointer" }}>
-              <div style={{ width: 44, height: 44, borderRadius: "50%", background: profile?.phone ? "rgba(37,211,102,0.12)" : "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <svg width="22" height="22" viewBox="0 0 24 24" fill={profile?.phone ? "#25D366" : G.rouge}><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24z"/></svg>
+            {editingPhoneCard ? (
+              <div style={{ padding: "15px 18px" }}>
+                <div style={{ fontSize: "0.7rem", color: "#888", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 8 }}>Mon numéro WhatsApp</div>
+                <input autoFocus value={phoneCardDraft} onChange={e => setPhoneCardDraft(e.target.value.slice(0, 25))} placeholder="+242 06 513 20 12" style={{ width: "100%", boxSizing: "border-box", padding: "11px 13px", border: `2px solid ${G.gris}`, borderRadius: 12, fontSize: "0.9rem", fontFamily: "inherit", marginBottom: 10 }} />
+                <div style={{ display: "flex", gap: 8 }}>
+                  <Btn variant="ghost" onClick={() => setEditingPhoneCard(false)} style={{ flex: 1 }}>Annuler</Btn>
+                  <Btn variant="primary" onClick={savePhoneCard} style={{ flex: 1 }}>Enregistrer</Btn>
+                </div>
               </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: "0.7rem", color: "#888", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 2 }}>Mon numéro WhatsApp</div>
+            ) : (
+              <div onClick={() => { if (!profile?.phone) { setPhoneCardDraft(""); setEditingPhoneCard(true); } }} style={{ padding: "15px 18px", display: "flex", alignItems: "center", gap: 14, cursor: profile?.phone ? "default" : "pointer" }}>
+                <div style={{ width: 44, height: 44, borderRadius: "50%", background: profile?.phone ? "rgba(37,211,102,0.12)" : "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill={profile?.phone ? "#25D366" : G.rouge}><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24z"/></svg>
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: "0.7rem", color: "#888", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 2 }}>Mon numéro WhatsApp</div>
+                  {profile?.phone
+                    ? <div style={{ fontSize: "0.87rem", color: "#333", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{profile.phone}</div>
+                    : <div style={{ fontSize: "0.87rem", color: G.rouge, fontWeight: 700 }}>Ajouter mon numéro</div>}
+                </div>
                 {profile?.phone
-                  ? <div style={{ fontSize: "0.87rem", color: "#333", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{profile.phone}</div>
-                  : <div style={{ fontSize: "0.87rem", color: G.rouge, fontWeight: 700 }}>Ajouter mon numéro</div>}
+                  ? <div onClick={(e) => { e.stopPropagation(); setPhoneCardDraft(profile.phone || ""); setEditingPhoneCard(true); }} style={{ cursor: "pointer", color: "#bbb", flexShrink: 0, padding: 4 }}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div>
+                  : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>}
               </div>
-              {profile?.phone
-                ? <div onClick={(e) => { e.stopPropagation(); setEditing(true); }} style={{ cursor: "pointer", color: "#bbb", flexShrink: 0, padding: 4 }}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div>
-                : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>}
-            </div>
-            {profile?.phone && (
+            )}
+            {profile?.phone && !editingPhoneCard && (
               <div onClick={async () => {
                 const newShared = !profile.share_phone_with_matches;
                 await sb.update(auth.token, "profiles", auth.userId, { share_phone_with_matches: newShared });
