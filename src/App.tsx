@@ -4983,7 +4983,7 @@ const BOT_FAQ = [
   { q: ["vus", "visiteurs", "qui a vu"], r: "L'onglet Vus affiche le nombre de personnes qui ont visité votre profil. Le compteur est visible pour tous. Premium requis pour voir l'identité des visiteurs. Seuls les membres Premium génèrent des vues." },
   { q: ["sombre", "thème", "dark", "nuit"], r: "Dans Profil, utilisez le bouton Mode clair/sombre pour basculer entre les deux thèmes." },
   { q: ["annuler", "unmatch", "fin"], r: "Dans la conversation → ⋮ (trois points) → Annuler le match. La conversation et les messages sont supprimés. L'autre personne n'est pas notifiée." },
-  { q: ["voir le numéro", "voir son numéro", "numéro du match", "numéro de téléphone", "appel", "icône téléphone", "voir numéro match"], r: "Dans la conversation d'un match, une icône téléphone verte en haut permet de voir son numéro. En compte gratuit, ça ouvre directement l'option pour passer Premium. En Premium, le numéro s'affiche si votre match a activé 'Visible par mes matchs Premium' dans ses réglages de confidentialité (Profil → carte Numéro WhatsApp) — sinon un message vous explique pourquoi ce n'est pas disponible." },
+  { q: ["voir le numéro", "voir son numéro", "numéro du match", "numéro de téléphone", "appel", "icône téléphone", "voir numéro match"], r: "Dans la conversation d'un match, une icône téléphone verte en haut permet de voir son numéro. En compte gratuit, ça ouvre directement l'option pour passer Premium. En Premium, le numéro s'affiche si votre match a activé 'Visible par mes matchs' dans ses réglages de confidentialité (Profil → carte Numéro WhatsApp) — sinon un message vous explique pourquoi ce n'est pas disponible." },
   { q: ["répondre", "citer", "reply", "bandeau", "réponse message"], r: "Appuyez longuement sur un message → Répondre. Un bandeau s'affiche au-dessus du champ de saisie avec un aperçu du message cité. Appuyez sur ✕ pour annuler." },
   { q: ["vocal", "note vocale", "message vocal", "micro", "audio", "enregistrer message"], r: "L'envoi de messages vocaux est réservé aux membres Premium (l'écoute d'un vocal reçu est libre pour tous). Maintenez appuyé le bouton micro pour enregistrer (1 minute max), glissez vers la gauche pour annuler ou vers le haut pour verrouiller l'enregistrement mains libres. Avant l'envoi, vous pouvez réécouter votre vocal et choisir entre Vocal normal (lecture illimitée, vitesses x1/x1.5/x2) ou Écoute unique (il se détruit automatiquement dès que le destinataire a fini de l'écouter)." },
   { q: ["numéro", "coordonnées", "whatsapp", "instagram", "snapchat", "partager mon contact", "partage de contact", "pourquoi mon message n'est pas envoyé", "message bloqué", "message pas envoyé", "réseau social"], r: "Le partage de numéro de téléphone, WhatsApp, Instagram ou tout autre moyen de contact en dehors de Moyo Dating est réservé aux membres Premium. Si vous êtes en compte gratuit, ce type de message est automatiquement bloqué avant l'envoi et l'Assistant Moyo Dating vous en informe directement dans votre messagerie. Cette règle protège la sécurité de tous les membres. Pour partager vos coordonnées librement, passez Premium." },
@@ -5662,7 +5662,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
             { title: "Groupe Premium", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>, items: ["Le Groupe Premium est une discussion commune réservée aux membres Premium : depuis l'onglet Messages, appuyez sur l'onglet 'Groupe' pour demander à y accéder.", "Votre demande est examinée par notre équipe avant validation. Vous recevez un message de bienvenue dès que c'est fait.", "Une fois membre, vous pouvez écrire, réagir, répondre et envoyer des photos librement avec tous les autres membres du groupe.", "Vous pouvez retirer un message que vous avez envoyé pour tout le monde, ou le masquer uniquement pour vous.", "'Voir les membres' affiche la liste des membres validés (les comptes administrateurs n'y apparaissent pas)."] },
             { title: "Mise en relation Moyo Dating", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>, items: ["Tout le monde peut créer et enregistrer sa carte relationnelle (qui vous êtes, ce que vous recherchez). Notre équipe recherche ensuite personnellement la personne qui vous correspond selon vos critères.", "Pour faire une demande : allez sur votre page Profil → appuyez sur le bouton rouge 'Demander une mise en relation' → remplissez votre carte relationnelle et enregistrez → appuyez sur 'Envoyer ma demande'. L'envoi est réservé aux membres Premium : si vous ne l'êtes pas encore, l'option de passer Premium s'affiche à ce moment-là.", "Une fois votre demande envoyée, notre équipe analyse votre profil et vos critères pour trouver la personne qui vous correspond le mieux.", "Quand une proposition vous est faite, un modal apparaît avec la photo, le nom, l'âge et la ville de la personne. Vous choisissez d'Accepter ou de Refuser.", "Si les deux personnes acceptent → un match est créé automatiquement et une conversation s'ouvre. Si l'une refuse → la proposition est annulée.", "La proposition expire automatiquement après le délai indiqué si vous ne répondez pas. Vous pouvez en faire une nouvelle depuis votre Profil."] },
             { title: "Messages", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>, items: [`Compte gratuit : ${FREE_LIMITS.messages} messages par match. Premium : messages illimités. Chaque conversation affiche son propre badge de messages non lus.`, "Chaque message affiche l'heure d'envoi. Avec Premium : coches grises = reçu, coches bleues = lu.", "Un point vert indique que la personne est en ligne. Premium : envoi de photos, offrir Premium via le bouton cadeau.", "Répondre à un message : appuyez longuement sur un message - Répondre. Un bandeau apparaît au-dessus du champ de saisie avec un aperçu du message cité. Appuyez sur X pour annuler.", "Supprimer un message : appuyez longuement - Supprimer pour tous (efface le message pour vous et votre interlocuteur) ou Supprimer pour moi (masque le message uniquement de votre côté).", "Appuyez sur la photo de profil de votre match en haut de la conversation pour voir sa fiche en plein écran (âge, ville, religion, profession, centres d'intérêt, bio).", "Modifier un message : appuyez longuement sur l'un de vos messages - Modifier (possible dans les 15 minutes). Le message affichera la mention 'modifié'.", "Icône téléphone verte en haut de la conversation : voir le numéro de votre match, si Premium et que la personne l'a autorisé dans ses réglages de confidentialité.", "Le bouton ⋮ (trois points) en haut de la conversation regroupe les options : Voir le numéro, Offrir/Demander Premium, Annuler le match, Bloquer, Signaler, Supprimer la conversation.", "Moyo Dating encourage les échanges respectueux et bienveillants. Les mots doux, les compliments sincères et le respect mutuel sont au coeur de notre communauté."] },
-            { title: "Mon Profil", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>, items: ["Modifiez votre photo, prénom, âge, ville, religion et bio via l'engrenage. Le bouton visible/invisible permet de disparaître de Découvrir.", "Lors de l'upload de photo, un outil de recadrage s'ouvre : glissez pour repositionner et zoomez pour ajuster. Le rectangle montre la zone visible sur les cartes, le cercle doré montre l'avatar rond.", "Utilisez Voir mon profil pour voir exactement comment les autres vous voient (mode carte et liste).", "Demandez la vérification de votre compte pour obtenir le badge bleu. Gratuit, vérification sous 24h via WhatsApp.", "Numéro WhatsApp : renseignez-le juste sous le bandeau Premium, et activez 'Visible par mes matchs Premium' si vous souhaitez que vos matchs Premium puissent voir votre numéro directement depuis la conversation."] },
+            { title: "Mon Profil", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>, items: ["Modifiez votre photo, prénom, âge, ville, religion et bio via l'engrenage. Le bouton visible/invisible permet de disparaître de Découvrir.", "Lors de l'upload de photo, un outil de recadrage s'ouvre : glissez pour repositionner et zoomez pour ajuster. Le rectangle montre la zone visible sur les cartes, le cercle doré montre l'avatar rond.", "Utilisez Voir mon profil pour voir exactement comment les autres vous voient (mode carte et liste).", "Demandez la vérification de votre compte pour obtenir le badge bleu. Gratuit, vérification sous 24h via WhatsApp.", "Numéro WhatsApp : renseignez-le juste sous le bandeau Premium, et activez 'Visible par mes matchs' si vous souhaitez que vos matchs puissent voir votre numéro directement depuis la conversation."] },
             { title: "Bloquer et Signaler", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>, items: ["Appuyez sur les 3 traits d'un profil pour accéder aux options. Bloquer fait disparaître le profil définitivement. Signaler envoie un rapport à notre équipe sous 24h.", "Les profils bloqués sont gérables depuis votre Liste noire dans le Profil.", "Moyo Dating dispose d'une modération automatique : les insultes, arnaques et contenus inappropriés sont détectés et bloqués avant envoi. Tout incident est signalé automatiquement à l'équipe.", "Partage de contacts : pour ta sécurité, le partage d'un numéro, d'un réseau social ou d'un lien n'est pas autorisé dans les messages ni dans ton profil (bio, nom…) en compte gratuit. Passe les premiers échanges sur Moyo Dating ; l'abonnement Premium débloque le partage de coordonnées en conversation privée.", "Sanctions : en cas de non-respect des règles, un compte peut être averti, suspendu temporairement (avec un décompte avant reconnexion automatique) ou banni définitivement."] },
             { title: `Premium${activePlansCount() > 1 ? " - " + activePlansCount() + " formules" : ""} dès ` + minEnabledPremiumPrice().toLocaleString() + " FCFA", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>, items: [
               "Avantages : messages illimités, likes illimités, envoi de photos et de messages vocaux, confirmations de lecture, voir qui vous a liké et visité votre profil, offrir Premium à un match, accès au Groupe Premium (discussion commune réservée aux membres Premium).",
@@ -7167,6 +7167,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMes
   const [likesSubTab, setLikesSubTab] = useState<"received" | "sent">("received");
   const [visitorsSubTab, setVisitorsSubTab] = useState<"visitors" | "visited">("visitors");
   const [myGender, setMyGender] = useState("");
+  const [showSameGenderWarn, setShowSameGenderWarn] = useState(false);
   useEffect(() => {
     sb.query<Profile>(auth.token, "profiles", `?id=eq.${auth.userId}&select=gender`)
       .then(res => { if (res[0]) setMyGender(res[0].gender); });
@@ -7360,6 +7361,10 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMes
       setConfirmUnlike(p);
       return;
     }
+    // ── Sécurité hétéro : ce garde-fou existait déjà dans Découvrir mais manquait ici — un like
+    //    peut arriver dans "Reçus" quelle que soit sa provenance, donc sans cette vérification on
+    //    pouvait liker en retour une personne du même genre et créer un vrai match. ──
+    if (BLOCK_SAME_GENDER && myGender && p.gender && myGender === p.gender) { setSelectedProfile(null); setShowSameGenderWarn(true); return; }
     setLiking(true);
     try {
       await sb.insert(auth.token, "likes", { from_user: auth.userId, to_user: p.id });
@@ -7972,6 +7977,16 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMes
               <Btn variant="ghost" onClick={() => setConfirmUnlike(null)} style={{ flex: 1 }}>Annuler</Btn>
               <Btn variant="danger" onClick={() => handleUnlike(confirmUnlike)} style={{ flex: 1 }}>Retirer le like</Btn>
             </div>
+          </div>
+        </div>
+      )}
+      {showSameGenderWarn && (
+        <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 600, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <div className="moyo-card-in" style={{ background: G.blanc, maxHeight: "85vh", overflowY: "auto", borderRadius: 20, padding: "32px 24px", width: "100%", maxWidth: 300, textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.15)" }}>
+            <div style={{ fontSize: "3rem", marginBottom: 12 }}>{myGender === "Homme" ? "🕺" : "💃"}</div>
+            <h3 style={{ fontSize: "1.2rem", fontWeight: 800, color: G.brun, marginBottom: 8 }}>Moyo Dating est pensé pour les rencontres entre hommes et femmes.</h3>
+            <p style={{ fontSize: "0.85rem", color: "#888", marginBottom: 20, lineHeight: 1.5 }}>Tu ne peux pas liker un profil du même genre que le tien.</p>
+            <Btn variant="primary" onClick={() => setShowSameGenderWarn(false)} style={{ width: "100%" }}>J'ai compris 😄</Btn>
           </div>
         </div>
       )}
@@ -9052,6 +9067,17 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
   }, [open?.partner?.id]);
   const [loading, setLoading] = useState(true);
   const [msgCount, setMsgCount] = useState(0);
+  // ── Sécurité hétéro pour le like depuis un Statut mis en avant : le ciblage d'audience
+  //    (target_gender, choisi par l'admin) ne garantit PAS que la personne mise en avant est du
+  //    genre opposé à qui la voit — une erreur de ciblage admin suffirait sinon à exposer un
+  //    homme à d'autres hommes (et inversement). Vérification indépendante, comme partout ailleurs. ──
+  const [myGenderForLikeGuard, setMyGenderForLikeGuard] = useState("");
+  const [showSameGenderWarnMsg, setShowSameGenderWarnMsg] = useState(false);
+  useEffect(() => {
+    sb.query<Profile>(auth.token, "profiles", `?id=eq.${auth.userId}&select=gender`)
+      .then(res => { if (res[0]?.gender) setMyGenderForLikeGuard(res[0].gender); })
+      .catch(() => {});
+  }, [auth.userId]);
   const [showDeleteConv, setShowDeleteConv] = useState(false);
   const [convMenuOpen, setConvMenuOpen] = useState(false);
   // ── Voir le numéro d'un match : gratuit → mur Premium direct (aucun état local nécessaire).
@@ -9815,6 +9841,10 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
   const likeFeatureProfile = async (st?: StatusPost | null) => {
     const targetId = st?.feature_user_id;
     if (!targetId || targetId === auth.userId) return;
+    if (BLOCK_SAME_GENDER && myGenderForLikeGuard && st?.feature_profile?.gender && myGenderForLikeGuard === st.feature_profile.gender) {
+      setShowSameGenderWarnMsg(true);
+      return;
+    }
     try {
       // Déjà liké ? (évite les doublons et la double consommation du quota)
       const already = await sb.query<object>(auth.token, "likes", `?from_user=eq.${auth.userId}&to_user=eq.${targetId}&select=from_user&limit=1`).catch(() => [] as object[]);
@@ -12062,6 +12092,16 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
         </div>
       </div>}
 
+      {showSameGenderWarnMsg && (
+        <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 600, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <div className="moyo-card-in" style={{ background: G.blanc, maxHeight: "85vh", overflowY: "auto", borderRadius: 20, padding: "32px 24px", width: "100%", maxWidth: 300, textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.15)" }}>
+            <div style={{ fontSize: "3rem", marginBottom: 12 }}>{myGenderForLikeGuard === "Homme" ? "🕺" : "💃"}</div>
+            <h3 style={{ fontSize: "1.2rem", fontWeight: 800, color: G.brun, marginBottom: 8 }}>Moyo Dating est pensé pour les rencontres entre hommes et femmes.</h3>
+            <p style={{ fontSize: "0.85rem", color: "#888", marginBottom: 20, lineHeight: 1.5 }}>Tu ne peux pas liker un profil du même genre que le tien.</p>
+            <Btn variant="primary" onClick={() => setShowSameGenderWarnMsg(false)} style={{ width: "100%" }}>J'ai compris 😄</Btn>
+          </div>
+        </div>
+      )}
       {phoneReveal && (
         <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 400, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }} onClick={() => setPhoneReveal(null)}>
           <div className="moyo-card-in" onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 300, textAlign: "center", boxShadow: "0 20px 60px rgba(44,26,14,0.2)" }}>
@@ -12082,7 +12122,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
                 </div>
                 <h3 style={{ fontSize: "1rem", fontWeight: 700, marginBottom: 8, color: G.brun }}>Numéro non disponible</h3>
-                <p style={{ fontSize: "0.84rem", color: "#666", marginBottom: 18, lineHeight: 1.6 }}>{phoneReveal.name} n'a pas encore renseigné de numéro, ou n'a pas autorisé ses matchs Premium à le voir.</p>
+                <p style={{ fontSize: "0.84rem", color: "#666", marginBottom: 18, lineHeight: 1.6 }}>{phoneReveal.name} n'a pas encore renseigné de numéro, ou n'a pas autorisé ses matchs à le voir.</p>
                 <Btn variant="ghost" onClick={() => setPhoneReveal(null)} style={{ width: "100%" }}>Fermer</Btn>
               </>
             )}
@@ -12108,7 +12148,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
             </div>
             <div style={{ padding: "12px 20px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #F5F5F5" }}>
               <Avatar url={open.partner.photo_url} gender={open.partner.gender} size={38} premium={open.partner.is_premium} />
-              <div onPointerDown={() => setConvMenuOpen(false)} style={{ width: 32, height: 32, borderRadius: "50%", background: "#F5F5F5", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+              <div onPointerDown={() => setConvMenuOpen(false)} style={{ width: 32, height: 32, borderRadius: "50%", background: G.creme, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
               </div>
             </div>
@@ -12136,13 +12176,13 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
                 </div>
               )}
               <div onPointerDown={() => { setConvMenuOpen(false); setTimeout(() => setConfirmUnmatchPartner(true), 50); }} style={{ padding: "15px 20px", display: "flex", alignItems: "center", gap: 14, cursor: "pointer", borderBottom: "1px solid #F8F8F8", WebkitTapHighlightColor: "transparent" }}>
-                <div style={{ width: 42, height: 42, borderRadius: "50%", background: "#F5F5F5", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <div style={{ width: 42, height: 42, borderRadius: "50%", background: G.creme, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                   <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={G.brun} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z" /><line x1="4" y1="4" x2="20" y2="20" /></svg>
                 </div>
                 <div style={{ fontWeight: 700, fontSize: "0.93rem", color: G.brun }}>Annuler le match</div>
               </div>
               <div onPointerDown={() => { setConvMenuOpen(false); setTimeout(() => setConfirmBlockPartner(true), 50); }} style={{ padding: "15px 20px", display: "flex", alignItems: "center", gap: 14, cursor: "pointer", borderBottom: "1px solid #F8F8F8", WebkitTapHighlightColor: "transparent" }}>
-                <div style={{ width: 42, height: 42, borderRadius: "50%", background: "#F5F5F5", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <div style={{ width: 42, height: 42, borderRadius: "50%", background: G.creme, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                   <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={G.brun} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="4.93" y1="4.93" x2="19.07" y2="19.07" /></svg>
                 </div>
                 <div style={{ fontWeight: 700, fontSize: "0.93rem", color: G.brun }}>Bloquer</div>
@@ -14932,7 +14972,7 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
           <div style={{ background: G.blanc, borderRadius: 18, border: profile?.phone ? "1.5px solid rgba(37,211,102,0.3)" : "1.5px dashed rgba(192,57,43,0.35)", boxShadow: "0 2px 10px rgba(0,0,0,0.06)", overflow: "hidden" }}>
             {editingPhoneCard ? (
               <div style={{ padding: "15px 18px" }}>
-                <div style={{ fontSize: "0.7rem", color: "#888", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 8 }}>Mon numéro WhatsApp</div>
+                <div style={{ fontWeight: 700, fontSize: "0.95rem", color: G.brun, marginBottom: 10 }}>Mon numéro WhatsApp</div>
                 <input autoFocus value={phoneCardDraft} onChange={e => setPhoneCardDraft(e.target.value.slice(0, 25))} placeholder="+242 06 513 20 12" style={{ width: "100%", boxSizing: "border-box", padding: "11px 13px", border: `2px solid ${G.gris}`, borderRadius: 12, fontSize: "0.9rem", fontFamily: "inherit", marginBottom: 10 }} />
                 <div style={{ display: "flex", gap: 8 }}>
                   <Btn variant="ghost" onClick={() => setEditingPhoneCard(false)} style={{ flex: 1 }}>Annuler</Btn>
@@ -14945,10 +14985,10 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
                   <svg width="22" height="22" viewBox="0 0 24 24" fill={profile?.phone ? "#25D366" : G.rouge}><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24z"/></svg>
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: "0.7rem", color: "#888", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 2 }}>Mon numéro WhatsApp</div>
+                  <div style={{ fontWeight: 700, fontSize: "0.95rem", color: G.brun }}>Mon numéro WhatsApp</div>
                   {profile?.phone
-                    ? <div style={{ fontSize: "0.87rem", color: "#333", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{profile.phone}</div>
-                    : <div style={{ fontSize: "0.87rem", color: G.rouge, fontWeight: 700 }}>Ajouter mon numéro</div>}
+                    ? <div style={{ fontSize: "0.82rem", color: "#888", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{profile.phone}</div>
+                    : <div style={{ fontSize: "0.82rem", color: G.rouge, fontWeight: 600, marginTop: 2 }}>Ajouter mon numéro</div>}
                 </div>
                 {profile?.phone
                   ? <div onClick={(e) => { e.stopPropagation(); setPhoneCardDraft(profile.phone || ""); setEditingPhoneCard(true); }} style={{ cursor: "pointer", color: "#bbb", flexShrink: 0, padding: 4 }}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div>
@@ -14960,10 +15000,10 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
                 const newShared = !profile.share_phone_with_matches;
                 await sb.update(auth.token, "profiles", auth.userId, { share_phone_with_matches: newShared });
                 setProfile(p => p ? { ...p, share_phone_with_matches: newShared } : null);
-                setToast({ msg: newShared ? "Numéro visible par tes matchs Premium" : "Numéro masqué", type: "success" });
+                setToast({ msg: newShared ? "Numéro visible par tes matchs" : "Numéro masqué", type: "success" });
               }} style={{ padding: "13px 18px", borderTop: "1px solid #F5F5F5", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, cursor: "pointer" }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: "0.83rem", fontWeight: 600, color: profile.share_phone_with_matches ? "#1a8a4a" : "#888", lineHeight: 1.4 }}>{profile.share_phone_with_matches ? "Ton numéro est visible par tes matchs Premium." : "Active pour que tes matchs puissent te contacter directement."}</div>
+                  <div style={{ fontSize: "0.95rem", fontWeight: 700, color: profile.share_phone_with_matches ? "#1a8a4a" : G.brun, lineHeight: 1.4 }}>{profile.share_phone_with_matches ? "Ton numéro est visible par tes matchs." : "Active pour que tes matchs puissent te contacter directement."}</div>
                 </div>
                 <div style={{ width: 46, height: 26, borderRadius: 50, background: profile.share_phone_with_matches ? "#27ae60" : G.gris, position: "relative", transition: "background 0.3s", flexShrink: 0 }}>
                   <div style={{ position: "absolute", top: 3, left: profile.share_phone_with_matches ? 23 : 3, width: 20, height: 20, borderRadius: "50%", background: G.blanc, boxShadow: "0 2px 6px rgba(0,0,0,0.2)", transition: "left 0.3s" }} />
@@ -15038,7 +15078,7 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: "0.7rem", color: emailVerified ? "#27ae60" : G.rouge, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 2 }}>Email de connexion</div>
-              <div style={{ fontSize: "0.87rem", color: "#333", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{auth.email || "-"}</div>
+              <div style={{ fontSize: "0.87rem", color: G.brun, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{auth.email || "-"}</div>
             </div>
             {emailVerified ? (
               <div style={{ display: "flex", alignItems: "center", gap: 5, background: "rgba(39,174,96,0.1)", border: "1px solid rgba(39,174,96,0.25)", borderRadius: 50, padding: "6px 13px", flexShrink: 0 }}>
