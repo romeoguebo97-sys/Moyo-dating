@@ -14460,7 +14460,22 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
     setDeleteLoading(true);
     setDeleteError("");
     try {
+      // ── Étape 0 : traçabilité — on garde une trace du nom de la personne qui supprime son
+      //    compte, AVANT toute suppression (sinon le nom disparaît avec le profil). Visible
+      //    ensuite dans Signalements → Système. N'empêche jamais la suppression si ça échoue. ──
+      try {
+        await sb.insert(auth.token, "reports", {
+          reporter_id: auth.userId,
+          reported_id: null,
+          reason: `[COMPTE SUPPRIMÉ] ${auth.name}`,
+          status: "pending",
+        });
+      } catch {}
+
       // ── Étape 1 : supprimer toutes les données associées en cascade ──
+      // NOTE : payment_requests n'est PLUS supprimé ici. Les paiements déjà encaissés doivent
+      // rester dans l'historique des recettes (Budget → Résultat net) même après suppression du
+      // compte, pour que les totaux financiers restent exacts et stables dans le temps.
       await Promise.all([
         sb.delete(auth.token, "likes", `?from_user=eq.${auth.userId}`),
         sb.delete(auth.token, "likes", `?to_user=eq.${auth.userId}`),
@@ -14471,7 +14486,6 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
         sb.delete(auth.token, "dismissed_cards", `?user_id=eq.${auth.userId}`),
         sb.delete(auth.token, "app_ratings", `?user_id=eq.${auth.userId}`),
         sb.delete(auth.token, "statuses", `?user_id=eq.${auth.userId}`),
-        sb.delete(auth.token, "payment_requests", `?user_id=eq.${auth.userId}`),
       ]);
 
       // ── Étape 2 : supprimer les matchs et leurs messages ──
