@@ -14,21 +14,8 @@ const AdminLoadingFallback = () => (
   </div>
 );
 
-// ── SUPABASE_URL/SUPABASE_KEY : déplacés dans lib/supabase.ts (refactoring — aucun changement
-//    de comportement). Ré-exportés ici car utilisés directement à des centaines d'endroits
-//    dans App.tsx et Admin.tsx (appels fetch directs), pas seulement via sb. ──
-import { SUPABASE_URL, SUPABASE_KEY, sb, sleep } from "./lib/supabase";
-export { SUPABASE_URL, SUPABASE_KEY, sb };
-import { Btn, Toast, VerifiedBadge, PremiumBadge, Avatar, ConfirmModal, Badge } from "./components/ui";
-export { Btn, Toast, VerifiedBadge, PremiumBadge, Avatar, ConfirmModal, Badge };
-import { APPT_HOUR_MIN, APPT_HOUR_MAX, APPT_INPUT, DateTimePicker } from "./components/DateTimePicker";
-export { APPT_HOUR_MIN, APPT_HOUR_MAX, DateTimePicker };
-import { formatMoney, mmScore, mmLevel, fmtApptDT, fmtDate } from "./lib/format";
-export { formatMoney, mmScore, mmLevel, fmtApptDT, fmtDate };
-import { setExemptedContactWords, setExemptedBuiltinWords, buildContactBannedRegex, buildCustomBannedRegex, hasContactInfo, moderateMessage, getModerationMessage, BUILTIN_MODERATION_WORDS, BUILTIN_CONTACT_WORDS } from "./lib/moderation";
-export { setExemptedContactWords, setExemptedBuiltinWords, buildContactBannedRegex, buildCustomBannedRegex, BUILTIN_MODERATION_WORDS, BUILTIN_CONTACT_WORDS };
-import { SUPPORT_PREFIX_USER, SUPPORT_PREFIX_REPLY, isSupportReason, cleanSupportReason, logAdminAction } from "./lib/admin";
-export { SUPPORT_PREFIX_USER, SUPPORT_PREFIX_REPLY, isSupportReason, cleanSupportReason, logAdminAction };
+export const SUPABASE_URL = "https://mcswcapxpruiffzrxfvl.supabase.co";
+export const SUPABASE_KEY = "sb_publishable_nx44ipF3_X98flDVXxBZ5A_aztvDdgN";
 
 // Setters exportés pour permettre aux panneaux admin (déplacés dans Admin.tsx) de modifier ces réglages
 export function setAPPOINTMENT_PHYSICAL_PRICE(v: any) { APPOINTMENT_PHYSICAL_PRICE = v; }
@@ -86,7 +73,7 @@ export function setSTORE_LINK_IOS(v: any) { STORE_LINK_IOS = v; }
 
 // Enregistrement fiable d'un réglage dans app_settings : met à jour la ligne existante (PATCH),
 // et ne l'insère (POST) que si elle n'existe pas. Ne dépend d'aucun "upsert" / contrainte spéciale.
-// (APP_URL est désormais dans lib/supabase.ts, utilisé uniquement par sb.resetPassword)
+const APP_URL = "https://dating.moyo-congo.com";
 
 const VILLES = [
   "Brazzaville","Pointe-Noire","Dolisie","Nkayi","Owando",
@@ -101,9 +88,164 @@ const RELIGIONS = [
   "Kimbanguiste", "Témoin de Jéhovah", "Croyant(e) du message", "Musulman(e)",
   "Brahnamiste", "Autre", "Athée", "Non pratiquant(e)",
 ];
+const CONTACT_PATTERNS = [
+  // ── Détection automatique (jamais désactivable, ce ne sont pas des "mots") ──
+  /(?:\+?\d[\s.\-]*){7,}/,                                   // suite de 7+ chiffres même très espacés (0 6 6 8 9 3 5 1 9) — anti-contournement
+  /(?:\+|\b00)\d{2,3}/,                                       // indicatifs internationaux : +33 +242 +243 +225 +221 +237, 0033…
+  /\b0[67]\b/,                                                // préfixes mobiles 06 / 07
+  /[\w.-]+@[\w.-]+\.\w+/,                                     // adresses e-mail
+  /@[a-z0-9._]{2,}/i,                                         // pseudos précédés de @ (@instagram, @gmail, @snapchat…)
+  /(https?:\/\/|www\.|wa\.me|t\.me|\.me\/|bit\.ly|tinyurl|tiktok\.com)/i, // liens
+  /z[ée]ro\s?(six|sept)/i,                                    // « zéro six » / « zéro sept »
+  // ── Chiffres dispersés dans une phrase pour contourner la détection (ex. "Viens me 913
+  //    découvrir 79 tu 32 verras" = 9137932 caché) : 3 groupes de 1 à 3 chiffres ou plus,
+  //    séparés par des mots courts (max ~20 caractères entre chaque). Les nombres à 4 chiffres
+  //    seuls (années : 1990, 2010…) ne sont volontairement PAS capturés par \d{1,3}\b, pour
+  //    limiter les faux positifs sur les bios mentionnant une année. ──
+  /\b\d{1,3}\b(?:\D{1,20}\b\d{1,3}\b){2,}/,
+];
+// ── Mots-clés "contacts" désactivables individuellement depuis l'admin (comme les mots interdits),
+//    séparés de CONTACT_PATTERNS ci-dessus qui reste toujours actif (détection technique). ──
+const CONTACT_WORD_PATTERNS = [
+  /(whatsapp|whatsap|whatsab|watsap|watsapp|wtsapp|wassap|\bwa\b|\bw\.?a\b|telegram|telega|snapchat|\bsnap\b|viber|wechat|we.?chat|skype|discord|messenger|\bimo\b|\bsignal\b|zangi|botim|\bkakao\b)/i,
+  /(facebook|face.?book|\bfb\b|instagram|insta.?gram|\binsta\b|tiktok|tik.?tok|twitter)/i,
+  /w\s*h\s*a\s*t\s*s\s*a\s*p\s*p/i,
+  /n\s*u\s*m\s*[ée]?\s*r\s*o/i,
+  /s\s*n\s*a\s*p/i,
+  /(num[ée]ro|\bnumero\b|\bnum\b|t[ée]l[ée]phone|telephone|\btél\b|\btel\b(?!\s+(que|qu'|quel|le|les))|portable|\bmobile\b|\bphone\b|\bvisio\b|\bvocal\b|ar?obase)/i,
+  /(donne|passe|envoie|envoi|file|balance|prends?|laisse).{0,14}(moi|ton|mon|votre).{0,8}(num[ée]ro|numero|\bnum\b|contact|mobile|portable|t[ée]l|whatsapp|insta|snap|facebook|phone|06|07)/i,
+  /je te donne.{0,8}(mon|num[ée]ro|contact|whatsapp|insta|snap)/i,
+  /(ton|votre|mon|son|nos|vos)\s*contacts?\b/i,
+  /[ée]chang(?:er|eons|e|és?)\s*(?:nos|les|vos|des|ton|nos\s)?\s*(contacts?|num[ée]ros?|numero|coordonn|t[ée]l|whatsapp|insta|snap)/i,
+  /(ton|votre)\s*0[67]\b/i,
+  /comment.{0,10}(te|vous|t')\s*(joindre|contacter|recontacter|atteindre|appeler)/i,
+  /(discuter|parler|parlons|continuer|on se parle|on parle|on discute|on continue).{0,12}(ailleurs|en priv[ée]|en dehors|autre part)/i,
+  /viens.{0,8}(en priv[ée]|sur whatsapp|sur insta|sur snap|sur telegram|sur messenger|ailleurs)/i,
+  /(ajoute|ajout|[ée]cris|ecris|contacte|rejoins|retrouve|trouve|message)[\s-]?(moi|nous)/i,
+  /tu as.{0,8}(whatsapp|insta|instagram|snap|snapchat|telegram|facebook|tiktok|un compte)/i,
+  /appel(le)?[\s-]?(moi|nous|vid[ée]o|vocal)/i,
+  /fais.?moi.?un.?appel/i,
+  /(mon num|mon numero|mon numéro|appelle.?moi|contacte.?moi|écris.?moi.?sur|ecris.?moi.?sur|rejoins.?moi.?sur|mon contact\b|mon tel\b)/i,
+  /(give|send|text|share).{0,10}(me).{0,8}(your).{0,8}(number|whatsapp|contact|phone|insta|snap)/i,
+  /(what.?s|whats).{0,4}your.{0,8}(number|whatsapp|contact|phone|insta|instagram|snap|snapchat)/i,
+  /(text|call|message|whatsapp).{0,4}me\b/i,
+  /(my|your)\s(number|whatsapp|phone number|contact|insta|instagram|snap|snapchat)\b/i,
+  /do you have\s(whatsapp|instagram|telegram|snapchat|a phone)/i,
+];
+const BUILTIN_CONTACT_WORDS = ["whatsapp", "telegram", "snapchat", "viber", "wechat", "skype", "discord", "messenger", "imo", "signal", "zangi", "botim", "kakao", "facebook", "instagram", "tiktok", "twitter", "numéro", "téléphone", "tel", "portable", "mobile", "phone", "visio", "vocal", "contact", "arobase"];
+let EXEMPTED_CONTACT_WORDS: Set<string> = new Set();
+export const setExemptedContactWords = (raw: string) => {
+  EXEMPTED_CONTACT_WORDS = new Set((raw || "").split(",").map(w => w.trim().toLowerCase()).filter(Boolean));
+};
+const isExemptedContactMatch = (matchedText: string): boolean => {
+  const lower = matchedText.toLowerCase();
+  for (const w of EXEMPTED_CONTACT_WORDS) { if (lower.includes(w) || w.includes(lower)) return true; }
+  return false;
+};
+// Mots interdits "contacts" (gratuit uniquement) — ajoutés par l'admin depuis Configuration → Sécurité
+let CONTACT_BANNED_REGEX: RegExp | null = null;
+// ── Mots intégrés par défaut, affichés et désactivables individuellement depuis l'admin
+//    (Configuration → Sécurité & Système → "Mots intégrés (par défaut)"). Chaque mot ici est
+//    juste une étiquette lisible ; la détection réelle reste gérée par MODERATION_RULES
+//    ci-dessous, qu'on ne modifie jamais — on filtre seulement APRÈS le déclenchement, si le mot
+//    exact détecté fait partie de la liste que l'admin a désactivée. ──
+export const BUILTIN_MODERATION_WORDS: { word: string; type: "insult" | "scam" | "sexual"; group: string }[] = [
+  // Insultes
+  ...["putain", "pute", "salope", "connard", "con", "fdp", "fils de pute", "bâtard", "va te faire", "enculé", "merde", "ta gueule", "ferme la", "idiot", "imbécile", "abruti", "débile", "crétin", "nègre", "singe", "bamboula", "tafiole", "tapette", "mongol", "nique ta mère", "ntm", "tg", "sale chien", "sale con", "sale pute", "bouffon", "clochard", "porc", "sale race", "sale noir", "sale blanc", "sale arabe", "sale africain", "sale congolais", "sale étranger", "retourne dans ton pays", "nigga"].map(word => ({ word, type: "insult" as const, group: "Insultes" })),
+  // Menaces
+  ...["je vais te tuer", "je vais te frapper", "je vais te retrouver", "je vais venir chez toi", "je vais te violer", "suicide toi", "crève", "meurs"].map(word => ({ word, type: "insult" as const, group: "Menaces" })),
+  // Lingala / Congo
+  ...["likata", "libolo", "lisoko", "punda", "malewa", "mbwa", "boloko", "bandeko ya mabe", "wumela", "zoba", "lokuta"].map(word => ({ word, type: "insult" as const, group: "Lingala / Congo" })),
+  // Arnaques
+  ...["envoie moi", "vire moi", "transfert", "western union", "moneygram", "recharge moi", "carte cadeau", "bitcoin", "crypto facile", "investissement rapide", "placement", "bénéfice", "profit garanti", "double argent", "multiplie argent", "paypal urgent", "clique ici", "gagne de l'argent", "casino", "paris sportif", "j'ai besoin d'argent", "problème financier", "urgence financière", "aide financière", "prêt argent", "dépanne moi", "avance moi", "envoie l'argent", "héritage", "succession", "millions fcfa", "compte bloqué", "ambassade", "visa contre", "billet bloqué", "viens whatsapp"].map(word => ({ word, type: "scam" as const, group: "Arnaques" })),
+  // Contenu sexuel
+  ...["photo nue", "video nue", "plan cul", "viens dans mon lit", "pipe", "branlette", "branler", "sucer", "chatte", "bite", "queue", "nude", "envoie tes seins", "viens coucher", "baise", "baiser", "nique", "sexe"].map(word => ({ word, type: "sexual" as const, group: "Contenu sexuel" })),
+];
+let EXEMPTED_BUILTIN_WORDS: Set<string> = new Set();
+export const setExemptedBuiltinWords = (raw: string) => {
+  EXEMPTED_BUILTIN_WORDS = new Set((raw || "").split(",").map(w => w.trim().toLowerCase()).filter(Boolean));
+};
+// Un mot détecté par une règle est exempté si son texte contient un des mots retirés par l'admin
+// (couvre les variantes d'orthographe puisque chaque règle regroupe plusieurs formes du même mot).
+const isExemptedMatch = (matchedText: string): boolean => {
+  const lower = matchedText.toLowerCase();
+  for (const w of EXEMPTED_BUILTIN_WORDS) { if (lower.includes(w) || w.includes(lower)) return true; }
+  return false;
+};
 
-// ── Toute la logique de modération (insultes, arnaques, détection de contact) : déplacée
-//    dans lib/moderation.ts (refactoring — aucun changement de comportement). ──
+export const buildContactBannedRegex = (raw: string) => {
+  const words = (raw || "").split(/[\n,;]+/).map(w => w.trim()).filter(Boolean);
+  if (words.length === 0) { CONTACT_BANNED_REGEX = null; return; }
+  const escaped = words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  try { CONTACT_BANNED_REGEX = new RegExp(`(${escaped.join("|")})`, "i"); } catch { CONTACT_BANNED_REGEX = null; }
+};
+// Compte les chiffres réels du texte (peu importe espaces/lettres/ponctuation entre eux) + chiffres écrits en toutes lettres.
+const countObfuscatedDigits = (text: string): number => {
+  const realDigits = (text.match(/\d/g) || []).length;
+  // Chiffres écrits en toutes lettres, en français ET en anglais (certains contournent la
+  // détection en épelant leur numéro en anglais) : on compte une SUITE d'au moins 4 mots-chiffres
+  // consécutifs (évite "un homme", "two dogs").
+  let spelled = 0;
+  const seq = text.toLowerCase().match(/(?:\b(?:z[ée]ro|zero|un|une|deux|trois|quatre|cinq|six|sept|huit|neuf|dix|one|two|three|four|five|six|seven|eight|nine|ten)\b[\s.,'\-]*){4,}/g);
+  if (seq) for (const s of seq) spelled += (s.match(/z[ée]ro|zero|une|un|deux|trois|quatre|cinq|six|sept|huit|neuf|dix|one|two|three|four|five|six|seven|eight|nine|ten/g) || []).length;
+  return realDigits + spelled;
+};
+const hasContactInfo = (text: string): boolean => {
+  if (CONTACT_PATTERNS.some(p => p.test(text))) return true; // détection technique, toujours active
+  for (const p of CONTACT_WORD_PATTERNS) {
+    const m = text.match(p);
+    if (m && !isExemptedContactMatch(m[0])) return true;
+  }
+  if (CONTACT_BANNED_REGEX !== null && CONTACT_BANNED_REGEX.test(text)) return true;
+  if (countObfuscatedDigits(text) >= 8) return true; // 8 chiffres ou plus (sous n'importe quelle forme) = numéro déguisé
+  return false;
+};
+
+
+// ── MODÉRATION : insultes, arnaques, contenu interdit ──
+const MODERATION_RULES: { pattern: RegExp; type: "insult" | "scam" | "sexual" }[] = [
+  // Insultes français - liste étendue
+  { pattern: /(putain|putin|pute|salope|connard|connasse|con\b|fdp|fils.?de.?pute|bâtard|batard|va.?te.?faire|enculé|encule|merde|ta.?gueule|ferme.?ta.?gueule|ferme.?la|idiot|idiote|imbécile|imbecile|abruti|abrutie|débile|debile|crétin|cretin|nègre|negre|singe|bamboula|tafiole|tapette|mongol|nique.?ta.?mère|ntm\b|tg\b|sale.?chien|sale.?con|sale.?pute|bouffon|clochard|porc|sale.?race|sale.?noir|sale.?blanc|sale.?arabe|sale.?africain|sale.?congolais|sale.?étranger|retourne.?dans.?ton.?pays|nigga)/i, type: "insult" },
+  // Menaces
+  { pattern: /(je.?vais.?te.?tuer|je.?vais.?te.?frapper|je.?vais.?te.?retrouver|je.?vais.?venir.?chez.?toi|je.?vais.?te.?violer|suicide.?toi|crève\b|meurs\b)/i, type: "insult" },
+  // Insultes lingala / congo - liste étendue
+  { pattern: /(likata|libolo|lisoko|lissoko|punda|malewa|mbwa|boloko|bandeko.?ya.?mabe|wumela|zoba|lokuta)/i, type: "insult" },
+  // Arnaques classiques
+  { pattern: /(envoie.?moi|envoi.?moi|send.?me|vire.?moi|transfert|western.?union|moneygram|recharge.?(moi|mon)|carte.?cadeau|gift.?card|bitcoin|crypto.?facile|investiss(ement)?.?rapide|investissement.?rapide|placement|bénéfice|benefice|profit.?garanti|doubl.{1,5}argent|multipli.{1,5}argent|paypal.?urgent|clique.?ici|gagne.?de.?l.?argent|casino|paris.?sportif)/i, type: "scam" },
+  { pattern: /(j.?ai.?besoin.?d.?argent|problème.?financier|probleme.?financier|urgence.?financière|urgence.?financiere|aide.?financière|aide.?financiere|prêt.?argent|pret.?argent|dépanne.?moi|depanne.?moi|avance.?moi|envoie.?l.?argent)/i, type: "scam" },
+  { pattern: /(héritage|heritage|succession|millions.?fcfa|millions.?cfa|millions.?euro|compte.?bloqué|compte.?bloque|ambassade|visa.?contre|billet.?bloqué|billet.?bloque)/i, type: "scam" },
+  // Redirection vers autres plateformes (contournement)
+  { pattern: /(viens.?whatsapp|viens.?sur.?telegram|contacte.?moi.?sur.?telegram|écris.?moi.?sur.?whatsapp)/i, type: "scam" },
+  // Contenu sexuel non sollicité - liste étendue
+  { pattern: /(envoie.?moi.?(ta|tes|une|des).?(photo|pic|nude|nue|nichon|fesse|cul|seins?)|photo.?(nue?|sexy|hot|intime|coquine?)|video.?(nue?|hot|intime)|plan.?cul|viens.?dans.?mon.?lit|pipe\b|branlette|branler|sucer\b|chatte\b|bite\b|queue\b|grosse.?bite|nude\b|envoie.?tes.?seins|viens.?coucher)/i, type: "sexual" },
+  // Mots sexuels directs
+  { pattern: /\b(baise|baiser|nique\b|sexe\b)\b/i, type: "sexual" },
+];
+
+// Mots interdits personnalisés (ajoutés par l'admin depuis Configuration → Sécurité)
+let CUSTOM_BANNED_REGEX: RegExp | null = null;
+export const buildCustomBannedRegex = (raw: string) => {
+  const words = (raw || "").split(/[\n,;]+/).map(w => w.trim()).filter(Boolean);
+  if (words.length === 0) { CUSTOM_BANNED_REGEX = null; return; }
+  const escaped = words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  try { CUSTOM_BANNED_REGEX = new RegExp(`(${escaped.join("|")})`, "i"); } catch { CUSTOM_BANNED_REGEX = null; }
+};
+
+const moderateMessage = (text: string): { blocked: boolean; type?: "insult" | "scam" | "sexual" } => {
+  for (const rule of MODERATION_RULES) {
+    const match = text.match(rule.pattern);
+    if (match && !isExemptedMatch(match[0])) return { blocked: true, type: rule.type };
+  }
+  if (CUSTOM_BANNED_REGEX && CUSTOM_BANNED_REGEX.test(text)) return { blocked: true, type: "insult" };
+  return { blocked: false };
+};
+
+const getModerationMessage = (type: "insult" | "scam" | "sexual"): string => {
+  if (type === "insult") return "Ce message contient des termes irrespectueux et ne peut pas être envoyé. Sur Moyo Dating, nous encourageons la bienveillance, la douceur et le respect mutuel.";
+  if (type === "scam") return "Ce message contient des demandes d'argent ou de transfert. Ce type de comportement est interdit sur Moyo Dating et peut entraîner la suppression de votre compte.";
+  if (type === "sexual") return "Ce message contient du contenu inapproprié et ne peut pas être envoyé.";
+  return "Ce message ne respecte pas les règles de Moyo Dating.";
+};
 
 // Fond messages style Moyo Dating - compatible tous navigateurs mobiles
 const MSG_BG_STYLE: React.CSSProperties = {
@@ -217,7 +359,7 @@ export let EUR_TO_FCFA = 655.957; // taux de conversion EUR→FCFA (configurable
 // Devises : Mobile Money = FCFA (XAF), Carte/Stripe = EUR. Helpers de classification et d'affichage.
 const isCardOperator = (op: string) => op === "Stripe" || op === "Carte" || op === "Wero" || op === "PayPal";
 export const paymentCurrency = (r: { currency?: string; operator: string }) => (r.currency || (isCardOperator(r.operator) ? "EUR" : "XAF"));
-// ── formatMoney : déplacé dans lib/format.ts (refactoring — aucun changement de comportement). ──
+export const formatMoney = (amount: number, currency: string) => currency === "EUR" ? `${(amount || 0).toLocaleString("fr-FR")} €` : `${(amount || 0).toLocaleString()} FCFA`;
 // Moyens de paiement activés (pilotés depuis Configuration admin). true = disponible.
 export let PAY_MTN_ENABLED = true;
 export let PAY_AIRTEL_ENABLED = true;
@@ -434,14 +576,15 @@ export const SUPPORT_TEAM_NAME = "Assistance Moyo Dating";
 // Configurable depuis Admin > Configuration > Équipe > Photo de l'Assistant (bucket Storage "assistant").
 export let SUPPORT_TEAM_PHOTO = "https://mcswcapxpruiffzrxfvl.supabase.co/storage/v1/object/public/assistant/Image%2031%20mai%202026,%2004_26_29.png";
 export function setSUPPORT_TEAM_PHOTO(v: string) { SUPPORT_TEAM_PHOTO = v; }
-// ── SUPPORT_PREFIX_USER, SUPPORT_PREFIX_REPLY, isSupportReason, cleanSupportReason,
-//    logAdminAction : déplacés dans lib/admin.ts (refactoring — aucun changement de comportement). ──
+export const SUPPORT_PREFIX_USER = "[SUPPORT_USER]";
+export const SUPPORT_PREFIX_REPLY = "[SUPPORT_REPLY]";
 // Message envoyé automatiquement par l'Assistant Moyo Dating lors d'une tentative de partage de contact (gratuit) — éditable depuis la config admin
 export let AUTO_MOD_CONTACT_REPLY = "Bonjour, notre système informatique a détecté une tentative d'échange de coordonnées personnelles. Cette action enfreint les Conditions Générales d'Utilisation de Moyo Dating. Le partage de coordonnées étant réservé aux membres Premium, nous vous invitons à respecter les règles de la communauté afin d'éviter toute restriction ou suppression définitive de votre compte.";
 // Demande de Premium (un non-Premium demande à son interlocuteur Premium de lui offrir)
 const GIFT_REQUEST_PREFIX = "[GIFTREQ]";
 const GIFT_REQUEST_TEXT = "💝 Et si tu m'offrais Premium ? On pourrait discuter sans aucune limite 🥰";
-// (isSupportReason, cleanSupportReason désormais dans lib/admin.ts, importés en haut du fichier)
+export const isSupportReason = (reason?: string) => !!reason && (reason.startsWith(SUPPORT_PREFIX_USER) || reason.startsWith(SUPPORT_PREFIX_REPLY));
+export const cleanSupportReason = (reason?: string) => (reason || "").replace(SUPPORT_PREFIX_USER, "").replace(SUPPORT_PREFIX_REPLY, "").trim();
 
 // ── Budget : catégories de dépenses + couleurs associées (réutilisées dans le tableau et les badges) ──
 export const EXPENSE_CATEGORIES = [
@@ -460,8 +603,12 @@ export const EXPENSE_CAT_COLORS: Record<string, string> = {
   "Divers": "#95a5a6",
 };
 
-// ── Thème (couleurs G) : déplacé dans theme.ts (refactoring — aucun changement de comportement). ──
-import { G } from "./theme";
+export const G = {
+  rouge: "#C0392B", rougeDark: "#922B21", or: "#D4A843",
+  vert: "#1A5C3A",
+  creme: "var(--c-creme)", cremeDark: "var(--c-cremeDark)",
+  brun: "var(--c-brun)", brunLight: "var(--c-brunLight)", blanc: "var(--c-blanc)", gris: "var(--c-gris)",
+};
 
 // Affiche une notification locale de façon compatible Android + ordinateur + PWA.
 // IMPORTANT : Android (Chrome) interdit `new Notification(...)` (« Illegal constructor »).
@@ -547,10 +694,21 @@ async function enableNotifications(auth: { token: string; userId: string }): Pro
   }
 }
 
-// ── Types partagés : déplacés dans types.ts (refactoring — aucun changement de comportement).
-//    Import interne uniquement ici (Admin.tsx importe désormais directement depuis "./types",
-//    pas de ré-export ici pour éviter tout conflit avec le composant Profile plus bas). ──
-import type { Auth, Profile, Match, Message, StatusPost, ToastState, PaymentRequest } from "./types";
+export type Auth = {
+  token: string;
+  userId: string;
+  name: string;
+  email: string;
+  photoUrl?: string | null;
+  isPremium: boolean;
+  isAdmin: boolean;
+  adminLevel?: "admin" | "superadmin";
+  refreshToken?: string;
+  expiresAt?: number;
+};
+export type Profile = { id: string; name: string; age: number; city: string; gender: string; bio: string; religion?: string; profession?: string; hobbies?: string; phone?: string | null; photo_url?: string | null; is_premium: boolean; is_admin?: boolean; is_visible?: boolean; is_verified?: boolean; is_certified?: boolean; last_seen?: string; hide_online_status?: boolean; warning_count?: number; is_banned?: boolean; ban_until?: string | null; ban_reason?: string | null; last_notice_acknowledged?: boolean; last_notice_at?: string | null; has_installed_pwa?: boolean; account_deleted?: boolean; share_phone_with_matches?: boolean };
+export type Match = { id: string; user1: string; user2: string; partner?: Profile; lastMsg?: Message; unreadCount?: number; created_at?: string };
+export type Message = { id?: string; match_id: string; sender_id: string; content: string; is_read: boolean; is_delivered?: boolean; is_edited?: boolean; created_at?: string; reactions?: Record<string, string[]>; is_view_once?: boolean; viewed_at?: string | null; is_destroyed?: boolean; destroyed_at?: string | null };
 // Ciblage des diffusions générales : décide si une diffusion (target) concerne un utilisateur donné.
 // target peut être composite "genre|abonnement" (ex. "femmes|premium") ou une ancienne valeur simple.
 const broadcastTargetsUser = (target: string | null | undefined, isPremium: boolean, gender: string): boolean => {
@@ -604,7 +762,8 @@ export const deleteOwnSupportMessage = async (reportId: string, token: string): 
     return r.ok;
   } catch { return false; }
 };
-// (StatusPost et ToastState sont désormais importés depuis types.ts en haut du fichier)
+export type StatusPost = { id?: string; user_id: string; image_url?: string | null; image_path?: string | null; caption?: string | null; text?: string | null; created_at?: string; expires_at?: string; profile?: Profile; is_official?: boolean; is_sponsored?: boolean; link_url?: string | null; is_feature?: boolean; target_gender?: string | null; feature_user_id?: string | null; feature_profile?: Profile };
+export type ToastState = { msg: string; type?: "success" | "error" | "premium" } | null;
 
 const STATUS_BUCKETS = ["statuses", "status"] as const;
 // ── Envoie un message automatique de bienvenue dans un nouveau match ──
@@ -619,7 +778,22 @@ export const sendMatchWelcomeMessage = async (token: string, matchId: string, my
   } catch {}
 };
 
-// ── mmScore, mmLevel : déplacés dans lib/format.ts (refactoring — aucun changement de comportement). ──
+// ── Score de compatibilité relationnelle entre deux profils (réutilisé admin + utilisateur) ──
+export const mmScore = (a: any, b: any): { score: number; reasons: string[] } => {
+  const ra = a?.relational_profile || {}, rb = b?.relational_profile || {};
+  let s = 0; const reasons: string[] = [];
+  if (a?.religion && b?.religion && a.religion === b.religion) { s += 25; reasons.push(`Même religion : ${a.religion}`); }
+  else if (ra.religion === "Sans importance" || rb.religion === "Sans importance") s += 10;
+  if (ra.project && rb.project && ra.project === rb.project) { s += 25; reasons.push(`Même objectif : ${ra.project}`); }
+  if (a?.city && b?.city && a.city === b.city) { s += 15; reasons.push(`Même ville : ${a.city}`); }
+  else if (/diaspora/i.test(a?.city || "") && /diaspora/i.test(b?.city || "")) { s += 8; reasons.push("Tous deux en diaspora"); }
+  const ci = (Array.isArray(ra.interests) ? ra.interests : []).filter((x: string) => (Array.isArray(rb.interests) ? rb.interests : []).includes(x));
+  if (ci.length) { s += Math.min(ci.length * 5, 20); reasons.push(`${ci.length} centre${ci.length > 1 ? "s" : ""} d'intérêt commun${ci.length > 1 ? "s" : ""}`); }
+  const cq = (Array.isArray(ra.qualities) ? ra.qualities : []).filter((x: string) => (Array.isArray(rb.qualities) ? rb.qualities : []).includes(x));
+  if (cq.length) { s += Math.min(cq.length * 4, 20); reasons.push(`${cq.length} valeur${cq.length > 1 ? "s" : ""} commune${cq.length > 1 ? "s" : ""}`); }
+  return { score: Math.min(s, 99), reasons };
+};
+export const mmLevel = (score: number) => score >= 90 ? { label: "Compatibilité élevée", color: "#8e44ad" } : score >= 75 ? { label: "Bonne compatibilité", color: "#e67e22" } : score >= 50 ? { label: "Compatibilité moyenne", color: "#2980b9" } : { label: "Profil sélectionné pour vous", color: "#9aa0a6" };
 
 // ══════════════════════ RENDEZ-VOUS ══════════════════════
 const APPT_STATUS: Record<string, { label: string; color: string }> = {
@@ -631,11 +805,85 @@ const APPT_STATUS: Record<string, { label: string; color: string }> = {
   absent: { label: "Absent", color: "#888" },
 };
 export const apptStatusInfo = (s: string) => APPT_STATUS[s] || { label: s, color: "#888" };
-// ── fmtApptDT : déplacé dans lib/format.ts (refactoring — aucun changement de comportement). ──
-// (APPT_INPUT est désormais importé depuis components/DateTimePicker.tsx, voir en haut du fichier)
+export const fmtApptDT = (s?: string) => s ? new Date(s).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }).replace(":", "h") : "";
+const APPT_INPUT: React.CSSProperties = { width: "100%", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.85rem", fontFamily: "inherit", background: G.blanc, color: G.brun };
 
-// ── APPT_HOUR_MIN/MAX, APPT_INPUT, ApptCalendar, DateTimePicker : déplacés dans
-//    components/DateTimePicker.tsx (refactoring — aucun changement de comportement). ──
+// Bornes de l'agence : horaires 9h → 19h, fermée le dimanche.
+export const APPT_HOUR_MIN = 9;
+export const APPT_HOUR_MAX = 19;
+const APPT_HOURS = Array.from({ length: APPT_HOUR_MAX - APPT_HOUR_MIN + 1 }, (_, i) => String(APPT_HOUR_MIN + i).padStart(2, "0"));
+const APPT_MINUTES = ["00", "15", "30", "45"];
+const apptTodayYMD = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+
+// Mini calendrier Moyo : dates passées et dimanches désactivés (agence fermée le dimanche)
+function ApptCalendar({ value, onPick, onClose }: { value: string; onPick: (d: string) => void; onClose: () => void }) {
+  const base = value ? new Date(value + "T00:00:00") : new Date();
+  const today = new Date(); const tY = today.getFullYear(); const tM = today.getMonth();
+  const [vy, setVy] = useState(base.getFullYear());
+  const [vm, setVm] = useState(base.getMonth());
+  const firstDay = new Date(vy, vm, 1);
+  const startOffset = (firstDay.getDay() + 6) % 7; // lundi = 0
+  const daysInMonth = new Date(vy, vm + 1, 0).getDate();
+  const canPrev = vy > tY || (vy === tY && vm > tM);
+  const monthLabel = firstDay.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+  const todayStr = apptTodayYMD();
+  const cells: (number | null)[] = [];
+  for (let i = 0; i < startOffset; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+  const navBtn: React.CSSProperties = { background: G.creme, border: `1px solid ${G.gris}`, borderRadius: 8, width: 30, height: 30, fontWeight: 800, color: G.brun };
+  return (
+    <div style={{ background: G.blanc, border: `1.5px solid ${G.gris}`, borderRadius: 14, padding: 12, boxShadow: "0 10px 30px rgba(0,0,0,0.12)" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+        <button type="button" onClick={() => { if (!canPrev) return; if (vm - 1 < 0) { setVm(11); setVy(vy - 1); } else setVm(vm - 1); }} disabled={!canPrev} style={{ ...navBtn, cursor: canPrev ? "pointer" : "not-allowed", opacity: canPrev ? 1 : 0.4 }}>‹</button>
+        <div style={{ fontWeight: 800, fontSize: "0.85rem", color: G.brun, textTransform: "capitalize" }}>{monthLabel}</div>
+        <button type="button" onClick={() => { if (vm + 1 > 11) { setVm(0); setVy(vy + 1); } else setVm(vm + 1); }} style={{ ...navBtn, cursor: "pointer" }}>›</button>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 3, marginBottom: 4 }}>
+        {["L", "M", "M", "J", "V", "S", "D"].map((d, i) => <div key={i} style={{ textAlign: "center", fontSize: "0.62rem", fontWeight: 800, color: i === 6 ? "#c0392b" : "#aaa", padding: "2px 0" }}>{d}</div>)}
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 3 }}>
+        {cells.map((d, i) => {
+          if (d === null) return <div key={i} />;
+          const ds = `${vy}-${String(vm + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+          const sunday = new Date(vy, vm, d).getDay() === 0;
+          const past = ds < todayStr;
+          const disabled = sunday || past;
+          const selected = ds === value;
+          return (
+            <div key={i} onClick={() => { if (disabled) return; onPick(ds); onClose(); }}
+              title={sunday ? "Agence fermée le dimanche" : past ? "Date passée" : ""}
+              style={{ aspectRatio: "1", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 9, fontSize: "0.8rem", fontWeight: 700, cursor: disabled ? "not-allowed" : "pointer", background: selected ? G.vert : disabled ? "transparent" : G.creme, color: selected ? "#fff" : disabled ? "#ccc" : G.brun, textDecoration: disabled ? "line-through" : "none", opacity: disabled ? 0.55 : 1 }}>{d}</div>
+          );
+        })}
+      </div>
+      <div style={{ fontSize: "0.64rem", color: "#999", marginTop: 8, textAlign: "center" }}>Agence fermée le dimanche · horaires 9h–19h</div>
+    </div>
+  );
+}
+
+// Sélecteur date (calendrier Moyo) + heure (9h–19h) + minute
+export function DateTimePicker({ date, hour, minute, onChange }: { date: string; hour: string; minute: string; onChange: (d: string, h: string, m: string) => void }) {
+  const [openCal, setOpenCal] = useState(false);
+  const sel: React.CSSProperties = { ...APPT_INPUT, width: "auto", padding: "10px 8px", cursor: "pointer" };
+  const fmt = date ? new Date(date + "T00:00:00").toLocaleDateString("fr-FR", { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric" }) : "Choisir une date";
+  return (
+    <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+      <button type="button" onClick={() => setOpenCal(o => !o)} style={{ ...APPT_INPUT, flex: "1 1 150px", padding: "9px 10px", cursor: "pointer", textAlign: "left", display: "flex", alignItems: "center", gap: 8, color: date ? G.brun : "#999" }}>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
+        <span style={{ textTransform: "capitalize" }}>{fmt}</span>
+      </button>
+      <select value={hour} onChange={e => onChange(date, e.target.value, minute)} style={sel}>
+        <option value="">-- h</option>
+        {APPT_HOURS.map(h => <option key={h} value={h}>{h} h</option>)}
+      </select>
+      <select value={minute} onChange={e => onChange(date, hour, e.target.value)} style={sel}>
+        <option value="">-- min</option>
+        {APPT_MINUTES.map(m => <option key={m} value={m}>{m}</option>)}
+      </select>
+      {openCal && <div style={{ flexBasis: "100%", marginTop: 4 }}><ApptCalendar value={date} onPick={(d) => onChange(d, hour, minute)} onClose={() => setOpenCal(false)} /></div>}
+    </div>
+  );
+}
 
 // Vrai modal de choix de date/heure (remplace le prompt navigateur)
 
@@ -946,8 +1194,372 @@ const getStatusSignedFallbackUrl = async (token: string, url?: string | null): P
   return buildStatusPublicUrl(path, "status");
 };
 
-// ── Client sb, safeRequest, connexion Realtime : déplacés dans lib/supabase.ts
-//    (refactoring — aucun changement de comportement). Import en haut du fichier. ──
+// ─────────────────────────────────────────────────────────────────────────────
+// CLIENT SUPABASE - v2 avec refresh automatique JWT
+// Stratégie :
+//   • Toutes les requêtes REST passent par safeRequest()
+//   • Si Supabase répond 401 → on tente un refresh du token (une seule fois)
+//   • Si le refresh réussit → on relance la requête avec le nouveau token
+//   • Si le refresh échoue → on appelle onAuthFailure() (déconnexion propre)
+//   • Un flag _isRefreshing évite les boucles infinies
+//   • onAuthFailure est injecté par App au montage via sb.setAuthFailureHandler()
+// ─────────────────────────────────────────────────────────────────────────────
+// Petit utilitaire de délai — sert uniquement à garantir que l'anneau de progression
+// reste visible au moins un court instant, même si l'upload est très rapide.
+// Ne touche à AUCUNE logique réseau : c'est juste un timer parallèle.
+const sleep = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
+
+// ── État interne de la connexion Realtime partagée (voir sb.subscribeRealtime plus bas) ──
+let _rtSocket: WebSocket | null = null;
+let _rtToken: string | null = null;
+const _rtListeners: Record<string, Set<() => void>> = {};
+let _rtReconnectTimer: ReturnType<typeof setTimeout> | null = null;
+function _rtEnsureSocket(token: string): WebSocket {
+  if (_rtSocket && _rtToken === token &&
+      (_rtSocket.readyState === WebSocket.OPEN || _rtSocket.readyState === WebSocket.CONNECTING)) {
+    return _rtSocket;
+  }
+  try { _rtSocket?.close(); } catch {}
+  _rtToken = token;
+  const wsUrl = SUPABASE_URL.replace("https://", "wss://").replace("http://", "ws://");
+  const ws = new WebSocket(`${wsUrl}/realtime/v1/websocket?apikey=${SUPABASE_KEY}&vsn=1.0.0`);
+  _rtSocket = ws;
+  ws.onopen = () => {
+    ws.send(JSON.stringify({ topic: "realtime:public", event: "phx_join", payload: { access_token: token }, ref: "1" }));
+    // Ré-abonnement à tous les topics encore actifs (utile après une reconnexion)
+    Object.keys(_rtListeners).forEach(topic => {
+      const set = _rtListeners[topic];
+      if (set && set.size > 0) {
+        ws.send(JSON.stringify({ topic, event: "phx_join", payload: { access_token: token }, ref: topic }));
+      }
+    });
+  };
+  ws.onmessage = (e) => {
+    try {
+      const msg = JSON.parse(e.data);
+      if (msg.event === "INSERT" || msg.event === "UPDATE" || msg.event === "DELETE") {
+        const cbs = _rtListeners[msg.topic];
+        cbs?.forEach(cb => { try { cb(); } catch {} });
+      }
+    } catch {}
+  };
+  ws.onerror = () => {};
+  ws.onclose = () => {
+    if (_rtSocket !== ws) return;
+    _rtSocket = null;
+    const hasListeners = Object.values(_rtListeners).some(s => s && s.size > 0);
+    if (hasListeners) {
+      if (_rtReconnectTimer) clearTimeout(_rtReconnectTimer);
+      _rtReconnectTimer = setTimeout(() => { if (_rtToken) _rtEnsureSocket(_rtToken); }, 2000);
+    }
+  };
+  return ws;
+}
+
+export const sb = {
+  // ── Callback injecté par App pour déclencher la déconnexion propre ──
+  _onAuthFailure: null as (() => void) | null,
+  setAuthFailureHandler(fn: () => void) { this._onAuthFailure = fn; },
+
+  // ── Anti-boucle : un seul refresh en cours à la fois ──
+  _isRefreshing: false,
+  _pendingRefreshToken: null as string | null,
+
+  // ── Headers standard REST ──
+  h: (token?: string) => ({
+    "Content-Type": "application/json",
+    "apikey": SUPABASE_KEY,
+    "Authorization": `Bearer ${token || SUPABASE_KEY}`,
+    "Prefer": "return=representation",
+  }),
+
+  // ────────────────────────────────────────────────────────────────────────
+  // AUTH
+  // ────────────────────────────────────────────────────────────────────────
+  async signUp(email: string, password: string, metadata: object) {
+    const r = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
+      method: "POST", headers: this.h(),
+      body: JSON.stringify({ email, password, data: metadata }),
+    });
+    return r.json();
+  },
+  async signIn(email: string, password: string) {
+    const r = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+      method: "POST", headers: this.h(),
+      body: JSON.stringify({ email, password }),
+    });
+    return r.json();
+  },
+  async signOut(token: string) {
+    await fetch(`${SUPABASE_URL}/auth/v1/logout`, { method: "POST", headers: this.h(token) });
+  },
+  async resetPassword(email: string) {
+    const r = await fetch(`${SUPABASE_URL}/auth/v1/recover`, {
+      method: "POST", headers: this.h(),
+      body: JSON.stringify({ email, redirect_to: APP_URL }),
+    });
+    return r.json();
+  },
+  async updatePassword(accessToken: string, newPassword: string) {
+    const r = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+      method: "PUT",
+      headers: { ...this.h(accessToken), "Authorization": `Bearer ${accessToken}` },
+      body: JSON.stringify({ password: newPassword }),
+    });
+    return r.json().catch(() => null);
+  },
+
+  // ────────────────────────────────────────────────────────────────────────
+  // REFRESH SESSION
+  // Appelle /auth/v1/token?grant_type=refresh_token
+  // Retourne { access_token, refresh_token, expires_in } ou null si échec
+  // ────────────────────────────────────────────────────────────────────────
+  async refreshSession(refreshToken: string): Promise<{ access_token: string; refresh_token: string; expires_in: number } | null> {
+    if (this._isRefreshing) {
+      console.log("[Moyo][Session] Refresh déjà en cours - skip");
+      return null;
+    }
+    this._isRefreshing = true;
+    console.log("[Moyo][Session] Tentative de refresh du token…");
+    try {
+      const r = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+        method: "POST",
+        headers: this.h(),
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      });
+      // ── Erreur serveur (pas un vrai 401/400) → conserver la session ──
+      if (!r.ok && r.status !== 400 && r.status !== 401) {
+        console.warn("[Moyo][Session] ⚠️ Refresh - serveur indisponible (" + r.status + ") - session conservée");
+        (this as any)._lastRefreshWasNetworkError = true;
+        return null;
+      }
+      (this as any)._lastRefreshWasNetworkError = false;
+      const data = await r.json().catch(() => null);
+      if (data?.access_token) {
+        console.log("[Moyo][Session] ✅ Refresh réussi - nouveau token obtenu");
+        return data;
+      }
+      console.warn("[Moyo][Session] ❌ Refresh échoué :", data?.error_description || data?.message || "réponse invalide");
+      return null;
+    } catch (e) {
+      // Erreur réseau pure (hors ligne, timeout) → NE PAS déconnecter
+      console.warn("[Moyo][Session] ❌ Refresh - erreur réseau (hors ligne?) - session conservée :", e);
+      (this as any)._lastRefreshWasNetworkError = true;
+      return null;
+    } finally {
+      this._isRefreshing = false;
+    }
+  },
+
+  // ────────────────────────────────────────────────────────────────────────
+  // SAFE REQUEST
+  // Wrapper central : exécute fn(token), détecte 401, tente refresh, relance.
+  // fn = fonction qui prend un token et retourne une Promise<Response>
+  // refreshToken = le refresh_token courant (passé par l'appelant)
+  // onNewToken = callback appelé si un nouveau token a été obtenu (pour màj Auth)
+  // ────────────────────────────────────────────────────────────────────────
+  async safeRequest(
+    token: string,
+    refreshToken: string | undefined,
+    fn: (t: string) => Promise<Response>,
+    onNewToken?: (newToken: string, newRefreshToken: string, newExpiresAt: number) => void,
+  ): Promise<Response> {
+    const r = await fn(token);
+
+    // Pas de 401 → tout va bien, retourner directement
+    if (r.status !== 401) return r;
+
+    console.warn("[Moyo][Session] 401 détecté - JWT probablement expiré");
+
+    // Pas de refresh_token disponible → déconnexion propre
+    if (!refreshToken) {
+      console.warn("[Moyo][Session] Pas de refresh_token - déconnexion");
+      this._onAuthFailure?.();
+      return r;
+    }
+
+    // Tentative de refresh
+    const refreshed = await this.refreshSession(refreshToken);
+    if (!refreshed) {
+      // ── Ne déconnecter QUE si c'est un vrai token invalide (400/401 Supabase) ──
+      // Si c'était une erreur réseau, on conserve la session
+      if ((this as any)._lastRefreshWasNetworkError) {
+        console.warn("[Moyo][Session] Refresh échoué (réseau) - session conservée");
+        return r;
+      }
+      console.warn("[Moyo][Session] Refresh impossible - déconnexion");
+      this._onAuthFailure?.();
+      return r;
+    }
+
+    // Refresh réussi → notifier App pour màj du state/localStorage
+    const newExpiresAt = Date.now() + refreshed.expires_in * 1000;
+    onNewToken?.(refreshed.access_token, refreshed.refresh_token, newExpiresAt);
+
+    // Relancer la requête originale avec le nouveau token
+    console.log("[Moyo][Session] ✅ Requête relancée avec le nouveau token");
+    return fn(refreshed.access_token);
+  },
+
+  // ────────────────────────────────────────────────────────────────────────
+  // REST - toutes les méthodes passent par safeRequest
+  // ────────────────────────────────────────────────────────────────────────
+  async query<T>(
+    token: string, table: string, params = "",
+    refreshToken?: string,
+    onNewToken?: (t: string, rt: string, exp: number) => void,
+  ): Promise<T[]> {
+    const r = await this.safeRequest(token, refreshToken,
+      (t) => fetch(`${SUPABASE_URL}/rest/v1/${table}${params}`, { headers: this.h(t) }),
+      onNewToken,
+    );
+    const data = await r.json().catch(() => []);
+    if (!Array.isArray(data)) {
+      if (data?.code || data?.message) throw new Error(data.message || data.code);
+      return [];
+    }
+    return data;
+  },
+
+  async insert<T>(
+    token: string, table: string, data: object,
+    refreshToken?: string,
+    onNewToken?: (t: string, rt: string, exp: number) => void,
+  ): Promise<T[]> {
+    const r = await this.safeRequest(token, refreshToken,
+      (t) => fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+        method: "POST", headers: this.h(t), body: JSON.stringify(data),
+      }),
+      onNewToken,
+    );
+    const res = await r.json().catch(() => null);
+    return Array.isArray(res) ? res : res ? [res] : [];
+  },
+
+  async update(
+    token: string, table: string, id: string, data: object,
+    refreshToken?: string,
+    onNewToken?: (t: string, rt: string, exp: number) => void,
+  ) {
+    const r = await this.safeRequest(token, refreshToken,
+      (t) => fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, {
+        method: "PATCH", headers: this.h(t), body: JSON.stringify(data),
+      }),
+      onNewToken,
+    );
+    return r.json().catch(() => null);
+  },
+
+  async upsert(
+    token: string, table: string, data: object,
+    refreshToken?: string,
+    onNewToken?: (t: string, rt: string, exp: number) => void,
+  ) {
+    const r = await this.safeRequest(token, refreshToken,
+      (t) => fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+        method: "POST",
+        headers: { ...this.h(t), "Prefer": "return=representation,resolution=merge-duplicates" },
+        body: JSON.stringify(data),
+      }),
+      onNewToken,
+    );
+    return r.json().catch(() => null);
+  },
+
+  async delete(
+    token: string, table: string, params: string,
+    refreshToken?: string,
+    onNewToken?: (t: string, rt: string, exp: number) => void,
+  ) {
+    await this.safeRequest(token, refreshToken,
+      (t) => fetch(`${SUPABASE_URL}/rest/v1/${table}${params}`, { method: "DELETE", headers: this.h(t) }),
+      onNewToken,
+    );
+  },
+
+  async rpc(
+    token: string, fn: string,
+    refreshToken?: string,
+    onNewToken?: (t: string, rt: string, exp: number) => void,
+  ) {
+    const r = await this.safeRequest(token, refreshToken,
+      (t) => fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
+        method: "POST", headers: this.h(t), body: JSON.stringify({}),
+      }),
+      onNewToken,
+    );
+    return r.json().catch(() => null);
+  },
+
+  // ────────────────────────────────────────────────────────────────────────
+  // UTILITAIRES (pas de refresh nécessaire - pas de données privées)
+  // ────────────────────────────────────────────────────────────────────────
+  async uploadPhoto(token: string, userId: string, file: File): Promise<string | null> {
+    try {
+      const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+      const path = `${userId}/avatar.${ext}`;
+      const r = await fetch(`${SUPABASE_URL}/storage/v1/object/avatars/${path}`, {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${token}`, "Content-Type": file.type || "image/jpeg", "x-upsert": "true", "Cache-Control": "3600" },
+        body: file,
+      });
+      if (!r.ok) return null;
+      return `${SUPABASE_URL}/storage/v1/object/public/avatars/${path}?v=${Date.now()}`;
+    } catch { return null; }
+  },
+
+  async markMessagesRead(token: string, matchId: string, userId: string) {
+    await fetch(`${SUPABASE_URL}/rest/v1/messages?match_id=eq.${matchId}&sender_id=neq.${userId}&is_read=eq.false`, {
+      method: "PATCH", headers: this.h(token), body: JSON.stringify({ is_read: true }),
+    });
+  },
+
+  async recordVisit(token: string, visitorId: string, visitedId: string) {
+    if (visitorId === visitedId) return;
+    await fetch(`${SUPABASE_URL}/rest/v1/profile_visits`, {
+      method: "POST",
+      headers: { ...this.h(token), "Prefer": "return=minimal" },
+      body: JSON.stringify({ visitor_id: visitorId, visited_id: visitedId }),
+    });
+  },
+
+  // ── Connexion Realtime partagée : une SEULE connexion WebSocket par utilisateur, sur laquelle on
+  //    "s'abonne" à plusieurs tables à la fois (comme plusieurs stations captées par une même antenne),
+  //    au lieu d'ouvrir une connexion séparée par écoute (messages, likes, matchs, vues, avertissements,
+  //    broadcasts...). Avant ce correctif, chaque personne active ouvrait 7 à 10+ connexions simultanées
+  //    rien que pour les badges — ce qui épuisait très vite le quota de connexions Realtime de Supabase
+  //    à seulement quelques centaines d'utilisateurs actifs en même temps. Le contrat public de
+  //    subscribeRealtime() ne change pas (toujours un objet avec .close()), donc aucun des appels
+  //    existants dans le reste du code n'a besoin d'être modifié. ──
+  subscribeRealtime(token: string, table: string, filter: string, callback: () => void): { close: () => void } | null {
+    try {
+      const topic = `realtime:public:${table}:${filter}`;
+      if (!_rtListeners[topic]) _rtListeners[topic] = new Set();
+      const isFirstForTopic = _rtListeners[topic].size === 0;
+      _rtListeners[topic].add(callback);
+      const ws = _rtEnsureSocket(token);
+      if (isFirstForTopic && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ topic, event: "phx_join", payload: { access_token: token }, ref: topic }));
+      }
+      // Si le socket n'est pas encore ouvert, l'abonnement se fera automatiquement dans onopen ci-dessus.
+      return {
+        close: () => {
+          const set = _rtListeners[topic];
+          if (!set) return;
+          set.delete(callback);
+          if (set.size === 0) {
+            delete _rtListeners[topic];
+            try {
+              if (_rtSocket && _rtSocket.readyState === WebSocket.OPEN) {
+                _rtSocket.send(JSON.stringify({ topic, event: "phx_leave", payload: {}, ref: topic + "_leave" }));
+              }
+            } catch {}
+          }
+        },
+      };
+    } catch { return null; }
+  },
+};
 
 const GLOBAL_CSS = `
   :root{ --c-creme:#F0F1F5; --c-cremeDark:#E4E6ED; --c-blanc:#FFFFFF; --c-gris:#E8DDD0; --c-brun:#2C1A0E; --c-brunLight:#5C3D2A; --c-card-bd:#E8E8E8; --c-ghost-bg:rgba(44,26,14,0.06); --c-shell-bg:#e7e7e9; }
@@ -1140,7 +1752,28 @@ const GLOBAL_CSS = `
   }
 `;
 
-// ── Btn : déplacé dans components/ui.tsx (refactoring — aucun changement de comportement). ──
+export function Btn({ children, variant = "primary", onClick, style = {}, disabled = false, loading = false }: {
+  children: React.ReactNode; variant?: string; onClick?: () => void;
+  style?: React.CSSProperties; disabled?: boolean; loading?: boolean;
+}) {
+  const base: React.CSSProperties = {
+    border: "none", borderRadius: 50, padding: "13px 28px", fontWeight: 600,
+    fontSize: "0.93rem", cursor: disabled || loading ? "not-allowed" : "pointer",
+    opacity: disabled || loading ? 0.65 : 1, display: "inline-flex",
+    alignItems: "center", justifyContent: "center", gap: 8,
+    transition: "all 0.18s ease", ...style,
+  };
+  const v: Record<string, React.CSSProperties> = {
+    primary: { background: G.rouge, color: "#fff", boxShadow: "0 4px 18px rgba(192,57,43,0.3)" },
+    authPrimary: { background: "linear-gradient(135deg,#CC5347,#B8392E)", color: "#fff", boxShadow: "0 6px 20px rgba(184,57,46,0.28)" },
+    gold: { background: `linear-gradient(135deg,${G.or},#B8860B)`, color: "#111" },
+    outline: { background: "transparent", color: G.brun, border: `2px solid ${G.brun}` },
+    ghost: { background: "var(--c-ghost-bg)", color: G.brun },
+    danger: { background: "#e74c3c", color: "#fff" },
+    white: { background: G.blanc, color: G.rouge },
+  };
+  return <button style={{ ...base, ...v[variant] }} onClick={onClick} disabled={disabled || loading}>{loading ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{animation:"pulse 0.8s ease-in-out infinite"}}><circle cx="12" cy="12" r="10"/></svg> : children}</button>;
+}
 
 function Input({ label, type = "text", value, onChange, placeholder, icon, error, hint, variant = "boxed" }: {
   label?: React.ReactNode; type?: string; value: string; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -1222,7 +1855,55 @@ function Input({ label, type = "text", value, onChange, placeholder, icon, error
   );
 }
 
-// ── Toast : déplacé dans components/ui.tsx (refactoring — aucun changement de comportement). ──
+export function Toast({ msg, type = "success", onClose }: { msg: string; type?: string; onClose: () => void }) {
+  useEffect(() => { const t = setTimeout(onClose, type === "error" ? 6000 : 4000); return () => clearTimeout(t); }, []);
+  const isError = type === "error";
+  const borderColor = isError ? "rgba(192,57,43,0.5)" : type === "premium" ? "rgba(212,168,67,0.4)" : "rgba(26,92,58,0.4)";
+  const iconColor = isError ? "#ff6b6b" : type === "premium" ? G.or : "#52d68a";
+  const bgColor = isError ? "rgba(30,10,10,0.88)" : "rgba(20,20,20,0.82)";
+  const icon = isError
+    ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={iconColor} strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    : type === "premium"
+    ? <svg width="16" height="16" viewBox="0 0 24 24" fill={iconColor} stroke="none" style={{ flexShrink: 0 }}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+    : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={iconColor} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><polyline points="20 6 9 17 4 12"/></svg>;
+  return (
+    <div style={{
+      position: "fixed",
+      bottom: "calc(env(safe-area-inset-bottom) + 76px)",
+      left: "50%",
+      transform: "translateX(-50%)",
+      background: bgColor,
+      backdropFilter: "blur(24px)",
+      WebkitBackdropFilter: "blur(24px)",
+      color: "rgba(255,255,255,0.95)",
+      padding: isError ? "14px 20px" : "11px 18px",
+      borderRadius: isError ? 16 : 50,
+      fontSize: "0.84rem",
+      fontWeight: 600,
+      zIndex: 12010,
+      boxShadow: isError
+        ? "0 12px 40px rgba(192,57,43,0.35), inset 0 1px 0 rgba(255,255,255,0.1)"
+        : "0 8px 32px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.12)",
+      maxWidth: "min(480px, 90vw)",
+      width: isError ? "min(480px, 90vw)" : "auto",
+      textAlign: "left",
+      display: "flex",
+      alignItems: isError ? "flex-start" : "center",
+      gap: 10,
+      border: `1.5px solid ${borderColor}`,
+      animation: "fadeUp 0.25s ease",
+      lineHeight: 1.5,
+    }}>
+      {icon}
+      <span style={{ flex: 1 }}>{msg}</span>
+      {isError && (
+        <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.5)", padding: 0, flexShrink: 0, marginLeft: 4 }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      )}
+    </div>
+  );
+}
 
 function ErrorModal({ msg, onClose }: { msg: string; onClose: () => void }) {
   if (!msg) return null;
@@ -1278,13 +1959,49 @@ function ModerationModal({ type, onClose }: { type: "insult" | "scam" | "sexual"
   );
 }
 
-// ── VerifiedBadge : déplacé dans components/ui.tsx (refactoring — aucun changement de comportement). ──
+export function VerifiedBadge({ size = 16 }: { size?: number }) {
+  return (
+    <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", background: "#1d9bf0", borderRadius: "50%", width: size, height: size, flexShrink: 0, boxShadow: "0 1px 3px rgba(0,0,0,0.12)" }}>
+      <svg width={size * 0.6} height={size * 0.6} viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="20 6 9 17 4 12"/>
+      </svg>
+    </div>
+  );
+}
 
 
 
-// ── PremiumBadge : déplacé dans components/ui.tsx (refactoring — aucun changement de comportement). ──
+export function PremiumBadge({ size = 16 }: { size?: number }) {
+  return (
+    <div
+      aria-label="Profil premium"
+      title="Profil premium"
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "#D4A843",
+        borderRadius: "50%",
+        width: size,
+        height: size,
+        flexShrink: 0,
+        boxShadow: "0 1px 3px rgba(0,0,0,0.12)",
+      }}
+    >
+      <svg width={size * 0.58} height={size * 0.58} viewBox="0 0 24 24" fill="#111" stroke="none" aria-hidden="true">
+        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+      </svg>
+    </div>
+  );
+}
 
-// ── Avatar : déplacé dans components/ui.tsx (refactoring — aucun changement de comportement). ──
+export const Avatar = memo(function Avatar({ url, gender, size = 54, border = false, premium = false }: { url?: string | null; gender?: string; size?: number; border?: boolean; premium?: boolean }) {
+  // ── Cercle doré pour les membres Premium, rouge pour les autres ──
+  const borderColor = border ? (premium ? G.or : G.rouge) : "none";
+  const borderStyle = border ? `3px solid ${borderColor}` : "none";
+  const boxShadow = border && premium ? `0 0 0 1px ${G.or}44` : "none";
+  return <div style={{ position: "relative", flexShrink: 0 }}><div style={{ width: size, height: size, borderRadius: "50%", overflow: "hidden", border: borderStyle, boxShadow, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center" }}>{url ? <img src={url} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" /> : (<svg width={size * 0.55} height={size * 0.55} viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>)}</div>{premium && <div style={{ position: "absolute", bottom: -2, right: -2, background: G.or, borderRadius: "50%", width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", border: `2px solid ${G.blanc}` }}><svg width="10" height="10" viewBox="0 0 24 24" fill="white" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>}</div>;
+});
 
 // ── Anneau de progression, en overlay pur au-dessus d'une photo pendant l'envoi ──
 // Composant 100% autonome : il observe juste un booléen déjà existant (`active`) et
@@ -4522,7 +5239,19 @@ const openAdminPanel = (fallback: () => void) => {
 // ─── Admin Desktop page (mounted when ?admin=1) ───────────────────────────────
 // ── Composants helpers pour le off-canvas ──
 // Modale de confirmation au style Moyo Dating (réutilisable, autonome)
-// ── ConfirmModal : déplacé dans components/ui.tsx (refactoring — aucun changement de comportement). ──
+export function ConfirmModal({ msg, onConfirm, onCancel, confirmLabel = "Confirmer", danger = false }: { msg: string; onConfirm: () => void; onCancel: () => void; confirmLabel?: string; danger?: boolean }) {
+  return (
+    <div onClick={onCancel} className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 100000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+      <div className="moyo-card-in" onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 18, padding: "26px 24px", width: "100%", maxWidth: 380, boxShadow: "0 24px 70px rgba(0,0,0,0.3)" }}>
+        <p style={{ fontSize: "0.92rem", color: "#111", lineHeight: 1.6, marginBottom: 22, fontWeight: 500, whiteSpace: "pre-line", textAlign: "center" }}>{msg}</p>
+        <div style={{ display: "flex", gap: 10 }}>
+          <button onClick={onCancel} style={{ flex: 1, padding: "12px", borderRadius: 50, border: `1.5px solid ${G.gris}`, background: G.creme, fontSize: "0.85rem", fontWeight: 700, cursor: "pointer", color: "#555" }}>Annuler</button>
+          <button onClick={() => { onConfirm(); }} style={{ flex: 1, padding: "12px", borderRadius: 50, border: "none", background: danger ? G.rouge : `linear-gradient(135deg,${G.vert},#0D2E1C)`, color: "#fff", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>{confirmLabel}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
 // Boutons d'installation PWA réutilisables (Google Play / App Store) + modales distinctes
 function InstallButtons({ variant = "light" }: { variant?: "light" | "dark" }) {
   const [modal, setModal] = React.useState<null | "android" | "ios" | "done" | "unavailable">(null);
@@ -6305,7 +7034,16 @@ const isRecent = (iso?: string, hours = 48) => {
   if (!iso) return false;
   return (Date.now() - new Date(iso).getTime()) < hours * 3600 * 1000;
 };
-// ── fmtDate : déplacé dans lib/format.ts (refactoring — aucun changement de comportement). ──
+export const fmtDate = (iso?: string) => {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const now = new Date();
+  const diffH = (now.getTime() - d.getTime()) / 3600000;
+  if (diffH < 1) return "Il y a moins d'1h";
+  if (diffH < 24) return `Il y a ${Math.floor(diffH)}h`;
+  if (diffH < 48) return "Hier";
+  return d.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+};
 
 // Switch interne réutilisable
 function InnerSwitch({ options, value, onChange, compact }: {
@@ -6335,7 +7073,14 @@ function InnerSwitch({ options, value, onChange, compact }: {
 }
 
 // Badge générique
-// ── Badge : déplacé dans components/ui.tsx (refactoring — aucun changement de comportement). ──
+export const Badge = memo(function Badge({ label, color = G.rouge, bg = "rgba(192,57,43,0.1)" }: { label: React.ReactNode; color?: string; bg?: string }) {
+  return (
+    <span style={{ background: bg, color, borderRadius: 50, padding: "2px 8px",
+      fontSize: "0.65rem", fontWeight: 700, letterSpacing: 0.2, flexShrink: 0 }}>
+      {label}
+    </span>
+  );
+});
 
 // Bloc flou Premium CTA
 function PremiumBlur({ count, label, onShowPremium, gender, isViews }: { count: number; label: string; onShowPremium: () => void; gender?: string; isViews?: boolean }) {
@@ -14975,9 +15720,17 @@ function UserWarningModal({ warning, onAcknowledge }: {
   );
 }
 
-// (PaymentRequest est désormais importé depuis types.ts en haut du fichier)
+export type PaymentRequest = { id: string; user_id: string; operator: string; tx_ref: string; amount: number; status: string; created_at: string; approved_at?: string; gift_for?: string; gift_for_name?: string; archived?: boolean; currency?: string; kind?: string; appointment_id?: string; profile?: { name: string; photo_url?: string | null; gender?: string } };
 
-// (logAdminAction désormais dans lib/admin.ts, importé en haut du fichier)
+export function logAdminAction(token: string, adminId: string, adminName: string, action: string, targetUserId?: string) {
+  try {
+    fetch(`${SUPABASE_URL}/rest/v1/admin_logs`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${token}`, "Prefer": "return=minimal" },
+      body: JSON.stringify({ admin_id: adminId, admin_name: adminName, action, target_user_id: targetUserId || null, created_at: new Date().toISOString() }),
+    });
+  } catch {}
+}
 
 // Range une action (texte libre) dans une catégorie, pour le tableau de bord d'activité.
 
