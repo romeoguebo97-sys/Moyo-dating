@@ -3172,9 +3172,9 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
             </div>
 
             {/* Contenu principal : prend tout l'espace restant, pousse son contenu vers le bas */}
-            <div style={{ position: "relative", zIndex: 2, flex: 1, minHeight: 0, display: "flex", flexDirection: "column", justifyContent: "flex-end", alignItems: "center", padding: "0 28px calc(20px + 10vh)" }}>
+            <div style={{ position: "relative", zIndex: 2, flex: 1, minHeight: 0, display: "flex", flexDirection: "column", justifyContent: "flex-end", alignItems: "center", padding: "0 28px calc(20px + 15vh)" }}>
               {/* Slogan — mêmes variables dynamiques (réglables depuis Admin) que la version desktop */}
-              <div style={{ textAlign: "left", alignSelf: "flex-start", marginBottom: "calc(24px + 5vh)", animation: "mfadeInDown 0.8s 0.2s ease both" }}>
+              <div style={{ textAlign: "left", alignSelf: "flex-start", marginBottom: 16, transform: "translateY(-8vh)", animation: "mfadeInDown 0.8s 0.2s ease both" }}>
                 <div style={{ fontSize: "0.92rem", fontWeight: 700, color: "#fff", letterSpacing: "0.22em", textTransform: "uppercase", marginBottom: 6 }}>{LANDING_TITLE_START}</div>
                 <div style={{ fontSize: "2.6rem", lineHeight: 1.05, fontWeight: 900, fontStyle: "italic", fontFamily: "Georgia, serif", letterSpacing: "-1px", marginBottom: 6 }}>
                   {(() => {
@@ -3202,11 +3202,11 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
 
               {/* Boutons */}
               <div style={{ display: "flex", flexDirection: "column", gap: 12, width: "100%", animation: "mfadeInUp 0.8s 0.5s ease both" }}>
-                <button onClick={() => onNav("signup")} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 9, background: "linear-gradient(135deg,#C0392B,#922B21)", color: "#fff", border: "none", borderRadius: 50, padding: "16px 0", fontSize: "0.98rem", fontWeight: 800, cursor: "pointer", boxShadow: "0 8px 24px rgba(192,57,43,0.4)" }}>
+                <button onClick={() => onNav("signup")} style={{ display: "flex", alignItems: "center", justifyContent: "flex-start", gap: 9, background: "linear-gradient(135deg,#C0392B,#922B21)", color: "#fff", border: "none", borderRadius: 50, padding: "16px 24px", fontSize: "0.98rem", fontWeight: 800, cursor: "pointer", boxShadow: "none" }}>
                   <svg width="17" height="17" viewBox="0 0 24 24" fill="white"><path d="M12 21s-6.7-4.35-9.3-8.1C1.1 10.2 1.8 6.9 4.6 5.4c2.2-1.2 4.6-.4 6 1.4l1.4 1.8 1.4-1.8c1.4-1.8 3.8-2.6 6-1.4 2.8 1.5 3.5 4.8 1.9 7.5C18.7 16.65 12 21 12 21z"/></svg>
                   Créer mon compte gratuit
                 </button>
-                <button onClick={() => onNav("login")} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 9, background: "#fff", color: "#1a1a1a", border: "none", borderRadius: 50, padding: "14px 0", fontSize: "0.95rem", fontWeight: 700, cursor: "pointer" }}>
+                <button onClick={() => onNav("login")} style={{ display: "flex", alignItems: "center", justifyContent: "flex-start", gap: 9, background: "#fff", color: "#1a1a1a", border: "none", borderRadius: 50, padding: "14px 24px", fontSize: "0.95rem", fontWeight: 700, cursor: "pointer" }}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="#1a1a1a"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>
                   Se connecter
                 </button>
