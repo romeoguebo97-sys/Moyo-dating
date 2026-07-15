@@ -3153,7 +3153,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
   ];
 
   return (
-    <div style={{ minHeight: "100vh", background: G.creme, overflow: "hidden", paddingTop: "env(safe-area-inset-top)" }}>
+    <div style={{ minHeight: "100vh", background: G.creme, overflow: "hidden" }}>
       <style>{GLOBAL_CSS}</style>
 
       {/* ── VERSION MOBILE ── */}
@@ -3273,7 +3273,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
       )}
 
       {/* ── NAV ── */}
-      <nav style={{ background: G.blanc, boxShadow: "0 2px 16px rgba(44,26,14,0.07)", flexShrink: 0, position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, display: (isMobile && showMobileLanding) ? "none" : "block" }}>
+      <nav style={{ background: G.blanc, boxShadow: "0 2px 16px rgba(44,26,14,0.07)", flexShrink: 0, position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, display: (isMobile && showMobileLanding) ? "none" : "block", paddingTop: "env(safe-area-inset-top)" }}>
         <div className="nav-inner" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px 24px", maxWidth: 1200, margin: "0 auto" }}>
           <div style={{ fontSize: "1.9rem", color: G.rouge, fontWeight: 700, letterSpacing: "-0.03em", display: "inline-flex", alignItems: "baseline", gap: 0 }}>
             <span style={{ display: "inline-block", verticalAlign: "top", lineHeight: 0.82 }}><span style={{ display: "block", fontWeight: 900, letterSpacing: "-0.02em" }}>Moyo</span><span style={{ display: "block", color: G.brun, fontSize: "0.48em", fontWeight: 800, marginTop: "0.06em" }}>Dating</span></span>
@@ -5696,7 +5696,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
     ) : (
       <>
         {/* Header mobile */}
-        <div ref={mobileHeaderRef} data-moyo-header style={{ padding: "8px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", background: G.blanc, borderBottom: `1px solid ${G.gris}`, position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 500, zIndex: 100, boxSizing: "border-box", visibility: inConv ? "hidden" : "visible", pointerEvents: inConv ? "none" : "auto" }}>
+        <div ref={mobileHeaderRef} data-moyo-header style={{ padding: "calc(env(safe-area-inset-top) + 8px) 16px 8px", display: "flex", justifyContent: "space-between", alignItems: "center", background: G.blanc, borderBottom: `1px solid ${G.gris}`, position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 500, zIndex: 100, boxSizing: "border-box", visibility: inConv ? "hidden" : "visible", pointerEvents: inConv ? "none" : "auto" }}>
           <div style={{ marginLeft: 4, fontSize: "1.6rem", color: G.rouge, fontWeight: 700, lineHeight: 0.82 }}>
             <div style={{ fontWeight: 900, letterSpacing: "-0.02em" }}>Moyo</div>
             <div style={{ color: G.brun, fontSize: "0.48em", fontWeight: 800, marginTop: "0.06em" }}>Dating</div>
