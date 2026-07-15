@@ -3172,15 +3172,24 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
             </div>
 
             {/* Contenu principal : prend tout l'espace restant, pousse son contenu vers le bas */}
-            <div style={{ position: "relative", zIndex: 2, flex: 1, minHeight: 0, display: "flex", flexDirection: "column", justifyContent: "flex-end", alignItems: "center", padding: "0 28px 20px" }}>
-              {/* Slogan */}
-              <div style={{ textAlign: "left", alignSelf: "flex-start", marginBottom: 24, animation: "mfadeInDown 0.8s 0.2s ease both" }}>
-                <div style={{ fontSize: "0.92rem", fontWeight: 700, color: "#fff", letterSpacing: "0.22em", textTransform: "uppercase", marginBottom: 6 }}>Trouve ton</div>
+            <div style={{ position: "relative", zIndex: 2, flex: 1, minHeight: 0, display: "flex", flexDirection: "column", justifyContent: "flex-end", alignItems: "center", padding: "0 28px calc(20px + 10vh)" }}>
+              {/* Slogan — mêmes variables dynamiques (réglables depuis Admin) que la version desktop */}
+              <div style={{ textAlign: "left", alignSelf: "flex-start", marginBottom: "calc(24px + 5vh)", animation: "mfadeInDown 0.8s 0.2s ease both" }}>
+                <div style={{ fontSize: "0.92rem", fontWeight: 700, color: "#fff", letterSpacing: "0.22em", textTransform: "uppercase", marginBottom: 6 }}>{LANDING_TITLE_START}</div>
                 <div style={{ fontSize: "2.6rem", lineHeight: 1.05, fontWeight: 900, fontStyle: "italic", fontFamily: "Georgia, serif", letterSpacing: "-1px", marginBottom: 6 }}>
-                  <span style={{ color: G.rouge, animation: "amePulse 2.5s ease-in-out infinite", display: "inline-block" }}>âme</span>{" "}
-                  <span style={{ color: "#fff" }}>sœur</span>
+                  {(() => {
+                    const parts = LANDING_TITLE_HIGHLIGHT.split(" ");
+                    const first = parts[0] || "";
+                    const rest = parts.slice(1).join(" ");
+                    return (
+                      <>
+                        <span style={{ color: G.rouge, animation: "amePulse 2.5s ease-in-out infinite", display: "inline-block" }}>{first}</span>
+                        {rest && <>{" "}<span style={{ color: "#fff" }}>{rest}</span></>}
+                      </>
+                    );
+                  })()}
                 </div>
-                <div style={{ fontSize: "1.9rem", fontWeight: 900, color: "#fff", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 8 }}>Congolaise</div>
+                <div style={{ fontSize: "1.9rem", fontWeight: 900, color: "#fff", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 8 }}>{LANDING_TITLE_END}</div>
                 <div style={{ fontSize: "0.8rem", fontWeight: 600, color: "rgba(255,255,255,0.82)", letterSpacing: "0.02em" }}>au <b>Congo</b> &amp; dans la <b>diaspora</b></div>
               </div>
 
@@ -3197,8 +3206,8 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                   <svg width="17" height="17" viewBox="0 0 24 24" fill="white"><path d="M12 21s-6.7-4.35-9.3-8.1C1.1 10.2 1.8 6.9 4.6 5.4c2.2-1.2 4.6-.4 6 1.4l1.4 1.8 1.4-1.8c1.4-1.8 3.8-2.6 6-1.4 2.8 1.5 3.5 4.8 1.9 7.5C18.7 16.65 12 21 12 21z"/></svg>
                   Créer mon compte gratuit
                 </button>
-                <button onClick={() => onNav("login")} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 9, background: "rgba(255,255,255,0.08)", color: "#fff", border: "1.5px solid rgba(255,255,255,0.5)", borderRadius: 50, padding: "14px 0", fontSize: "0.95rem", fontWeight: 700, cursor: "pointer", backdropFilter: "blur(6px)" }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>
+                <button onClick={() => onNav("login")} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 9, background: "#fff", color: "#1a1a1a", border: "none", borderRadius: 50, padding: "14px 0", fontSize: "0.95rem", fontWeight: 700, cursor: "pointer" }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="#1a1a1a"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>
                   Se connecter
                 </button>
               </div>
