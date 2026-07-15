@@ -4285,7 +4285,7 @@ function AuthLayout({ children, onBack, title, subtitle, stepInfo }: { children:
         <svg viewBox="0 0 400 300" style={{ position: "absolute", top: 0, left: 0, width: "100%", height: 280, display: "block" }} preserveAspectRatio="none">
           <path d="M0,0 L400,0 L400,190 C300,255 100,145 0,215 Z" fill={G.rouge} />
         </svg>
-        <div style={{ position: "relative", zIndex: 2, padding: "20px 20px 0" }}>
+        <div style={{ position: "relative", zIndex: 2, padding: "calc(env(safe-area-inset-top) + 20px) 20px 0" }}>
           <div onClick={onBack} style={{ display: "inline-flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
             <div style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
@@ -4303,7 +4303,7 @@ function AuthLayout({ children, onBack, title, subtitle, stepInfo }: { children:
       </div>
     )}
     {!title && (
-      <div style={{ padding: "20px 20px 0" }}>
+      <div style={{ padding: "calc(env(safe-area-inset-top) + 20px) 20px 0" }}>
         <div onClick={onBack} style={{ width: 40, height: 40, borderRadius: "50%", background: G.blanc, boxShadow: "0 4px 14px rgba(44,26,14,0.08)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
             <path d="M19 12H5M12 19l-7-7 7-7"/>
