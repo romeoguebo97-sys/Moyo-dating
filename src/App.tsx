@@ -3196,7 +3196,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                       const rest = parts.slice(1).join(" ");
                       return (
                         <>
-                          <span style={{ color: G.rouge, animation: "amePulse 2.5s ease-in-out infinite" }}>{first}</span>
+                          <span style={{ color: G.rouge, animation: "amePulse 2.5s ease-in-out infinite", WebkitTextStroke: "0.6px rgba(255,255,255,0.8)" }}>{first}</span>
                           {rest && <>{" "}<span style={{ color: "#fff" }}>{rest}</span></>}
                         </>
                       );
@@ -4251,6 +4251,20 @@ function PrivacyNoticeModal({ gender, onClose }: { gender?: string; onClose: () 
 
 function AuthLayout({ children, onBack, title, subtitle, stepInfo }: { children: React.ReactNode; onBack: () => void; title?: string; subtitle?: string; stepInfo?: React.ReactNode }) {
   const isWide = typeof window !== "undefined" && window.innerWidth >= 768;
+  // ── La vague rouge doit toujours couvrir tout le texte au-dessus (titre, sous-titre, étapes),
+  //    qui varie en longueur selon l'écran. On mesure la vraie hauteur du contenu pour ajuster
+  //    la vague dynamiquement, au lieu d'une hauteur fixe qui coupait le texte sur certains écrans. ──
+  const authHeaderRef = useRef<HTMLDivElement | null>(null);
+  const [authHeaderHeight, setAuthHeaderHeight] = useState(190);
+  useEffect(() => {
+    const el = authHeaderRef.current;
+    if (!el) return;
+    const measure = () => setAuthHeaderHeight(el.offsetHeight);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [title, subtitle]);
 
   // ── Desktop : pas de vague rouge, juste un bouton retour et le titre en texte sombre au-dessus
   //    d'une carte blanche centrée. La vague est un traitement pensé pour le mobile uniquement. ──
@@ -4282,10 +4296,10 @@ function AuthLayout({ children, onBack, title, subtitle, stepInfo }: { children:
   return <div style={{ minHeight: "100vh", background: G.blanc, position: "relative", overflow: "hidden" }}>
     {title && (
       <div style={{ position: "relative" }}>
-        <svg viewBox="0 0 400 300" style={{ position: "absolute", top: 0, left: 0, width: "100%", height: 280, display: "block" }} preserveAspectRatio="none">
-          <path d="M0,0 L400,0 L400,190 C300,255 100,145 0,215 Z" fill={G.rouge} />
+        <svg viewBox={`0 0 400 ${authHeaderHeight + 90}`} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: authHeaderHeight + 90, display: "block" }} preserveAspectRatio="none">
+          <path d={`M0,0 L400,0 L400,${authHeaderHeight - 25} C300,${authHeaderHeight + 40} 100,${authHeaderHeight - 70} 0,${authHeaderHeight}Z`} fill={G.rouge} />
         </svg>
-        <div style={{ position: "relative", zIndex: 2, padding: "calc(env(safe-area-inset-top) + 20px) 20px 0" }}>
+        <div ref={authHeaderRef} style={{ position: "relative", zIndex: 2, padding: "calc(env(safe-area-inset-top) + 20px) 20px 0" }}>
           <div onClick={onBack} style={{ display: "inline-flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
             <div style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
@@ -4294,7 +4308,7 @@ function AuthLayout({ children, onBack, title, subtitle, stepInfo }: { children:
             </div>
             <span style={{ color: "#fff", fontWeight: 600, fontSize: "0.9rem" }}>Accueil</span>
           </div>
-          <div style={{ marginTop: 20, paddingBottom: 90 }}>
+          <div style={{ marginTop: 20, paddingBottom: 24 }}>
             <div style={{ fontSize: "1.7rem", fontWeight: 800, color: "#fff", lineHeight: 1.15 }}>{title}</div>
             {subtitle && <div style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.85)", marginTop: 8, lineHeight: 1.5 }}>{subtitle}</div>}
             {stepInfo}
