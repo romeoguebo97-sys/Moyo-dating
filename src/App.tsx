@@ -3023,6 +3023,21 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
       return () => { document.body.style.overflow = prevOverflow; };
     }
   }, [isMobile, showMobileLanding]);
+  // Le fond global du site (html/body/#root) est en couleur crème pour tout le reste de l'app.
+  // Pendant l'écran d'accueil mobile plein écran uniquement, on le passe en sombre pour que la
+  // zone de la barre de statut iOS (au-dessus de notre contenu fixed) ne montre jamais de blanc.
+  useEffect(() => {
+    if (isMobile && showMobileLanding) {
+      const prevHtmlBg = document.documentElement.style.backgroundColor;
+      const prevBodyBg = document.body.style.backgroundColor;
+      document.documentElement.style.backgroundColor = "#5f0000";
+      document.body.style.backgroundColor = "#5f0000";
+      return () => {
+        document.documentElement.style.backgroundColor = prevHtmlBg;
+        document.body.style.backgroundColor = prevBodyBg;
+      };
+    }
+  }, [isMobile, showMobileLanding]);
   const [installModal, setInstallModal] = React.useState<null | "android" | "ios" | "done" | "unavailable">(null);
 
   // Lance l'installation native Android (la vraie pop-up Chrome)
@@ -3146,7 +3161,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
 
       {/* ── VERSION MOBILE ── */}
       {isMobile && showMobileLanding && (
-        <div data-moyo-mobile-landing style={{ position: "fixed", inset: 0, background: "#1a0505", display: "flex", flexDirection: "column", alignItems: "stretch", zIndex: 9999, fontFamily: "Arial, sans-serif", overflow: "hidden", touchAction: "none" }}>
+        <div data-moyo-mobile-landing style={{ position: "fixed", inset: 0, background: "#5f0000", display: "flex", flexDirection: "column", alignItems: "stretch", zIndex: 9999, fontFamily: "Arial, sans-serif", overflow: "hidden", touchAction: "none" }}>
           <style>{`
             @keyframes amePulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.06)} }
             @keyframes mfadeInDown { from{opacity:0;transform:translateY(-16px)} to{opacity:1;transform:translateY(0)} }
@@ -16090,6 +16105,16 @@ export default function App() {
       document.head.appendChild(statusBar);
     }
     statusBar.setAttribute("content", "black-translucent");
+
+    // Ne pas laisser cette balise en blanc, sinon la zone de la barre de statut iOS
+    // (au-dessus de notre contenu) s'affiche blanche au lieu de suivre le design.
+    let themeColor = document.querySelector('meta[name="theme-color"]') as HTMLMetaElement | null;
+    if (!themeColor) {
+      themeColor = document.createElement("meta");
+      themeColor.name = "theme-color";
+      document.head.appendChild(themeColor);
+    }
+    themeColor.setAttribute("content", "#5f0000");
     // Sécurité iOS Safari : empêche le double-tap zoom et le pinch-zoom de page,
     // sauf dans les zones interactives qui gèrent leur propre zoom (ex: éditeur de photo)
     const preventGesture = (e: Event) => {
