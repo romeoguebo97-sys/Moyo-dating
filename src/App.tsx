@@ -152,7 +152,7 @@ let CONTACT_BANNED_REGEX: RegExp | null = null;
 //    exact détecté fait partie de la liste que l'admin a désactivée. ──
 export const BUILTIN_MODERATION_WORDS: { word: string; type: "insult" | "scam" | "sexual"; group: string }[] = [
   // Insultes
-  ...["putain", "pute", "salope", "connard", "con", "fdp", "filss de pute", "bâtard", "va te faire", "enculé", "merde", "ta gueule", "ferme la", "idiot", "imbécile", "abruti", "débile", "crétin", "nègre", "singe", "bamboula", "tafiole", "tapette", "mongol", "nique ta mère", "ntm", "tg", "sale chien", "sale con", "sale pute", "bouffon", "clochard", "porc", "sale race", "sale noir", "sale blanc", "sale arabe", "sale africain", "sale congolais", "sale étranger", "retourne dans ton pays", "nigga"].map(word => ({ word, type: "insult" as const, group: "Insultes" })),
+  ...["putain", "pute", "salope", "connard", "con", "fdp", "fils de pute", "bâtard", "va te faire", "enculé", "merde", "ta gueule", "ferme la", "idiot", "imbécile", "abruti", "débile", "crétin", "nègre", "singe", "bamboula", "tafiole", "tapette", "mongol", "nique ta mère", "ntm", "tg", "sale chien", "sale con", "sale pute", "bouffon", "clochard", "porc", "sale race", "sale noir", "sale blanc", "sale arabe", "sale africain", "sale congolais", "sale étranger", "retourne dans ton pays", "nigga"].map(word => ({ word, type: "insult" as const, group: "Insultes" })),
   // Menaces
   ...["je vais te tuer", "je vais te frapper", "je vais te retrouver", "je vais venir chez toi", "je vais te violer", "suicide toi", "crève", "meurs"].map(word => ({ word, type: "insult" as const, group: "Menaces" })),
   // Lingala / Congo
@@ -675,6 +675,16 @@ async function subscribeToPush(auth: { token: string; userId: string }) {
       }),
     });
   } catch {}
+}
+
+// Détecte la plateforme du visiteur pour n'afficher que le bouton de téléchargement pertinent
+// (Google Play sur Android, App Store sur iPhone, les deux sur ordinateur).
+function detectStorePlatform(): "ios" | "android" | "other" {
+  if (typeof navigator === "undefined") return "other";
+  const ua = navigator.userAgent || "";
+  if (/iphone|ipad|ipod/i.test(ua)) return "ios";
+  if (/android/i.test(ua)) return "android";
+  return "other";
 }
 
 // ── Notifications natives (app Android empaquetée avec Capacitor) via Firebase Cloud Messaging ──
@@ -3200,14 +3210,18 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
               </svg>
             </div>
             <div style={{ display: "flex", gap: 7, marginTop: 8 }}>
+              {detectStorePlatform() !== "ios" && (
               <div onClick={installGooglePlay} style={{ display: "flex", alignItems: "center", gap: 5, background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.25)", color: "#fff", borderRadius: 9, padding: "5px 10px", cursor: "pointer" }}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="white"><path d="M3.18 23.76c.3.17.64.24.99.2l11.47-11.47L12.36 9.2 3.18 23.76zm16.3-12.04L16.6 9.97l-3.23 3.23 3.23 3.23 2.9-1.74c.82-.49.82-1.28-.02-1.97zM3.02.28C2.7.46 2.5.8 2.5 1.25v21.5c0 .44.2.79.52.96l.1.06 12.05-12.05v-.28L3.12.22l-.1.06zm9.34 9.34L3.18.24l-.1.06 9.28 9.32z"/></svg>
                 <div style={{ textAlign: "left", lineHeight: 1 }}><div style={{ fontSize: "0.42rem", opacity: 0.8 }}>Disponible sur</div><div style={{ fontSize: "0.62rem", fontWeight: 700 }}>Google Play</div></div>
               </div>
+              )}
+              {detectStorePlatform() !== "android" && (
               <div onClick={installAppStore} style={{ display: "flex", alignItems: "center", gap: 5, background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.25)", color: "#fff", borderRadius: 9, padding: "5px 10px", cursor: "pointer" }}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="white"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
                 <div style={{ textAlign: "left", lineHeight: 1 }}><div style={{ fontSize: "0.42rem", opacity: 0.8 }}>Télécharger dans</div><div style={{ fontSize: "0.62rem", fontWeight: 700 }}>App Store</div></div>
               </div>
+              )}
             </div>
           </div>
         </div>
@@ -3919,14 +3933,18 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
           </div>
           <p style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.6)", marginBottom: 16, fontWeight: 600 }}>Installe l'application en un clic</p>
           <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
+            {detectStorePlatform() !== "ios" && (
             <div className="store" onClick={installGooglePlay} style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", color: "#fff", borderRadius: 12, padding: "10px 18px", minWidth: 150, cursor: "pointer" }}>
               <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M3.18 23.76c.3.17.64.24.99.2l11.47-11.47L12.36 9.2 3.18 23.76zm16.3-12.04L16.6 9.97l-3.23 3.23 3.23 3.23 2.9-1.74c.82-.49.82-1.28-.02-1.97zM3.02.28C2.7.46 2.5.8 2.5 1.25v21.5c0 .44.2.79.52.96l.1.06 12.05-12.05v-.28L3.12.22l-.1.06zm9.34 9.34L3.18.24l-.1.06 9.28 9.32z"/></svg>
               <div><div style={{ fontSize: "0.68rem", opacity: 0.75 }}>Disponible sur</div><div style={{ fontSize: "0.9rem", fontWeight: 700 }}>Google Play</div></div>
             </div>
+            )}
+            {detectStorePlatform() !== "android" && (
             <div className="store" onClick={installAppStore} style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", color: "#fff", borderRadius: 12, padding: "10px 18px", minWidth: 150, cursor: "pointer" }}>
               <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
               <div><div style={{ fontSize: "0.68rem", opacity: 0.75 }}>Télécharger dans</div><div style={{ fontSize: "0.9rem", fontWeight: 700 }}>App Store</div></div>
             </div>
+            )}
           </div>
         </div>
       </div>
@@ -5348,14 +5366,18 @@ function InstallButtons({ variant = "light" }: { variant?: "light" | "dark" }) {
   return (
     <>
       <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
+        {detectStorePlatform() !== "ios" && (
         <div onClick={onGoogle} style={{ display: "flex", alignItems: "center", gap: 9, background: btnBg, border: `1px solid ${btnBorder}`, color: "#fff", borderRadius: 12, padding: "9px 16px", cursor: "pointer" }}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M3.18 23.76c.3.17.64.24.99.2l11.47-11.47L12.36 9.2 3.18 23.76zm16.3-12.04L16.6 9.97l-3.23 3.23 3.23 3.23 2.9-1.74c.82-.49.82-1.28-.02-1.97zM3.02.28C2.7.46 2.5.8 2.5 1.25v21.5c0 .44.2.79.52.96l.1.06 12.05-12.05v-.28L3.12.22l-.1.06zm9.34 9.34L3.18.24l-.1.06 9.28 9.32z"/></svg>
           <div style={{ textAlign: "left", lineHeight: 1.1 }}><div style={{ fontSize: "0.58rem", opacity: 0.8 }}>Disponible sur</div><div style={{ fontSize: "0.82rem", fontWeight: 700 }}>Google Play</div></div>
         </div>
+        )}
+        {detectStorePlatform() !== "android" && (
         <div onClick={onApple} style={{ display: "flex", alignItems: "center", gap: 9, background: btnBg, border: `1px solid ${btnBorder}`, color: "#fff", borderRadius: 12, padding: "9px 16px", cursor: "pointer" }}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
           <div style={{ textAlign: "left", lineHeight: 1.1 }}><div style={{ fontSize: "0.58rem", opacity: 0.8 }}>Télécharger dans</div><div style={{ fontSize: "0.82rem", fontWeight: 700 }}>App Store</div></div>
         </div>
+        )}
       </div>
       {modal && (
         <div onClick={() => setModal(null)} className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 100000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
