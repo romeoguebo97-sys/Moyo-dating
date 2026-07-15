@@ -3023,21 +3023,6 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
       return () => { document.body.style.overflow = prevOverflow; };
     }
   }, [isMobile, showMobileLanding]);
-  // Le fond global du site (html/body/#root) est en couleur crème pour tout le reste de l'app.
-  // Pendant l'écran d'accueil mobile plein écran uniquement, on le passe en sombre pour que la
-  // zone de la barre de statut iOS (au-dessus de notre contenu fixed) ne montre jamais de blanc.
-  useEffect(() => {
-    if (isMobile && showMobileLanding) {
-      const prevHtmlBg = document.documentElement.style.backgroundColor;
-      const prevBodyBg = document.body.style.backgroundColor;
-      document.documentElement.style.backgroundColor = "#5f0000";
-      document.body.style.backgroundColor = "#5f0000";
-      return () => {
-        document.documentElement.style.backgroundColor = prevHtmlBg;
-        document.body.style.backgroundColor = prevBodyBg;
-      };
-    }
-  }, [isMobile, showMobileLanding]);
   const [installModal, setInstallModal] = React.useState<null | "android" | "ios" | "done" | "unavailable">(null);
 
   // Lance l'installation native Android (la vraie pop-up Chrome)
