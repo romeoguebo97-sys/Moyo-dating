@@ -3157,7 +3157,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
           `}</style>
 
           {/* Corps avec photo — plein écran, sans bande blanche */}
-          <div style={{ flex: 1, position: "relative", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", padding: "0 28px 44px" }}>
+          <div style={{ flex: 1, position: "relative", display: "flex", flexDirection: "column", overflow: "hidden" }}>
             {/* Photo du couple en arrière-plan intégral */}
             <div style={{ position: "absolute", inset: 0, backgroundImage: `url("/couple-hero.jpg")`, backgroundSize: "cover", backgroundPosition: "center 20%" }} />
             {/* Dégradé sombre pour la lisibilité du texte, look éditorial premium */}
@@ -3171,10 +3171,10 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
               </span>
             </div>
 
-            {/* Contenu */}
-            <div style={{ position: "relative", zIndex: 2, width: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}>
+            {/* Contenu principal : prend tout l'espace restant, pousse son contenu vers le bas */}
+            <div style={{ position: "relative", zIndex: 2, flex: 1, minHeight: 0, display: "flex", flexDirection: "column", justifyContent: "flex-end", alignItems: "center", padding: "0 28px 20px" }}>
               {/* Slogan */}
-              <div style={{ textAlign: "center", marginBottom: 24, animation: "mfadeInDown 0.8s 0.2s ease both" }}>
+              <div style={{ textAlign: "left", alignSelf: "flex-start", marginBottom: 24, animation: "mfadeInDown 0.8s 0.2s ease both" }}>
                 <div style={{ fontSize: "0.92rem", fontWeight: 700, color: "#fff", letterSpacing: "0.22em", textTransform: "uppercase", marginBottom: 6 }}>Trouve ton</div>
                 <div style={{ fontSize: "2.6rem", lineHeight: 1.05, fontWeight: 900, fontStyle: "italic", fontFamily: "Georgia, serif", letterSpacing: "-1px", marginBottom: 6 }}>
                   <span style={{ color: G.rouge, animation: "amePulse 2.5s ease-in-out infinite", display: "inline-block" }}>âme</span>{" "}
@@ -3185,7 +3185,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
               </div>
 
               {/* 3 points */}
-              <div style={{ display: "flex", gap: 7, marginBottom: 26, animation: "mfadeIn 0.8s 0.4s ease both" }}>
+              <div style={{ display: "flex", gap: 7, marginBottom: 22, animation: "mfadeIn 0.8s 0.4s ease both" }}>
                 {[0, 0.2, 0.4].map((delay, i) => (
                   <div key={i} style={{ width: 8, height: 8, borderRadius: "50%", background: "rgba(255,255,255,0.5)", animation: `mbounce 1.3s ${delay}s ease-in-out infinite` }} />
                 ))}
@@ -3197,41 +3197,52 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                   <svg width="17" height="17" viewBox="0 0 24 24" fill="white"><path d="M12 21s-6.7-4.35-9.3-8.1C1.1 10.2 1.8 6.9 4.6 5.4c2.2-1.2 4.6-.4 6 1.4l1.4 1.8 1.4-1.8c1.4-1.8 3.8-2.6 6-1.4 2.8 1.5 3.5 4.8 1.9 7.5C18.7 16.65 12 21 12 21z"/></svg>
                   Créer mon compte gratuit
                 </button>
-                <button onClick={() => onNav("login")} style={{ background: "rgba(255,255,255,0.08)", color: "#fff", border: "1.5px solid rgba(255,255,255,0.5)", borderRadius: 50, padding: "14px 0", fontSize: "0.95rem", fontWeight: 700, cursor: "pointer", backdropFilter: "blur(6px)" }}>
+                <button onClick={() => onNav("login")} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 9, background: "rgba(255,255,255,0.08)", color: "#fff", border: "1.5px solid rgba(255,255,255,0.5)", borderRadius: 50, padding: "14px 0", fontSize: "0.95rem", fontWeight: 700, cursor: "pointer", backdropFilter: "blur(6px)" }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>
                   Se connecter
                 </button>
               </div>
             </div>
-          </div>
 
-          {/* Petit séparateur cœur + Voir notre site + Disponible sur */}
-          <div style={{ position: "absolute", bottom: 16, left: "50%", transform: "translateX(-50%)", display: "flex", flexDirection: "column", alignItems: "center", gap: 10, animation: "mfadeIn 1s 1s ease both", zIndex: 4, width: "100%" }}>
-            <div onClick={() => setShowMobileLanding(false)} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, cursor: "pointer" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, width: 130 }}>
-                <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.35)" }} />
-                <svg width="12" height="12" viewBox="0 0 24 24" fill={G.rouge}><path d="M12 21s-6.7-4.35-9.3-8.1C1.1 10.2 1.8 6.9 4.6 5.4c2.2-1.2 4.6-.4 6 1.4l1.4 1.8 1.4-1.8c1.4-1.8 3.8-2.6 6-1.4 2.8 1.5 3.5 4.8 1.9 7.5C18.7 16.65 12 21 12 21z"/></svg>
-                <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.35)" }} />
+            {/* Petit séparateur cœur + Voir notre site + Disponible sur — sous les boutons, jamais superposé */}
+            <div style={{ position: "relative", zIndex: 2, flex: "0 0 auto", display: "flex", flexDirection: "column", alignItems: "center", gap: 10, padding: "0 20px max(14px, env(safe-area-inset-bottom)) 20px", animation: "mfadeIn 1s 1s ease both" }}>
+              <div onClick={() => setShowMobileLanding(false)} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 7, cursor: "pointer" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, width: 120 }}>
+                  <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.35)" }} />
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill={G.rouge}><path d="M12 21s-6.7-4.35-9.3-8.1C1.1 10.2 1.8 6.9 4.6 5.4c2.2-1.2 4.6-.4 6 1.4l1.4 1.8 1.4-1.8c1.4-1.8 3.8-2.6 6-1.4 2.8 1.5 3.5 4.8 1.9 7.5C18.7 16.65 12 21 12 21z"/></svg>
+                  <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.35)" }} />
+                </div>
+                <div style={{ color: "#ffffff", fontSize: "0.52rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase" }}>Voir notre site</div>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "mbounceArrow 1.5s ease-in-out infinite" }}>
+                  <polyline points="6 9 12 15 18 9"/>
+                </svg>
               </div>
-              <div style={{ color: "#ffffff", fontSize: "0.55rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase" }}>Voir notre site</div>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "mbounceArrow 1.5s ease-in-out infinite" }}>
-                <polyline points="6 9 12 15 18 9"/>
-              </svg>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-              <div style={{ color: "rgba(255,255,255,0.7)", fontSize: "0.58rem", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" }}>Disponible sur</div>
-              <div style={{ display: "flex", gap: 7 }}>
-                {detectStorePlatform() !== "ios" && (
-                <div onClick={installGooglePlay} style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(0,0,0,0.35)", border: "1px solid rgba(255,255,255,0.3)", color: "#fff", borderRadius: 9, padding: "6px 12px", cursor: "pointer" }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M3.18 23.76c.3.17.64.24.99.2l11.47-11.47L12.36 9.2 3.18 23.76zm16.3-12.04L16.6 9.97l-3.23 3.23 3.23 3.23 2.9-1.74c.82-.49.82-1.28-.02-1.97zM3.02.28C2.7.46 2.5.8 2.5 1.25v21.5c0 .44.2.79.52.96l.1.06 12.05-12.05v-.28L3.12.22l-.1.06zm9.34 9.34L3.18.24l-.1.06 9.28 9.32z"/></svg>
-                  <span style={{ fontSize: "0.68rem", fontWeight: 700 }}>Google Play</span>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                <div style={{ display: "flex", gap: 7 }}>
+                  {detectStorePlatform() !== "ios" && (
+                  <div onClick={installGooglePlay} style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(0,0,0,0.55)", border: "1px solid rgba(255,255,255,0.35)", color: "#fff", borderRadius: 8, padding: "6px 14px 6px 10px", cursor: "pointer" }}>
+                    <svg width="18" height="18" viewBox="0 0 512 512">
+                      <path fill="#00d2ff" d="M99.6 8.1C91.6 12.5 86 21.9 86 32.9v446.2c0 11 5.6 20.4 13.6 24.8L326.8 256 99.6 8.1z"/>
+                      <path fill="#ffe000" d="M411.6 213.3l-73.5-41.9L263.2 256l74.9 84.6 73.5-41.9c19.3-11 19.3-71.4 0-85.4z"/>
+                      <path fill="#00e676" d="M99.6 8.1L338.1 171.4 263.2 256l-163.6 235.9c2.5 1.4 5.2 2.1 8 2.1 4.4 0 8.9-1.3 12.8-3.6l286.4-163.5-107.5-97.5z"/>
+                      <path fill="#ff3d3d" d="M99.6 503.9c3.9 2.3 8.4 3.6 12.8 3.6 2.8 0 5.5-.7 8-2.1L406.8 341.5 300.1 256l-38.9 45.9L99.6 503.9z"/>
+                    </svg>
+                    <div style={{ textAlign: "left", lineHeight: 1.15 }}>
+                      <div style={{ fontSize: "0.5rem", opacity: 0.85 }}>Disponible sur</div>
+                      <div style={{ fontSize: "0.78rem", fontWeight: 700 }}>Google Play</div>
+                    </div>
+                  </div>
+                  )}
+                  {detectStorePlatform() !== "android" && (
+                  <div onClick={installAppStore} style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(0,0,0,0.55)", border: "1px solid rgba(255,255,255,0.35)", color: "#fff", borderRadius: 8, padding: "6px 14px 6px 10px", cursor: "pointer" }}>
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="white"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+                    <div style={{ textAlign: "left", lineHeight: 1.15 }}>
+                      <div style={{ fontSize: "0.5rem", opacity: 0.85 }}>Télécharger dans</div>
+                      <div style={{ fontSize: "0.78rem", fontWeight: 700 }}>App Store</div>
+                    </div>
+                  </div>
+                  )}
                 </div>
-                )}
-                {detectStorePlatform() !== "android" && (
-                <div onClick={installAppStore} style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(0,0,0,0.35)", border: "1px solid rgba(255,255,255,0.3)", color: "#fff", borderRadius: 9, padding: "6px 12px", cursor: "pointer" }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
-                  <span style={{ fontSize: "0.68rem", fontWeight: 700 }}>App Store</span>
-                </div>
-                )}
               </div>
             </div>
           </div>
