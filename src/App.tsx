@@ -3154,6 +3154,11 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
             @keyframes mfadeIn { from{opacity:0} to{opacity:1} }
             @keyframes mbounce { 0%,80%,100%{transform:scale(1);opacity:0.4} 40%{transform:scale(1.6);opacity:1;background:white} }
             @keyframes mbounceArrow { 0%,100%{transform:translateY(0)} 50%{transform:translateY(5px)} }
+            .slogan-lines { width: 300px; text-align: left; }
+            .slogan-line { display: block; width: 100%; white-space: nowrap; }
+            .soulmate-line { display: flex; justify-content: space-between; align-items: baseline; }
+            .justified-line { text-align: justify; text-align-last: justify; }
+            .justified-line::after { content: ""; display: inline-block; width: 100%; }
           `}</style>
 
           {/* Corps avec photo — plein écran, sans bande blanche */}
@@ -3175,22 +3180,24 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
             <div style={{ position: "relative", zIndex: 2, flex: 1, minHeight: 0, display: "flex", flexDirection: "column", justifyContent: "flex-end", alignItems: "center", padding: "0 28px calc(20px + 15vh)" }}>
               {/* Slogan — mêmes variables dynamiques (réglables depuis Admin) que la version desktop */}
               <div style={{ textAlign: "left", alignSelf: "flex-start", marginBottom: 16, transform: "translateY(-8vh)", animation: "mfadeInDown 0.8s 0.2s ease both" }}>
-                <div style={{ fontSize: "0.92rem", fontWeight: 700, color: "#fff", letterSpacing: "0.22em", textTransform: "uppercase", marginBottom: 6 }}>{LANDING_TITLE_START}</div>
-                <div style={{ fontSize: "2.6rem", lineHeight: 1.05, fontWeight: 900, fontStyle: "italic", fontFamily: "Georgia, serif", letterSpacing: "-1px", marginBottom: 6 }}>
-                  {(() => {
-                    const parts = LANDING_TITLE_HIGHLIGHT.split(" ");
-                    const first = parts[0] || "";
-                    const rest = parts.slice(1).join(" ");
-                    return (
-                      <>
-                        <span style={{ color: G.rouge, animation: "amePulse 2.5s ease-in-out infinite", display: "inline-block" }}>{first}</span>
-                        {rest && <>{" "}<span style={{ color: "#fff" }}>{rest}</span></>}
-                      </>
-                    );
-                  })()}
+                <div style={{ fontSize: "0.92rem", fontWeight: 700, color: "#fff", letterSpacing: "0.22em", textTransform: "uppercase", marginBottom: 10 }}>{LANDING_TITLE_START}</div>
+                <div className="slogan-lines">
+                  <div className="slogan-line soulmate-line" style={{ fontSize: "2.6rem", lineHeight: 1.05, fontWeight: 900, fontStyle: "italic", fontFamily: "Georgia, serif", marginBottom: 6 }}>
+                    {(() => {
+                      const parts = LANDING_TITLE_HIGHLIGHT.split(" ");
+                      const first = parts[0] || "";
+                      const rest = parts.slice(1).join(" ");
+                      return (
+                        <>
+                          <span style={{ color: G.rouge, animation: "amePulse 2.5s ease-in-out infinite" }}>{first}</span>
+                          {rest && <span style={{ color: "#fff" }}>{rest}</span>}
+                        </>
+                      );
+                    })()}
+                  </div>
+                  <div className="slogan-line justified-line" style={{ fontSize: "1.7rem", fontWeight: 900, color: "#fff", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 8 }}>{LANDING_TITLE_END}</div>
+                  <div className="slogan-line justified-line" style={{ fontSize: "0.86rem", fontWeight: 600, color: "rgba(255,255,255,0.82)" }}>au Congo &amp; dans la diaspora</div>
                 </div>
-                <div style={{ fontSize: "1.9rem", fontWeight: 900, color: "#fff", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 8 }}>{LANDING_TITLE_END}</div>
-                <div style={{ fontSize: "0.8rem", fontWeight: 600, color: "rgba(255,255,255,0.82)", letterSpacing: "0.02em" }}>au <b>Congo</b> &amp; dans la <b>diaspora</b></div>
               </div>
 
               {/* 3 points */}
@@ -3214,7 +3221,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
             </div>
 
             {/* Petit séparateur cœur + Voir notre site + Disponible sur — sous les boutons, jamais superposé */}
-            <div style={{ position: "relative", zIndex: 2, flex: "0 0 auto", display: "flex", flexDirection: "column", alignItems: "center", gap: 10, padding: "0 20px max(14px, env(safe-area-inset-bottom)) 20px", animation: "mfadeIn 1s 1s ease both" }}>
+            <div style={{ position: "relative", zIndex: 2, flex: "0 0 auto", display: "flex", flexDirection: "column", alignItems: "center", gap: 10, padding: "18px 20px max(14px, env(safe-area-inset-bottom)) 20px", animation: "mfadeIn 1s 1s ease both" }}>
               <div onClick={() => setShowMobileLanding(false)} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 7, cursor: "pointer" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, width: 120 }}>
                   <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.35)" }} />
