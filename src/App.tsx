@@ -3033,7 +3033,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
       themeColor.name = "theme-color";
       document.head.appendChild(themeColor);
     }
-    themeColor.setAttribute("content", (isMobile && showMobileLanding) ? "#ffffff" : "#ffffff");
+    themeColor.setAttribute("content", (isMobile && showMobileLanding) ? #5f0000" : "#5f0000");
   }, [isMobile, showMobileLanding]);
   const [installModal, setInstallModal] = React.useState<null | "android" | "ios" | "done" | "unavailable">(null);
 
