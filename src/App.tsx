@@ -3153,7 +3153,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
   ];
 
   return (
-    <div style={{ minHeight: "100vh", background: G.creme, overflow: "hidden" }}>
+    <div style={{ minHeight: "100vh", background: G.creme, overflow: "hidden", paddingTop: "env(safe-area-inset-top)" }}>
       <style>{GLOBAL_CSS}</style>
 
       {/* ── VERSION MOBILE ── */}
