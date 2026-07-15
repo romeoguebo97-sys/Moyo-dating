@@ -3154,11 +3154,6 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
             @keyframes mfadeIn { from{opacity:0} to{opacity:1} }
             @keyframes mbounce { 0%,80%,100%{transform:scale(1);opacity:0.4} 40%{transform:scale(1.6);opacity:1;background:white} }
             @keyframes mbounceArrow { 0%,100%{transform:translateY(0)} 50%{transform:translateY(5px)} }
-            .slogan-lines { width: 300px; text-align: left; }
-            .slogan-line { display: block; width: 100%; white-space: nowrap; }
-            .soulmate-line { display: flex; justify-content: space-between; align-items: baseline; }
-            .justified-line { text-align: justify; text-align-last: justify; }
-            .justified-line::after { content: ""; display: inline-block; width: 100%; }
           `}</style>
 
           {/* Corps avec photo — plein écran, sans bande blanche */}
@@ -3177,12 +3172,12 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
             </div>
 
             {/* Contenu principal : prend tout l'espace restant, pousse son contenu vers le bas */}
-            <div style={{ position: "relative", zIndex: 2, flex: 1, minHeight: 0, display: "flex", flexDirection: "column", justifyContent: "flex-end", alignItems: "center", padding: "0 28px calc(20px + 15vh)" }}>
+            <div style={{ position: "relative", zIndex: 2, flex: 1, minHeight: 0, display: "flex", flexDirection: "column", justifyContent: "flex-end", alignItems: "center", padding: "0 28px calc(20px + 8vh)" }}>
               {/* Slogan — mêmes variables dynamiques (réglables depuis Admin) que la version desktop */}
-              <div style={{ textAlign: "left", alignSelf: "flex-start", marginBottom: 16, transform: "translateY(-8vh)", animation: "mfadeInDown 0.8s 0.2s ease both" }}>
+              <div style={{ textAlign: "left", alignSelf: "flex-start", marginBottom: 16, transform: "translateY(-3vh)", animation: "mfadeInDown 0.8s 0.2s ease both" }}>
                 <div style={{ fontSize: "0.92rem", fontWeight: 700, color: "#fff", letterSpacing: "0.22em", textTransform: "uppercase", marginBottom: 10 }}>{LANDING_TITLE_START}</div>
-                <div className="slogan-lines">
-                  <div className="slogan-line soulmate-line" style={{ fontSize: "2.6rem", lineHeight: 1.05, fontWeight: 900, fontStyle: "italic", fontFamily: "Georgia, serif", marginBottom: 6 }}>
+                <div style={{ textAlign: "left" }}>
+                  <div style={{ fontSize: "2.6rem", lineHeight: 1.05, fontWeight: 900, fontStyle: "italic", fontFamily: "Georgia, serif", letterSpacing: "-1px", marginBottom: 6 }}>
                     {(() => {
                       const parts = LANDING_TITLE_HIGHLIGHT.split(" ");
                       const first = parts[0] || "";
@@ -3190,13 +3185,13 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                       return (
                         <>
                           <span style={{ color: G.rouge, animation: "amePulse 2.5s ease-in-out infinite" }}>{first}</span>
-                          {rest && <span style={{ color: "#fff" }}>{rest}</span>}
+                          {rest && <>{" "}<span style={{ color: "#fff" }}>{rest}</span></>}
                         </>
                       );
                     })()}
                   </div>
-                  <div className="slogan-line justified-line" style={{ fontSize: "1.7rem", fontWeight: 900, color: "#fff", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 8 }}>{LANDING_TITLE_END}</div>
-                  <div className="slogan-line justified-line" style={{ fontSize: "0.86rem", fontWeight: 600, color: "rgba(255,255,255,0.82)" }}>au Congo &amp; dans la diaspora</div>
+                  <div style={{ fontSize: "1.9rem", fontWeight: 900, color: "#fff", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 8 }}>{LANDING_TITLE_END}</div>
+                  <div style={{ fontSize: "0.85rem", fontWeight: 600, color: "rgba(255,255,255,0.82)" }}>au Congo &amp; dans la diaspora</div>
                 </div>
               </div>
 
@@ -16076,6 +16071,25 @@ export default function App() {
       "content",
       "width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, viewport-fit=cover, interactive-widget=resizes-content"
     );
+
+    // PWA installée (ajoutée à l'écran d'accueil) sur iOS : sans ces deux balises, la barre de
+    // statut (heure/batterie) garde un fond opaque au lieu de laisser voir le contenu en dessous,
+    // même si le reste de la page gère déjà correctement les zones de sécurité.
+    let capable = document.querySelector('meta[name="apple-mobile-web-app-capable"]') as HTMLMetaElement | null;
+    if (!capable) {
+      capable = document.createElement("meta");
+      capable.name = "apple-mobile-web-app-capable";
+      document.head.appendChild(capable);
+    }
+    capable.setAttribute("content", "yes");
+
+    let statusBar = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]') as HTMLMetaElement | null;
+    if (!statusBar) {
+      statusBar = document.createElement("meta");
+      statusBar.name = "apple-mobile-web-app-status-bar-style";
+      document.head.appendChild(statusBar);
+    }
+    statusBar.setAttribute("content", "black-translucent");
     // Sécurité iOS Safari : empêche le double-tap zoom et le pinch-zoom de page,
     // sauf dans les zones interactives qui gèrent leur propre zoom (ex: éditeur de photo)
     const preventGesture = (e: Event) => {
