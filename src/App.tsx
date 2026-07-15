@@ -3201,13 +3201,13 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
               </div>
 
               {/* Boutons */}
-              <div style={{ display: "flex", flexDirection: "column", gap: 12, width: "100%", animation: "mfadeInUp 0.8s 0.5s ease both" }}>
-                <button onClick={() => onNav("signup")} style={{ display: "flex", alignItems: "center", justifyContent: "flex-start", gap: 9, background: "linear-gradient(135deg,#C0392B,#922B21)", color: "#fff", border: "none", borderRadius: 50, padding: "16px 24px", fontSize: "0.98rem", fontWeight: 800, cursor: "pointer", boxShadow: "none" }}>
-                  <svg width="17" height="17" viewBox="0 0 24 24" fill="white"><path d="M12 21s-6.7-4.35-9.3-8.1C1.1 10.2 1.8 6.9 4.6 5.4c2.2-1.2 4.6-.4 6 1.4l1.4 1.8 1.4-1.8c1.4-1.8 3.8-2.6 6-1.4 2.8 1.5 3.5 4.8 1.9 7.5C18.7 16.65 12 21 12 21z"/></svg>
+              <div style={{ display: "flex", flexDirection: "column", gap: 18, width: "100%", animation: "mfadeInUp 0.8s 0.5s ease both" }}>
+                <button onClick={() => onNav("signup")} style={{ position: "relative", display: "block", width: "100%", textAlign: "center", background: "linear-gradient(135deg,#C0392B,#922B21)", color: "#fff", border: "1.5px solid rgba(255,255,255,0.4)", borderRadius: 50, padding: "16px 0", fontSize: "0.98rem", fontWeight: 800, cursor: "pointer", boxShadow: "0 8px 20px rgba(146,43,33,0.35)" }}>
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="white" style={{ position: "absolute", left: 30, top: "50%", transform: "translateY(-50%)" }}><path d="M12 21s-6.7-4.35-9.3-8.1C1.1 10.2 1.8 6.9 4.6 5.4c2.2-1.2 4.6-.4 6 1.4l1.4 1.8 1.4-1.8c1.4-1.8 3.8-2.6 6-1.4 2.8 1.5 3.5 4.8 1.9 7.5C18.7 16.65 12 21 12 21z"/></svg>
                   Créer mon compte gratuit
                 </button>
-                <button onClick={() => onNav("login")} style={{ display: "flex", alignItems: "center", justifyContent: "flex-start", gap: 9, background: "#fff", color: "#1a1a1a", border: "none", borderRadius: 50, padding: "14px 24px", fontSize: "0.95rem", fontWeight: 700, cursor: "pointer" }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="#1a1a1a"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>
+                <button onClick={() => onNav("login")} style={{ position: "relative", display: "block", width: "100%", textAlign: "center", background: "#fff", color: "#1a1a1a", border: "1.5px solid rgba(0,0,0,0.1)", borderRadius: 50, padding: "14px 0", fontSize: "0.95rem", fontWeight: 700, cursor: "pointer", boxShadow: "0 6px 16px rgba(0,0,0,0.15)" }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="#1a1a1a" style={{ position: "absolute", left: 30, top: "50%", transform: "translateY(-50%)" }}><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>
                   Se connecter
                 </button>
               </div>
