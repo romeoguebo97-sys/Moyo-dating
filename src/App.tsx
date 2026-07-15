@@ -3023,6 +3023,18 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
       return () => { document.body.style.overflow = prevOverflow; };
     }
   }, [isMobile, showMobileLanding]);
+  // La couleur de la barre de statut iOS ne doit être rouge foncé que sur l'écran d'accueil
+  // mobile (fond sombre plein écran) ; partout ailleurs dans l'app, la nav est blanche, donc
+  // la barre de statut doit rester blanche aussi, sinon elle laisse une bande rouge parasite.
+  useEffect(() => {
+    let themeColor = document.querySelector('meta[name="theme-color"]') as HTMLMetaElement | null;
+    if (!themeColor) {
+      themeColor = document.createElement("meta");
+      themeColor.name = "theme-color";
+      document.head.appendChild(themeColor);
+    }
+    themeColor.setAttribute("content", (isMobile && showMobileLanding) ? "#5f0000" : "#ffffff");
+  }, [isMobile, showMobileLanding]);
   const [installModal, setInstallModal] = React.useState<null | "android" | "ios" | "done" | "unavailable">(null);
 
   // Lance l'installation native Android (la vraie pop-up Chrome)
@@ -3146,7 +3158,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
 
       {/* ── VERSION MOBILE ── */}
       {isMobile && showMobileLanding && (
-        <div data-moyo-mobile-landing style={{ position: "fixed", inset: 0, background: "#1a0505", display: "flex", flexDirection: "column", alignItems: "stretch", zIndex: 9999, fontFamily: "Arial, sans-serif", overflow: "hidden", touchAction: "none" }}>
+        <div data-moyo-mobile-landing style={{ position: "fixed", inset: 0, background: "#5f0000", display: "flex", flexDirection: "column", alignItems: "stretch", zIndex: 9999, fontFamily: "Arial, sans-serif", overflow: "hidden", touchAction: "none" }}>
           <style>{`
             @keyframes amePulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.06)} }
             @keyframes mfadeInDown { from{opacity:0;transform:translateY(-16px)} to{opacity:1;transform:translateY(0)} }
@@ -16090,6 +16102,7 @@ export default function App() {
       document.head.appendChild(statusBar);
     }
     statusBar.setAttribute("content", "black-translucent");
+
     // Sécurité iOS Safari : empêche le double-tap zoom et le pinch-zoom de page,
     // sauf dans les zones interactives qui gèrent leur propre zoom (ex: éditeur de photo)
     const preventGesture = (e: Event) => {
