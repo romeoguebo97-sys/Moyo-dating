@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Télécharger Moyo Dating</title>
+<meta name="description" content="Téléchargez l'application Android officielle de Moyo Dating." />
+<link rel="icon" type="image/png" href="/favicon.png" />
+<style>
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    background: #FBF8F3;
+    color: #0A0A09;
+  }
+
+  .wrap {
+    max-width: 420px;
+    margin: 0 auto;
+    padding: 0 20px 32px;
+    text-align: center;
+  }
+
+  .topbar {
+    width: 100%;
+    padding: 14px 0 4px;
+  }
+
+  .back-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #C0392B, #922B21);
+    box-shadow: 0 4px 14px rgba(192, 57, 43, 0.4);
+    text-decoration: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 0.12s ease;
+  }
+  .back-btn:active { transform: scale(0.92); }
+  .back-btn svg { width: 16px; height: 16px; }
+
+  .app-icon {
+    width: 92px;
+    height: 92px;
+    border-radius: 24px;
+    box-shadow: 0 10px 24px rgba(146, 43, 33, 0.18);
+    margin: 8px 0 16px;
+  }
+
+  h1 {
+    font-size: 1.4rem;
+    font-weight: 900;
+    margin: 0 0 4px;
+    letter-spacing: -0.5px;
+    line-height: 1.2;
+  }
+  h1 .noir { color: #0A0A09; }
+  h1 .rouge { color: #C0392B; }
+
+  .tagline {
+    margin: 0 0 22px;
+    color: #3F3D3A;
+    font-size: 0.88rem;
+    font-weight: 600;
+  }
+
+  .btn-download {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    background: linear-gradient(135deg, #C0392B, #922B21);
+    color: #fff;
+    text-decoration: none;
+    font-weight: 800;
+    font-size: 1rem;
+    padding: 15px;
+    border-radius: 16px;
+    box-shadow: 0 10px 24px rgba(192, 57, 43, 0.3);
+    border: none;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+  }
+  .btn-download:active,
+  .btn-download.tapped {
+    transform: scale(0.96);
+    box-shadow: 0 4px 12px rgba(146, 43, 33, 0.35);
+    background: linear-gradient(135deg, #1A5C3A, #123F28);
+  }
+  .btn-download.tapped {
+    pointer-events: none;
+  }
+
+  .note {
+    margin: 10px 0 0;
+    font-size: 0.76rem;
+    color: #57534E;
+    font-weight: 600;
+  }
+
+  .features {
+    display: flex;
+    width: 100%;
+    margin-top: 22px;
+    background: #fff;
+    border: 1px solid #EDE7DE;
+    border-radius: 16px;
+    padding: 16px 6px;
+  }
+  .feature {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 0 6px;
+  }
+  .feature + .feature {
+    border-left: 1px solid #EDE7DE;
+  }
+  .feature .ico {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: #FBEAE7;
+    color: #C0392B;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .feature .ico svg { width: 15px; height: 15px; }
+  .feature p {
+    margin: 0;
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: #44403C;
+    line-height: 1.3;
+  }
+
+  .steps {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 24px;
+  }
+
+  .step {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-align: left;
+    background: #fff;
+    border: 1px solid #EDE7DE;
+    border-radius: 14px;
+    padding: 13px 14px;
+  }
+
+  .step-num {
+    flex: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #C0392B, #922B21);
+    color: #fff;
+    font-weight: 800;
+    font-size: 0.72rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .step-text { flex: 1; }
+  .step-text .title {
+    margin: 0 0 2px;
+    font-size: 0.85rem;
+    font-weight: 800;
+    color: #0A0A09;
+    line-height: 1.3;
+  }
+  .step-text .desc {
+    margin: 0;
+    font-size: 0.72rem;
+    color: #78716C;
+    font-weight: 600;
+    line-height: 1.35;
+  }
+
+  .step .ico {
+    flex: none;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: #F1EBDD;
+    color: #922B21;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .step .ico svg { width: 16px; height: 16px; }
+
+  .warning-note {
+    width: 100%;
+    margin-top: 20px;
+    padding: 11px 14px;
+    background: #FBF1D8;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #7a5a10;
+    line-height: 1.4;
+  }
+
+  footer {
+    padding-top: 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .help-label {
+    font-size: 0.74rem;
+    color: #78716C;
+    font-weight: 600;
+    margin: 0;
+  }
+
+  .btn-help {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #C0392B;
+    text-decoration: none;
+    font-size: 0.78rem;
+    font-weight: 800;
+    padding: 8px 16px;
+    border-radius: 100px;
+    border: 1.5px solid #C0392B;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 0.12s ease, background 0.12s ease;
+  }
+  .btn-help:active {
+    transform: scale(0.95);
+    background: rgba(192, 57, 43, 0.08);
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <a class="back-btn" href="/" aria-label="Retour à l'accueil">
+        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      </a>
+    </div>
+
+    <img class="app-icon" src="/favicon.png" alt="Moyo Dating" />
+    <h1><span class="noir">Téléchargez</span><br /><span class="rouge">Moyo Dating</span></h1>
+    <p class="tagline">L'app officielle, en direct de notre site</p>
+
+    <a class="btn-download" id="dl-btn" href="/downloads/moyo-dating.apk" download>
+      <span id="dl-icon">&#8681;</span> <span id="dl-label">Télécharger gratuitement</span>
+    </a>
+    <p class="note">Fichier .apk pour Android</p>
+
+    <div class="features">
+      <div class="feature">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
+        <p>Notifications instantanées</p>
+      </div>
+      <div class="feature">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 3 14h7l-1 8 11-14h-7l1-6z"/></svg></div>
+        <p>Plus rapide que le navigateur</p>
+      </div>
+      <div class="feature">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg></div>
+        <p>Accès direct depuis votre écran d'accueil</p>
+      </div>
+    </div>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-text">
+          <p class="title">Ouvrez le fichier téléchargé</p>
+          <p class="desc">Retrouvez le fichier .apk dans vos téléchargements</p>
+        </div>
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-text">
+          <p class="title">Autorisez l'installation si Android le demande</p>
+          <p class="desc">Une fenêtre s'affiche automatiquement, appuyez sur "Autoriser"</p>
+        </div>
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-text">
+          <p class="title">Ouvrez Moyo Dating et acceptez les notifications</p>
+          <p class="desc">Activez les notifications pour ne rien manquer</p>
+        </div>
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-text">
+          <p class="title">Profitez de l'application !</p>
+          <p class="desc">C'est prêt, bonne expérience sur Moyo Dating &#10084;&#65039;</p>
+        </div>
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 4 12 14.01l-3-3"/><circle cx="12" cy="12" r="10"/></svg></div>
+      </div>
+    </div>
+
+    <p class="warning-note">Android peut afficher un avertissement, car l'application est téléchargée hors Play Store. Vous pouvez installer Moyo Dating en toute sécurité depuis notre site officiel.</p>
+
+    <footer>
+      <p class="help-label">Besoin d'aide ?</p>
+      <a class="btn-help" href="https://wa.me/242065132012">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38a9.86 9.86 0 0 0 4.74 1.21h.01c5.46 0 9.91-4.45 9.91-9.91C21.96 6.45 17.5 2 12.04 2zm0 18.06h-.01a8.2 8.2 0 0 1-4.18-1.14l-.3-.18-3.11.82.83-3.03-.2-.31a8.2 8.2 0 0 1-1.26-4.31c0-4.53 3.7-8.22 8.24-8.22 2.2 0 4.27.86 5.82 2.41a8.17 8.17 0 0 1 2.41 5.82c0 4.54-3.7 8.24-8.24 8.24z"/></svg>
+        Écrivez-nous
+      </a>
+    </footer>
+  </div>
+
+  <script>
+    var btn = document.getElementById("dl-btn");
+    var label = document.getElementById("dl-label");
+    var icon = document.getElementById("dl-icon");
+    btn.addEventListener("click", function () {
+      if (btn.classList.contains("tapped")) return;
+      btn.classList.add("tapped");
+      icon.textContent = "\u2713";
+      label.textContent = "Téléchargement en cours...";
+      setTimeout(function () {
+        btn.classList.remove("tapped");
+        icon.textContent = "\u2b07";
+        label.textContent = "Télécharger gratuitement";
+      }, 3000);
+    });
+  </script>
+</body>
+</html>
