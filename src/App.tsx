@@ -3023,6 +3023,18 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
       return () => { document.body.style.overflow = prevOverflow; };
     }
   }, [isMobile, showMobileLanding]);
+  // La couleur de la barre de statut iOS ne doit être rouge foncé que sur l'écran d'accueil
+  // mobile (fond sombre plein écran) ; partout ailleurs dans l'app, la nav est blanche, donc
+  // la barre de statut doit rester blanche aussi, sinon elle laisse une bande rouge parasite.
+  useEffect(() => {
+    let themeColor = document.querySelector('meta[name="theme-color"]') as HTMLMetaElement | null;
+    if (!themeColor) {
+      themeColor = document.createElement("meta");
+      themeColor.name = "theme-color";
+      document.head.appendChild(themeColor);
+    }
+    themeColor.setAttribute("content", (isMobile && showMobileLanding) ? "#5f0000" : "#ffffff");
+  }, [isMobile, showMobileLanding]);
   const [installModal, setInstallModal] = React.useState<null | "android" | "ios" | "done" | "unavailable">(null);
 
   // Lance l'installation native Android (la vraie pop-up Chrome)
@@ -16091,15 +16103,6 @@ export default function App() {
     }
     statusBar.setAttribute("content", "black-translucent");
 
-    // Ne pas laisser cette balise en blanc, sinon la zone de la barre de statut iOS
-    // (au-dessus de notre contenu) s'affiche blanche au lieu de suivre le design.
-    let themeColor = document.querySelector('meta[name="theme-color"]') as HTMLMetaElement | null;
-    if (!themeColor) {
-      themeColor = document.createElement("meta");
-      themeColor.name = "theme-color";
-      document.head.appendChild(themeColor);
-    }
-    themeColor.setAttribute("content", "#5f0000");
     // Sécurité iOS Safari : empêche le double-tap zoom et le pinch-zoom de page,
     // sauf dans les zones interactives qui gèrent leur propre zoom (ex: éditeur de photo)
     const preventGesture = (e: Event) => {
