@@ -3156,33 +3156,36 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
             @keyframes mbounceArrow { 0%,100%{transform:translateY(0)} 50%{transform:translateY(5px)} }
           `}</style>
 
-          {/* Nav blanche */}
-          <div style={{ background: G.blanc, padding: "10px 20px 10px", display: "flex", alignItems: "center", justifyContent: "center", borderBottom: "1px solid #eee", flexShrink: 0, position: "relative", zIndex: 3 }}>
-            <div style={{ fontSize: "2rem", fontWeight: 900, letterSpacing: "-1px" }}>
-              <span style={{ display: "inline-block", verticalAlign: "top", lineHeight: 0.82 }}><span style={{ fontWeight: 900, letterSpacing: "-0.02em", color: "#C0392B" }}>Moyo</span><span style={{ display: "block", color: G.brun, fontSize: "0.48em", fontWeight: 800, marginTop: "0.06em" }}> Dating</span></span>
-            </div>
-          </div>
+          {/* Corps avec photo — plein écran, sans bande blanche */}
+          <div style={{ flex: 1, position: "relative", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", padding: "0 28px 44px" }}>
+            {/* Photo du couple en arrière-plan intégral */}
+            <div style={{ position: "absolute", inset: 0, backgroundImage: `url("/couple-hero.jpg")`, backgroundSize: "cover", backgroundPosition: "center 20%" }} />
+            {/* Dégradé sombre pour la lisibilité du texte, look éditorial premium */}
+            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(10,4,4,0.18) 0%, rgba(10,4,4,0.05) 30%, rgba(15,4,4,0.55) 68%, rgba(8,2,2,0.92) 100%)" }} />
 
-          {/* Corps avec photo */}
-          <div style={{ flex: 1, position: "relative", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 28px 60px" }}>
-            {/* Dégradé rouge → blanc */}
-            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, #7B1515 0%, #C0392B 25%, #E8A0A0 55%, #F5E8E8 75%, #F7F4F0 100%)" }} />
-            {/* Photo couple par-dessus avec blend mode */}
-            <div style={{ position: "absolute", inset: 0, backgroundImage: `url("https://mcswcapxpruiffzrxfvl.supabase.co/storage/v1/object/public/Photo_de_couple_moyo.png/Photo%20de%20couple%20moyo.jpg")`, backgroundSize: "cover", backgroundPosition: "center 10%", mixBlendMode: "multiply", opacity: 0.9 }} />
+            {/* Logo, superposé directement sur la photo */}
+            <div style={{ position: "absolute", top: "max(22px, env(safe-area-inset-top))", left: 24, zIndex: 3, animation: "mfadeInDown 0.8s ease both" }}>
+              <span style={{ display: "inline-block", verticalAlign: "top", lineHeight: 0.82, filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.35))" }}>
+                <span style={{ display: "block", fontWeight: 900, fontSize: "1.5rem", letterSpacing: "-0.02em", color: "#fff" }}>Moyo</span>
+                <span style={{ display: "block", color: "#fff", fontSize: "0.72rem", fontWeight: 700, marginTop: "0.06em" }}>Dating</span>
+              </span>
+            </div>
 
             {/* Contenu */}
-            <div style={{ position: "relative", zIndex: 2, width: "100%", display: "flex", flexDirection: "column", alignItems: "center", marginTop: "-10vh" }}>
+            <div style={{ position: "relative", zIndex: 2, width: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}>
               {/* Slogan */}
-              <div style={{ textAlign: "center", marginBottom: 18, animation: "mfadeInDown 0.8s 0.2s ease both" }}>
-                <div style={{ textAlign: "center", lineHeight: 1.2, WebkitTextStroke: "0.5px white" }}>
-                <div style={{ fontSize: "1rem", fontWeight: 700, color: "#fff", letterSpacing: "0.15em", textTransform: "uppercase" }}>Trouve ton</div>
-                <div style={{ fontSize: "2.8rem", fontWeight: 900, color: "#fff", fontStyle: "italic", fontFamily: "Georgia, serif", letterSpacing: "-1px", animation: "amePulse 2.5s ease-in-out infinite", display: "inline-block" }}>âme sœur</div>
-                <div style={{ fontSize: "1.9rem", fontWeight: 900, color: "#fff", letterSpacing: "0.08em", textTransform: "uppercase" }}>Congolais.e</div>
-              </div>
+              <div style={{ textAlign: "center", marginBottom: 24, animation: "mfadeInDown 0.8s 0.2s ease both" }}>
+                <div style={{ fontSize: "0.92rem", fontWeight: 700, color: "#fff", letterSpacing: "0.22em", textTransform: "uppercase", marginBottom: 6 }}>Trouve ton</div>
+                <div style={{ fontSize: "2.6rem", lineHeight: 1.05, fontWeight: 900, fontStyle: "italic", fontFamily: "Georgia, serif", letterSpacing: "-1px", marginBottom: 6 }}>
+                  <span style={{ color: G.rouge, animation: "amePulse 2.5s ease-in-out infinite", display: "inline-block" }}>âme</span>{" "}
+                  <span style={{ color: "#fff" }}>sœur</span>
+                </div>
+                <div style={{ fontSize: "1.9rem", fontWeight: 900, color: "#fff", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 8 }}>Congolaise</div>
+                <div style={{ fontSize: "0.8rem", fontWeight: 600, color: "rgba(255,255,255,0.82)", letterSpacing: "0.02em" }}>au <b>Congo</b> &amp; dans la <b>diaspora</b></div>
               </div>
 
               {/* 3 points */}
-              <div style={{ display: "flex", gap: 7, margin: "14px 0 18px", animation: "mfadeIn 0.8s 0.4s ease both" }}>
+              <div style={{ display: "flex", gap: 7, marginBottom: 26, animation: "mfadeIn 0.8s 0.4s ease both" }}>
                 {[0, 0.2, 0.4].map((delay, i) => (
                   <div key={i} style={{ width: 8, height: 8, borderRadius: "50%", background: "rgba(255,255,255,0.5)", animation: `mbounce 1.3s ${delay}s ease-in-out infinite` }} />
                 ))}
@@ -3190,38 +3193,46 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
 
               {/* Boutons */}
               <div style={{ display: "flex", flexDirection: "column", gap: 12, width: "100%", animation: "mfadeInUp 0.8s 0.5s ease both" }}>
-                <button onClick={() => onNav("signup")} style={{ background: "linear-gradient(135deg,#C0392B,#922B21)", color: "#fff", border: "2px solid rgba(255,255,255,0.7)", borderRadius: 50, padding: "15px 0", fontSize: "0.95rem", fontWeight: 800, cursor: "pointer", boxShadow: "0 5px 18px rgba(192,57,43,0.4)" }}>
+                <button onClick={() => onNav("signup")} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 9, background: "linear-gradient(135deg,#C0392B,#922B21)", color: "#fff", border: "none", borderRadius: 50, padding: "16px 0", fontSize: "0.98rem", fontWeight: 800, cursor: "pointer", boxShadow: "0 8px 24px rgba(192,57,43,0.4)" }}>
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="white"><path d="M12 21s-6.7-4.35-9.3-8.1C1.1 10.2 1.8 6.9 4.6 5.4c2.2-1.2 4.6-.4 6 1.4l1.4 1.8 1.4-1.8c1.4-1.8 3.8-2.6 6-1.4 2.8 1.5 3.5 4.8 1.9 7.5C18.7 16.65 12 21 12 21z"/></svg>
                   Créer mon compte gratuit
                 </button>
-                <button onClick={() => onNav("login")} style={{ background: G.blanc, color: G.brun, border: "2px solid #1a1a1a", borderRadius: 50, padding: "14px 0", fontSize: "0.95rem", fontWeight: 700, cursor: "pointer" }}>
+                <button onClick={() => onNav("login")} style={{ background: "rgba(255,255,255,0.08)", color: "#fff", border: "1.5px solid rgba(255,255,255,0.5)", borderRadius: 50, padding: "14px 0", fontSize: "0.95rem", fontWeight: 700, cursor: "pointer", backdropFilter: "blur(6px)" }}>
                   Se connecter
                 </button>
               </div>
             </div>
           </div>
 
-          {/* Congo & Diaspora + Voir notre site */}
-          <div style={{ position: "absolute", bottom: 18, left: "50%", transform: "translateX(-50%)", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, animation: "mfadeIn 1s 1s ease both", zIndex: 4, width: "100%" }}>
-            <div onClick={() => setShowMobileLanding(false)} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, cursor: "pointer" }}>
-              <div style={{ color: "#ffffff", fontSize: "0.82rem", fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase" }}>Congo &amp; Diaspora</div>
+          {/* Petit séparateur cœur + Voir notre site + Disponible sur */}
+          <div style={{ position: "absolute", bottom: 16, left: "50%", transform: "translateX(-50%)", display: "flex", flexDirection: "column", alignItems: "center", gap: 10, animation: "mfadeIn 1s 1s ease both", zIndex: 4, width: "100%" }}>
+            <div onClick={() => setShowMobileLanding(false)} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, cursor: "pointer" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, width: 130 }}>
+                <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.35)" }} />
+                <svg width="12" height="12" viewBox="0 0 24 24" fill={G.rouge}><path d="M12 21s-6.7-4.35-9.3-8.1C1.1 10.2 1.8 6.9 4.6 5.4c2.2-1.2 4.6-.4 6 1.4l1.4 1.8 1.4-1.8c1.4-1.8 3.8-2.6 6-1.4 2.8 1.5 3.5 4.8 1.9 7.5C18.7 16.65 12 21 12 21z"/></svg>
+                <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.35)" }} />
+              </div>
               <div style={{ color: "#ffffff", fontSize: "0.55rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase" }}>Voir notre site</div>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "mbounceArrow 1.5s ease-in-out infinite" }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "mbounceArrow 1.5s ease-in-out infinite" }}>
                 <polyline points="6 9 12 15 18 9"/>
               </svg>
             </div>
-            <div style={{ display: "flex", gap: 7, marginTop: 8 }}>
-              {detectStorePlatform() !== "ios" && (
-              <div onClick={installGooglePlay} style={{ display: "flex", alignItems: "center", gap: 5, background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.25)", color: "#fff", borderRadius: 9, padding: "5px 10px", cursor: "pointer" }}>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="white"><path d="M3.18 23.76c.3.17.64.24.99.2l11.47-11.47L12.36 9.2 3.18 23.76zm16.3-12.04L16.6 9.97l-3.23 3.23 3.23 3.23 2.9-1.74c.82-.49.82-1.28-.02-1.97zM3.02.28C2.7.46 2.5.8 2.5 1.25v21.5c0 .44.2.79.52.96l.1.06 12.05-12.05v-.28L3.12.22l-.1.06zm9.34 9.34L3.18.24l-.1.06 9.28 9.32z"/></svg>
-                <div style={{ textAlign: "left", lineHeight: 1 }}><div style={{ fontSize: "0.42rem", opacity: 0.8 }}>Disponible sur</div><div style={{ fontSize: "0.62rem", fontWeight: 700 }}>Google Play</div></div>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+              <div style={{ color: "rgba(255,255,255,0.7)", fontSize: "0.58rem", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" }}>Disponible sur</div>
+              <div style={{ display: "flex", gap: 7 }}>
+                {detectStorePlatform() !== "ios" && (
+                <div onClick={installGooglePlay} style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(0,0,0,0.35)", border: "1px solid rgba(255,255,255,0.3)", color: "#fff", borderRadius: 9, padding: "6px 12px", cursor: "pointer" }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M3.18 23.76c.3.17.64.24.99.2l11.47-11.47L12.36 9.2 3.18 23.76zm16.3-12.04L16.6 9.97l-3.23 3.23 3.23 3.23 2.9-1.74c.82-.49.82-1.28-.02-1.97zM3.02.28C2.7.46 2.5.8 2.5 1.25v21.5c0 .44.2.79.52.96l.1.06 12.05-12.05v-.28L3.12.22l-.1.06zm9.34 9.34L3.18.24l-.1.06 9.28 9.32z"/></svg>
+                  <span style={{ fontSize: "0.68rem", fontWeight: 700 }}>Google Play</span>
+                </div>
+                )}
+                {detectStorePlatform() !== "android" && (
+                <div onClick={installAppStore} style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(0,0,0,0.35)", border: "1px solid rgba(255,255,255,0.3)", color: "#fff", borderRadius: 9, padding: "6px 12px", cursor: "pointer" }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+                  <span style={{ fontSize: "0.68rem", fontWeight: 700 }}>App Store</span>
+                </div>
+                )}
               </div>
-              )}
-              {detectStorePlatform() !== "android" && (
-              <div onClick={installAppStore} style={{ display: "flex", alignItems: "center", gap: 5, background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.25)", color: "#fff", borderRadius: 9, padding: "5px 10px", cursor: "pointer" }}>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="white"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
-                <div style={{ textAlign: "left", lineHeight: 1 }}><div style={{ fontSize: "0.42rem", opacity: 0.8 }}>Télécharger dans</div><div style={{ fontSize: "0.62rem", fontWeight: 700 }}>App Store</div></div>
-              </div>
-              )}
             </div>
           </div>
         </div>
