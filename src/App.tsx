@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo, memo, Suspense } from "react";
+import { Capacitor } from "@capacitor/core";
 
 // Chargement paresseux du panneau admin : ce code (≈40% du fichier) n'est téléchargé
 // que si quelqu'un ouvre réellement l'admin, jamais pour les utilisateurs normaux.
@@ -676,9 +677,74 @@ async function subscribeToPush(auth: { token: string; userId: string }) {
   } catch {}
 }
 
+// ── Notifications natives (app Android empaquetée avec Capacitor) via Firebase Cloud Messaging ──
+// Le Web Push (ci-dessous) ne fonctionne pas de façon fiable dans la WebView Android : on utilise
+// donc FCM en parallèle uniquement quand l'app tourne en natif (jamais sur le site web classique).
+
+// Récupère le jeton FCM de l'appareil et l'envoie à Supabase. Suppose que la permission est déjà
+// accordée (ne la demande pas) — appelée aussi bien après un clic que silencieusement si déjà accordée.
+async function registerFcmToken(auth: { token: string; userId: string }): Promise<void> {
+  const { PushNotifications } = await import("@capacitor/push-notifications");
+  return new Promise((resolve) => {
+    PushNotifications.addListener("registration", async (token) => {
+      try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/fcm_tokens?on_conflict=token`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "apikey": SUPABASE_KEY,
+            "Authorization": `Bearer ${auth.token}`,
+            "Prefer": "resolution=merge-duplicates,return=minimal",
+          },
+          body: JSON.stringify({ user_id: auth.userId, token: token.value, platform: "android" }),
+        });
+        if (!res.ok) {
+          const errText = await res.text().catch(() => "");
+          console.error("[Moyo][FCM] Échec enregistrement du jeton dans Supabase:", res.status, errText);
+        } else {
+          console.log("[Moyo][FCM] Jeton enregistré avec succès.");
+        }
+      } catch (err) {
+        console.error("[Moyo][FCM] Erreur réseau lors de l'enregistrement du jeton:", err);
+      }
+      resolve();
+    });
+    PushNotifications.addListener("registrationError", (err) => {
+      console.error("[Moyo][FCM] registrationError:", JSON.stringify(err));
+      resolve();
+    });
+    PushNotifications.register();
+  });
+}
+
+async function enableNativePush(auth: { token: string; userId: string }): Promise<"granted" | "denied" | "unsupported"> {
+  try {
+    const { Capacitor } = await import("@capacitor/core");
+    if (!Capacitor.isNativePlatform()) return "unsupported";
+    const { PushNotifications } = await import("@capacitor/push-notifications");
+
+    let perm = await PushNotifications.checkPermissions();
+    if (perm.receive === "prompt" || perm.receive === "prompt-with-rationale") {
+      perm = await PushNotifications.requestPermissions();
+    }
+    if (perm.receive !== "granted") return "denied";
+
+    await registerFcmToken(auth);
+    return "granted";
+  } catch (err) {
+    console.error("[Moyo][FCM] Exception dans enableNativePush:", err);
+    return "unsupported";
+  }
+}
+
 // Demande l'autorisation puis abonne. Renvoie un statut pour informer l'utilisateur.
 // "granted" = activé, "denied" = refusé (bloqué par le navigateur), "unsupported" = non géré.
 async function enableNotifications(auth: { token: string; userId: string }): Promise<"granted" | "denied" | "unsupported"> {
+  // Dans l'app Android empaquetée, on passe par FCM natif, jamais par le Web Push du navigateur.
+  try {
+    const { Capacitor } = await import("@capacitor/core");
+    if (Capacitor.isNativePlatform()) return await enableNativePush(auth);
+  } catch {}
   try {
     if (typeof window === "undefined") return "unsupported";
     if (!("Notification" in window) || !("serviceWorker" in navigator) || !("PushManager" in window)) return "unsupported";
@@ -14249,10 +14315,31 @@ function MatchRequestButton({ auth, onShowPremium }: { auth: Auth; onShowPremium
 export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpenAdmin, adminBadgeCount, assistantEnabled = true, onToggleAssistant, promoAvailable, onOpenSuperPromo }: { auth: Auth; onLogout: () => void; onShowPremium: (r: string) => void; darkMode?: boolean; onToggleDark?: () => void; onOpenAdmin?: () => void; adminBadgeCount?: number; assistantEnabled?: boolean; onToggleAssistant?: () => void; promoAvailable?: { price: number; expiresAt: string; message: string } | null; onOpenSuperPromo?: () => void }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [notifStatus, setNotifStatus] = useState<"default" | "granted" | "denied" | "unsupported">(() => {
+    if (typeof window !== "undefined" && Capacitor.isNativePlatform()) return "default";
     if (typeof window === "undefined" || !("Notification" in window)) return "unsupported";
     return Notification.permission as "default" | "granted" | "denied";
   });
   const [notifLoading, setNotifLoading] = useState(false);
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    (async () => {
+      try {
+        const { PushNotifications } = await import("@capacitor/push-notifications");
+        const perm = await PushNotifications.checkPermissions();
+        if (perm.receive === "granted") {
+          setNotifStatus("granted");
+          // Permission déjà accordée (ex: demandée au premier lancement de l'app) : on récupère
+          // et on envoie quand même le jeton, sans quoi il ne serait jamais enregistré puisque le
+          // bouton dans l'UI n'a alors rien à faire (déjà affiché comme activé).
+          registerFcmToken(auth).catch(() => {});
+        }
+        else if (perm.receive === "denied") setNotifStatus("denied");
+        else setNotifStatus("default");
+      } catch {
+        setNotifStatus("default");
+      }
+    })();
+  }, []);
   const [warningsExpanded, setWarningsExpanded] = useState(false);
   const [warningsList, setWarningsList] = useState<{ id: string; reason: string; warning_number: number; created_at: string }[]>([]);
   const [warningsLoading, setWarningsLoading] = useState(false);
