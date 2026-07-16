@@ -3035,26 +3035,6 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
     }
     themeColor.setAttribute("content", (isMobile && showMobileLanding) ? "#5f0000" : "#ffffff");
   }, [isMobile, showMobileLanding]);
-  // Même logique que ci-dessus, mais pour l'app Android native (le plugin @capacitor/status-bar) :
-  // ces balises web ne parlent qu'à Safari/iOS, Android a besoin d'un appel natif séparé.
-  // Ignoré silencieusement sur le web classique et sur iOS (native uniquement).
-  useEffect(() => {
-    (async () => {
-      try {
-        const { Capacitor } = await import("@capacitor/core");
-        if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") return;
-        const { StatusBar, Style } = await import("@capacitor/status-bar");
-        if (isMobile && showMobileLanding) {
-          await StatusBar.setOverlaysWebView({ overlay: true });
-          await StatusBar.setStyle({ style: Style.Dark }); // icônes claires (fond sombre)
-        } else {
-          await StatusBar.setOverlaysWebView({ overlay: false });
-          await StatusBar.setStyle({ style: Style.Light }); // icônes sombres (fond blanc)
-          await StatusBar.setBackgroundColor({ color: "#ffffff" });
-        }
-      } catch {}
-    })();
-  }, [isMobile, showMobileLanding]);
   const [installModal, setInstallModal] = React.useState<null | "android" | "ios" | "done" | "unavailable">(null);
 
   // Lance l'installation native Android (la vraie pop-up Chrome)
