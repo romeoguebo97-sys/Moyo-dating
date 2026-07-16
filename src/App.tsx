@@ -3228,7 +3228,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
             </div>
 
             {/* Petit séparateur cœur + Voir notre site + Disponible sur — sous les boutons, jamais superposé */}
-            <div style={{ position: "relative", zIndex: 2, flex: "0 0 auto", display: "flex", flexDirection: "column", alignItems: "center", gap: 10, padding: "18px 20px max(14px, env(safe-area-inset-bottom)) 20px", animation: "mfadeIn 1s 1s ease both" }}>
+            <div style={{ position: "relative", zIndex: 2, flex: "0 0 auto", display: "flex", flexDirection: "column", alignItems: "center", gap: 10, padding: "38px 20px max(14px, env(safe-area-inset-bottom)) 20px", animation: "mfadeIn 1s 1s ease both" }}>
               <div onClick={() => setShowMobileLanding(false)} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 7, cursor: "pointer" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, width: 120 }}>
                   <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.35)" }} />
@@ -4325,7 +4325,7 @@ function AuthLayout({ children, onBack, title, subtitle, stepInfo }: { children:
         </div>
       </div>
     )}
-    <div style={{ position: "relative", zIndex: 2, display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "2px 20px 40px" }}>
+    <div style={{ position: "relative", zIndex: 2, display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "28px 20px 40px" }}>
       <div style={{ width: "100%", maxWidth: 420, overflowX: "hidden" }}>
         {children}
       </div>
