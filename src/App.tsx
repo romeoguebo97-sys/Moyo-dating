@@ -12105,9 +12105,9 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
       {/* Modal aperçu image */}
       {previewImg && (
         <div onClick={closePreview} className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.92)", zIndex: 500, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div className="moyo-card-in" onClick={(e) => { e.stopPropagation(); closePreview(); }} style={{ position: "absolute", top: 20, right: 20, width: 40, height: 40, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: "1.2rem", color: "#fff", boxShadow: "0 2px 10px rgba(0,0,0,0.35)", zIndex: 2 }}>✕</div>
+          <div className="moyo-card-in" onClick={(e) => { e.stopPropagation(); closePreview(); }} style={{ position: "absolute", top: "calc(env(safe-area-inset-top) + 20px)", right: 20, width: 40, height: 40, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: "1.2rem", color: "#fff", boxShadow: "0 2px 10px rgba(0,0,0,0.35)", zIndex: 2 }}>✕</div>
           {burnMsg && (
-            <div onClick={e => e.stopPropagation()} style={{ position: "absolute", top: 22, left: "50%", transform: "translateX(-50%)", display: "flex", alignItems: "center", gap: 7, background: "rgba(0,0,0,0.55)", border: "1px solid rgba(255,255,255,0.22)", borderRadius: 50, padding: "7px 15px", color: "#fff", fontSize: "0.8rem", fontWeight: 600, zIndex: 2 }}>
+            <div onClick={e => e.stopPropagation()} style={{ position: "absolute", top: "calc(env(safe-area-inset-top) + 22px)", left: "50%", transform: "translateX(-50%)", display: "flex", alignItems: "center", gap: 7, background: "rgba(0,0,0,0.55)", border: "1px solid rgba(255,255,255,0.22)", borderRadius: 50, padding: "7px 15px", color: "#fff", fontSize: "0.8rem", fontWeight: 600, zIndex: 2 }}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
               Vue unique
             </div>
@@ -12125,7 +12125,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
       {/* Écran d'aperçu avant envoi (avec option vue unique) */}
       {pendingPreview && (
         <div style={{ position: "fixed", inset: 0, background: "#000", zIndex: 510, display: "flex", flexDirection: "column" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 18px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "calc(env(safe-area-inset-top) + 16px) 18px 16px" }}>
             <div onClick={cancelPending} style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(255,255,255,0.12)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#fff", fontSize: "1.1rem" }}>✕</div>
             <div onClick={openCropModal} style={{ display: "flex", alignItems: "center", gap: 6, color: "#fff", fontWeight: 700, fontSize: "0.85rem", cursor: "pointer", padding: "6px 10px", borderRadius: 50, background: "rgba(255,255,255,0.12)" }}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M18 22V8a2 2 0 0 0-2-2H2"/></svg>
@@ -12158,7 +12158,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
           l'aperçu fonctionne sans jamais passer par ici. */}
       {cropModalOpen && pendingPreview && cropDisplaySize && cropRect && (
         <div style={{ position: "fixed", inset: 0, background: "#000", zIndex: 520, display: "flex", flexDirection: "column" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 18px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "calc(env(safe-area-inset-top) + 16px) 18px 16px" }}>
             <div onClick={closeCropModal} style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(255,255,255,0.12)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#fff", fontSize: "1.1rem" }}>✕</div>
             <div style={{ color: "#fff", fontWeight: 700, fontSize: "0.9rem" }}>Recadrer</div>
             <div onClick={cropSaving ? undefined : confirmCrop} style={{ color: cropSaving ? "rgba(255,255,255,0.5)" : "#fff", fontWeight: 700, fontSize: "0.95rem", cursor: cropSaving ? "default" : "pointer", padding: "6px 4px" }}>{cropSaving ? "…" : "Valider"}</div>
@@ -12363,11 +12363,11 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
             </div>
           )}
           <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.48) 32%, rgba(0,0,0,0.05) 66%, rgba(0,0,0,0.22) 100%)", pointerEvents: "none" }} />
-          <button onClick={() => setShowPartnerProfile(false)} style={{ position: "absolute", top: 16, right: 16, width: 44, height: 44, minWidth: 44, minHeight: 44, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.35)", background: "rgba(0,0,0,0.48)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 16px rgba(0,0,0,0.3)", cursor: "pointer", backdropFilter: "blur(8px)", padding: 0 }}>
+          <button onClick={() => setShowPartnerProfile(false)} style={{ position: "absolute", top: "calc(env(safe-area-inset-top) + 16px)", right: 16, width: 44, height: 44, minWidth: 44, minHeight: 44, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.35)", background: "rgba(0,0,0,0.48)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 16px rgba(0,0,0,0.3)", cursor: "pointer", backdropFilter: "blur(8px)", padding: 0 }}>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
           </button>
           {partnerFullProfile.id !== SUPPORT_TEAM_ID && !partnerFullProfile.hide_online_status && getOnlineStatus(partnerFullProfile.last_seen).label === "En ligne" && (
-            <div style={{ position: "absolute", top: 16, left: 16, display: "flex", alignItems: "center", gap: 7, background: "rgba(0,0,0,0.48)", border: "1px solid rgba(255,255,255,0.35)", borderRadius: 50, padding: "9px 14px", boxShadow: "0 4px 16px rgba(0,0,0,0.3)", backdropFilter: "blur(8px)", color: "#fff", fontSize: "0.8rem", fontWeight: 700 }}>
+            <div style={{ position: "absolute", top: "calc(env(safe-area-inset-top) + 16px)", left: 16, display: "flex", alignItems: "center", gap: 7, background: "rgba(0,0,0,0.48)", border: "1px solid rgba(255,255,255,0.35)", borderRadius: 50, padding: "9px 14px", boxShadow: "0 4px 16px rgba(0,0,0,0.3)", backdropFilter: "blur(8px)", color: "#fff", fontSize: "0.8rem", fontWeight: 700 }}>
               <span style={{ width: 9, height: 9, borderRadius: "50%", background: "#27ae60", boxShadow: "0 0 0 3px rgba(39,174,96,0.35)", flexShrink: 0 }} />
               En ligne
             </div>
@@ -13428,7 +13428,7 @@ function GroupChat({ auth, onBack, onShowPremium, onOpenPrivateChat }: { auth: A
       {/* Aperçu photo avant envoi */}
       {pendingPreview && (
         <div style={{ position: "fixed", inset: 0, background: "#000", zIndex: 610, display: "flex", flexDirection: "column" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 18px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "calc(env(safe-area-inset-top) + 16px) 18px 16px" }}>
             <div onClick={cancelPending} style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(255,255,255,0.12)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#fff", fontSize: "1.1rem" }}>✕</div>
             <div onClick={openCropModal} style={{ display: "flex", alignItems: "center", gap: 6, color: "#fff", fontWeight: 700, fontSize: "0.85rem", cursor: "pointer", padding: "6px 10px", borderRadius: 50, background: "rgba(255,255,255,0.12)" }}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M18 22V8a2 2 0 0 0-2-2H2"/></svg>
@@ -13461,7 +13461,7 @@ function GroupChat({ auth, onBack, onShowPremium, onOpenPrivateChat }: { auth: A
           l'aperçu fonctionne sans jamais passer par ici. */}
       {cropModalOpen && pendingPreview && cropDisplaySize && cropRect && (
         <div style={{ position: "fixed", inset: 0, background: "#000", zIndex: 620, display: "flex", flexDirection: "column" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 18px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "calc(env(safe-area-inset-top) + 16px) 18px 16px" }}>
             <div onClick={closeCropModal} style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(255,255,255,0.12)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#fff", fontSize: "1.1rem" }}>✕</div>
             <div style={{ color: "#fff", fontWeight: 700, fontSize: "0.9rem" }}>Recadrer</div>
             <div onClick={cropSaving ? undefined : confirmCrop} style={{ color: cropSaving ? "rgba(255,255,255,0.5)" : "#fff", fontWeight: 700, fontSize: "0.95rem", cursor: cropSaving ? "default" : "pointer", padding: "6px 4px" }}>{cropSaving ? "…" : "Valider"}</div>
