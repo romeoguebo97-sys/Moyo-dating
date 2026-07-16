@@ -3035,6 +3035,26 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
     }
     themeColor.setAttribute("content", (isMobile && showMobileLanding) ? "#5f0000" : "#ffffff");
   }, [isMobile, showMobileLanding]);
+  // Même logique que ci-dessus, mais pour l'app Android native (le plugin @capacitor/status-bar) :
+  // ces balises web ne parlent qu'à Safari/iOS, Android a besoin d'un appel natif séparé.
+  // Ignoré silencieusement sur le web classique et sur iOS (native uniquement).
+  useEffect(() => {
+    (async () => {
+      try {
+        const { Capacitor } = await import("@capacitor/core");
+        if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") return;
+        const { StatusBar, Style } = await import("@capacitor/status-bar");
+        if (isMobile && showMobileLanding) {
+          await StatusBar.setOverlaysWebView({ overlay: true });
+          await StatusBar.setStyle({ style: Style.Dark }); // icônes claires (fond sombre)
+        } else {
+          await StatusBar.setOverlaysWebView({ overlay: false });
+          await StatusBar.setStyle({ style: Style.Light }); // icônes sombres (fond blanc)
+          await StatusBar.setBackgroundColor({ color: "#ffffff" });
+        }
+      } catch {}
+    })();
+  }, [isMobile, showMobileLanding]);
   const [installModal, setInstallModal] = React.useState<null | "android" | "ios" | "done" | "unavailable">(null);
 
   // Lance l'installation native Android (la vraie pop-up Chrome)
@@ -11372,7 +11392,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
       {/* Arrière-plan fixe — ne scroll pas */}
       <img src="/msg-bg.png" alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "top", zIndex: 0, pointerEvents: "none" }} />
       {/* Header fixe */}
-      <div ref={headerRef} style={{ padding: "10px 16px", background: G.blanc, borderBottom: `1px solid ${G.gris}`, display: "flex", gap: 12, alignItems: "center", flexShrink: 0, zIndex: 2 }}>
+      <div ref={headerRef} style={{ padding: "calc(env(safe-area-inset-top) + 10px) 16px 10px", background: G.blanc, borderBottom: `1px solid ${G.gris}`, display: "flex", gap: 12, alignItems: "center", flexShrink: 0, zIndex: 2 }}>
         {/* Bouton retour cercle rouge */}
         <div onClick={() => { if (isWideMsg) { setOpen(null); loadConvs(); } else { closeChat(); } }} style={{ width: 38, height: 38, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 3px 10px rgba(192,57,43,0.35)", flexShrink: 0 }}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -13181,7 +13201,7 @@ function GroupChat({ auth, onBack, onShowPremium, onOpenPrivateChat }: { auth: A
   // ── Écran-cadre commun aux états "pas encore dans le chat" (en-tête + centre) ──
   const StatusScreen = ({ icon, title, text, action }: { icon: React.ReactNode; title: string; text: string; action?: React.ReactNode }) => (
     <div style={{ display: "flex", flexDirection: "column", height: "100dvh", background: "#F0F1F5" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", background: G.blanc, borderBottom: `1px solid ${G.gris}`, flexShrink: 0 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "calc(env(safe-area-inset-top) + 12px) 16px 12px", background: G.blanc, borderBottom: `1px solid ${G.gris}`, flexShrink: 0 }}>
         <div onClick={onBack} style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(44,26,14,0.06)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={G.brun} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
         </div>
@@ -13226,7 +13246,7 @@ function GroupChat({ auth, onBack, onShowPremium, onOpenPrivateChat }: { auth: A
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
       {moderationAlert && <ModerationModal type={moderationAlert} onClose={() => setModerationAlert(null)} />}
       {/* En-tête */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", background: G.blanc, borderBottom: `1px solid ${G.gris}`, flexShrink: 0 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "calc(env(safe-area-inset-top) + 12px) 16px 12px", background: G.blanc, borderBottom: `1px solid ${G.gris}`, flexShrink: 0 }}>
         <div onClick={onBack} style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(44,26,14,0.06)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={G.brun} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
         </div>
