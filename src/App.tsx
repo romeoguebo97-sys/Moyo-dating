@@ -5773,7 +5773,7 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
         l'écran de chat (la flèche "descendre" prend sa place). L'Assistant reste accessible
         depuis le bouton dédié dans le header/menu Découvrir. */}
     {assistantEnabled && !isWide && !inConv && <BotFloat onOpen={() => setShowBot(true)} G={G} />}
-    {showGuide && <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 9999, display: "flex", alignItems: "flex-start", justifyContent: "center", overflowY: "auto", padding: "20px 12px" }}>
+    {showGuide && <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 9999, display: "flex", alignItems: "flex-start", justifyContent: "center", overflowY: "auto", padding: "calc(env(safe-area-inset-top) + 20px) 12px 20px" }}>
       <div className="moyo-sheet-in" style={{ background: G.blanc, maxHeight: "85vh", borderRadius: 20, width: "100%", maxWidth: 480, margin: "0 auto", overflow: "hidden", display: "flex", flexDirection: "column" }}>
         {/* Header (fixe, ne défile pas) */}
         <div style={{ background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, padding: "24px 20px", position: "relative", flexShrink: 0 }}>
@@ -12536,17 +12536,17 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
         onPointerLeave={() => setStatusPaused(false)}
         onTouchEnd={() => setStatusPaused(false)}
         onTouchCancel={() => setStatusPaused(false)}
-        style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.94)", zIndex: 700, display: "flex", alignItems: "center", justifyContent: "center", padding: `88px 18px ${statusPreview.link_url && statusPreview.user_id !== auth.userId ? 150 : 22}px`, touchAction: "none", overscrollBehavior: "contain" }}
+        style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.94)", zIndex: 700, display: "flex", alignItems: "center", justifyContent: "center", padding: `calc(env(safe-area-inset-top) + 88px) 18px ${statusPreview.link_url && statusPreview.user_id !== auth.userId ? 150 : 22}px`, touchAction: "none", overscrollBehavior: "contain" }}
         className="moyo-status-view no-invert"
       >
-        <div style={{ position: "absolute", top: 10, left: 12, right: 12, display: "flex", gap: 4, zIndex: 3 }}>
+        <div style={{ position: "absolute", top: "calc(env(safe-area-inset-top) + 10px)", left: 12, right: 12, display: "flex", gap: 4, zIndex: 3 }}>
           {(statusPreviewList.length ? statusPreviewList : [statusPreview]).map((st, i) => (
             <div key={st.id || st.image_url || i} style={{ flex: 1, height: 3, borderRadius: 999, background: "rgba(255,255,255,0.35)", overflow: "hidden" }}>
               <div style={{ width: `${i < statusPreviewIndex ? 100 : i === statusPreviewIndex ? statusProgress : 0}%`, height: "100%", background: G.blanc, borderRadius: 999, transition: "width 100ms linear" }} />
             </div>
           ))}
         </div>
-        <div style={{ position: "absolute", top: 24, left: 18, right: 18, display: "flex", alignItems: "center", gap: 10, color: "#fff", zIndex: 3 }}>
+        <div style={{ position: "absolute", top: "calc(env(safe-area-inset-top) + 24px)", left: 18, right: 18, display: "flex", alignItems: "center", gap: 10, color: "#fff", zIndex: 3 }}>
           <Avatar url={statusPreview.profile?.photo_url} gender={statusPreview.profile?.gender} size={44} premium={statusPreview.profile?.is_premium} />
           <div style={{ minWidth: 0 }}>
             <div style={{ fontWeight: 900, fontSize: "1.02rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 6 }}>{statusPreview.profile?.name || "Statut"}{(statusPreview.profile?.id === "moyo-official" || statusPreview.is_official || statusPreview.is_feature) && <VerifiedBadge size={15} />}</div>
@@ -12564,8 +12564,8 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
           )}
           <button onClick={(e) => { e.stopPropagation(); closeStatusViewer(); }} style={{ marginLeft: statusPreview.user_id === auth.userId ? 8 : "auto", width: 40, height: 40, borderRadius: "50%", border: "none", background: "rgba(255,255,255,0.16)", color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0, boxShadow: "0 6px 16px rgba(0,0,0,0.18)" }}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
         </div>
-        <button aria-label="Statut précédent" onPointerDown={() => setStatusPaused(true)} onPointerUp={() => setStatusPaused(false)} onTouchStart={(e) => { e.preventDefault(); setStatusPaused(true); }} onTouchEnd={() => setStatusPaused(false)} onClick={(e) => { e.stopPropagation(); goStatusStep(-1); }} style={{ position: "absolute", left: 0, top: 82, bottom: 0, width: "34%", zIndex: 2, background: "transparent", border: "none", cursor: "pointer", outline: "none", WebkitTapHighlightColor: "transparent" }} />
-        <button aria-label="Statut suivant" onPointerDown={() => setStatusPaused(true)} onPointerUp={() => setStatusPaused(false)} onTouchStart={(e) => { e.preventDefault(); setStatusPaused(true); }} onTouchEnd={() => setStatusPaused(false)} onClick={(e) => { e.stopPropagation(); goStatusStep(1); }} style={{ position: "absolute", right: 0, top: 82, bottom: 0, width: "66%", zIndex: 2, background: "transparent", border: "none", cursor: "pointer", outline: "none", WebkitTapHighlightColor: "transparent" }} />
+        <button aria-label="Statut précédent" onPointerDown={() => setStatusPaused(true)} onPointerUp={() => setStatusPaused(false)} onTouchStart={(e) => { e.preventDefault(); setStatusPaused(true); }} onTouchEnd={() => setStatusPaused(false)} onClick={(e) => { e.stopPropagation(); goStatusStep(-1); }} style={{ position: "absolute", left: 0, top: "calc(env(safe-area-inset-top) + 82px)", bottom: 0, width: "34%", zIndex: 2, background: "transparent", border: "none", cursor: "pointer", outline: "none", WebkitTapHighlightColor: "transparent" }} />
+        <button aria-label="Statut suivant" onPointerDown={() => setStatusPaused(true)} onPointerUp={() => setStatusPaused(false)} onTouchStart={(e) => { e.preventDefault(); setStatusPaused(true); }} onTouchEnd={() => setStatusPaused(false)} onClick={(e) => { e.stopPropagation(); goStatusStep(1); }} style={{ position: "absolute", right: 0, top: "calc(env(safe-area-inset-top) + 82px)", bottom: 0, width: "66%", zIndex: 2, background: "transparent", border: "none", cursor: "pointer", outline: "none", WebkitTapHighlightColor: "transparent" }} />
         {statusPreview.image_url && !statusPreview.is_feature ? <img src={statusPreview.image_url} alt="Statut" onClick={e => e.stopPropagation()} onError={async e => { const signed = await getStatusSignedFallbackUrl(auth.token, statusPreview.image_url); if (signed && signed !== statusPreview.image_url) { (e.currentTarget as HTMLImageElement).src = signed; setStatusPreview(prev => prev ? { ...prev, image_url: signed } : prev); } }} style={{ maxWidth: "100%", maxHeight: statusPreview.user_id === auth.userId ? "78vh" : (statusPreview.link_url ? "58vh" : "68vh"), borderRadius: 22, objectFit: "contain", boxShadow: "0 18px 60px rgba(0,0,0,0.35)", zIndex: 1 }} /> : null}
         {statusPreview.link_url && statusPreview.user_id !== auth.userId && (
           statusPreview.link_url.startsWith("tel:") ? (() => {
@@ -12590,7 +12590,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
           )
         )}
         {statusPreview.is_feature && (
-          <div onClick={e => e.stopPropagation()} style={{ position: "absolute", top: 78, left: 10, right: 10, bottom: 78, zIndex: 4, borderRadius: 24, overflow: "hidden", boxShadow: "0 18px 60px rgba(0,0,0,0.45)", background: "#1a1a1a" }}>
+          <div onClick={e => e.stopPropagation()} style={{ position: "absolute", top: "calc(env(safe-area-inset-top) + 78px)", left: 10, right: 10, bottom: 78, zIndex: 4, borderRadius: 24, overflow: "hidden", boxShadow: "0 18px 60px rgba(0,0,0,0.45)", background: "#1a1a1a" }}>
             {statusPreview.image_url && <img src={statusPreview.image_url} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />}
             {/* Zones de tap (comme les statuts individuels) : gauche = précédent, droite = suivant, appui long = pause. Limitées à la partie haute pour ne pas gêner les boutons. */}
             <button aria-label="Statut précédent" onPointerDown={() => setStatusPaused(true)} onPointerUp={() => setStatusPaused(false)} onTouchStart={(e) => { e.preventDefault(); setStatusPaused(true); }} onTouchEnd={() => setStatusPaused(false)} onClick={(e) => { e.stopPropagation(); goStatusStep(-1); }} style={{ position: "absolute", left: 0, top: 0, bottom: "42%", width: "34%", zIndex: 3, background: "transparent", border: "none", cursor: "pointer", outline: "none", WebkitTapHighlightColor: "transparent" }} />
