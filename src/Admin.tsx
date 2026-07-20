@@ -5636,7 +5636,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
 
   // ── Listes cliquables des cartes stats "Nouveaux aujourd'hui / Profils vérifiés / bannis / incomplets" ──
   // (même principe que "Premium actifs" ci-dessus, mutualisé pour éviter 4 x 3 states dupliqués)
-  type SimpleUserListType = "today" | "verified" | "banned" | "incomplete" | "pwa";
+  type SimpleUserListType = "today" | "verified" | "banned" | "incomplete" | "pwa" | "phone_visible";
   const [userListModal, setUserListModal] = useState<SimpleUserListType | null>(null);
   const [userListProfiles, setUserListProfiles] = useState<AdminProfile[]>([]);
   const [userListLoading, setUserListLoading] = useState(false);
@@ -5666,6 +5666,11 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
       icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>,
       gradient: "linear-gradient(135deg,#8e44ad,#5e2d73)",
     },
+    phone_visible: {
+      title: "Numéro visible",
+      icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>,
+      gradient: "linear-gradient(135deg,#16a085,#0e6655)",
+    },
   }[t]);
   useEffect(() => {
     if (!userListModal || !auth) return;
@@ -5678,8 +5683,9 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
       banned: `is_banned=eq.true&order=created_at.desc`,
       incomplete: `is_complete=eq.false&order=created_at.desc`,
       pwa: `has_installed_pwa=eq.true&order=created_at.desc`,
+      phone_visible: `share_phone_with_matches=eq.true&order=created_at.desc`,
     };
-    fetch(`${SUPABASE_URL}/rest/v1/profiles?select=id,name,age,city,gender,photo_url,is_verified,is_banned,is_complete,created_at&${filterQs[userListModal]}&limit=200`, {
+    fetch(`${SUPABASE_URL}/rest/v1/profiles?select=id,name,age,city,gender,photo_url,is_verified,is_banned,is_complete,created_at,phone,share_phone_with_matches&${filterQs[userListModal]}&limit=200`, {
       headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
     }).then(r => r.json()).then(data => { setUserListProfiles(Array.isArray(data) ? data : []); setUserListLoading(false); }).catch(() => setUserListLoading(false));
   }, [userListModal]);
@@ -6216,6 +6222,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
     retentionD30: null as number | null,
     retentionSample: 0,
     pwaInstalls: 0,
+    phoneVisibleCount: 0,
   });
 
   // ── Reports ──
@@ -6896,7 +6903,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
 
       const [rTotalUsers, rMatches, rMessages, rTotalReports,
              rPremium, rVerified, rBanned, rMale, rFemale, rTodayUsers,
-             rTotalLikes, rLikesToday, rPwaInstalls] = await Promise.all([
+             rTotalLikes, rLikesToday, rPwaInstalls, rPhoneVisible] = await Promise.all([
         fetch(`${SUPABASE_URL}/rest/v1/profiles?select=id`, { headers: countHeader }),
         fetch(`${SUPABASE_URL}/rest/v1/matches?select=id`, { headers: countHeader }),
         fetch(`${SUPABASE_URL}/rest/v1/messages?select=id`, { headers: countHeader }),
@@ -6910,6 +6917,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
         fetch(`${SUPABASE_URL}/rest/v1/likes?select=id`, { headers: countHeader }),
         fetch(`${SUPABASE_URL}/rest/v1/likes?created_at=gte.${todayIso}&select=id`, { headers: countHeader }),
         fetch(`${SUPABASE_URL}/rest/v1/profiles?has_installed_pwa=eq.true&select=id`, { headers: countHeader }),
+        fetch(`${SUPABASE_URL}/rest/v1/profiles?share_phone_with_matches=eq.true&select=id`, { headers: countHeader }),
       ]);
 
       // ── Likes par jour (30 derniers jours) ──
@@ -6997,6 +7005,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
         retentionD30,
         retentionSample: sample.length,
         pwaInstalls: parseCount(rPwaInstalls),
+        phoneVisibleCount: parseCount(rPhoneVisible),
       });
       setReports(reps);
       loadAutoLogCount();
@@ -8465,11 +8474,12 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                       <div style={{ fontWeight: 700, fontSize: "0.88rem", display: "flex", alignItems: "center", gap: 5 }}>{p.name || "Sans nom"}{p.is_verified && <VerifiedBadge size={13} />}</div>
                       <div style={{ fontSize: "0.72rem", color: "#888" }}>{p.age ? `${p.age} ans · ` : ""}{p.city || "Ville inconnue"}</div>
                     </div>
-                    <div style={{ fontSize: "0.66rem", color: meta.gradient.includes("#e74c3c") ? "#e74c3c" : meta.gradient.includes("#27ae60") ? "#27ae60" : meta.gradient.includes("#e67e22") ? "#e67e22" : G.vert, fontWeight: 700, textAlign: "right", flexShrink: 0, lineHeight: 1.4 }}>
+                    <div style={{ fontSize: "0.66rem", color: meta.gradient.includes("#e74c3c") ? "#e74c3c" : meta.gradient.includes("#27ae60") ? "#27ae60" : meta.gradient.includes("#e67e22") ? "#e67e22" : meta.gradient.includes("#16a085") ? "#16a085" : G.vert, fontWeight: 700, textAlign: "right", flexShrink: 0, lineHeight: 1.4 }}>
                       {userListModal === "today" && p.created_at && new Date(p.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
                       {userListModal === "verified" && "Vérifié"}
                       {userListModal === "banned" && "Banni"}
                       {userListModal === "incomplete" && "Inscription non finie"}
+                      {userListModal === "phone_visible" && (p.phone || "Numéro non renseigné")}
                     </div>
                   </div>
                 ))}
@@ -9196,11 +9206,12 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     ["Profils vérifiés", stats.verifiedUsers, G.vert, "verified"],
                     ["Profils bannis", stats.bannedUsers, "#e74c3c", "banned"],
                     ["App installée (PWA)", stats.pwaInstalls, "#8e44ad", "pwa"],
+                    ["Numéro visible", stats.phoneVisibleCount, "#16a085", "phone_visible"],
                   ] as [string, number, string, string | null][]).map(([label, val, color, action]) => (
                     <div key={label} onClick={() => {
                       if (action === "premium") setShowPremiumList(true);
                       else if (action === "matches") setShowMatchList(true);
-                      else if (action === "today" || action === "verified" || action === "banned" || action === "pwa") setUserListModal(action);
+                      else if (action === "today" || action === "verified" || action === "banned" || action === "pwa" || action === "phone_visible") setUserListModal(action as SimpleUserListType);
                     }} style={{ background: `${color}0d`, borderRadius: 12, padding: "12px", border: `1px solid ${color}25`, cursor: action ? "pointer" : "default", position: "relative" }}>
                       <div style={{ fontSize: "1.4rem", fontWeight: 800, color }}>{val}</div>
                       <div style={{ fontSize: "0.7rem", color: "#555", marginTop: 2 }}>{label}</div>
