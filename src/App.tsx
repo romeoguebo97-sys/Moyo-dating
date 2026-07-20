@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo, memo, Suspense } from "react";
 import { Capacitor } from "@capacitor/core";
+import { getCountries, getCountryCallingCode, isValidPhoneNumber, type CountryCode } from "libphonenumber-js";
 
 // Chargement paresseux du panneau admin : ce code (≈40% du fichier) n'est téléchargé
 // que si quelqu'un ouvre réellement l'admin, jamais pour les utilisateurs normaux.
@@ -1927,6 +1928,150 @@ function Input({ label, type = "text", value, onChange, placeholder, icon, error
       </div>
       {hint && !error && <p style={{ color: "#555", fontSize: "0.75rem", marginTop: 4 }}>{hint}</p>}
       {error && <p style={{ color: "#e74c3c", fontSize: "0.75rem", marginTop: 4 }}>{error}</p>}
+    </div>
+  );
+}
+
+// ── Téléphone avec sélecteur de pays ──────────────────────────────────────
+// Liste des pays (indicatif + nom en français), Congo puis France en tête,
+// le reste par ordre alphabétique. Noms fournis par Intl.DisplayNames (natif
+// navigateur), donc aucune dépendance supplémentaire pour les libellés.
+type PhoneCountry = { code: CountryCode; name: string; callingCode: string };
+const PHONE_COUNTRY_NAME_OVERRIDES: Record<string, string> = { CG: "Congo" };
+let _phoneCountriesCache: PhoneCountry[] | null = null;
+function getPhoneCountries(): PhoneCountry[] {
+  if (_phoneCountriesCache) return _phoneCountriesCache;
+  let regionNames: Intl.DisplayNames | null = null;
+  try { regionNames = new Intl.DisplayNames(["fr"], { type: "region" }); } catch {}
+  const list: PhoneCountry[] = (getCountries() as CountryCode[]).map(code => {
+    let name = code as string;
+    try { name = PHONE_COUNTRY_NAME_OVERRIDES[code] || regionNames?.of(code) || code; } catch {}
+    return { code, name, callingCode: getCountryCallingCode(code) };
+  });
+  list.sort((a, b) => {
+    if (a.code === "CG") return -1;
+    if (b.code === "CG") return 1;
+    if (a.code === "FR") return -1;
+    if (b.code === "FR") return 1;
+    return a.name.localeCompare(b.name, "fr");
+  });
+  _phoneCountriesCache = list;
+  return list;
+}
+
+// Reconstitue { pays, numéro local } à partir d'une valeur déjà stockée (ex: "+242068605028"),
+// pour préremplir le champ en édition. Essaie Congo/France en priorité (marché principal),
+// puis les autres indicatifs du plus long au plus court (évite les faux positifs sur "+1").
+function splitStoredPhone(value: string): { country: CountryCode; national: string } {
+  const digits = (value || "").replace(/[^\d]/g, "");
+  const all = getPhoneCountries();
+  if (digits) {
+    const priority = ["CG", "FR"];
+    const ordered = [
+      ...priority.map(c => all.find(p => p.code === c)).filter(Boolean) as PhoneCountry[],
+      ...all.filter(p => !priority.includes(p.code)).sort((a, b) => b.callingCode.length - a.callingCode.length),
+    ];
+    for (const c of ordered) {
+      if (digits.startsWith(c.callingCode) && digits.length > c.callingCode.length) {
+        return { country: c.code, national: digits.slice(c.callingCode.length) };
+      }
+    }
+  }
+  return { country: "CG", national: "" };
+}
+
+function PhoneCountryField({ value, onChange, label, required = false, autoFocus = false, hint }: {
+  value: string;
+  onChange: (storedValue: string, valid: boolean) => void;
+  label?: React.ReactNode;
+  required?: boolean;
+  autoFocus?: boolean;
+  hint?: string;
+}) {
+  const countries = getPhoneCountries();
+  const initial = useMemo(() => splitStoredPhone(value), []); // uniquement à l'initialisation
+  const [country, setCountry] = useState<CountryCode>(initial.country);
+  const [national, setNational] = useState(initial.national);
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const [touched, setTouched] = useState(false);
+  const boxRef = useRef<HTMLDivElement>(null);
+
+  const selected = countries.find(c => c.code === country) || countries[0];
+  const digitsOnly = national.replace(/\D/g, "");
+  const valid = digitsOnly.length === 0 ? !required : isValidPhoneNumber(digitsOnly, country);
+
+  useEffect(() => {
+    const stored = digitsOnly ? `+${selected.callingCode}${digitsOnly}` : "";
+    onChange(stored, valid);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [country, national]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onClick = (e: MouseEvent) => { if (boxRef.current && !boxRef.current.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, [open]);
+
+  const filtered = search.trim()
+    ? countries.filter(c => c.name.toLowerCase().includes(search.trim().toLowerCase()) || c.callingCode.includes(search.trim().replace(/\D/g, "")))
+    : countries;
+
+  const showError = touched && digitsOnly.length > 0 && !valid;
+
+  return (
+    <div style={{ marginBottom: 18, width: "100%" }} ref={boxRef}>
+      {label && <label style={{ display: "block", fontWeight: 500, marginBottom: 7, fontSize: "0.88rem", color: "#555" }}>{label}</label>}
+      <div style={{ position: "relative" }}>
+        <div style={{ display: "flex", border: `2px solid ${showError ? "#e74c3c" : G.gris}`, borderRadius: 12, overflow: "hidden", background: G.blanc }}>
+          <button
+            type="button"
+            onClick={() => { setOpen(o => !o); setSearch(""); }}
+            style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 6, padding: "13px 10px 13px 14px", border: "none", borderRight: `1.5px solid ${G.gris}`, background: "transparent", fontSize: "0.88rem", fontWeight: 700, color: G.brun, cursor: "pointer", maxWidth: "48%" }}
+          >
+            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{selected.name} (+{selected.callingCode})</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, transform: open ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <input
+            autoFocus={autoFocus}
+            type="tel"
+            value={national}
+            onChange={e => setNational(e.target.value.slice(0, 20))}
+            onBlur={() => setTouched(true)}
+            placeholder="Numéro local"
+            style={{ flex: 1, minWidth: 0, boxSizing: "border-box", border: "none", padding: "13px 14px", fontSize: "0.93rem", background: "transparent", color: G.brun, outline: "none" }}
+          />
+        </div>
+        {open && (
+          <div style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, right: 0, zIndex: 50, background: G.blanc, borderRadius: 12, boxShadow: "0 12px 32px rgba(0,0,0,0.18)", border: `1px solid ${G.gris}`, overflow: "hidden" }}>
+            <div style={{ padding: 10, borderBottom: `1px solid ${G.gris}` }}>
+              <input
+                autoFocus
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Rechercher un pays..."
+                style={{ width: "100%", boxSizing: "border-box", padding: "9px 12px", border: `1.5px solid ${G.gris}`, borderRadius: 8, fontSize: "0.86rem", outline: "none" }}
+              />
+            </div>
+            <div style={{ maxHeight: 260, overflowY: "auto" }}>
+              {filtered.map(c => (
+                <div
+                  key={c.code}
+                  onClick={() => { setCountry(c.code); setOpen(false); }}
+                  style={{ padding: "10px 14px", cursor: "pointer", fontSize: "0.86rem", color: G.brun, background: c.code === country ? G.creme : "transparent", display: "flex", justifyContent: "space-between", gap: 10 }}
+                >
+                  <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name}</span>
+                  <span style={{ color: "#999", flexShrink: 0 }}>+{c.callingCode}</span>
+                </div>
+              ))}
+              {filtered.length === 0 && <div style={{ padding: 14, fontSize: "0.82rem", color: "#999", textAlign: "center" }}>Aucun pays trouvé</div>}
+            </div>
+          </div>
+        )}
+      </div>
+      {showError && <p style={{ color: "#e74c3c", fontSize: "0.76rem", marginTop: 6 }}>Numéro invalide pour {selected.name}. Vérifie le nombre de chiffres.</p>}
+      {hint && !showError && <p style={{ color: "#7a7a7a", fontSize: "0.76rem", marginTop: 6 }}>{hint}</p>}
     </div>
   );
 }
@@ -4615,6 +4760,7 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
   const [tempToken, setTempToken] = useState<string | null>(isResume ? resumeToken : sessionStorage.getItem("moyo_signup_token"));
   const [tempUserId, setTempUserId] = useState<string | null>(isResume ? resumeUid : sessionStorage.getItem("moyo_signup_uid"));
   const [form, setForm] = useState({ email: "", password: "", name: "", age: "", city: "", gender: "", bio: "", religion: "", profession: "", hobbies: "", phone: "" });
+  const [phoneValid, setPhoneValid] = useState(true);
   const [loading, setLoading] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [toast, setToast] = useState<ToastState>(null);
@@ -5058,15 +5204,11 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
         </div>
         <div style={{ marginBottom: 18 }}>
           <label style={{ display: "block", fontWeight: 500, marginBottom: 7, fontSize: "0.88rem", color: "#555" }}>Numéro WhatsApp <span style={{ color: G.rouge, fontSize: "0.78rem", fontWeight: 600 }}>(optionnel)</span></label>
-          <div style={{ position: "relative" }}>
-            <span style={{ position: "absolute", left: 13, top: "50%", transform: "translateY(-50%)", display: "flex", pointerEvents: "none" }}><svg width="16" height="16" viewBox="0 0 24 24" fill="#25D366"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24z"/></svg></span>
-            <input value={form.phone} onChange={e => upd("phone", e.target.value.slice(0, 25))} placeholder="+242 06 513 20 12" style={{ width: "100%", boxSizing: "border-box", display: "block", padding: "13px 14px 13px 40px", border: `2px solid ${G.gris}`, borderRadius: 12, fontSize: "0.93rem", background: G.blanc, color: G.brun, outline: "none" }} />
-          </div>
-          <div style={{ fontSize: "0.76rem", color: "#7a7a7a", marginTop: 6 }}>Reste privé, jamais visible par les autres membres.</div>
+          <PhoneCountryField value={form.phone} onChange={(v, valid) => { upd("phone", v); setPhoneValid(valid); }} hint="Reste privé, jamais visible par les autres membres." />
         </div>
         <div style={{ display: "flex", gap: 10 }}>
           <Btn variant="ghost" onClick={() => setStep(3)} style={{ flex: 1 }}>← Retour</Btn>
-          <Btn variant="authPrimary" onClick={() => setStep(5)} style={{ flex: 2 }} disabled={!form.name.trim() || !form.age || parseInt(form.age) < 18 || parseInt(form.age) > 99 || !form.city}>Suivant →</Btn>
+          <Btn variant="authPrimary" onClick={() => setStep(5)} style={{ flex: 2 }} disabled={!form.name.trim() || !form.age || parseInt(form.age) < 18 || parseInt(form.age) > 99 || !form.city || !phoneValid}>Suivant →</Btn>
         </div>
       </>}
 
@@ -14423,6 +14565,7 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
   //    profil" — puisque ce champ a été retiré de cet écran pour tout centraliser ici. ──
   const [editingPhoneCard, setEditingPhoneCard] = useState(false);
   const [phoneCardDraft, setPhoneCardDraft] = useState("");
+  const [phoneCardValid, setPhoneCardValid] = useState(true);
   const savePhoneCard = async () => {
     const newPhone = phoneCardDraft.trim().slice(0, 25) || null;
     await sb.update(auth.token, "profiles", auth.userId, { phone: newPhone });
@@ -15149,10 +15292,10 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
             {editingPhoneCard ? (
               <div style={{ padding: "15px 18px" }}>
                 <div style={{ fontWeight: 700, fontSize: "0.95rem", color: G.brun, marginBottom: 10 }}>Mon numéro WhatsApp</div>
-                <input autoFocus value={phoneCardDraft} onChange={e => setPhoneCardDraft(e.target.value.slice(0, 25))} placeholder="+242 06 513 20 12" style={{ width: "100%", boxSizing: "border-box", padding: "11px 13px", border: `2px solid ${G.gris}`, borderRadius: 12, fontSize: "0.9rem", fontFamily: "inherit", marginBottom: 10 }} />
+                <PhoneCountryField value={phoneCardDraft} onChange={(v, valid) => { setPhoneCardDraft(v); setPhoneCardValid(valid); }} autoFocus />
                 <div style={{ display: "flex", gap: 8 }}>
                   <Btn variant="ghost" onClick={() => setEditingPhoneCard(false)} style={{ flex: 1 }}>Annuler</Btn>
-                  <Btn variant="primary" onClick={savePhoneCard} style={{ flex: 1 }}>Enregistrer</Btn>
+                  <Btn variant="primary" onClick={savePhoneCard} disabled={!phoneCardValid || !phoneCardDraft.trim()} style={{ flex: 1 }}>Enregistrer</Btn>
                 </div>
               </div>
             ) : (
@@ -15995,6 +16138,7 @@ export default function App() {
   //    membre n'en a pas encore renseigné un. Ne se ferme qu'une fois le numéro enregistré. ──
   const [phonePromptOpen, setPhonePromptOpen] = useState(false);
   const [phonePromptValue, setPhonePromptValue] = useState("");
+  const [phonePromptValid, setPhonePromptValid] = useState(false);
   const [phonePromptSaving, setPhonePromptSaving] = useState(false);
   const [verifyPromptOpen, setVerifyPromptOpen] = useState(false);
   const [verifyPromptMe, setVerifyPromptMe] = useState<{ age?: number; gender?: string }>({});
@@ -17185,14 +17329,8 @@ export default function App() {
           </div>
           <h3 style={{ fontSize: "1.15rem", fontWeight: 800, color: "#111", marginBottom: 8 }}>Ton profil est incomplet</h3>
           <p style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.6, marginBottom: 18 }}>Renseigne ton numéro de téléphone pour continuer à utiliser Moyo Dating.</p>
-          <input
-            value={phonePromptValue}
-            onChange={e => setPhonePromptValue(e.target.value.slice(0, 25))}
-            placeholder="+242 06 513 20 12"
-            type="tel"
-            style={{ width: "100%", boxSizing: "border-box", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, fontSize: "0.93rem", fontFamily: "inherit", marginBottom: 16, textAlign: "center", outline: "none" }}
-          />
-          <Btn variant="primary" loading={phonePromptSaving} disabled={!phonePromptValue.trim()} style={{ width: "100%" }} onClick={async () => {
+          <PhoneCountryField value={phonePromptValue} onChange={(v, valid) => { setPhonePromptValue(v); setPhonePromptValid(valid); }} required autoFocus />
+          <Btn variant="primary" loading={phonePromptSaving} disabled={!phonePromptValue.trim() || !phonePromptValid} style={{ width: "100%" }} onClick={async () => {
             const v = phonePromptValue.trim();
             if (!v || !auth) return;
             setPhonePromptSaving(true);

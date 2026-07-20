@@ -7701,7 +7701,11 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
   };
 
   // ── Classify reports ──
+  const isAccountDeletionReport = (r: ReportRow) => !!r.reason?.startsWith("[COMPTE SUPPRIMÉ]");
+  // Extrait le nom capturé dans la raison au moment de la suppression (ex: "[COMPTE SUPPRIMÉ] Jean D." → "Jean D.")
+  const accountDeletionName = (r: ReportRow) => (r.reason || "").replace("[COMPTE SUPPRIMÉ]", "").trim() || "un membre";
   const classifyReport = (r: ReportRow): { label: string; color: string } => {
+    if (isAccountDeletionReport(r)) return { label: "Compte supprimé", color: "#922B21" };
     if (r.reason?.startsWith("[AUTO-MOD") || r.reason?.startsWith("[AUTO-CONTACT")) return { label: "Auto-modération", color: "#e67e22" };
     if (r.reason?.startsWith("[BOT SIGNALEMENT]")) return { label: "Alerte bot", color: "#8e44ad" };
     if (isSupportReason(r.reason)) return { label: "Messagerie", color: G.vert };
@@ -10146,6 +10150,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
             const meta = (r: ReportRow) => {
               const t = typeOf(r);
               const nm = (id?: string | null) => (id ? reportProfilesCache[id]?.name : "") || "";
+              if (isAccountDeletionReport(r)) return { t, color: "#922B21", bg: "rgba(146,43,33,0.12)", typeLabel: "Compte supprimé", actor: "Utilisateur", title: `Suppression de compte — ${accountDeletionName(r)}`, sub: "Compte et données supprimés par l'utilisateur", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#922B21" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg> };
               if (t === "messaging") return { t, color: "#27ae60", bg: "rgba(39,174,96,0.12)", typeLabel: "Messagerie", actor: "Modération", title: `Conversation avec ${nm(r.reporter_id) || "un membre"}`, sub: r.status === "archived" ? "Discussion archivée" : "Discussion traitée", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1e8449" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> };
               if (t === "system") return { t, color: "#E67E22", bg: "rgba(230,126,34,0.14)", typeLabel: "Auto-modération", actor: "Système", title: `Auto-modération sur ${nm(r.reporter_id) || nm(r.reported_id) || "un membre"}`, sub: (r.reason || "").includes("CONTACT") ? "Tentative de partage de contact" : "Contenu modéré automatiquement", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E67E22" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> };
               return { t, color: "#e74c3c", bg: "rgba(231,76,60,0.12)", typeLabel: "Signalement", actor: "Modération", title: `Signalement sur ${nm(r.reported_id) || "un profil"}`, sub: r.status === "rejected" ? "Signalement rejeté après examen" : r.status === "banned" ? "Profil banni après examen" : "Signalement traité", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg> };
@@ -10503,7 +10508,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     </div>
 
                     {/* Ligne 2 : raison */}
-                    <div style={{ fontSize: "0.82rem", fontWeight: 600, color: G.brun, marginBottom: 5, lineHeight: 1.4 }}>{isSupport ? cleanSupportReason(r.reason) : r.reason}</div>
+                    <div style={{ fontSize: "0.82rem", fontWeight: 600, color: G.brun, marginBottom: 5, lineHeight: 1.4 }}>{isSupport ? cleanSupportReason(r.reason) : isAccountDeletionReport(r) ? `${accountDeletionName(r)} a supprimé son compte` : r.reason}</div>
 
                     {/* Ligne 3 : Profils reporter + reported avec noms */}
                     {(() => {
