@@ -2273,7 +2273,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail, giftFor, prom
   if (step === "b1") return (
     <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 300, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
       <div onClick={e => e.stopPropagation()} className="moyo-sheet-in" style={{ background: "#FCFBF8", width: "100%", maxWidth: 460, height: "100%", maxHeight: "100vh", overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y", boxShadow: "0 30px 80px rgba(0,0,0,0.4)", position: "relative", display: "flex", flexDirection: "column" }}>
-        <div style={{ padding: "18px 20px 0", flexShrink: 0 }}>
+        <div style={{ padding: "calc(env(safe-area-inset-top) + 18px) 20px 0", flexShrink: 0 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 22 }}>
             <div style={{ fontSize: "0.68rem", fontWeight: 800, color: "#c8c0ac", letterSpacing: 1 }}>ÉTAPE 1 SUR 4</div>
             <div onClick={onClose} style={{ cursor: "pointer", background: "#eceae5", borderRadius: "50%", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -2320,7 +2320,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail, giftFor, prom
   if (step === "b2") return (
     <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 300, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
       <div onClick={e => e.stopPropagation()} className="moyo-sheet-in" style={{ background: "#FCFBF8", width: "100%", maxWidth: 460, height: "100%", maxHeight: "100vh", overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y", boxShadow: "0 30px 80px rgba(0,0,0,0.4)", position: "relative", display: "flex", flexDirection: "column" }}>
-        <div style={{ padding: "18px 20px 0", flexShrink: 0 }}>
+        <div style={{ padding: "calc(env(safe-area-inset-top) + 18px) 20px 0", flexShrink: 0 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 22 }}>
             <div onClick={() => isDiaspora ? onClose() : setStep("b1")} style={{ cursor: "pointer", background: "#eceae5", borderRadius: "50%", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center" }}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#777" strokeWidth="2.5" strokeLinecap="round"><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" /></svg>
@@ -2414,7 +2414,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail, giftFor, prom
     return (
       <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 300, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
         <div onClick={e => e.stopPropagation()} className="moyo-sheet-in" style={{ background: "#FCFBF8", width: "100%", maxWidth: 460, height: "100%", maxHeight: "100vh", display: "flex", flexDirection: "column" }}>
-          <div style={{ padding: "18px 20px 0", flexShrink: 0 }}>
+          <div style={{ padding: "calc(env(safe-area-inset-top) + 18px) 20px 0", flexShrink: 0 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
               <div onClick={() => setStep("b2")} style={{ cursor: "pointer", background: "#eceae5", borderRadius: "50%", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#777" strokeWidth="2.5" strokeLinecap="round"><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" /></svg>
@@ -2563,7 +2563,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail, giftFor, prom
     return (
       <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 300, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
         <div onClick={e => e.stopPropagation()} className="moyo-sheet-in" style={{ background: "#FCFBF8", width: "100%", maxWidth: 460, height: "100%", maxHeight: "100vh", overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y", boxShadow: "0 30px 80px rgba(0,0,0,0.4)" }}>
-          <div style={{ padding: "18px 20px 0" }}>
+          <div style={{ padding: "calc(env(safe-area-inset-top) + 18px) 20px 0" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
               <div onClick={() => setStep("b3")} style={{ cursor: "pointer", background: "#eceae5", borderRadius: "50%", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#777" strokeWidth="2.5" strokeLinecap="round"><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" /></svg>
@@ -2634,8 +2634,8 @@ function PremiumModal({ onClose, reason, userId, token, userEmail, giftFor, prom
   // ════════ ÉCRAN 1 : OFFRE — VERSION A (par défaut) ════════
   if (step === "offer") return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 300, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: "#FCFBF8", borderRadius: 0, width: "100%", maxWidth: 460, height: "100%", maxHeight: "100vh", overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y", boxShadow: "0 30px 80px rgba(0,0,0,0.4)", position: "relative", padding: "18px 20px 16px" }}>
-        <div onClick={onClose} style={{ position: "absolute", top: 16, right: 16, cursor: "pointer", background: "#eceae5", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2 }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: "#FCFBF8", borderRadius: 0, width: "100%", maxWidth: 460, height: "100%", maxHeight: "100vh", overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y", boxShadow: "0 30px 80px rgba(0,0,0,0.4)", position: "relative", padding: "calc(env(safe-area-inset-top) + 18px) 20px 16px" }}>
+        <div onClick={onClose} style={{ position: "absolute", top: "calc(env(safe-area-inset-top) + 16px)", right: 16, cursor: "pointer", background: "#eceae5", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2 }}>
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#777" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
         </div>
         <div style={{ display: "flex", justifyContent: "center", marginBottom: 8, position: "relative" }}>
@@ -2808,7 +2808,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail, giftFor, prom
   return (
     <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 300, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
       <div className="moyo-sheet-in" style={{ background: "#f6f6f7", width: "100%", maxWidth: 460, height: "100%", maxHeight: "100vh", display: "flex", flexDirection: "column", overscrollBehavior: "contain" }}>
-        <div style={{ background: OP.main, padding: "16px 18px 14px", flexShrink: 0 }}>
+        <div style={{ background: OP.main, padding: "calc(env(safe-area-inset-top) + 16px) 18px 14px", flexShrink: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <div onClick={() => { setStep("offer"); setTxSent(false); setTxActivated(false); setTxErr(null); setTxRef(""); }} style={{ cursor: "pointer", background: OP.onColor === "#fff" ? "rgba(255,255,255,0.22)" : "rgba(0,0,0,0.1)", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={OP.onColor} strokeWidth="2.5" strokeLinecap="round"><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" /></svg>
@@ -5887,12 +5887,6 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
         "Les photos contenant des coordonnées visibles (numéro écrit sur une image, réseau social affiché, etc.) sont soumises aux mêmes règles que le partage de contact par message.",
         "Toute photo signalée par la communauté ou détectée comme inappropriée peut être retirée par notre équipe, avec avertissement du compte concerné.",
         "En cas de récidive, le compte peut être suspendu temporairement ou définitivement banni.",
-      ]},
-      { title: "Groupe Premium", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>, items: [
-        "Le Groupe Premium est un salon de discussion réservé aux membres Premium, accessible via le bouton Groupe en haut de la Messagerie.",
-        "Contrairement à vos conversations privées, tout ce que vous écrivez dans le Groupe est visible par tous les autres membres Premium présents.",
-        "Pour y accéder, envoyez une demande depuis le bouton Groupe : un administrateur doit la valider avant que vous puissiez y écrire.",
-        "Le partage de photos dans le Groupe peut être activé ou désactivé par l'équipe Moyo Dating selon les périodes.",
       ]},
       { title: "Rendez-vous avec l'équipe Moyo", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>, items: [
         "Vous pouvez prendre rendez-vous avec l'équipe Moyo Dating pour étudier votre cas, améliorer votre profil, ou préparer une mise en relation personnalisée.",
