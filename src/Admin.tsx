@@ -499,6 +499,7 @@ export function AdminDesktopPage() {
   const [appConfig, setAppConfig] = React.useState({
     limitLikes: "5",
     limitMessages: "3",
+    limitMessagesFemme: "100",
     limitMatchRequests: "2",
     limitStatusBoosts: "2",
     limitPhotoSizeMb: "5",
@@ -552,7 +553,7 @@ export function AdminDesktopPage() {
     const allKeys = [
       "rule_block_same_gender_like",
       "modal_same_gender_homme","modal_same_gender_femme","modal_match_title","modal_match_subtitle","modal_premium_default","modal_likes_epuises",
-      "limit_likes_free","limit_messages_free","limit_match_requests","limit_status_boosts","limit_photo_size_mb","match_welcome_message",
+      "limit_likes_free","limit_messages_free","limit_messages_free_femme","limit_match_requests","limit_status_boosts","limit_photo_size_mb","match_welcome_message",
       "premium_price_fcfa","premium_price_week_fcfa","premium_price_2month_fcfa","premium_days_week","premium_days_2month","premium_duration_days",
       "feature_statuses","feature_gift_premium","feature_assistant","feature_group_premium",
       "feature_moderation_insults","feature_moderation_contact",
@@ -585,6 +586,7 @@ export function AdminDesktopPage() {
       setAppConfig(c => ({
         limitLikes: map["limit_likes_free"] || c.limitLikes,
         limitMessages: map["limit_messages_free"] || c.limitMessages,
+        limitMessagesFemme: map["limit_messages_free_femme"] || c.limitMessagesFemme,
         limitMatchRequests: map["limit_match_requests"] || c.limitMatchRequests,
         limitStatusBoosts: map["limit_status_boosts"] || c.limitStatusBoosts,
         limitPhotoSizeMb: map["limit_photo_size_mb"] || c.limitPhotoSizeMb,
@@ -902,7 +904,8 @@ export function AdminDesktopPage() {
             {configTab === "tarifs" && <OffCanvasSection title="Limites & Quotas">
               {([
                 ["limit_likes_free", "limitLikes" as keyof typeof appConfig, "Likes gratuits/jour", appConfig.limitLikes, "number"],
-                ["limit_messages_free", "limitMessages" as keyof typeof appConfig, "Messages gratuits/match", appConfig.limitMessages, "number"],
+                ["limit_messages_free", "limitMessages" as keyof typeof appConfig, "Messages gratuits/match (hommes)", appConfig.limitMessages, "number"],
+                ["limit_messages_free_femme", "limitMessagesFemme" as keyof typeof appConfig, "Messages gratuits/match (femmes)", appConfig.limitMessagesFemme, "number"],
                 ["limit_photo_size_mb", "limitPhotoSizeMb" as keyof typeof appConfig, "Taille max photo (Mo)", appConfig.limitPhotoSizeMb, "number"],
                 ["match_welcome_message", "matchWelcomeMessage" as keyof typeof appConfig, "Message bienvenue match", appConfig.matchWelcomeMessage, "text"],
               ] as [string, keyof typeof appConfig, string, string, string][]).map(([key, ck, label, value, type]) => (
@@ -2307,7 +2310,7 @@ function AssistantPhotoConfig({ auth }: { auth: Auth }) {
 export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () => void }) {
   const [rules, setRules] = React.useState({ blockSameGenderLike: true });
   const [modalTexts, setModalTexts] = React.useState({ sameGenderHomme: "Eh frère, reste du bon côté ! 😂", sameGenderFemme: "Eh soeur, reste du bon côté ! 😂", sameGenderSub: "Moyo Dating c'est pour les rencontres hétérosexuelles 😄", signupSuccess: "Ton compte est prêt ! Connecte-toi maintenant.", matchTitle: "C'est un Match !", matchSubtitle: "Toi et {name} vous plaisez mutuellement !", premiumDefault: "Passe Premium pour débloquer toutes les fonctionnalités de Moyo Dating !", likesEpuises: "Tu as utilisé tes {n} likes gratuits aujourd'hui. Passe Premium pour liker sans limite !" });
-  const [appConfig, setAppConfig] = React.useState({ limitLikes: "5", limitMessages: "3", limitMatchRequests: "2", limitStatusBoosts: "2", limitPhotoSizeMb: "5", matchWelcomeMessage: "Vous avez un nouveau match ! Dites bonjour 👋", premiumPriceFcfa: "3500", premiumPriceEur: "10", eurToFcfaRate: "655.957", premiumDurationDays: "31", premiumPriceWeekFcfa: "1200", premiumPrice2monthFcfa: "5900", premiumDaysWeek: "7", premiumDays2month: "62", likesNotifDelayHours: "24", featureStatuses: "true", featureGiftPremium: "true", featureAssistant: "true", featureGroupPremium: "true", featureGroupPhotos: "true", maintenanceMode: "false", maintenanceMessage: "Moyo Dating est en maintenance. Nous revenons très vite ! 🔧", customBannedWords: "", contactBannedWords: "", autoModContactReply: AUTO_MOD_CONTACT_REPLY, featureModerationInsults: "true", featureModerationContact: "true", disabledBuiltinWords: "", disabledBuiltinContactWords: "" });
+  const [appConfig, setAppConfig] = React.useState({ limitLikes: "5", limitMessages: "3", limitMessagesFemme: "100", limitMatchRequests: "2", limitStatusBoosts: "2", limitPhotoSizeMb: "5", matchWelcomeMessage: "Vous avez un nouveau match ! Dites bonjour 👋", premiumPriceFcfa: "3500", premiumPriceEur: "10", eurToFcfaRate: "655.957", premiumDurationDays: "31", premiumPriceWeekFcfa: "1200", premiumPrice2monthFcfa: "5900", premiumDaysWeek: "7", premiumDays2month: "62", likesNotifDelayHours: "24", featureStatuses: "true", featureGiftPremium: "true", featureAssistant: "true", featureGroupPremium: "true", featureGroupPhotos: "true", maintenanceMode: "false", maintenanceMessage: "Moyo Dating est en maintenance. Nous revenons très vite ! 🔧", customBannedWords: "", contactBannedWords: "", autoModContactReply: AUTO_MOD_CONTACT_REPLY, featureModerationInsults: "true", featureModerationContact: "true", disabledBuiltinWords: "", disabledBuiltinContactWords: "" });
   const [editingModal, setEditingModal] = React.useState<string | null>(null);
   const [editingValue, setEditingValue] = React.useState("");
   const [editingConfig, setEditingConfig] = React.useState<string | null>(null);
@@ -2315,7 +2318,7 @@ export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () =
   const [matchProposalExpiryDaysM, setMatchProposalExpiryDaysM] = React.useState("30");
 
   React.useEffect(() => {
-    const allKeys = ["rule_block_same_gender_like","modal_same_gender_homme","modal_same_gender_femme","modal_same_gender_sub","modal_signup_success","modal_match_title","modal_match_subtitle","modal_premium_default","modal_likes_epuises","limit_likes_free","limit_messages_free","limit_match_requests","limit_status_boosts","limit_photo_size_mb","match_welcome_message","match_proposal_expiry_days","premium_price_fcfa","premium_price_week_fcfa","premium_price_2month_fcfa","premium_days_week","premium_days_2month","premium_duration_days","feature_statuses","feature_gift_premium","feature_assistant","feature_group_premium","feature_moderation_insults","feature_moderation_contact","maintenance_mode","maintenance_message","custom_banned_words","contact_banned_words","disabled_builtin_words","disabled_builtin_contact_words","auto_mod_contact_reply","poll_badges_ms","poll_admin_badge_ms","poll_stats_ms","poll_broadcast_ms","poll_support_ms"];
+    const allKeys = ["rule_block_same_gender_like","modal_same_gender_homme","modal_same_gender_femme","modal_same_gender_sub","modal_signup_success","modal_match_title","modal_match_subtitle","modal_premium_default","modal_likes_epuises","limit_likes_free","limit_messages_free","limit_messages_free_femme","limit_match_requests","limit_status_boosts","limit_photo_size_mb","match_welcome_message","match_proposal_expiry_days","premium_price_fcfa","premium_price_week_fcfa","premium_price_2month_fcfa","premium_days_week","premium_days_2month","premium_duration_days","feature_statuses","feature_gift_premium","feature_assistant","feature_group_premium","feature_moderation_insults","feature_moderation_contact","maintenance_mode","maintenance_message","custom_banned_words","contact_banned_words","disabled_builtin_words","disabled_builtin_contact_words","auto_mod_contact_reply","poll_badges_ms","poll_admin_badge_ms","poll_stats_ms","poll_broadcast_ms","poll_support_ms"];
     fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(${allKeys.join(",")})&select=key,value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } })
       .then(r => r.json()).then(data => {
         if (!Array.isArray(data)) return;
@@ -2324,7 +2327,7 @@ export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () =
         if (map["match_proposal_expiry_days"]) setMatchProposalExpiryDaysM(map["match_proposal_expiry_days"]);
         if (map["rule_block_same_gender_like"]) setRules(r => ({ ...r, blockSameGenderLike: map["rule_block_same_gender_like"] === "true" }));
         setModalTexts(t => ({ sameGenderHomme: map["modal_same_gender_homme"] || t.sameGenderHomme, sameGenderFemme: map["modal_same_gender_femme"] || t.sameGenderFemme, sameGenderSub: map["modal_same_gender_sub"] || t.sameGenderSub, signupSuccess: map["modal_signup_success"] || t.signupSuccess, matchTitle: map["modal_match_title"] || t.matchTitle, matchSubtitle: map["modal_match_subtitle"] || t.matchSubtitle, premiumDefault: map["modal_premium_default"] || t.premiumDefault, likesEpuises: map["modal_likes_epuises"] || t.likesEpuises }));
-        setAppConfig(c => ({ limitLikes: map["limit_likes_free"] || c.limitLikes, limitMessages: map["limit_messages_free"] || c.limitMessages, limitMatchRequests: map["limit_match_requests"] || c.limitMatchRequests, limitStatusBoosts: map["limit_status_boosts"] || c.limitStatusBoosts, limitPhotoSizeMb: map["limit_photo_size_mb"] || c.limitPhotoSizeMb, matchWelcomeMessage: map["match_welcome_message"] || c.matchWelcomeMessage, premiumPriceFcfa: map["premium_price_fcfa"] || c.premiumPriceFcfa, premiumPriceWeekFcfa: map["premium_price_week_fcfa"] || c.premiumPriceWeekFcfa, premiumPrice2monthFcfa: map["premium_price_2month_fcfa"] || c.premiumPrice2monthFcfa, premiumDaysWeek: map["premium_days_week"] || c.premiumDaysWeek, premiumDays2month: map["premium_days_2month"] || c.premiumDays2month, premiumPriceEur: map["premium_price_eur"] || c.premiumPriceEur, eurToFcfaRate: map["eur_to_fcfa_rate"] || c.eurToFcfaRate, premiumDurationDays: map["premium_duration_days"] || c.premiumDurationDays, likesNotifDelayHours: map["likes_notification_delay_hours"] || c.likesNotifDelayHours, featureStatuses: map["feature_statuses"] || c.featureStatuses, featureGiftPremium: map["feature_gift_premium"] || c.featureGiftPremium, featureAssistant: map["feature_assistant"] || c.featureAssistant, featureGroupPremium: map["feature_group_premium"] || c.featureGroupPremium,
+        setAppConfig(c => ({ limitLikes: map["limit_likes_free"] || c.limitLikes, limitMessages: map["limit_messages_free"] || c.limitMessages, limitMessagesFemme: map["limit_messages_free_femme"] || c.limitMessagesFemme, limitMatchRequests: map["limit_match_requests"] || c.limitMatchRequests, limitStatusBoosts: map["limit_status_boosts"] || c.limitStatusBoosts, limitPhotoSizeMb: map["limit_photo_size_mb"] || c.limitPhotoSizeMb, matchWelcomeMessage: map["match_welcome_message"] || c.matchWelcomeMessage, premiumPriceFcfa: map["premium_price_fcfa"] || c.premiumPriceFcfa, premiumPriceWeekFcfa: map["premium_price_week_fcfa"] || c.premiumPriceWeekFcfa, premiumPrice2monthFcfa: map["premium_price_2month_fcfa"] || c.premiumPrice2monthFcfa, premiumDaysWeek: map["premium_days_week"] || c.premiumDaysWeek, premiumDays2month: map["premium_days_2month"] || c.premiumDays2month, premiumPriceEur: map["premium_price_eur"] || c.premiumPriceEur, eurToFcfaRate: map["eur_to_fcfa_rate"] || c.eurToFcfaRate, premiumDurationDays: map["premium_duration_days"] || c.premiumDurationDays, likesNotifDelayHours: map["likes_notification_delay_hours"] || c.likesNotifDelayHours, featureStatuses: map["feature_statuses"] || c.featureStatuses, featureGiftPremium: map["feature_gift_premium"] || c.featureGiftPremium, featureAssistant: map["feature_assistant"] || c.featureAssistant, featureGroupPremium: map["feature_group_premium"] || c.featureGroupPremium,
         featureGroupPhotos: map["feature_group_photos"] || c.featureGroupPhotos, maintenanceMode: map["maintenance_mode"] || c.maintenanceMode, maintenanceMessage: map["maintenance_message"] || c.maintenanceMessage, customBannedWords: map["custom_banned_words"] || c.customBannedWords, contactBannedWords: map["contact_banned_words"] || c.contactBannedWords, autoModContactReply: map["auto_mod_contact_reply"] || c.autoModContactReply, featureModerationInsults: map["feature_moderation_insults"] || c.featureModerationInsults, featureModerationContact: map["feature_moderation_contact"] || c.featureModerationContact, disabledBuiltinWords: map["disabled_builtin_words"] !== undefined ? map["disabled_builtin_words"] : c.disabledBuiltinWords, disabledBuiltinContactWords: map["disabled_builtin_contact_words"] !== undefined ? map["disabled_builtin_contact_words"] : c.disabledBuiltinContactWords }));
         if (map["custom_banned_words"] !== undefined) buildCustomBannedRegex(map["custom_banned_words"]);
         if (map["contact_banned_words"] !== undefined) buildContactBannedRegex(map["contact_banned_words"]);
@@ -2361,7 +2364,7 @@ export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () =
         <SiteInfoConfig auth={auth} group="landing" />
       </OffCanvasSection>
       <OffCanvasSection title="Limites & Quotas">
-        {([["limit_likes_free","limitLikes" as keyof typeof appConfig,"Likes gratuits/jour",appConfig.limitLikes,"number"],["limit_messages_free","limitMessages" as keyof typeof appConfig,"Messages gratuits/match",appConfig.limitMessages,"number"],["limit_photo_size_mb","limitPhotoSizeMb" as keyof typeof appConfig,"Taille max photo (Mo)",appConfig.limitPhotoSizeMb,"number"],["match_welcome_message","matchWelcomeMessage" as keyof typeof appConfig,"Message bienvenue match",appConfig.matchWelcomeMessage,"text"]] as [string, keyof typeof appConfig, string, string, string][]).map(([key,ck,label,value,type]) => (
+        {([["limit_likes_free","limitLikes" as keyof typeof appConfig,"Likes gratuits/jour",appConfig.limitLikes,"number"],["limit_messages_free","limitMessages" as keyof typeof appConfig,"Messages gratuits/match (hommes)",appConfig.limitMessages,"number"],["limit_messages_free_femme","limitMessagesFemme" as keyof typeof appConfig,"Messages gratuits/match (femmes)",appConfig.limitMessagesFemme,"number"],["limit_photo_size_mb","limitPhotoSizeMb" as keyof typeof appConfig,"Taille max photo (Mo)",appConfig.limitPhotoSizeMb,"number"],["match_welcome_message","matchWelcomeMessage" as keyof typeof appConfig,"Message bienvenue match",appConfig.matchWelcomeMessage,"text"]] as [string, keyof typeof appConfig, string, string, string][]).map(([key,ck,label,value,type]) => (
           <EditableRow key={key} label={label} value={value} type={type as "text"|"number"} open={editingConfig === key} onOpen={() => { setEditingConfig(editingConfig === key ? null : key); setEditingConfigValue(value); }} editValue={editingConfigValue} onEdit={setEditingConfigValue} onSave={async () => { await patch(key, editingConfigValue); setAppConfig(c => ({ ...c, [ck]: editingConfigValue })); setEditingConfig(null); }} />
         ))}
         {([["limit_match_requests","limitMatchRequests" as keyof typeof appConfig,"Demandes mise en relation/mois",appConfig.limitMatchRequests],["limit_status_boosts","limitStatusBoosts" as keyof typeof appConfig,"Boosts statut/mois",appConfig.limitStatusBoosts]] as [string, keyof typeof appConfig, string, string][]).map(([key,ck,label,value]) => (
@@ -4478,13 +4481,33 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
     }
   };
 
-  const loadMatchListData = async () => {
+  // ── search vide → derniers matchs de la plateforme (limite confortable).
+  //    search rempli → requête ciblée en base : trouve d'abord les profils dont le nom
+  //    correspond, puis tous LEURS matchs (même très anciens), sans dépendre d'une limite
+  //    de chargement globale. Corrige le cas où une recherche ne trouvait rien parce que
+  //    les matchs de la personne cherchée étaient plus vieux que les N derniers chargés. ──
+  const loadMatchListData = async (search: string = "") => {
     setMatchListLoading(true);
     try {
-      const r = await fetch(`${SUPABASE_URL}/rest/v1/matches?select=id,created_at,user1,user2&order=created_at.desc&limit=200`, {
-        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
-      });
-      const data = await r.json().catch(() => []);
+      const q = search.trim();
+      let data: any[] = [];
+      if (q) {
+        const pr = await fetch(`${SUPABASE_URL}/rest/v1/profiles?name=ilike.*${encodeURIComponent(q)}*&select=id&limit=200`, {
+          headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+        });
+        const matchingIds: string[] = (await pr.json().catch(() => [])).map((p: any) => p.id).filter(Boolean);
+        if (matchingIds.length === 0) { setMatchList([]); setMatchListLoading(false); return; }
+        const idList = matchingIds.join(",");
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/matches?select=id,created_at,user1,user2&or=(user1.in.(${idList}),user2.in.(${idList}))&order=created_at.desc&limit=500`, {
+          headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+        });
+        data = await r.json().catch(() => []);
+      } else {
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/matches?select=id,created_at,user1,user2&order=created_at.desc&limit=500`, {
+          headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+        });
+        data = await r.json().catch(() => []);
+      }
       if (!Array.isArray(data)) { setMatchListLoading(false); return; }
       const ids = [...new Set(data.flatMap((m: any) => [m.user1, m.user2]))];
       const profiles: Record<string, AdminProfile> = {};
@@ -5694,6 +5717,15 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
   const [showMatchList, setShowMatchList] = useState(false);
   const [matchList, setMatchList] = useState<{ id: string; created_at: string; user1?: string; user2?: string; profile1?: AdminProfile; profile2?: AdminProfile; message_count?: number }[]>([]);
   const [matchListSearch, setMatchListSearch] = useState("");
+  // ── Recherche débattue (400ms) : redéclenche loadMatchListData avec le texte tapé,
+  //    uniquement quand le sous-onglet "Voir les matchs" est actif. Vide → derniers matchs.
+  //    Rempli → requête ciblée en base (voir loadMatchListData), ne dépend plus d'une limite
+  //    de chargement fixe. ──
+  useEffect(() => {
+    if (matchSubTab !== "list") return;
+    const t = setTimeout(() => { loadMatchListData(matchListSearch); }, 400);
+    return () => clearTimeout(t);
+  }, [matchListSearch, matchSubTab]);
   const [matchListViewMode, setMatchListViewMode] = useState<"list" | "grid">("list");
   const [mmFollowViewMode, setMmFollowViewMode] = useState<"list" | "grid">("list");
   const [mmFollowStatusFilter, setMmFollowStatusFilter] = useState<"pending" | "pending_response" | "accepted" | "refused" | "expired" | null>(null);
@@ -13502,7 +13534,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     </div>
                   )}
                 </div>
-                <button onClick={() => { loadMatchListData(); }} style={{ background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "8px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: "#555", fontSize: "0.78rem", fontWeight: 700, flexShrink: 0 }}><IcoRefresh /> Actualiser</button>
+                <button onClick={() => { loadMatchListData(matchListSearch); }} style={{ background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "8px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: "#555", fontSize: "0.78rem", fontWeight: 700, flexShrink: 0 }}><IcoRefresh /> Actualiser</button>
                 <div style={{ display: "flex", borderRadius: 10, overflow: "hidden", border: `1.5px solid ${G.gris}`, flexShrink: 0 }}>
                   <div onClick={() => setMatchListViewMode("grid")} style={{ padding: "7px 12px", background: matchListViewMode === "grid" ? "#2980b9" : G.blanc, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={matchListViewMode === "grid" ? G.blanc : "#888"} strokeWidth="2.2" strokeLinecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
@@ -13515,12 +13547,12 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               {matchListLoading ? (
                 <div style={{ textAlign: "center", padding: 40 }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2980b9" strokeWidth="2" strokeLinecap="round" style={{ animation: "pulse 0.8s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg></div>
               ) : matchList.length === 0 ? (
-                <div style={{ textAlign: "center", padding: "40px 20px", color: "#aaa", fontSize: "0.88rem" }}>Aucun match trouvé</div>
+                <div style={{ textAlign: "center", padding: "40px 20px", color: "#aaa", fontSize: "0.88rem" }}>{matchListSearch.trim() ? `Aucun match pour « ${matchListSearch} »` : "Aucun match trouvé"}</div>
               ) : (() => {
-                const q = matchListSearch.trim().toLowerCase();
-                const deduped = dedupeMatchesByCouple(matchList);
-                const filtered = q ? deduped.filter(m => m.profile1?.name?.toLowerCase().includes(q) || m.profile2?.name?.toLowerCase().includes(q)) : deduped;
-                if (filtered.length === 0) return <div style={{ textAlign: "center", padding: "40px 20px", color: "#aaa", fontSize: "0.88rem" }}>Aucun match pour « {matchListSearch} »</div>;
+                const q = matchListSearch.trim();
+                // matchList reflète déjà la recherche (requête ciblée en base dans loadMatchListData) —
+                // plus besoin de refiltrer côté client ici.
+                const filtered = dedupeMatchesByCouple(matchList);
                 return (
                 <div style={matchListViewMode === "grid" ? { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 8 } : { display: "flex", flexDirection: "column", gap: 8 }}>
                   {q && <div style={{ fontSize: "0.72rem", color: "#888", marginBottom: 2, gridColumn: "1/-1" }}>{filtered.length} match{filtered.length > 1 ? "s" : ""} avec « {matchListSearch} »</div>}

@@ -265,7 +265,11 @@ export let POLL_ADMIN_BADGE_MS = 5000;   // Badge admin
 export let POLL_STATS_MS = 60000;        // Stats tableau de bord
 export let POLL_BROADCAST_MS = 60000;    // Broadcasts
 export let POLL_SUPPORT_MS = 6000;       // Messages support
-export const FREE_LIMITS = { likes: 5, messages: 3, matchRequests: 2, statusBoosts: 2 }; // valeurs par défaut, écrasées par app_settings
+export const FREE_LIMITS = { likes: 5, messages: 3, messagesFemme: 100, matchRequests: 2, statusBoosts: 2 }; // valeurs par défaut, écrasées par app_settings
+// Limite de messages gratuits/match : différenciée par genre (ex: femmes 100, hommes 3 par défaut).
+export function freeMessageLimitFor(gender?: string | null): number {
+  return gender === "Femme" ? FREE_LIMITS.messagesFemme : FREE_LIMITS.messages;
+}
 const STATUS_LIMIT = 2;
 export const LIFETIME_PREMIUM_UNTIL = "2099-12-31T23:59:59.000Z";
 export let PREMIUM_30_DAYS_MS = 31 * 24 * 60 * 60 * 1000; // valeur par défaut, écrasée par app_settings
@@ -468,7 +472,7 @@ export function dedupeMatchesByCouple<T extends { user1?: string; user2?: string
 }
 
 // Charger les settings dynamiques depuis Supabase au démarrage
-fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,pay_wero_enabled,pay_paypal_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,feature_show_likes_views_free,feature_group_premium,feature_group_photos,feature_moderation_insults,feature_moderation_contact,premium_screen_variant,custom_banned_words,contact_banned_words,disabled_builtin_words,disabled_builtin_contact_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,pay_wero_number,pay_paypal_number,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,store_link_android,store_link_ios,plan_week_enabled,plan_month_enabled,plan_2month_enabled,discover_default_mode,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,auto_warn_ban_contact_enabled,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price,privacy_notice_enabled,premium_boost_enabled,assistant_photo_url,broadcast_enabled,modal_match_title,modal_match_subtitle)&select=key,value`, {
+fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_messages_free_femme,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,pay_wero_enabled,pay_paypal_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,feature_show_likes_views_free,feature_group_premium,feature_group_photos,feature_moderation_insults,feature_moderation_contact,premium_screen_variant,custom_banned_words,contact_banned_words,disabled_builtin_words,disabled_builtin_contact_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,pay_wero_number,pay_paypal_number,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,store_link_android,store_link_ios,plan_week_enabled,plan_month_enabled,plan_2month_enabled,discover_default_mode,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,auto_warn_ban_contact_enabled,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price,privacy_notice_enabled,premium_boost_enabled,assistant_photo_url,broadcast_enabled,modal_match_title,modal_match_subtitle)&select=key,value`, {
   headers: { "apikey": SUPABASE_KEY },
 }).then(r => r.json()).then((data: { key: string; value: string }[]) => {
   if (!Array.isArray(data)) return;
@@ -535,6 +539,7 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
   if (map["landing_slogan"]) LANDING_SLOGAN = map["landing_slogan"];
   if (map["limit_likes_free"]) FREE_LIMITS.likes = parseInt(map["limit_likes_free"]) || 5;
   if (map["limit_messages_free"]) FREE_LIMITS.messages = parseInt(map["limit_messages_free"]) || 3;
+  if (map["limit_messages_free_femme"]) FREE_LIMITS.messagesFemme = parseInt(map["limit_messages_free_femme"]) || 100;
   if (map["limit_match_requests"]) FREE_LIMITS.matchRequests = parseInt(map["limit_match_requests"]) || 2;
   if (map["limit_status_boosts"]) FREE_LIMITS.statusBoosts = parseInt(map["limit_status_boosts"]) || 2;
   if (map["premium_duration_days"]) PREMIUM_30_DAYS_MS = (parseInt(map["premium_duration_days"]) || 31) * 24 * 60 * 60 * 1000;
@@ -8984,9 +8989,10 @@ const ReplyBanner = React.memo(function ReplyBanner({ replyTo, partnerName, myId
   const name = isMine ? "Toi" : (partnerName ?? "…");
   const accent = isMine ? G.vert : G.rouge;
   const isImg = replyTo.content.startsWith("[img]") && !replyTo.is_view_once && !replyTo.is_destroyed;
+  const isVid = replyTo.content.startsWith("[video]") && !replyTo.is_view_once && !replyTo.is_destroyed;
   const isAudio = replyTo.content.startsWith("[audio]") && replyTo.content.endsWith("[/audio]");
   const raw = replyTo.content.replace(/^\[↩.*?\]\n/, "");
-  const preview = replyTo.is_destroyed ? (isAudio ? "Vocal détruit" : "Photo détruite") : replyTo.is_view_once ? (isAudio ? "Vocal vue unique" : "Photo vue unique") : (!isImg && !isAudio && raw.length > 80 ? raw.slice(0, 80) + "…" : raw);
+  const preview = replyTo.is_destroyed ? (isAudio ? "Vocal détruit" : replyTo.content.startsWith("[video]") ? "Vidéo détruite" : "Photo détruite") : replyTo.is_view_once ? (isAudio ? "Vocal vue unique" : replyTo.content.startsWith("[video]") ? "Vidéo vue unique" : "Photo vue unique") : (!isImg && !isVid && !isAudio && raw.length > 80 ? raw.slice(0, 80) + "…" : raw);
   return (
     // ── ReplyBanner v2 : visible, robuste iOS, sans overflow caché ──
     <div style={{
@@ -9018,6 +9024,13 @@ const ReplyBanner = React.memo(function ReplyBanner({ replyTo, partnerName, myId
               </svg>
               <span style={{ color: "#888" }}>Photo</span>
             </span>
+          ) : isVid ? (
+            <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+              </svg>
+              <span style={{ color: "#888" }}>Vidéo</span>
+            </span>
           ) : isAudio && !replyTo.is_view_once && !replyTo.is_destroyed ? (
             <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -9028,9 +9041,12 @@ const ReplyBanner = React.memo(function ReplyBanner({ replyTo, partnerName, myId
           ) : preview}
         </div>
       </div>
-      {/* Miniature image */}
+      {/* Miniature image / vidéo */}
       {isImg && (
         <img src={replyTo.content.slice(5, -6)} alt="" style={{ width: 48, height: 48, objectFit: "cover", flexShrink: 0, alignSelf: "center", borderRadius: 8, margin: "0 6px" }} />
+      )}
+      {isVid && (
+        <img src={parseVideoContent(replyTo.content).thumbUrl} alt="" style={{ width: 48, height: 48, objectFit: "cover", flexShrink: 0, alignSelf: "center", borderRadius: 8, margin: "0 6px" }} />
       )}
       {/* Bouton ✕ */}
       <div onClick={onCancel} style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "0 12px", cursor: "pointer", flexShrink: 0 }}>
@@ -9104,6 +9120,43 @@ const parseAudioContent = (content: string): { url: string; duration: number; wa
   return { url: url || "", duration: parseFloat(durStr) || 0, wave: waveStr ? waveStr.split(",").map(n => parseFloat(n) || 0) : [] };
 };
 const encodeAudioContent = (url: string, duration: number, wave: number[]) => `[audio]${url}::${duration.toFixed(1)}::${wave.map(n => n.toFixed(2)).join(",")}[/audio]`;
+
+// ── Messages vidéo : encodage compact dans content → "[video]url::durée::urlMiniature[/video]" ──
+const isVideoMsg = (content: string) => content.startsWith("[video]") && content.endsWith("[/video]");
+const parseVideoContent = (content: string): { url: string; duration: number; thumbUrl: string } => {
+  const inner = content.slice(7, -8);
+  const [url, durStr, thumbUrl] = inner.split("::");
+  return { url: url || "", duration: parseFloat(durStr) || 0, thumbUrl: thumbUrl || "" };
+};
+const encodeVideoContent = (url: string, duration: number, thumbUrl: string) => `[video]${url}::${duration.toFixed(1)}::${thumbUrl}[/video]`;
+// Capture une image de la vidéo (peu après le début, pour éviter une frame noire) pour servir de
+// miniature dans la bulle de conversation, sans avoir à charger toute la vidéo.
+function captureVideoThumbnail(file: File): Promise<Blob | null> {
+  return new Promise((resolve) => {
+    const video = document.createElement("video");
+    video.preload = "metadata";
+    video.muted = true;
+    video.playsInline = true;
+    const url = URL.createObjectURL(file);
+    video.src = url;
+    const cleanup = () => { URL.revokeObjectURL(url); };
+    video.onloadedmetadata = () => {
+      video.currentTime = Math.min(0.15, Math.max(0, (video.duration || 1) / 10));
+    };
+    video.onseeked = () => {
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = video.videoWidth || 480;
+        canvas.height = video.videoHeight || 640;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) { cleanup(); resolve(null); return; }
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob(blob => { cleanup(); resolve(blob); }, "image/jpeg", 0.82);
+      } catch { cleanup(); resolve(null); }
+    };
+    video.onerror = () => { cleanup(); resolve(null); };
+  });
+}
 
 // ── Lecteur de note vocale unique, mutualisé entre le vocal "normal" et le vocal "vue unique". ──
 // La seule différence de comportement est pilotée par m.is_view_once (comme pour les photos).
@@ -9409,8 +9462,11 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
   };
   const [imgLoading, setImgLoading] = useState(false);
   const [previewImg, setPreviewImg] = useState<string | null>(null);
+  const [previewVideoUrl, setPreviewVideoUrl] = useState<string | null>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [pendingPreview, setPendingPreview] = useState<string | null>(null);
+  const [pendingKind, setPendingKind] = useState<"image" | "video">("image");
+  const [pendingDuration, setPendingDuration] = useState(0);
   const [pendingViewOnce, setPendingViewOnce] = useState(false);
   // ── Recadrage optionnel avant envoi : rectangle de sélection ajustable par l'utilisateur,
   //    sur l'image affichée à sa taille réelle (pas de object-fit à compenser). Coordonnées du
@@ -9615,6 +9671,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
       if (wantMine !== mine) continue;
       let body = mm.content.replace(/^\[↩ .+? : [\s\S]+?\]\n/, "");
       if (quoted === "Photo") { if (body.startsWith("[img]")) { target = mm; break; } continue; }
+      if (quoted === "Vidéo") { if (body.startsWith("[video]")) { target = mm; break; } continue; }
       const b = body.trim().toLowerCase();
       if (q && (b.startsWith(q) || b.includes(q))) { target = mm; break; }
     }
@@ -10548,9 +10605,10 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
       try { await sb.update(auth.token, "messages", msgId, { content: newContent, is_edited: true }); } catch {}
       return;
     }
-    if (!auth.isPremium && msgCount >= FREE_LIMITS.messages) { onShowPremium(`Tu as envoyé tes ${FREE_LIMITS.messages} messages gratuits avec ${open.partner?.name}. Passe Premium !`); return; }
+    if (!auth.isPremium && msgCount >= freeMessageLimitFor(myGenderForLikeGuard)) { onShowPremium(`Tu as envoyé tes ${freeMessageLimitFor(myGenderForLikeGuard)} messages gratuits avec ${open.partner?.name}. Passe Premium !`); return; }
     const replyIsAudio = !!replyTo && isAudioMsg(replyTo.content);
-    const rawQuoted = replyTo ? (replyTo.is_destroyed ? (replyIsAudio ? "Vocal détruit" : "Photo détruite") : replyTo.is_view_once ? (replyIsAudio ? "Vocal vue unique" : "Photo vue unique") : replyIsAudio ? "Message vocal" : replyTo.content.startsWith("[img]") ? "Photo" : replyTo.content) : "";
+    const replyIsVideo = !!replyTo && replyTo.content.startsWith("[video]");
+    const rawQuoted = replyTo ? (replyTo.is_destroyed ? (replyIsAudio ? "Vocal détruit" : replyIsVideo ? "Vidéo détruite" : "Photo détruite") : replyTo.is_view_once ? (replyIsAudio ? "Vocal vue unique" : replyIsVideo ? "Vidéo vue unique" : "Photo vue unique") : replyIsAudio ? "Message vocal" : replyIsVideo ? "Vidéo" : replyTo.content.startsWith("[img]") ? "Photo" : replyTo.content) : "";
     // Supprimer la citation imbriquée si le message cité est lui-même une réponse
     const cleanQuoted = rawQuoted.replace(/^\[↩ .+? : .+?\]\n/, "").replace(/\]/g, "）").substring(0, 60);
     const prefix = replyTo ? `[↩ ${replyTo.sender_id === auth.userId ? "Toi" : open.partner?.name} : ${cleanQuoted}]\n` : "";
@@ -10561,7 +10619,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
       setMsgs(m => [...m, row]); setMsgCount(c => c + 1); setText(""); setReplyTo(null);
     } else if (row && (row.code === "P0001" || (typeof row.message === "string" && row.message.includes("FREE_MESSAGE_LIMIT_REACHED")))) {
       // Refus du serveur : limite de messages gratuits atteinte (trigger trg_free_message_limit)
-      onShowPremium(`Tu as envoyé tes ${FREE_LIMITS.messages} messages gratuits avec ${open.partner?.name}. Passe Premium !`);
+      onShowPremium(`Tu as envoyé tes ${freeMessageLimitFor(myGenderForLikeGuard)} messages gratuits avec ${open.partner?.name}. Passe Premium !`);
     }
     // Tout autre échec (réseau, etc.) : on ne fait rien, le champ reste rempli pour réessayer
     } finally {
@@ -10574,15 +10632,37 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file || !open) return;
-    if (!auth.isPremium) { onShowPremium("L'envoi de photos est réservé aux membres Premium !"); return; }
+    if (!auth.isPremium) { onShowPremium("L'envoi de photos et vidéos est réservé aux membres Premium !"); return; }
+    const isVideoFile = file.type.startsWith("video/");
+    if (isVideoFile) {
+      // Vérifie la durée avant d'accepter le fichier (max 1 minute, comme les vocaux).
+      const probe = document.createElement("video");
+      probe.preload = "metadata";
+      probe.onloadedmetadata = () => {
+        URL.revokeObjectURL(probe.src);
+        if (probe.duration > 61) {
+          setToast({ msg: "Vidéo trop longue (1 minute maximum).", type: "error" });
+          return;
+        }
+        setPendingPreview(URL.createObjectURL(file));
+        setPendingFile(file);
+        setPendingKind("video");
+        setPendingDuration(probe.duration || 0);
+        setPendingViewOnce(false);
+      };
+      probe.src = URL.createObjectURL(file);
+      return;
+    }
     setPendingPreview(URL.createObjectURL(file));
     setPendingFile(file);
+    setPendingKind("image");
     setPendingViewOnce(false);
   };
   // Annule l'aperçu
   const cancelPending = () => {
     setPendingPreview(prev => { if (prev) URL.revokeObjectURL(prev); return null; });
     setPendingFile(null);
+    setPendingKind("image");
     setPendingViewOnce(false);
     setCropModalOpen(false);
     setCropDisplaySize(null);
@@ -10666,9 +10746,41 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
     if (!pendingFile || !open) return;
     const file = pendingFile;
     const once = pendingViewOnce;
+    const kind = pendingKind;
+    const duration = pendingDuration;
     cancelPending();
     setImgLoading(true);
     try {
+      if (kind === "video") {
+        const ext = file.name.split(".").pop()?.toLowerCase() || "mp4";
+        const path = `${auth.userId}/${Date.now()}.${ext}`;
+        const r = await fetch(`${SUPABASE_URL}/storage/v1/object/messages/${path}`, {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${auth.token}`, "Content-Type": file.type || "video/mp4", "x-upsert": "true" },
+          body: file,
+        });
+        if (r.ok) {
+          const url = `${SUPABASE_URL}/storage/v1/object/public/messages/${path}`;
+          let thumbUrl = "";
+          const thumbBlob = await captureVideoThumbnail(file);
+          if (thumbBlob) {
+            const thumbPath = `${auth.userId}/${Date.now()}-thumb.jpg`;
+            const tr = await fetch(`${SUPABASE_URL}/storage/v1/object/messages/${thumbPath}`, {
+              method: "POST",
+              headers: { "Authorization": `Bearer ${auth.token}`, "Content-Type": "image/jpeg", "x-upsert": "true" },
+              body: thumbBlob,
+            });
+            if (tr.ok) thumbUrl = `${SUPABASE_URL}/storage/v1/object/public/messages/${thumbPath}`;
+          }
+          const content = encodeVideoContent(url, duration, thumbUrl);
+          const row: Record<string, unknown> = { match_id: open.id, sender_id: auth.userId, content, is_read: false };
+          if (once) row.is_view_once = true;
+          const res = await sb.insert<Message>(auth.token, "messages", row);
+          if (res[0]) { setMsgs(m => [...m, res[0]]); setMsgCount(c => c + 1); }
+        }
+        setImgLoading(false);
+        return;
+      }
       const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
       const path = `${auth.userId}/${Date.now()}.${ext}`;
       const r = await fetch(`${SUPABASE_URL}/storage/v1/object/messages/${path}`, {
@@ -10715,9 +10827,31 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
       setPreviewImg(objUrl);
     } catch {}
   };
+  // Ouvre une vidéo vue unique : précharge en mémoire → détruit le fichier côté serveur → affiche le blob.
+  const openVideoViewOnce = async (m: Message) => {
+    if (!m.id || m.is_destroyed) return;
+    try {
+      const { url } = parseVideoContent(m.content);
+      const resp = await fetch(url);
+      const blob = await resp.blob();
+      const objUrl = URL.createObjectURL(blob);
+      const now = new Date().toISOString();
+      destroyedIdsRef.current.add(m.id);
+      setMsgs(list => list.map(x => x.id === m.id ? { ...x, is_destroyed: true, viewed_at: now, destroyed_at: now } : x));
+      sb.update(auth.token, "messages", m.id, { is_destroyed: true, viewed_at: now, destroyed_at: now }).catch(() => {});
+      fetch(`${SUPABASE_URL}/functions/v1/burn-video`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` },
+        body: JSON.stringify({ message_id: m.id }),
+      }).catch(() => {});
+      setBurnMsg(m);
+      setPreviewVideoUrl(objUrl);
+    } catch {}
+  };
   // Ferme la visionneuse (libère le blob mémoire)
   const closePreview = () => {
     setPreviewImg(prev => { if (prev && prev.startsWith("blob:")) URL.revokeObjectURL(prev); return null; });
+    setPreviewVideoUrl(prev => { if (prev && prev.startsWith("blob:")) URL.revokeObjectURL(prev); return null; });
     setBurnMsg(null);
   };
 
@@ -11475,22 +11609,25 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
                           const lm = c.lastMsg; const ct = lm?.content;
                           if (!ct) return "Dis bonjour !";
                           const isPhoto = ct.startsWith("[img]") && ct.endsWith("[/img]");
+                          const isVideoLast = ct.startsWith("[video]") && ct.endsWith("[/video]");
                           const isVoiceMsg = ct.startsWith("[audio]") && ct.endsWith("[/audio]");
                           const replyIcon = <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>;
                           const replyMatch = ct.match(/^\[↩ (.+?) : ([\s\S]+?)\]\n([\s\S]*)$/);
                           if (replyMatch) {
                             const body = replyMatch[3] || "";
                             const bodyIsPhoto = body.startsWith("[img]") && body.endsWith("[/img]");
+                            const bodyIsVideo = body.startsWith("[video]") && body.endsWith("[/video]");
                             const bodyIsVoice = body.startsWith("[audio]") && body.endsWith("[/audio]");
-                            const bodyLabel = bodyIsVoice ? "Message vocal" : bodyIsPhoto ? "Photo" : body;
+                            const bodyLabel = bodyIsVoice ? "Message vocal" : bodyIsVideo ? "Vidéo" : bodyIsPhoto ? "Photo" : body;
                             return <span style={{ display: "inline-flex", alignItems: "center", gap: 4, verticalAlign: "middle" }}>{replyIcon}<span>{bodyLabel}</span></span>;
                           }
-                          if (isPhoto || isVoiceMsg || lm?.is_destroyed || lm?.is_view_once) {
+                          if (isPhoto || isVideoLast || isVoiceMsg || lm?.is_destroyed || lm?.is_view_once) {
                             const micIcon = <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>;
-                            let label = isVoiceMsg ? "Message vocal" : "Photo";
-                            let icon = isVoiceMsg ? micIcon : <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>;
-                            if (lm?.is_destroyed) { label = isVoiceMsg ? "Vocal détruit" : "Photo détruite"; icon = <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>; }
-                            else if (lm?.is_view_once) { label = isVoiceMsg ? "Vocal vue unique" : "Photo vue unique"; icon = isVoiceMsg ? <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><rect x="2.4" y="9" width="2.4" height="6" rx="1.2" fill="currentColor"/><rect x="7.2" y="6" width="2.4" height="12" rx="1.2" fill="currentColor"/><rect x="12" y="3" width="2.4" height="18" rx="1.2" fill="currentColor"/><rect x="16.8" y="6" width="2.4" height="12" rx="1.2" fill="currentColor"/><rect x="21.6" y="9" width="2.4" height="6" rx="1.2" fill="currentColor"/></svg> : <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>; }
+                            const videoIcon = <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>;
+                            let label = isVoiceMsg ? "Message vocal" : isVideoLast ? "Vidéo" : "Photo";
+                            let icon = isVoiceMsg ? micIcon : isVideoLast ? videoIcon : <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>;
+                            if (lm?.is_destroyed) { label = isVoiceMsg ? "Vocal détruit" : isVideoLast ? "Vidéo détruite" : "Photo détruite"; icon = <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>; }
+                            else if (lm?.is_view_once) { label = isVoiceMsg ? "Vocal vue unique" : isVideoLast ? "Vidéo vue unique" : "Photo vue unique"; icon = isVoiceMsg ? <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><rect x="2.4" y="9" width="2.4" height="6" rx="1.2" fill="currentColor"/><rect x="7.2" y="6" width="2.4" height="12" rx="1.2" fill="currentColor"/><rect x="12" y="3" width="2.4" height="18" rx="1.2" fill="currentColor"/><rect x="16.8" y="6" width="2.4" height="12" rx="1.2" fill="currentColor"/><rect x="21.6" y="9" width="2.4" height="6" rx="1.2" fill="currentColor"/></svg> : <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>; }
                             return <span style={{ display: "inline-flex", alignItems: "center", gap: 5, verticalAlign: "middle" }}>{icon}<span>{label}</span></span>;
                           }
                           return ct;
@@ -11550,7 +11687,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
           <div style={{ fontWeight: 700, fontSize: "0.92rem", color: G.brun, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{open.partner?.name}</div>
           {open.partner?.id === SUPPORT_TEAM_ID ? <div style={{ fontSize: "0.7rem", color: "#27ae60", fontWeight: 600 }}>● Répond sous 24h</div> : open.partner?.hide_online_status ? null : (() => { const s = getOnlineStatus(open.partner?.last_seen); return <div style={{ fontSize: "0.7rem", color: s.color, fontWeight: 600 }}>● {s.label}</div>; })()}
         </div>
-        {!auth.isPremium && <div style={{ fontSize: "0.7rem", color: "#555", background: G.creme, padding: "4px 8px", borderRadius: 50, flexShrink: 0 }}>{Math.max(0, FREE_LIMITS.messages - msgCount)}/{FREE_LIMITS.messages} msg</div>}
+        {!auth.isPremium && <div style={{ fontSize: "0.7rem", color: "#555", background: G.creme, padding: "4px 8px", borderRadius: 50, flexShrink: 0 }}>{Math.max(0, freeMessageLimitFor(myGenderForLikeGuard) - msgCount)}/{freeMessageLimitFor(myGenderForLikeGuard)} msg</div>}
         {/* Voir le numéro du match : uniquement pour un vrai match (pas la conversation Assistant),
             toujours visible pour tout le monde. Gratuit → ouvre directement le mur Premium.
             Premium → révèle le numéro si le match l'a autorisé et l'a renseigné, sinon message
@@ -11603,6 +11740,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
         {msgs.map((m, i) => {
           const isMine = m.sender_id === auth.userId;
           const isImg = isImage(m.content);
+          const isVid = isVideoMsg(m.content);
           const isVoice = isAudioMsg(m.content);
           const time = m.created_at ? new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) : "";
           const reactions = m.reactions || {};
@@ -11701,6 +11839,104 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
                       {isMine && <TickIcon read={m.is_read} isPremium={auth.isPremium} />}
                     </div>
                     {/* Badges réactions sous l'image - identique aux messages texte */}
+                    {reactionEntries.length > 0 && (
+                      <div style={{ position: "absolute", bottom: -18, [isMine ? "right" : "left"]: 4, display: "flex", gap: 3 }}>
+                        {reactionEntries.map(([emoji, users]) => (
+                          <div key={emoji} onClick={async () => {
+                            if (!m.id) return;
+                            const current = m.reactions || {};
+                            const usersOnThis = (current[emoji] || []) as string[];
+                            const hasReacted = usersOnThis.includes(auth.userId);
+                            const cleaned: Record<string, string[]> = {};
+                            for (const [e, us] of Object.entries(current)) {
+                              cleaned[e] = (us as string[]).filter((u: string) => u !== auth.userId);
+                            }
+                            const base: string[] = cleaned[emoji] || [];
+                            const updated = hasReacted ? base : [...base, auth.userId];
+                            const newReactions = { ...cleaned, [emoji]: updated };
+                            await sb.update(auth.token, "messages", m.id, { reactions: newReactions });
+                            setMsgs(prev => prev.map(msg => msg.id === m.id ? { ...msg, reactions: newReactions } : msg));
+                          }} style={{ background: G.blanc, borderRadius: 50, padding: "2px 6px", fontSize: "0.75rem", boxShadow: "0 1px 4px rgba(0,0,0,0.15)", cursor: "pointer", display: "flex", alignItems: "center", gap: 2, border: `1px solid ${G.gris}` }}>
+                            {emoji}<span style={{ fontSize: "0.65rem", color: "#555", fontWeight: 600 }}>{users.length > 1 ? users.length : ""}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : isVid ? (
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 4, flexDirection: isMine ? "row-reverse" : "row", width: "100%", justifyContent: isMine ? "flex-start" : "flex-start" }}>
+                  <div
+                    style={{ position: "relative", maxWidth: "72%", display: "flex", flexDirection: "column", alignItems: isMine ? "flex-end" : "flex-start" }}
+                    onTouchStart={handleLongPressStart} onTouchEnd={handleLongPressEnd} onMouseDown={handleLongPressStart} onMouseUp={handleLongPressEnd}
+                  >
+                    {!m.is_view_once && !m.is_destroyed && (
+                    <div className="msg-arrow" onClick={(e) => { e.stopPropagation(); setContextMenu({ msg: m, x: 0, y: 0 }); }} style={{ position: "absolute", top: 6, right: 6, zIndex: 3, cursor: "pointer", width: 22, height: 22, borderRadius: "50%", background: "rgba(255,255,255,0.78)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 1px 4px rgba(0,0,0,0.12)" }}>
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                    </div>
+                    )}
+                    {m.is_destroyed ? (
+                      <div onClick={() => { if (!isMine) setShowDestroyed(true); }} style={{ display: "flex", alignItems: "center", gap: 11, padding: "12px 15px", borderRadius: isMine ? "16px 16px 4px 16px" : "16px 16px 16px 4px", background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.08)", cursor: isMine ? "default" : "pointer", minWidth: 200 }}>
+                        <div style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
+                        </div>
+                        <div style={{ minWidth: 0 }}>
+                          {isMine ? (
+                            <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#444" }}>Vidéo consultée et détruite</div>
+                          ) : (
+                            <>
+                              <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#444" }}>Vidéo détruite</div>
+                              <div style={{ fontSize: "0.72rem", color: "#999" }}>Cette vidéo a été consultée.</div>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    ) : m.is_view_once ? (
+                      isMine ? (
+                        <div style={{ display: "flex", alignItems: "center", gap: 11, padding: "12px 15px", borderRadius: "18px 18px 4px 18px", background: G.rouge, minWidth: 200 }}>
+                          <div style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                          </div>
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#fff" }}>Vidéo vue unique</div>
+                            <div style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.85)" }}>Envoyée</div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div onClick={() => openVideoViewOnce(m)} style={{ display: "flex", alignItems: "center", gap: 11, padding: "12px 15px", borderRadius: "18px 18px 18px 4px", background: G.blanc, border: `1px solid ${G.gris}`, boxShadow: "0 1px 4px rgba(0,0,0,0.06)", cursor: "pointer", minWidth: 200 }}>
+                          <div style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(192,57,43,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                          </div>
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ fontWeight: 700, fontSize: "0.85rem", color: G.brun }}>Vidéo vue unique</div>
+                            <div style={{ fontSize: "0.72rem", color: G.rouge, fontWeight: 600 }}>Appuie pour voir</div>
+                          </div>
+                        </div>
+                      )
+                    ) : (() => {
+                      const vp = parseVideoContent(m.content);
+                      return (
+                        <div onClick={() => setPreviewVideoUrl(vp.url)} style={{ position: "relative", cursor: "pointer", width: "100%", borderRadius: isMine ? "14px 14px 4px 14px" : "14px 14px 14px 4px", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}>
+                          {vp.thumbUrl ? (
+                            <img src={vp.thumbUrl} alt="vidéo" loading="lazy" style={{ width: "100%", display: "block" }} />
+                          ) : (
+                            <div style={{ width: 220, height: 160, background: "#111" }} />
+                          )}
+                          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            <div style={{ width: 46, height: 46, borderRadius: "50%", background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                              <svg width="20" height="20" viewBox="0 0 24 24" fill="#fff"><polygon points="6 3 20 12 6 21 6 3"/></svg>
+                            </div>
+                          </div>
+                          {vp.duration > 0 && (
+                            <div style={{ position: "absolute", bottom: 6, right: 8, background: "rgba(0,0,0,0.6)", color: "#fff", fontSize: "0.68rem", fontWeight: 700, padding: "2px 7px", borderRadius: 50 }}>{fmtAudioTime(vp.duration)}</div>
+                          )}
+                        </div>
+                      );
+                    })()}
+                    <div style={{ display: "flex", alignItems: "center", gap: 3, marginTop: 3, justifyContent: isMine ? "flex-end" : "flex-start" }}>
+                      <span style={{ fontSize: "0.62rem", color: "#aaa" }}>{time}</span>
+                      {isMine && <TickIcon read={m.is_read} isPremium={auth.isPremium} />}
+                    </div>
                     {reactionEntries.length > 0 && (
                       <div style={{ position: "absolute", bottom: -18, [isMine ? "right" : "left"]: 4, display: "flex", gap: 3 }}>
                         {reactionEntries.map(([emoji, users]) => (
@@ -11946,8 +12182,8 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
           <div ref={barRowRef} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", position: "relative" }}>
             {/* Bloc idle : image / emoji / texte — masqué (pas démonté) pendant l'enregistrement */}
             <div style={{ display: (recState === "recording" || recState === "locked") ? "none" : "flex", gap: 8, alignItems: "flex-end", flex: 1, minWidth: 0 }}>
-              <input ref={imgRef} type="file" accept="image/*" onChange={onPickImage} style={{ display: "none" }} />
-              <div onClick={() => auth.isPremium ? imgRef.current?.click() : onShowPremium("L'envoi de photos est réservé aux membres Premium !")}
+              <input ref={imgRef} type="file" accept="image/*,video/*" onChange={onPickImage} style={{ display: "none" }} />
+              <div onClick={() => auth.isPremium ? imgRef.current?.click() : onShowPremium("L'envoi de photos et vidéos est réservé aux membres Premium !")}
                 style={{ width: 40, height: 40, borderRadius: "50%", background: auth.isPremium ? "rgba(192,57,43,0.08)" : "#F5F5F5", border: `1.5px solid ${auth.isPremium ? "rgba(192,57,43,0.25)" : "#E0E0E0"}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, marginBottom: 2 }}>
                 {imgLoading ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{animation:"pulse 0.8s ease-in-out infinite"}}><circle cx="12" cy="12" r="10"/></svg> : (
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={auth.isPremium ? G.rouge : "#bbb"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -12175,10 +12411,11 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
                 const m = contextMenu.msg;
                 const isMine = m.sender_id === auth.userId;
                 const isImage = m.content.startsWith("[img]");
+                const isVideoCtx = m.content.startsWith("[video]");
                 const isAudioCtx = isAudioMsg(m.content);
                 const ageMs = m.created_at ? Date.now() - new Date(m.created_at).getTime() : Infinity;
                 const within15min = ageMs <= 15 * 60 * 1000;
-                if (!isMine || isImage || isAudioCtx || !within15min) return null;
+                if (!isMine || isImage || isVideoCtx || isAudioCtx || !within15min) return null;
                 return (
                   <div onClick={() => {
                     const msg = contextMenu!.msg;
@@ -12200,7 +12437,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
               </div>
               {(() => {
                 const m = contextMenu.msg;
-                if (m.content.startsWith("[img]") || isAudioMsg(m.content)) return null; // rien d'utile (ni permis) à copier pour une photo/un vocal
+                if (m.content.startsWith("[img]") || m.content.startsWith("[video]") || isAudioMsg(m.content)) return null; // rien d'utile (ni permis) à copier pour une photo/vidéo/vocal
                 return (
                   <div onClick={async () => {
                     const contentToCopy = contextMenu.msg.content.replace(/^\[↩ .+? : .+?\]\n/, "");
@@ -12286,19 +12523,46 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
         </div>
       )}
 
+      {/* Modal aperçu vidéo */}
+      {previewVideoUrl && (
+        <div onClick={closePreview} className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.92)", zIndex: 500, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div className="moyo-card-in" onClick={(e) => { e.stopPropagation(); closePreview(); }} style={{ position: "absolute", top: "calc(env(safe-area-inset-top) + 20px)", right: 20, width: 40, height: 40, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: "1.2rem", color: "#fff", boxShadow: "0 2px 10px rgba(0,0,0,0.35)", zIndex: 2 }}>✕</div>
+          {burnMsg && (
+            <div onClick={e => e.stopPropagation()} style={{ position: "absolute", top: "calc(env(safe-area-inset-top) + 22px)", left: "50%", transform: "translateX(-50%)", display: "flex", alignItems: "center", gap: 7, background: "rgba(0,0,0,0.55)", border: "1px solid rgba(255,255,255,0.22)", borderRadius: 50, padding: "7px 15px", color: "#fff", fontSize: "0.8rem", fontWeight: 600, zIndex: 2 }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              Vue unique
+            </div>
+          )}
+          <video src={previewVideoUrl} controls autoPlay playsInline onClick={e => e.stopPropagation()} style={{ maxWidth: "95%", maxHeight: "90vh", borderRadius: 12 }} />
+          {burnMsg && (
+            <div onClick={e => e.stopPropagation()} style={{ position: "absolute", bottom: 28, left: "50%", transform: "translateX(-50%)", width: "calc(100% - 40px)", maxWidth: 440, display: "flex", alignItems: "center", gap: 11, background: "rgba(0,0,0,0.62)", border: "1px solid rgba(255,255,255,0.14)", borderRadius: 14, padding: "13px 16px", color: "#ddd", fontSize: "0.8rem", lineHeight: 1.45, zIndex: 2 }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              <span><b style={{ color: "#fff" }}>Vidéo à vue unique</b>, elle vient d'être détruite et ne pourra plus être affichée.</span>
+            </div>
+          )}
+        </div>
+      )}
+
+
       {/* Écran d'aperçu avant envoi (avec option vue unique) */}
       {pendingPreview && (
         <div style={{ position: "fixed", inset: 0, background: "#000", zIndex: 510, display: "flex", flexDirection: "column" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "calc(env(safe-area-inset-top) + 16px) 18px 16px" }}>
             <div onClick={cancelPending} style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(255,255,255,0.12)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#fff", fontSize: "1.1rem" }}>✕</div>
-            <div onClick={openCropModal} style={{ display: "flex", alignItems: "center", gap: 6, color: "#fff", fontWeight: 700, fontSize: "0.85rem", cursor: "pointer", padding: "6px 10px", borderRadius: 50, background: "rgba(255,255,255,0.12)" }}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M18 22V8a2 2 0 0 0-2-2H2"/></svg>
-              Recadrer
-            </div>
+            {pendingKind === "image" ? (
+              <div onClick={openCropModal} style={{ display: "flex", alignItems: "center", gap: 6, color: "#fff", fontWeight: 700, fontSize: "0.85rem", cursor: "pointer", padding: "6px 10px", borderRadius: 50, background: "rgba(255,255,255,0.12)" }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M18 22V8a2 2 0 0 0-2-2H2"/></svg>
+                Recadrer
+              </div>
+            ) : <div />}
             <div onClick={confirmSendImage} style={{ color: "#fff", fontWeight: 700, fontSize: "0.95rem", cursor: "pointer", padding: "6px 4px" }}>Envoyer</div>
           </div>
           <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", padding: "0 12px", minHeight: 0 }}>
-            <img src={pendingPreview} alt="aperçu" style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", borderRadius: 14 }} />
+            {pendingKind === "video" ? (
+              <video src={pendingPreview} controls autoPlay muted playsInline style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", borderRadius: 14 }} />
+            ) : (
+              <img src={pendingPreview} alt="aperçu" style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", borderRadius: 14 }} />
+            )}
           </div>
           <div style={{ padding: "16px 18px 26px" }}>
             <div onClick={() => setPendingViewOnce(v => !v)} style={{ display: "flex", alignItems: "center", gap: 13, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.14)", borderRadius: 16, padding: "13px 15px", marginBottom: 14, cursor: "pointer" }}>
@@ -12307,7 +12571,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ color: "#fff", fontWeight: 700, fontSize: "0.9rem" }}>Vue unique</div>
-                <div style={{ color: "#aaa", fontSize: "0.76rem" }}>La photo sera détruite après ouverture.</div>
+                <div style={{ color: "#aaa", fontSize: "0.76rem" }}>{pendingKind === "video" ? "La vidéo sera détruite après ouverture." : "La photo sera détruite après ouverture."}</div>
               </div>
               <div style={{ width: 46, height: 27, borderRadius: 50, background: pendingViewOnce ? G.rouge : "rgba(255,255,255,0.25)", position: "relative", flexShrink: 0, transition: "background 0.15s" }}>
                 <div style={{ position: "absolute", top: 3, left: pendingViewOnce ? 22 : 3, width: 21, height: 21, borderRadius: "50%", background: G.blanc, transition: "left 0.15s" }} />
@@ -12383,8 +12647,8 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
             <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
               <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
             </div>
-            <h3 style={{ fontSize: "1.05rem", fontWeight: 700, color: "#fff", margin: "0 22px 8px" }}>Impossible d'afficher cette photo</h3>
-            <p style={{ fontSize: "0.85rem", color: "#999", lineHeight: 1.5, margin: "0 22px 22px" }}>Cette photo a été détruite après avoir été vue.</p>
+            <h3 style={{ fontSize: "1.05rem", fontWeight: 700, color: "#fff", margin: "0 22px 8px" }}>Impossible d'afficher ce média</h3>
+            <p style={{ fontSize: "0.85rem", color: "#999", lineHeight: 1.5, margin: "0 22px 22px" }}>Cette photo ou vidéo a été détruite après avoir été vue.</p>
             <div onClick={() => setShowDestroyed(false)} style={{ borderTop: "1px solid rgba(255,255,255,0.12)", padding: 15, color: G.rouge, fontWeight: 700, fontSize: "0.95rem", cursor: "pointer" }}>Fermer</div>
           </div>
         </div>
