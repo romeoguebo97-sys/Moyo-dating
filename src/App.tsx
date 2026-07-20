@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo, memo, Suspense } from "react";
+import { createPortal } from "react-dom";
 import { Capacitor } from "@capacitor/core";
 import { getCountries, getCountryCallingCode, isValidPhoneNumber, type CountryCode } from "libphonenumber-js";
 
@@ -1995,7 +1996,10 @@ function PhoneCountryField({ value, onChange, label, required = false, autoFocus
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [touched, setTouched] = useState(false);
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number; width: number } | null>(null);
   const boxRef = useRef<HTMLDivElement>(null);
+  const rowRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   const selected = countries.find(c => c.code === country) || countries[0];
   const digitsOnly = national.replace(/\D/g, "");
@@ -2007,11 +2011,33 @@ function PhoneCountryField({ value, onChange, label, required = false, autoFocus
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [country, national]);
 
+  const openDropdown = () => {
+    const r = rowRef.current?.getBoundingClientRect();
+    if (r) setMenuPos({ top: r.bottom + 6, left: r.left, width: r.width });
+    setSearch("");
+    setOpen(true);
+  };
+
+  // ── Fermeture au clic extérieur : le menu est un portail (rendu dans document.body,
+  //    en dehors du DOM de la carte) — on vérifie donc contre les DEUX refs (champ + menu). ──
   useEffect(() => {
     if (!open) return;
-    const onClick = (e: MouseEvent) => { if (boxRef.current && !boxRef.current.contains(e.target as Node)) setOpen(false); };
+    const onClick = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (boxRef.current?.contains(t)) return;
+      if (menuRef.current?.contains(t)) return;
+      setOpen(false);
+    };
+    // Ferme aussi au scroll (le menu ne suit pas la position sinon) et au redimensionnement.
+    const onScrollOrResize = () => setOpen(false);
     document.addEventListener("mousedown", onClick);
-    return () => document.removeEventListener("mousedown", onClick);
+    window.addEventListener("scroll", onScrollOrResize, true);
+    window.addEventListener("resize", onScrollOrResize);
+    return () => {
+      document.removeEventListener("mousedown", onClick);
+      window.removeEventListener("scroll", onScrollOrResize, true);
+      window.removeEventListener("resize", onScrollOrResize);
+    };
   }, [open]);
 
   const filtered = search.trim()
@@ -2023,53 +2049,55 @@ function PhoneCountryField({ value, onChange, label, required = false, autoFocus
   return (
     <div style={{ marginBottom: 18, width: "100%" }} ref={boxRef}>
       {label && <label style={{ display: "block", fontWeight: 500, marginBottom: 7, fontSize: "0.88rem", color: "#555" }}>{label}</label>}
-      <div style={{ position: "relative" }}>
-        <div style={{ display: "flex", border: `2px solid ${showError ? "#e74c3c" : G.gris}`, borderRadius: 12, overflow: "hidden", background: G.blanc }}>
-          <button
-            type="button"
-            onClick={() => { setOpen(o => !o); setSearch(""); }}
-            style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 6, padding: "13px 10px 13px 14px", border: "none", borderRight: `1.5px solid ${G.gris}`, background: "transparent", fontSize: "0.88rem", fontWeight: 700, color: G.brun, cursor: "pointer", maxWidth: "48%" }}
-          >
-            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{selected.name} (+{selected.callingCode})</span>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, transform: open ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}><polyline points="6 9 12 15 18 9"/></svg>
-          </button>
-          <input
-            autoFocus={autoFocus}
-            type="tel"
-            value={national}
-            onChange={e => setNational(e.target.value.slice(0, 20))}
-            onBlur={() => setTouched(true)}
-            placeholder="Numéro local"
-            style={{ flex: 1, minWidth: 0, boxSizing: "border-box", border: "none", padding: "13px 14px", fontSize: "0.93rem", background: "transparent", color: G.brun, outline: "none" }}
-          />
-        </div>
-        {open && (
-          <div style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, right: 0, zIndex: 50, background: G.blanc, borderRadius: 12, boxShadow: "0 12px 32px rgba(0,0,0,0.18)", border: `1px solid ${G.gris}`, overflow: "hidden" }}>
-            <div style={{ padding: 10, borderBottom: `1px solid ${G.gris}` }}>
-              <input
-                autoFocus
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                placeholder="Rechercher un pays..."
-                style={{ width: "100%", boxSizing: "border-box", padding: "9px 12px", border: `1.5px solid ${G.gris}`, borderRadius: 8, fontSize: "0.86rem", outline: "none" }}
-              />
-            </div>
-            <div style={{ maxHeight: 260, overflowY: "auto" }}>
-              {filtered.map(c => (
-                <div
-                  key={c.code}
-                  onClick={() => { setCountry(c.code); setOpen(false); }}
-                  style={{ padding: "10px 14px", cursor: "pointer", fontSize: "0.86rem", color: G.brun, background: c.code === country ? G.creme : "transparent", display: "flex", justifyContent: "space-between", gap: 10 }}
-                >
-                  <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name}</span>
-                  <span style={{ color: "#999", flexShrink: 0 }}>+{c.callingCode}</span>
-                </div>
-              ))}
-              {filtered.length === 0 && <div style={{ padding: 14, fontSize: "0.82rem", color: "#999", textAlign: "center" }}>Aucun pays trouvé</div>}
-            </div>
-          </div>
-        )}
+      <div ref={rowRef} style={{ display: "flex", border: `2px solid ${showError ? "#e74c3c" : G.gris}`, borderRadius: 12, overflow: "hidden", background: G.blanc }}>
+        <button
+          type="button"
+          onClick={() => { if (open) setOpen(false); else openDropdown(); }}
+          style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 6, padding: "13px 10px 13px 14px", border: "none", borderRight: `1.5px solid ${G.gris}`, background: "transparent", fontSize: "0.88rem", fontWeight: 700, color: G.brun, cursor: "pointer", maxWidth: "48%" }}
+        >
+          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{selected.name} (+{selected.callingCode})</span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, transform: open ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <input
+          autoFocus={autoFocus}
+          type="tel"
+          value={national}
+          onChange={e => setNational(e.target.value.slice(0, 20))}
+          onBlur={() => setTouched(true)}
+          placeholder="Numéro local"
+          style={{ flex: 1, minWidth: 0, boxSizing: "border-box", border: "none", padding: "13px 14px", fontSize: "0.93rem", background: "transparent", color: G.brun, outline: "none" }}
+        />
       </div>
+      {open && menuPos && createPortal(
+        <div
+          ref={menuRef}
+          style={{ position: "fixed", top: menuPos.top, left: menuPos.left, width: menuPos.width, zIndex: 99999, background: G.blanc, borderRadius: 12, boxShadow: "0 12px 32px rgba(0,0,0,0.22)", border: `1px solid ${G.gris}`, overflow: "hidden" }}
+        >
+          <div style={{ padding: 10, borderBottom: `1px solid ${G.gris}` }}>
+            <input
+              autoFocus
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Rechercher un pays..."
+              style={{ width: "100%", boxSizing: "border-box", padding: "9px 12px", border: `1.5px solid ${G.gris}`, borderRadius: 8, fontSize: "0.86rem", outline: "none" }}
+            />
+          </div>
+          <div style={{ maxHeight: 260, overflowY: "auto" }}>
+            {filtered.map(c => (
+              <div
+                key={c.code}
+                onClick={() => { setCountry(c.code); setOpen(false); }}
+                style={{ padding: "10px 14px", cursor: "pointer", fontSize: "0.86rem", color: G.brun, background: c.code === country ? G.creme : "transparent", display: "flex", justifyContent: "space-between", gap: 10 }}
+              >
+                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name}</span>
+                <span style={{ color: "#999", flexShrink: 0 }}>+{c.callingCode}</span>
+              </div>
+            ))}
+            {filtered.length === 0 && <div style={{ padding: 14, fontSize: "0.82rem", color: "#999", textAlign: "center" }}>Aucun pays trouvé</div>}
+          </div>
+        </div>,
+        document.body
+      )}
       {showError && <p style={{ color: "#e74c3c", fontSize: "0.76rem", marginTop: 6 }}>Numéro invalide pour {selected.name}. Vérifie le nombre de chiffres.</p>}
       {hint && !showError && <p style={{ color: "#7a7a7a", fontSize: "0.76rem", marginTop: 6 }}>{hint}</p>}
     </div>
