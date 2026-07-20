@@ -9134,27 +9134,42 @@ const encodeVideoContent = (url: string, duration: number, thumbUrl: string) => 
 function captureVideoThumbnail(file: File): Promise<Blob | null> {
   return new Promise((resolve) => {
     const video = document.createElement("video");
-    video.preload = "metadata";
+    video.preload = "auto"; // "metadata" ne garantit pas une frame décodée sur mobile → miniature noire
     video.muted = true;
     video.playsInline = true;
     const url = URL.createObjectURL(file);
     video.src = url;
-    const cleanup = () => { URL.revokeObjectURL(url); };
-    video.onloadedmetadata = () => {
-      video.currentTime = Math.min(0.15, Math.max(0, (video.duration || 1) / 10));
+    let settled = false;
+    const finish = (blob: Blob | null) => {
+      if (settled) return;
+      settled = true;
+      URL.revokeObjectURL(url);
+      resolve(blob);
     };
-    video.onseeked = () => {
+    const capture = () => {
       try {
         const canvas = document.createElement("canvas");
         canvas.width = video.videoWidth || 480;
         canvas.height = video.videoHeight || 640;
         const ctx = canvas.getContext("2d");
-        if (!ctx) { cleanup(); resolve(null); return; }
+        if (!ctx) { finish(null); return; }
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        canvas.toBlob(blob => { cleanup(); resolve(blob); }, "image/jpeg", 0.82);
-      } catch { cleanup(); resolve(null); }
+        canvas.toBlob(blob => finish(blob), "image/jpeg", 0.82);
+      } catch { finish(null); }
     };
-    video.onerror = () => { cleanup(); resolve(null); };
+    // Attend qu'une vraie frame soit décodée (pas juste les métadonnées) avant de chercher
+    // le point de capture — sinon le canvas reste noir même après le "seeked".
+    video.onloadeddata = () => {
+      const target = video.duration && video.duration > 1.3 ? 1 : Math.max(0.2, (video.duration || 1) * 0.4);
+      if (!video.duration || video.duration <= target + 0.1) { requestAnimationFrame(capture); return; }
+      video.currentTime = target;
+    };
+    // Un frame de marge après "seeked" pour laisser le temps au navigateur de peindre l'image.
+    video.onseeked = () => { requestAnimationFrame(capture); };
+    video.onerror = () => finish(null);
+    // Filet de sécurité : si rien ne se déclenche (certains WebView Android), on abandonne proprement
+    // plutôt que de bloquer l'envoi indéfiniment — la vidéo part alors sans miniature.
+    setTimeout(() => finish(null), 4000);
   });
 }
 
@@ -12182,7 +12197,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
           <div ref={barRowRef} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", position: "relative" }}>
             {/* Bloc idle : image / emoji / texte — masqué (pas démonté) pendant l'enregistrement */}
             <div style={{ display: (recState === "recording" || recState === "locked") ? "none" : "flex", gap: 8, alignItems: "flex-end", flex: 1, minWidth: 0 }}>
-              <input ref={imgRef} type="file" accept="image/*,video/*" onChange={onPickImage} style={{ display: "none" }} />
+              <input ref={imgRef} type="file" accept="image/*,video/*" capture="user" onChange={onPickImage} style={{ display: "none" }} />
               <div onClick={() => auth.isPremium ? imgRef.current?.click() : onShowPremium("L'envoi de photos et vidéos est réservé aux membres Premium !")}
                 style={{ width: 40, height: 40, borderRadius: "50%", background: auth.isPremium ? "rgba(192,57,43,0.08)" : "#F5F5F5", border: `1.5px solid ${auth.isPremium ? "rgba(192,57,43,0.25)" : "#E0E0E0"}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, marginBottom: 2 }}>
                 {imgLoading ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{animation:"pulse 0.8s ease-in-out infinite"}}><circle cx="12" cy="12" r="10"/></svg> : (
