@@ -468,7 +468,10 @@ export function AdminDesktopPage() {
     setAutoShortcuts(cur => ({ ...cur, [key]: next }));
     if (!auth) return;
     try {
-      await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: next ? "true" : "false" }) });
+      // Upsert (POST + resolution=merge-duplicates) plutôt que PATCH : si la ligne n'existe pas
+      // encore en base, PATCH échoue silencieusement (0 ligne modifiée, aucune erreur) et
+      // l'interrupteur reste allumé à l'écran sans que rien ne soit vraiment enregistré.
+      await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ key, value: next ? "true" : "false" }) });
     } catch {}
   };
   // ── Mise à jour explicite (contrairement à toggleAutoShortcut qui inverse la valeur en cours) —
@@ -477,7 +480,7 @@ export function AdminDesktopPage() {
     setAutoShortcuts(cur => ({ ...cur, [key]: value }));
     if (!auth) return;
     try {
-      await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: value ? "true" : "false" }) });
+      await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ key, value: value ? "true" : "false" }) });
     } catch {}
   };
   const [premiumEventShortcutLoading, setPremiumEventShortcutLoading] = React.useState(false);
@@ -5110,7 +5113,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
       if (Array.isArray(profileData) && profileData[0]?.referred_by) {
         const parrain = profileData[0].referred_by;
         const filleulName = profileData[0].name || "votre filleul";
-        const parrainRes = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${parrain}&select=premium_until,is_premium`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+        const parrainRes = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${parrain}&select=premium_until,is_premium,name`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
         const parrainData = await parrainRes.json().catch(() => []);
         if (Array.isArray(parrainData) && parrainData[0]) {
           const bonusDays = referralBonusForAmount(p.amount);
@@ -5119,6 +5122,9 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
             const newUntil = new Date(base.getTime() + bonusDays * 24 * 60 * 60 * 1000).toISOString();
             await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${parrain}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ is_premium: true, premium_until: newUntil }) });
             await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: parrain, admin_id: auth.userId, reason: `Votre filleul ${filleulName} vient de passer Premium ! Vous gagnez ${bonusDays} jour${bonusDays > 1 ? "s" : ""} de Premium offert${bonusDays > 1 ? "s" : ""}. Actualisez l'application pour en profiter 🌟`, warning_number: 0, acknowledged: false }) });
+            // Trace du bonus dans l'historique "Suivi parrainage" (Marketing) — sans cet enregistrement,
+            // rien ne distingue un compte Premium par parrainage d'un compte Premium payé normalement.
+            fetch(`${SUPABASE_URL}/rest/v1/referral_credits`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ parrain_id: parrain, parrain_name: parrainData[0].name || null, filleul_id: targetId, filleul_name: filleulName, bonus_days: bonusDays }) }).catch(() => {});
           }
         }
       }
@@ -5967,7 +5973,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
       default: return base;
     }
   };
-  const [mktTab, setMktTab] = useState<"statuts" | "features" | "event" | "promo" | "phoneprompt" | "premiumnudge">("statuts");
+  const [mktTab, setMktTab] = useState<"statuts" | "features" | "event" | "promo" | "phoneprompt" | "premiumnudge" | "referrals">("statuts");
   // ── SUPER PROMO (formule 1 mois à prix réduit, ciblée, affichée côté membre max 1x/jour) ──
   const PROMO_LABEL = "Super promo (1 mois)"; // doit rester identique au label envoyé par PremiumModal (subscription_selected)
   // promoActive n'est plus un state local : on lit désormais autoShortcuts.promo_active,
@@ -6157,6 +6163,23 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
     const [verifyPromptMissingCount, setVerifyPromptMissingCount] = useState<number | null>(null);
     const [premiumNudgeTarget, setPremiumNudgeTarget] = useState("all");
     const [premiumNudgeMessage, setPremiumNudgeMessage] = useState("Passe Premium pour multiplier tes chances de rencontre !");
+    // ── Suivi parrainage : historique des bonus crédités (table referral_credits) ──
+    const [referralCredits, setReferralCredits] = useState<{ id: string; parrain_id: string; parrain_name: string; filleul_id: string; filleul_name: string; bonus_days: number; created_at: string }[]>([]);
+    const [referralCreditsLoading, setReferralCreditsLoading] = useState(false);
+    const [referralSearch, setReferralSearch] = useState("");
+    const loadReferralCredits = async () => {
+      if (!auth) return;
+      setReferralCreditsLoading(true);
+      try {
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/referral_credits?select=*&order=created_at.desc&limit=500`, {
+          headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+        });
+        const data = await r.json().catch(() => []);
+        setReferralCredits(Array.isArray(data) ? data : []);
+      } catch {}
+      setReferralCreditsLoading(false);
+    };
+    useEffect(() => { if (mktTab === "referrals") loadReferralCredits(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [mktTab]);
     useEffect(() => {
       if (!auth) return;
       (async () => {
@@ -10969,13 +10992,13 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
       {activeTab === "marketing" && (
         <div style={{ padding: "16px" }}>
           <div style={{ display: "flex", gap: 10, marginBottom: 16, overflowX: "auto", paddingBottom: 2 }}>
-            {([["statuts", "Statuts Moyo Dating", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>], ["features", "Mises en avant", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>], ["event", "Campagnes Premium", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>], ["promo", "Promotion", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/><line x1="9" y1="9" x2="9" y2="9"/></svg>], ["phoneprompt", "Profil incomplet", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>], ["premiumnudge", "Inciter au Premium", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>]] as [("statuts" | "features" | "event" | "promo" | "phoneprompt" | "premiumnudge"), string, React.ReactElement][]).map(([k, lbl, ico]) => (
+            {([["statuts", "Statuts Moyo Dating", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>], ["features", "Mises en avant", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>], ["event", "Campagnes Premium", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>], ["promo", "Promotion", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/><line x1="9" y1="9" x2="9" y2="9"/></svg>], ["phoneprompt", "Profil incomplet", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>], ["premiumnudge", "Inciter au Premium", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>], ["referrals", "Suivi parrainage", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>]] as [("statuts" | "features" | "event" | "promo" | "phoneprompt" | "premiumnudge" | "referrals"), string, React.ReactElement][]).map(([k, lbl, ico]) => (
               <button key={k} onClick={() => setMktTab(k)} style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 7, padding: "9px 18px", borderRadius: 999, cursor: "pointer", fontSize: "0.82rem", fontWeight: 800, background: mktTab === k ? "#E67E22" : "#fff", color: mktTab === k ? "#fff" : "#555", border: mktTab === k ? "none" : `1.5px solid ${G.gris}`, boxShadow: mktTab === k ? "0 4px 12px rgba(230,126,34,0.25)" : "none" }}>{ico}{lbl}{k === "features" && featurePendingCount > 0 && <span style={{ background: mktTab === k ? "#fff" : "#E67E22", color: mktTab === k ? "#E67E22" : "#fff", borderRadius: 50, fontSize: "0.6rem", fontWeight: 800, padding: "1px 6px", lineHeight: 1.5 }}>{featurePendingCount > 99 ? "99+" : featurePendingCount}</span>}</button>
             ))}
           </div>
 
           {/* ── Cartes KPI (contextuelles selon le sous-onglet, masquées sur Événement Premium) ── */}
-          {mktTab !== "event" && mktTab !== "promo" && mktTab !== "phoneprompt" && mktTab !== "premiumnudge" && (
+          {mktTab !== "event" && mktTab !== "promo" && mktTab !== "phoneprompt" && mktTab !== "premiumnudge" && mktTab !== "referrals" && (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: 12, marginBottom: 16 }}>
             {(mktTab === "statuts" ? [
               { ic: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>, bg: "rgba(192,57,43,0.12)", label: "Statuts actifs", value: officialStatuses.length, sub: "En ligne actuellement", subColor: G.rouge },
@@ -10997,6 +11020,98 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
             ))}
           </div>
           )}
+
+          {mktTab === "referrals" && (() => {
+            const q = referralSearch.trim().toLowerCase();
+            const filtered = q ? referralCredits.filter(r => r.parrain_name?.toLowerCase().includes(q) || r.filleul_name?.toLowerCase().includes(q)) : referralCredits;
+            const totalDays = referralCredits.reduce((s, r) => s + (r.bonus_days || 0), 0);
+            const parrainCounts: Record<string, { name: string; count: number; days: number }> = {};
+            referralCredits.forEach(r => {
+              if (!parrainCounts[r.parrain_id]) parrainCounts[r.parrain_id] = { name: r.parrain_name, count: 0, days: 0 };
+              parrainCounts[r.parrain_id].count += 1;
+              parrainCounts[r.parrain_id].days += r.bonus_days || 0;
+            });
+            const topParrains = Object.values(parrainCounts).sort((a, b) => b.days - a.days).slice(0, 5);
+            return (
+              <div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: 12, marginBottom: 16 }}>
+                  <div style={{ background: G.blanc, borderRadius: 18, padding: "16px 18px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)", display: "flex", alignItems: "center", gap: 14 }}>
+                    <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(230,126,34,0.14)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E67E22" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: "0.78rem", color: "#888", fontWeight: 600 }}>Parrainages convertis</div>
+                      <div style={{ fontSize: "1.7rem", fontWeight: 900, color: G.brun, lineHeight: 1.1 }}>{referralCredits.length}</div>
+                      <div style={{ fontSize: "0.72rem", color: "#E67E22", fontWeight: 700, marginTop: 1 }}>Filleuls passés Premium</div>
+                    </div>
+                  </div>
+                  <div style={{ background: G.blanc, borderRadius: 18, padding: "16px 18px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)", display: "flex", alignItems: "center", gap: 14 }}>
+                    <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(26,92,58,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1A5C3A" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: "0.78rem", color: "#888", fontWeight: 600 }}>Jours Premium offerts au total</div>
+                      <div style={{ fontSize: "1.7rem", fontWeight: 900, color: G.brun, lineHeight: 1.1 }}>{totalDays}</div>
+                      <div style={{ fontSize: "0.72rem", color: "#1A5C3A", fontWeight: 700, marginTop: 1 }}>Toutes récompenses cumulées</div>
+                    </div>
+                  </div>
+                  <div style={{ background: G.blanc, borderRadius: 18, padding: "16px 18px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)", display: "flex", alignItems: "center", gap: 14 }}>
+                    <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(142,68,173,0.14)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.42 4.58a5.4 5.4 0 0 0-7.65 0l-.77.78-.77-.78a5.4 5.4 0 0 0-7.65 7.65l8.42 8.42 8.42-8.42a5.4 5.4 0 0 0 0-7.65z"/></svg>
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: "0.78rem", color: "#888", fontWeight: 600 }}>Parrains actifs</div>
+                      <div style={{ fontSize: "1.7rem", fontWeight: 900, color: G.brun, lineHeight: 1.1 }}>{Object.keys(parrainCounts).length}</div>
+                      <div style={{ fontSize: "0.72rem", color: "#8e44ad", fontWeight: 700, marginTop: 1 }}>Ont au moins 1 filleul converti</div>
+                    </div>
+                  </div>
+                </div>
+
+                {topParrains.length > 0 && (
+                  <div style={{ background: G.blanc, borderRadius: 18, padding: 18, boxShadow: "0 2px 10px rgba(0,0,0,0.05)", marginBottom: 16 }}>
+                    <div style={{ fontSize: "0.9rem", fontWeight: 800, color: G.brun, marginBottom: 10 }}>🏆 Top parrains</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {topParrains.map((p, i) => (
+                        <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", background: G.creme, borderRadius: 10 }}>
+                          <span style={{ fontSize: "0.85rem", fontWeight: 700, color: G.brun }}>{i + 1}. {p.name || "Sans nom"}</span>
+                          <span style={{ fontSize: "0.78rem", color: "#888" }}>{p.count} filleul{p.count > 1 ? "s" : ""} · <b style={{ color: "#1A5C3A" }}>{p.days} jours</b></span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div style={{ background: G.blanc, borderRadius: 18, padding: 18, boxShadow: "0 2px 10px rgba(0,0,0,0.05)" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
+                    <div style={{ fontSize: "0.9rem", fontWeight: 800, color: G.brun }}>Historique des bonus crédités</div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <input value={referralSearch} onChange={e => setReferralSearch(e.target.value)} placeholder="Rechercher un parrain ou un filleul..." style={{ padding: "8px 14px", borderRadius: 50, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", minWidth: 220 }} />
+                      <button onClick={loadReferralCredits} style={{ background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "8px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: "#555", fontSize: "0.78rem", fontWeight: 700 }}><IcoRefresh /> Actualiser</button>
+                    </div>
+                  </div>
+                  {referralCreditsLoading ? (
+                    <div style={{ textAlign: "center", padding: "40px 20px", color: "#aaa" }}>Chargement...</div>
+                  ) : filtered.length === 0 ? (
+                    <div style={{ textAlign: "center", padding: "40px 20px", color: "#aaa", fontSize: "0.88rem" }}>{q ? `Aucun résultat pour « ${referralSearch} »` : "Aucun bonus de parrainage crédité pour l'instant. Seuls les bonus crédités à partir de maintenant apparaîtront ici."}</div>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {filtered.map(r => (
+                        <div key={r.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "12px 14px", background: G.creme, borderRadius: 12, flexWrap: "wrap" }}>
+                          <div style={{ fontSize: "0.85rem", color: G.brun }}>
+                            <b>{r.parrain_name || "?"}</b> a parrainé <b>{r.filleul_name || "?"}</b>
+                          </div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                            <span style={{ background: "rgba(26,92,58,0.12)", color: "#1A5C3A", fontWeight: 800, fontSize: "0.78rem", borderRadius: 50, padding: "3px 10px" }}>+{r.bonus_days} jour{r.bonus_days > 1 ? "s" : ""}</span>
+                            <span style={{ fontSize: "0.72rem", color: "#999" }}>{new Date(r.created_at).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" })}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
 
           {mktTab === "phoneprompt" && (
             <div style={{ background: G.blanc, borderRadius: 18, padding: 20, boxShadow: "0 2px 10px rgba(0,0,0,0.05)", maxWidth: 640 }}>
