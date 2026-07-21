@@ -9173,6 +9173,170 @@ function captureVideoThumbnail(file: File): Promise<Blob | null> {
   });
 }
 
+// ── Caméra maison, intégrée à l'app : image caméra en direct + galerie + capture, réunies
+//    dans un seul écran (comme WhatsApp/Instagram), plutôt que de dépendre du comportement
+//    variable des appareils photo natifs selon le téléphone/navigateur. Appui simple = photo,
+//    appui maintenu = vidéo (jusqu'à 1 minute), bouton galerie = choisir un fichier existant. ──
+function CameraCapture({ onCapture, onClose }: {
+  onCapture: (file: File, kind: "image" | "video", durationSec?: number) => void;
+  onClose: () => void;
+}) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const [facing, setFacing] = useState<"user" | "environment">("user");
+  const [error, setError] = useState<string | null>(null);
+  const [recording, setRecording] = useState(false);
+  const [recSeconds, setRecSeconds] = useState(0);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const recTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const recStartRef = useRef(0);
+  const pressedRef = useRef(false);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
+
+  const stopStream = () => {
+    streamRef.current?.getTracks().forEach(t => t.stop());
+    streamRef.current = null;
+  };
+
+  const startStream = async (face: "user" | "environment") => {
+    setError(null);
+    stopStream();
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: face }, audio: true });
+      streamRef.current = stream;
+      if (videoRef.current) videoRef.current.srcObject = stream;
+    } catch {
+      setError("Impossible d'accéder à la caméra. Vérifie que Moyo Dating a l'autorisation d'utiliser la caméra et le micro dans les réglages de ton téléphone.");
+    }
+  };
+
+  useEffect(() => {
+    startStream("user");
+    return () => {
+      stopStream();
+      if (recTimerRef.current) clearInterval(recTimerRef.current);
+      if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const flip = () => {
+    const next = facing === "user" ? "environment" : "user";
+    setFacing(next);
+    startStream(next);
+  };
+
+  const takePhoto = () => {
+    const v = videoRef.current;
+    if (!v || !v.videoWidth) return;
+    const canvas = document.createElement("canvas");
+    canvas.width = v.videoWidth; canvas.height = v.videoHeight;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    // Miroir pour la caméra avant (comme n'importe quel selfie) — pas pour l'arrière.
+    if (facing === "user") { ctx.translate(canvas.width, 0); ctx.scale(-1, 1); }
+    ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
+    canvas.toBlob(blob => {
+      if (!blob) return;
+      onCapture(new File([blob], `photo-${Date.now()}.jpg`, { type: "image/jpeg" }), "image");
+    }, "image/jpeg", 0.9);
+  };
+
+  const stopRecording = () => {
+    if (recTimerRef.current) { clearInterval(recTimerRef.current); recTimerRef.current = null; }
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") mediaRecorderRef.current.stop();
+    setRecording(false);
+  };
+
+  const startRecording = () => {
+    const stream = streamRef.current;
+    if (!stream) return;
+    chunksRef.current = [];
+    let mr: MediaRecorder;
+    try {
+      const mime = MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus") ? "video/webm;codecs=vp9,opus" : MediaRecorder.isTypeSupported("video/webm") ? "video/webm" : "";
+      mr = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+    } catch { return; }
+    mediaRecorderRef.current = mr;
+    mr.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+    mr.onstop = () => {
+      const type = mr.mimeType || "video/webm";
+      const blob = new Blob(chunksRef.current, { type });
+      const duration = (Date.now() - recStartRef.current) / 1000;
+      const ext = type.includes("mp4") ? "mp4" : "webm";
+      onCapture(new File([blob], `video-${Date.now()}.${ext}`, { type }), "video", duration);
+    };
+    recStartRef.current = Date.now();
+    mr.start();
+    setRecording(true);
+    setRecSeconds(0);
+    recTimerRef.current = setInterval(() => {
+      setRecSeconds(s => {
+        const next = s + 1;
+        if (next >= 60) stopRecording();
+        return next;
+      });
+    }, 1000);
+  };
+
+  const onShutterDown = () => {
+    pressedRef.current = true;
+    holdTimerRef.current = setTimeout(() => { if (pressedRef.current) startRecording(); }, 350);
+  };
+  const onShutterUp = () => {
+    if (!pressedRef.current) return;
+    pressedRef.current = false;
+    if (holdTimerRef.current) { clearTimeout(holdTimerRef.current); holdTimerRef.current = null; }
+    if (recording) stopRecording(); else takePhoto();
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "#000", zIndex: 600, display: "flex", flexDirection: "column" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "calc(env(safe-area-inset-top) + 16px) 18px 12px" }}>
+        <div onClick={() => { stopStream(); onClose(); }} style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#fff", fontSize: "1.1rem" }}>✕</div>
+        {recording ? (
+          <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(192,57,43,0.85)", borderRadius: 50, padding: "5px 12px" }}>
+            <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#fff" }} />
+            <span style={{ color: "#fff", fontWeight: 700, fontSize: "0.82rem" }}>{fmtAudioTime(recSeconds)} / 1:00</span>
+          </div>
+        ) : <div />}
+        <div style={{ width: 38 }} />
+      </div>
+      <div style={{ flex: 1, position: "relative", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        {error ? (
+          <div style={{ color: "#fff", textAlign: "center", padding: 24, fontSize: "0.9rem", lineHeight: 1.6 }}>{error}</div>
+        ) : (
+          <video ref={videoRef} autoPlay muted playsInline style={{ width: "100%", height: "100%", objectFit: "cover", transform: facing === "user" ? "scaleX(-1)" : "none" }} />
+        )}
+      </div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 34px calc(env(safe-area-inset-bottom) + 22px)" }}>
+        <div onClick={() => galleryInputRef.current?.click()} style={{ width: 46, height: 46, borderRadius: 12, background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        </div>
+        <div
+          onPointerDown={onShutterDown}
+          onPointerUp={onShutterUp}
+          onPointerLeave={onShutterUp}
+          style={{ width: 74, height: 74, borderRadius: "50%", background: recording ? "#C0392B" : "rgba(255,255,255,0.22)", border: "4px solid #fff", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", touchAction: "none", flexShrink: 0 }}
+        >
+          <div style={{ width: recording ? 26 : 58, height: recording ? 26 : 58, borderRadius: recording ? 6 : "50%", background: "#fff", transition: "all 0.15s" }} />
+        </div>
+        <div onClick={flip} style={{ width: 46, height: 46, borderRadius: "50%", background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"/><polyline points="23 20 23 14 17 14"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
+        </div>
+      </div>
+      <input ref={galleryInputRef} type="file" accept="image/*,video/*" style={{ display: "none" }}
+        onChange={e => {
+          const f = e.target.files?.[0];
+          e.target.value = "";
+          if (f) onCapture(f, f.type.startsWith("video/") ? "video" : "image");
+        }} />
+    </div>
+  );
+}
+
 // ── Lecteur de note vocale unique, mutualisé entre le vocal "normal" et le vocal "vue unique". ──
 // La seule différence de comportement est pilotée par m.is_view_once (comme pour les photos).
 const VoiceMessage = React.memo(function VoiceMessage({ m, isMine, onOpenOnce, onExpireOnce, time, isPremium, nextMsg }: {
@@ -9481,6 +9645,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [pendingPreview, setPendingPreview] = useState<string | null>(null);
   const [pendingKind, setPendingKind] = useState<"image" | "video">("image");
+  const [showCamera, setShowCamera] = useState(false);
   const [pendingDuration, setPendingDuration] = useState(0);
   const [pendingViewOnce, setPendingViewOnce] = useState(false);
   // ── Recadrage optionnel avant envoi : rectangle de sélection ajustable par l'utilisateur,
@@ -9744,7 +9909,6 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
     const older = prev.filter(m => (m.created_at || "") < oldest && !ids.has(m.id));
     return [...older, ...windowAsc];
   };
-  const imgRef = useRef<HTMLInputElement>(null);
   const footerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const statusInputRef = useRef<HTMLInputElement>(null);
@@ -10642,15 +10806,26 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
     }
   }, [auth, open, text, replyTo, msgCount, onShowPremium, editingMsg]);
 
-  // Étape 1 : sélection d'une photo → ouvre l'écran d'aperçu (aucun envoi immédiat)
-  const onPickImage = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file || !open) return;
+  // Accepte un fichier photo/vidéo (venant de la caméra maison ou de la galerie) et ouvre
+  // l'écran d'aperçu. knownDuration : passé directement quand on connaît déjà la durée exacte
+  // (vidéo filmée dans l'app) — évite de re-sonder le fichier, ce qui est peu fiable sur les
+  // vidéos tout juste enregistrées (durée parfois signalée comme "Infinity" par certains
+  // navigateurs tant que le fichier n'a pas été entièrement relu une première fois).
+  const acceptMediaFile = (file: File, knownDuration?: number) => {
+    if (!open) return;
     if (!auth.isPremium) { onShowPremium("L'envoi de photos et vidéos est réservé aux membres Premium !"); return; }
     const isVideoFile = file.type.startsWith("video/");
     if (isVideoFile) {
-      // Vérifie la durée avant d'accepter le fichier (max 1 minute, comme les vocaux).
+      if (knownDuration !== undefined) {
+        if (knownDuration > 61) { setToast({ msg: "Vidéo trop longue (1 minute maximum).", type: "error" }); return; }
+        setPendingPreview(URL.createObjectURL(file));
+        setPendingFile(file);
+        setPendingKind("video");
+        setPendingDuration(knownDuration);
+        setPendingViewOnce(false);
+        return;
+      }
+      // Durée inconnue (fichier choisi depuis la galerie) : on la sonde avant d'accepter.
       const probe = document.createElement("video");
       probe.preload = "metadata";
       probe.onloadedmetadata = () => {
@@ -12197,8 +12372,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
           <div ref={barRowRef} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", position: "relative" }}>
             {/* Bloc idle : image / emoji / texte — masqué (pas démonté) pendant l'enregistrement */}
             <div style={{ display: (recState === "recording" || recState === "locked") ? "none" : "flex", gap: 8, alignItems: "flex-end", flex: 1, minWidth: 0 }}>
-              <input ref={imgRef} type="file" accept="image/*,video/*" capture="user" onChange={onPickImage} style={{ display: "none" }} />
-              <div onClick={() => auth.isPremium ? imgRef.current?.click() : onShowPremium("L'envoi de photos et vidéos est réservé aux membres Premium !")}
+              <div onClick={() => auth.isPremium ? setShowCamera(true) : onShowPremium("L'envoi de photos et vidéos est réservé aux membres Premium !")}
                 style={{ width: 40, height: 40, borderRadius: "50%", background: auth.isPremium ? "rgba(192,57,43,0.08)" : "#F5F5F5", border: `1.5px solid ${auth.isPremium ? "rgba(192,57,43,0.25)" : "#E0E0E0"}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, marginBottom: 2 }}>
                 {imgLoading ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{animation:"pulse 0.8s ease-in-out infinite"}}><circle cx="12" cy="12" r="10"/></svg> : (
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={auth.isPremium ? G.rouge : "#bbb"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -12558,6 +12732,17 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
         </div>
       )}
 
+
+      {/* Caméra maison : image en direct + galerie + capture, dans un seul écran */}
+      {showCamera && (
+        <CameraCapture
+          onClose={() => setShowCamera(false)}
+          onCapture={(file, kind, duration) => {
+            setShowCamera(false);
+            acceptMediaFile(file, kind === "video" ? (duration ?? 0) : undefined);
+          }}
+        />
+      )}
 
       {/* Écran d'aperçu avant envoi (avec option vue unique) */}
       {pendingPreview && (
