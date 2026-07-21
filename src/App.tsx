@@ -9192,6 +9192,7 @@ function CameraCapture({ onCapture, onClose }: {
   const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const recTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const recStartRef = useRef(0);
+  const mirrorRafRef = useRef<number | null>(null);
   const pressedRef = useRef(false);
   const galleryInputRef = useRef<HTMLInputElement>(null);
 
@@ -9218,6 +9219,7 @@ function CameraCapture({ onCapture, onClose }: {
       stopStream();
       if (recTimerRef.current) clearInterval(recTimerRef.current);
       if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
+      if (mirrorRafRef.current) cancelAnimationFrame(mirrorRafRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -9252,16 +9254,50 @@ function CameraCapture({ onCapture, onClose }: {
 
   const startRecording = () => {
     const stream = streamRef.current;
-    if (!stream) return;
+    const v = videoRef.current;
+    if (!stream || !v) return;
     chunksRef.current = [];
+    // ── Caméra avant : la prévisualisation est mise en miroir (comme un vrai miroir, plus
+    //    naturel pour se filmer), mais MediaRecorder enregistre par défaut le flux brut de la
+    //    caméra, NON mis en miroir — d'où l'effet "à l'envers" au moment de la relecture, qui
+    //    ne correspond pas à ce que la personne voyait en filmant. On enregistre donc depuis un
+    //    canvas qui redessine chaque image en miroir en direct, pour que le résultat final
+    //    corresponde exactement à l'aperçu (comme c'est déjà le cas pour les photos). ──
+    let recordStream: MediaStream = stream;
+    if (facing === "user") {
+      const canvas = document.createElement("canvas");
+      canvas.width = v.videoWidth || 480;
+      canvas.height = v.videoHeight || 640;
+      const ctx = canvas.getContext("2d");
+      const draw = () => {
+        if (ctx && v.videoWidth) {
+          if (canvas.width !== v.videoWidth || canvas.height !== v.videoHeight) { canvas.width = v.videoWidth; canvas.height = v.videoHeight; }
+          ctx.save();
+          ctx.translate(canvas.width, 0);
+          ctx.scale(-1, 1);
+          ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
+          ctx.restore();
+        }
+        mirrorRafRef.current = requestAnimationFrame(draw);
+      };
+      draw();
+      const canvasStream = canvas.captureStream(30);
+      const audioTrack = stream.getAudioTracks()[0];
+      if (audioTrack) canvasStream.addTrack(audioTrack);
+      recordStream = canvasStream;
+    }
     let mr: MediaRecorder;
     try {
       const mime = MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus") ? "video/webm;codecs=vp9,opus" : MediaRecorder.isTypeSupported("video/webm") ? "video/webm" : "";
-      mr = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
-    } catch { return; }
+      mr = mime ? new MediaRecorder(recordStream, { mimeType: mime }) : new MediaRecorder(recordStream);
+    } catch {
+      if (mirrorRafRef.current) { cancelAnimationFrame(mirrorRafRef.current); mirrorRafRef.current = null; }
+      return;
+    }
     mediaRecorderRef.current = mr;
     mr.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data); };
     mr.onstop = () => {
+      if (mirrorRafRef.current) { cancelAnimationFrame(mirrorRafRef.current); mirrorRafRef.current = null; }
       const type = mr.mimeType || "video/webm";
       const blob = new Blob(chunksRef.current, { type });
       const duration = (Date.now() - recStartRef.current) / 1000;
@@ -9316,6 +9352,9 @@ function CameraCapture({ onCapture, onClose }: {
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
         </div>
         <div
+          className="no-select-callout voice-recording-zone"
+          onContextMenu={(e) => e.preventDefault()}
+          onDragStart={(e) => e.preventDefault()}
           onPointerDown={onShutterDown}
           onPointerUp={onShutterUp}
           onPointerLeave={onShutterUp}
