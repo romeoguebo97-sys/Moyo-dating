@@ -9202,6 +9202,8 @@ function CameraCapture({ onCapture, onClose }: {
   // qu'ils n'ont pas été rechargés une première fois).
   const thumbBlobRef = useRef<Blob | null>(null);
   const thumbTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const shutterRef = useRef<HTMLDivElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
 
   const stopStream = () => {
     streamRef.current?.getTracks().forEach(t => t.stop());
@@ -9222,12 +9224,27 @@ function CameraCapture({ onCapture, onClose }: {
 
   useEffect(() => {
     startStream("user");
+    // ── Blocage "dur" de la sélection/loupe native au long press, au niveau du navigateur
+    //    lui-même — le CSS (user-select:none) seul s'est révélé insuffisant sur iPhone : React
+    //    attache ses gestionnaires tactiles en mode passif par défaut, donc preventDefault() dans
+    //    un onTouchStart React est silencieusement ignoré. On attache ici un VRAI écouteur natif
+    //    non-passif ({ passive: false }), le seul moyen fiable d'empêcher le geste. ──
+    const block = (e: TouchEvent) => { e.preventDefault(); };
+    const targets = [shutterRef.current, rootRef.current].filter(Boolean) as HTMLElement[];
+    targets.forEach(el => {
+      el.addEventListener("touchstart", block, { passive: false });
+      el.addEventListener("touchmove", block, { passive: false });
+    });
     return () => {
       stopStream();
       if (recTimerRef.current) clearInterval(recTimerRef.current);
       if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
       if (mirrorRafRef.current) cancelAnimationFrame(mirrorRafRef.current);
       if (thumbTimerRef.current) clearTimeout(thumbTimerRef.current);
+      targets.forEach(el => {
+        el.removeEventListener("touchstart", block);
+        el.removeEventListener("touchmove", block);
+      });
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -9356,6 +9373,7 @@ function CameraCapture({ onCapture, onClose }: {
 
   return (
     <div
+      ref={rootRef}
       className="no-select-callout voice-recording-zone"
       onContextMenu={(e) => e.preventDefault()}
       onDragStart={(e) => e.preventDefault()}
@@ -9410,6 +9428,7 @@ function CameraCapture({ onCapture, onClose }: {
         </div>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
           <div
+            ref={shutterRef}
             onPointerDown={onShutterDown}
             onPointerUp={onShutterUp}
             onPointerLeave={onShutterUp}
@@ -18261,7 +18280,7 @@ export default function App() {
         <>
           {showAdminConfig && <div onClick={() => setShowAdminConfig(false)} className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.35)", zIndex: 9998 }} />}
           <div style={{ position: "fixed", top: 0, right: showAdminConfig ? 0 : "-110vw", width: "min(95vw, 480px)", height: "100vh", background: G.blanc, zIndex: 9999, boxShadow: "-8px 0 32px rgba(44,26,14,0.18)", display: "flex", flexDirection: "column", transition: "right 0.3s cubic-bezier(0.4,0,0.2,1)" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 20px", borderBottom: `1px solid ${G.gris}`, flexShrink: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "calc(env(safe-area-inset-top) + 18px) 20px 18px", borderBottom: `1px solid ${G.gris}`, flexShrink: 0 }}>
               <div style={{ fontWeight: 800, fontSize: "0.95rem", color: G.brun }}>Configuration</div>
               <button onClick={() => setShowAdminConfig(false)} style={{ width: 32, height: 32, borderRadius: "50%", border: "none", background: G.creme, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>

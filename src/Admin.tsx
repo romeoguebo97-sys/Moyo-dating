@@ -9091,7 +9091,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
       {/* Header */}
       <div data-admtabs="" style={{ background: G.blanc, boxShadow: "0 2px 12px rgba(0,0,0,0.06)", position: "sticky", top: 0, zIndex: 100 }}>
         {/* Ligne titre - cachée sur desktop (remplacée par la topbar) */}
-        <div data-admhdr="" style={{ padding: "calc(env(safe-area-inset-top) + 14px) 16px 0 16px", display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
+        <div data-admhdr="" style={{ padding: "14px 16px 0 16px", display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
           <div onClick={onBack} style={{ cursor: "pointer", display: "flex", alignItems: "center" }}><IcoArrowLeft /></div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <IcoGear />
