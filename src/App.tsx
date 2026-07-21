@@ -11900,18 +11900,28 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
                     onUnreadCount(convs.reduce((s, x) => s + (x.id === c.id ? 0 : (x.unreadCount || 0)), 0));
                     openChat(c);
                 }} style={{ display: "flex", gap: 12, alignItems: "center", padding: "10px 12px", background: open?.id === c.id ? "rgba(192,57,43,0.06)" : (nouveau ? "rgba(192,57,43,0.04)" : G.blanc), cursor: "pointer", transition: swipe?.id === c.id ? "none" : "transform 0.22s cubic-bezier(.22,.61,.36,1), background 0.12s", transform: `translateX(${dx}px)`, position: "relative", zIndex: 1 }}>
-                  <div style={{ position: "relative", flexShrink: 0 }}>
-                    <div style={{ borderRadius: "50%", padding: nouveau ? 2 : 0, background: nouveau ? `linear-gradient(135deg, ${G.rouge}, ${G.or})` : "transparent" }}>
-                      <div style={{ borderRadius: "50%", padding: nouveau ? 2 : 0, background: nouveau ? "#fff" : "transparent" }}>
-                        <Avatar url={c.partner?.photo_url} gender={c.partner?.gender} size={48} />
+                  {(() => {
+                    const partnerStatuses = c.partner ? statuses.filter(s => s.user_id === c.partner!.id) : [];
+                    const hasStatus = partnerStatuses.length > 0;
+                    const ringed = nouveau || hasStatus;
+                    return (
+                      <div style={{ position: "relative", flexShrink: 0 }}>
+                        <div
+                          onClick={hasStatus ? (e) => { e.stopPropagation(); openStatusViewer(partnerStatuses, 0); } : undefined}
+                          style={{ borderRadius: "50%", padding: ringed ? 2 : 0, background: ringed ? `linear-gradient(135deg, ${G.rouge}, ${G.or})` : "transparent", cursor: hasStatus ? "pointer" : "default" }}
+                        >
+                          <div style={{ borderRadius: "50%", padding: ringed ? 2 : 0, background: ringed ? "#fff" : "transparent" }}>
+                            <Avatar url={c.partner?.photo_url} gender={c.partner?.gender} size={48} />
+                          </div>
+                        </div>
+                        {nouveau && (
+                          <div style={{ position: "absolute", right: -2, bottom: -2, width: 20, height: 20, borderRadius: "50%", background: G.rouge, border: "2px solid #fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="#fff" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                    {nouveau && (
-                      <div style={{ position: "absolute", right: -2, bottom: -2, width: 20, height: 20, borderRadius: "50%", background: G.rouge, border: "2px solid #fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="#fff" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-                      </div>
-                    )}
-                  </div>
+                    );
+                  })()}
                   <div style={{ flex: 1, minWidth: 0 }}>
                     {/* Ligne 1 : nom + point online à gauche, heure à droite */}
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 2 }}>
@@ -18178,7 +18188,7 @@ export default function App() {
     {/* Flux B : suggestion spontanée Moyo Dating (modal existant "On pense à toi") */}
     {pendingProposal && pendingProposal.source !== "request" && !pendingWarning && !pendingBroadcast && (
       <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.9)", zIndex: 10001, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-        <div className="moyo-card-in" style={{ background: "linear-gradient(180deg,#1a0d0a,#0d0605)", border: "1px solid rgba(212,168,67,0.25)", maxHeight: "90vh", overflowY: "auto", borderRadius: 24, width: "100%", maxWidth: 380, boxShadow: "0 24px 64px rgba(0,0,0,0.5)", padding: "30px 26px 26px", textAlign: "center" }}>
+        <div className="moyo-card-in" style={{ maxHeight: "90vh", overflowY: "auto", width: "100%", maxWidth: 340, padding: "10px 6px", textAlign: "center", color: "#fff" }}>
           {/* Cœur + étincelles décoratives */}
           <div style={{ position: "relative", height: 46, marginBottom: 6 }}>
             <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="1.5" style={{ position: "absolute", left: "50%", top: 0, transform: "translateX(-50%)" }}><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
@@ -18209,8 +18219,8 @@ export default function App() {
                 : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
               }
             </div>
-            <div style={{ position: "absolute", bottom: -6, left: "50%", transform: "translateX(-50%)", width: 38, height: 38, borderRadius: "50%", background: "#1a0d0a", border: `2px solid ${G.rouge}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <svg width="17" height="17" viewBox="0 0 24 24" fill={G.rouge} stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            <div style={{ position: "absolute", bottom: -19, left: "50%", transform: "translateX(-50%)", width: 38, height: 38, borderRadius: "50%", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, display: "flex", alignItems: "center", justifyContent: "center", border: "3px solid #fff", boxShadow: "0 4px 12px rgba(192,57,43,0.5)" }}>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="#fff" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
             </div>
           </div>
           <div style={{ fontFamily: "Georgia, serif", fontWeight: 700, fontSize: "1.35rem", color: "#fff", marginBottom: 4 }}>{pendingProposal.proposerName}</div>
