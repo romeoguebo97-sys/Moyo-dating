@@ -9178,7 +9178,7 @@ function captureVideoThumbnail(file: File): Promise<Blob | null> {
 //    variable des appareils photo natifs selon le téléphone/navigateur. Appui simple = photo,
 //    appui maintenu = vidéo (jusqu'à 1 minute), bouton galerie = choisir un fichier existant. ──
 function CameraCapture({ onCapture, onClose }: {
-  onCapture: (file: File, kind: "image" | "video", durationSec?: number) => void;
+  onCapture: (file: File, kind: "image" | "video", durationSec?: number, thumbBlob?: Blob | null) => void;
   onClose: () => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -9195,6 +9195,13 @@ function CameraCapture({ onCapture, onClose }: {
   const mirrorRafRef = useRef<number | null>(null);
   const pressedRef = useRef(false);
   const galleryInputRef = useRef<HTMLInputElement>(null);
+  // Miniature vidéo : capturée EN DIRECT depuis l'aperçu caméra pendant l'enregistrement
+  // (même technique que takePhoto, déjà fiable) plutôt qu'extraite après coup du fichier
+  // enregistré — cette seconde approche s'est révélée systématiquement noire (les fichiers
+  // vidéo issus de MediaRecorder posent des problèmes de lecture/décodage bien connus tant
+  // qu'ils n'ont pas été rechargés une première fois).
+  const thumbBlobRef = useRef<Blob | null>(null);
+  const thumbTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const stopStream = () => {
     streamRef.current?.getTracks().forEach(t => t.stop());
@@ -9220,6 +9227,7 @@ function CameraCapture({ onCapture, onClose }: {
       if (recTimerRef.current) clearInterval(recTimerRef.current);
       if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
       if (mirrorRafRef.current) cancelAnimationFrame(mirrorRafRef.current);
+      if (thumbTimerRef.current) clearTimeout(thumbTimerRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -9230,24 +9238,31 @@ function CameraCapture({ onCapture, onClose }: {
     startStream(next);
   };
 
-  const takePhoto = () => {
-    const v = videoRef.current;
-    if (!v || !v.videoWidth) return;
-    const canvas = document.createElement("canvas");
-    canvas.width = v.videoWidth; canvas.height = v.videoHeight;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    // Miroir pour la caméra avant (comme n'importe quel selfie) — pas pour l'arrière.
-    if (facing === "user") { ctx.translate(canvas.width, 0); ctx.scale(-1, 1); }
-    ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
-    canvas.toBlob(blob => {
-      if (!blob) return;
-      onCapture(new File([blob], `photo-${Date.now()}.jpg`, { type: "image/jpeg" }), "image");
-    }, "image/jpeg", 0.9);
+  // Dessine l'image actuelle de l'aperçu caméra dans un canvas (avec miroir pour la caméra
+  // avant) — utilisé pour la photo ET pour la miniature vidéo.
+  const grabFrame = (quality = 0.9): Promise<Blob | null> => {
+    return new Promise(resolve => {
+      const v = videoRef.current;
+      if (!v || !v.videoWidth) { resolve(null); return; }
+      const canvas = document.createElement("canvas");
+      canvas.width = v.videoWidth; canvas.height = v.videoHeight;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) { resolve(null); return; }
+      if (facing === "user") { ctx.translate(canvas.width, 0); ctx.scale(-1, 1); }
+      ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob(blob => resolve(blob), "image/jpeg", quality);
+    });
+  };
+
+  const takePhoto = async () => {
+    const blob = await grabFrame(0.9);
+    if (!blob) return;
+    onCapture(new File([blob], `photo-${Date.now()}.jpg`, { type: "image/jpeg" }), "image");
   };
 
   const stopRecording = () => {
     if (recTimerRef.current) { clearInterval(recTimerRef.current); recTimerRef.current = null; }
+    if (thumbTimerRef.current) { clearTimeout(thumbTimerRef.current); thumbTimerRef.current = null; }
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") mediaRecorderRef.current.stop();
     setRecording(false);
   };
@@ -9257,6 +9272,13 @@ function CameraCapture({ onCapture, onClose }: {
     const v = videoRef.current;
     if (!stream || !v) return;
     chunksRef.current = [];
+    thumbBlobRef.current = null;
+    // Capture la miniature ~1s après le début de l'enregistrement, pendant que l'aperçu
+    // caméra tourne encore normalement (donc forcément une vraie image, jamais noire).
+    thumbTimerRef.current = setTimeout(async () => {
+      const blob = await grabFrame(0.75);
+      if (blob) thumbBlobRef.current = blob;
+    }, 1000);
     // ── Caméra avant : la prévisualisation est mise en miroir (comme un vrai miroir, plus
     //    naturel pour se filmer), mais MediaRecorder enregistre par défaut le flux brut de la
     //    caméra, NON mis en miroir — d'où l'effet "à l'envers" au moment de la relecture, qui
@@ -9296,13 +9318,17 @@ function CameraCapture({ onCapture, onClose }: {
     }
     mediaRecorderRef.current = mr;
     mr.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data); };
-    mr.onstop = () => {
+    mr.onstop = async () => {
       if (mirrorRafRef.current) { cancelAnimationFrame(mirrorRafRef.current); mirrorRafRef.current = null; }
       const type = mr.mimeType || "video/webm";
       const blob = new Blob(chunksRef.current, { type });
       const duration = (Date.now() - recStartRef.current) / 1000;
       const ext = type.includes("mp4") ? "mp4" : "webm";
-      onCapture(new File([blob], `video-${Date.now()}.${ext}`, { type }), "video", duration);
+      // Filet de sécurité : si la vidéo s'est arrêtée avant le déclenchement du minuteur de
+      // miniature (enregistrement très court), on capture une dernière image maintenant,
+      // pendant que l'aperçu caméra est encore actif.
+      if (!thumbBlobRef.current) thumbBlobRef.current = await grabFrame(0.75);
+      onCapture(new File([blob], `video-${Date.now()}.${ext}`, { type }), "video", duration, thumbBlobRef.current);
     };
     recStartRef.current = Date.now();
     mr.start();
@@ -9329,41 +9355,71 @@ function CameraCapture({ onCapture, onClose }: {
   };
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "#000", zIndex: 600, display: "flex", flexDirection: "column" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "calc(env(safe-area-inset-top) + 16px) 18px 12px" }}>
+    <div
+      className="no-select-callout voice-recording-zone"
+      onContextMenu={(e) => e.preventDefault()}
+      onDragStart={(e) => e.preventDefault()}
+      style={{ position: "fixed", inset: 0, background: "#000", zIndex: 600, display: "flex", flexDirection: "column" }}
+    >
+      {/* En-tête : fermer / logo Moyo Dating / bascule avant-arrière */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "calc(env(safe-area-inset-top) + 16px) 18px 12px", position: "relative", zIndex: 2 }}>
         <div onClick={() => { stopStream(); onClose(); }} style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#fff", fontSize: "1.1rem" }}>✕</div>
-        {recording ? (
-          <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(192,57,43,0.85)", borderRadius: 50, padding: "5px 12px" }}>
-            <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#fff" }} />
-            <span style={{ color: "#fff", fontWeight: 700, fontSize: "0.82rem" }}>{fmtAudioTime(recSeconds)} / 1:00</span>
-          </div>
-        ) : <div />}
-        <div style={{ width: 38 }} />
+        <div style={{ display: "flex", alignItems: "center", gap: 7, color: "#fff", fontWeight: 700, fontSize: "0.95rem" }}>
+          <svg width="17" height="17" viewBox="0 0 24 24" fill={G.rouge}><path d="M12 21s-6.7-4.35-9.3-8.1C.8 10.1 1.4 6.6 4.3 4.9c2.4-1.4 5.3-.8 6.9 1.2l.8 1 .8-1c1.6-2 4.5-2.6 6.9-1.2 2.9 1.7 3.5 5.2 1.6 8-2.6 3.75-9.3 8.1-9.3 8.1z"/></svg>
+          Moyo Dating
+        </div>
+        <div onClick={flip} style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"/><polyline points="23 20 23 14 17 14"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
+        </div>
       </div>
+
       <div style={{ flex: 1, position: "relative", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
         {error ? (
           <div style={{ color: "#fff", textAlign: "center", padding: 24, fontSize: "0.9rem", lineHeight: 1.6 }}>{error}</div>
         ) : (
-          <video ref={videoRef} autoPlay muted playsInline style={{ width: "100%", height: "100%", objectFit: "cover", transform: facing === "user" ? "scaleX(-1)" : "none" }} />
+          <>
+            <video ref={videoRef} autoPlay muted playsInline style={{ width: "100%", height: "100%", objectFit: "cover", transform: facing === "user" ? "scaleX(-1)" : "none" }} />
+            {/* Coins de cadrage — purement décoratif, aide visuelle pour bien se centrer */}
+            <div style={{ position: "absolute", inset: 18, pointerEvents: "none" }}>
+              {[{ top: 0, left: 0, borderWidth: "3px 0 0 3px" }, { top: 0, right: 0, borderWidth: "3px 3px 0 0" }, { bottom: 0, left: 0, borderWidth: "0 0 3px 3px" }, { bottom: 0, right: 0, borderWidth: "0 3px 3px 0" }].map((c, i) => (
+                <div key={i} style={{ position: "absolute", width: 28, height: 28, borderStyle: "solid", borderColor: "rgba(255,255,255,0.85)", ...c }} />
+              ))}
+            </div>
+          </>
         )}
       </div>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 34px calc(env(safe-area-inset-bottom) + 22px)" }}>
-        <div onClick={() => galleryInputRef.current?.click()} style={{ width: 46, height: 46, borderRadius: 12, background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+
+      {/* Pastille durée + texte d'aide, toujours visibles au-dessus des boutons */}
+      <div style={{ textAlign: "center", padding: "0 18px 12px" }}>
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 7, background: recording ? "rgba(192,57,43,0.85)" : "rgba(255,255,255,0.12)", border: recording ? "none" : "1px solid rgba(255,255,255,0.25)", borderRadius: 50, padding: "6px 14px", marginBottom: 8 }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+          <span style={{ color: "#fff", fontWeight: 700, fontSize: "0.82rem" }}>{fmtAudioTime(recSeconds)} / 1:00</span>
         </div>
-        <div
-          className="no-select-callout voice-recording-zone"
-          onContextMenu={(e) => e.preventDefault()}
-          onDragStart={(e) => e.preventDefault()}
-          onPointerDown={onShutterDown}
-          onPointerUp={onShutterUp}
-          onPointerLeave={onShutterUp}
-          style={{ width: 74, height: 74, borderRadius: "50%", background: recording ? "#C0392B" : "rgba(255,255,255,0.22)", border: "4px solid #fff", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", touchAction: "none", flexShrink: 0 }}
-        >
-          <div style={{ width: recording ? 26 : 58, height: recording ? 26 : 58, borderRadius: recording ? 6 : "50%", background: "#fff", transition: "all 0.15s" }} />
+        <div style={{ color: "rgba(255,255,255,0.75)", fontSize: "0.78rem", lineHeight: 1.5 }}>
+          Appuyez pour photo<br />Maintenez pour vidéo (max 1 min)
         </div>
-        <div onClick={flip} style={{ width: 46, height: 46, borderRadius: "50%", background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"/><polyline points="23 20 23 14 17 14"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
+      </div>
+
+      {/* Galerie / Obturateur (dégradé rouge → or, identité Moyo) */}
+      <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "center", gap: 56, padding: "0 34px calc(env(safe-area-inset-bottom) + 22px)" }}>
+        <div onClick={() => galleryInputRef.current?.click()} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, cursor: "pointer" }}>
+          <div style={{ width: 46, height: 46, borderRadius: 12, border: `1.5px solid rgba(192,57,43,0.55)`, background: "rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          </div>
+          <span style={{ color: G.rouge, fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.03em" }}>GALERIE</span>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+          <div
+            onPointerDown={onShutterDown}
+            onPointerUp={onShutterUp}
+            onPointerLeave={onShutterUp}
+            style={{ width: 74, height: 74, borderRadius: "50%", padding: 4, background: recording ? G.rouge : `linear-gradient(135deg, ${G.rouge}, ${G.or})`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", touchAction: "none", flexShrink: 0, transition: "background 0.15s" }}
+          >
+            <div style={{ width: "100%", height: "100%", borderRadius: "50%", background: "#000", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <div style={{ width: recording ? 24 : 56, height: recording ? 24 : 56, borderRadius: recording ? 6 : "50%", background: "#fff", transition: "all 0.15s" }} />
+            </div>
+          </div>
+          <span style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.03em" }}><span style={{ color: "#fff" }}>PHOTO</span> / <span style={{ color: G.rouge }}>VIDÉO</span></span>
         </div>
       </div>
       <input ref={galleryInputRef} type="file" accept="image/*,video/*" style={{ display: "none" }}
@@ -9686,6 +9742,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
   const [pendingKind, setPendingKind] = useState<"image" | "video">("image");
   const [showCamera, setShowCamera] = useState(false);
   const [pendingDuration, setPendingDuration] = useState(0);
+  const [pendingThumbBlob, setPendingThumbBlob] = useState<Blob | null>(null);
   const [pendingViewOnce, setPendingViewOnce] = useState(false);
   // ── Recadrage optionnel avant envoi : rectangle de sélection ajustable par l'utilisateur,
   //    sur l'image affichée à sa taille réelle (pas de object-fit à compenser). Coordonnées du
@@ -10850,7 +10907,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
   // (vidéo filmée dans l'app) — évite de re-sonder le fichier, ce qui est peu fiable sur les
   // vidéos tout juste enregistrées (durée parfois signalée comme "Infinity" par certains
   // navigateurs tant que le fichier n'a pas été entièrement relu une première fois).
-  const acceptMediaFile = (file: File, knownDuration?: number) => {
+  const acceptMediaFile = (file: File, knownDuration?: number, knownThumb?: Blob | null) => {
     if (!open) return;
     if (!auth.isPremium) { onShowPremium("L'envoi de photos et vidéos est réservé aux membres Premium !"); return; }
     const isVideoFile = file.type.startsWith("video/");
@@ -10861,6 +10918,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
         setPendingFile(file);
         setPendingKind("video");
         setPendingDuration(knownDuration);
+        setPendingThumbBlob(knownThumb || null);
         setPendingViewOnce(false);
         return;
       }
@@ -10877,6 +10935,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
         setPendingFile(file);
         setPendingKind("video");
         setPendingDuration(probe.duration || 0);
+        setPendingThumbBlob(null);
         setPendingViewOnce(false);
       };
       probe.src = URL.createObjectURL(file);
@@ -10890,6 +10949,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
   // Annule l'aperçu
   const cancelPending = () => {
     setPendingPreview(prev => { if (prev) URL.revokeObjectURL(prev); return null; });
+    setPendingThumbBlob(null);
     setPendingFile(null);
     setPendingKind("image");
     setPendingViewOnce(false);
@@ -10977,6 +11037,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
     const once = pendingViewOnce;
     const kind = pendingKind;
     const duration = pendingDuration;
+    const knownThumb = pendingThumbBlob;
     cancelPending();
     setImgLoading(true);
     try {
@@ -10991,7 +11052,9 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
         if (r.ok) {
           const url = `${SUPABASE_URL}/storage/v1/object/public/messages/${path}`;
           let thumbUrl = "";
-          const thumbBlob = await captureVideoThumbnail(file);
+          // Priorité à la miniature déjà capturée en direct pendant l'enregistrement (fiable) —
+          // extraction de secours après coup seulement pour les vidéos choisies depuis la galerie.
+          const thumbBlob = knownThumb || await captureVideoThumbnail(file);
           if (thumbBlob) {
             const thumbPath = `${auth.userId}/${Date.now()}-thumb.jpg`;
             const tr = await fetch(`${SUPABASE_URL}/storage/v1/object/messages/${thumbPath}`, {
@@ -12776,16 +12839,21 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
       {showCamera && (
         <CameraCapture
           onClose={() => setShowCamera(false)}
-          onCapture={(file, kind, duration) => {
+          onCapture={(file, kind, duration, thumbBlob) => {
             setShowCamera(false);
-            acceptMediaFile(file, kind === "video" ? (duration ?? 0) : undefined);
+            acceptMediaFile(file, kind === "video" ? (duration ?? 0) : undefined, thumbBlob);
           }}
         />
       )}
 
       {/* Écran d'aperçu avant envoi (avec option vue unique) */}
       {pendingPreview && (
-        <div style={{ position: "fixed", inset: 0, background: "#000", zIndex: 510, display: "flex", flexDirection: "column" }}>
+        <div
+          className="no-select-callout voice-recording-zone"
+          onContextMenu={(e) => e.preventDefault()}
+          onDragStart={(e) => e.preventDefault()}
+          style={{ position: "fixed", inset: 0, background: "#000", zIndex: 510, display: "flex", flexDirection: "column" }}
+        >
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "calc(env(safe-area-inset-top) + 16px) 18px 16px" }}>
             <div onClick={cancelPending} style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(255,255,255,0.12)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#fff", fontSize: "1.1rem" }}>✕</div>
             {pendingKind === "image" ? (
