@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback, memo } from "react";
 import type { Auth, Match, Message, PaymentRequest, Profile, StatusPost, ToastState } from "./App";
 import {
-  APPOINTMENT_PHYSICAL_PRICE, APPT_HOUR_MAX, APPT_HOUR_MIN, AUTO_MOD_CONTACT_REPLY, Avatar, BLOCK_SAME_GENDER, Badge, Btn, CONTACT_ADDRESS, CONTACT_EMAIL, CONTACT_WHATSAPP, ConfirmModal, DISCOVER_DEFAULT_MODE, DateTimePicker, EUR_TO_FCFA, EXPENSE_CATEGORIES, EXPENSE_CAT_COLORS, FREE_LIMITS, G, LANDING_MEMBERS, LANDING_SLOGAN, LANDING_STAT_CITIES, LANDING_STAT_COUPLES, LANDING_STAT_MEMBERS, LANDING_TITLE_END, LANDING_TITLE_HIGHLIGHT, LANDING_TITLE_START, LIFETIME_PREMIUM_UNTIL, Messages, PAY_AIRTEL_ENABLED, PAY_AIRTEL_NUMBER, PAY_AIRTEL_RESPONSABLE, PAY_CB_ENABLED, PAY_MTN_ENABLED, PAY_MTN_NUMBER, PAY_MTN_RESPONSABLE, PAY_WERO_ENABLED, PAY_WERO_NUMBER, PAY_PAYPAL_ENABLED, PAY_PAYPAL_NUMBER, PLAN_2MONTH_ENABLED, PLAN_MONTH_ENABLED, PLAN_WEEK_ENABLED, POLL_ADMIN_BADGE_MS, POLL_BADGES_MS, POLL_BROADCAST_MS, POLL_STATS_MS, POLL_SUPPORT_MS, PREMIUM_30_DAYS_MS, PREMIUM_DAYS_2MONTH, PREMIUM_DAYS_WEEK, PREMIUM_PRICE_2MONTH_FCFA, PREMIUM_PRICE_EUR, PREMIUM_PRICE_FCFA, PREMIUM_PRICE_WEEK_FCFA, PREMIUM_STAT_COUPLES, PREMIUM_STAT_MEMBERS, PremiumBadge, REFERRAL_BONUS_2MONTH, REFERRAL_BONUS_MONTH, REFERRAL_BONUS_WEEK, SOCIAL_FACEBOOK, SOCIAL_INSTAGRAM, SOCIAL_TIKTOK, SOCIAL_YOUTUBE, STORE_LINK_ANDROID, STORE_LINK_IOS, SUPABASE_KEY, SUPABASE_URL, SUPER_ADMIN_ID, SUPPORT_PREFIX_REPLY, SUPPORT_PREFIX_USER, SUPPORT_TEAM_ID, SUPPORT_TEAM_NAME, SUPPORT_TEAM_PHOTO, Toast, VerifiedBadge, apptStatusInfo, buildContactBannedRegex, buildCustomBannedRegex, setExemptedBuiltinWords, setExemptedContactWords, cleanSupportReason, dedupeMatchesByCouple, fmtApptDT, fmtDate, formatMoney, isSupportReason, logAdminAction, mmLevel, mmScore, paymentCurrency, resolveStatusImageUrl, sb, sendMatchWelcomeMessage,
-  setAPPOINTMENT_PHYSICAL_PRICE, setAUTO_MOD_CONTACT_REPLY, setBLOCK_SAME_GENDER, setCONTACT_ADDRESS, setCONTACT_EMAIL, setCONTACT_WHATSAPP, setDISCOVER_DEFAULT_MODE, setEUR_TO_FCFA, setLANDING_MEMBERS, setLANDING_SLOGAN, setLANDING_STAT_CITIES, setLANDING_STAT_COUPLES, setLANDING_STAT_MEMBERS, setLANDING_TITLE_END, setLANDING_TITLE_HIGHLIGHT, setLANDING_TITLE_START, setPAY_AIRTEL_ENABLED, setPAY_AIRTEL_NUMBER, setPAY_AIRTEL_RESPONSABLE, setPAY_CB_ENABLED, setPAY_MTN_ENABLED, setPAY_MTN_NUMBER, setPAY_MTN_RESPONSABLE, setPAY_WERO_ENABLED, setPAY_WERO_NUMBER, setPAY_PAYPAL_ENABLED, setPAY_PAYPAL_NUMBER, setPLAN_2MONTH_ENABLED, setPLAN_MONTH_ENABLED, setPLAN_WEEK_ENABLED, setPOLL_ADMIN_BADGE_MS, setPOLL_BADGES_MS, setPOLL_BROADCAST_MS, setPOLL_STATS_MS, setPOLL_SUPPORT_MS, setPREMIUM_30_DAYS_MS, setPREMIUM_DAYS_2MONTH, setPREMIUM_DAYS_WEEK, setPREMIUM_PRICE_2MONTH_FCFA, setPREMIUM_PRICE_EUR, setPREMIUM_PRICE_FCFA, setPREMIUM_PRICE_WEEK_FCFA, setPREMIUM_STAT_COUPLES, setPREMIUM_STAT_MEMBERS, setPREMIUM_BOOST_ENABLED, setPREMIUM_SCREEN_VARIANT, setFEATURE_SHOW_LIKES_VIEWS_FREE, setPRIVACY_NOTICE_ENABLED, setSOCIAL_FACEBOOK, setSOCIAL_INSTAGRAM, setSOCIAL_TIKTOK, setSOCIAL_YOUTUBE, setSTORE_LINK_ANDROID, setSTORE_LINK_IOS, setSUPPORT_TEAM_PHOTO,
+  APPOINTMENT_PHYSICAL_PRICE, APPT_HOUR_MAX, APPT_HOUR_MIN, AUTO_MOD_CONTACT_REPLY, Avatar, BLOCK_SAME_GENDER, Badge, Btn, CONTACT_ADDRESS, CONTACT_EMAIL, CONTACT_WHATSAPP, ConfirmModal, DISCOVER_DEFAULT_MODE, DateTimePicker, EUR_TO_FCFA, EXPENSE_CATEGORIES, EXPENSE_CAT_COLORS, FREE_LIMITS, G, LANDING_MEMBERS, LANDING_SLOGAN, LANDING_STAT_CITIES, LANDING_STAT_COUPLES, LANDING_STAT_MEMBERS, LANDING_TITLE_END, LANDING_TITLE_HIGHLIGHT, LANDING_TITLE_START, LIFETIME_PREMIUM_UNTIL, Messages, PAY_AIRTEL_ENABLED, PAY_AIRTEL_NUMBER, PAY_AIRTEL_RESPONSABLE, PAY_CB_ENABLED, PAY_MTN_ENABLED, PAY_MTN_NUMBER, PAY_MTN_RESPONSABLE, PAY_WERO_ENABLED, PAY_WERO_NUMBER, PAY_PAYPAL_ENABLED, PAY_PAYPAL_NUMBER, PLAN_2MONTH_ENABLED, PLAN_MONTH_ENABLED, PLAN_WEEK_ENABLED, POLL_ADMIN_BADGE_MS, POLL_BADGES_MS, POLL_BROADCAST_MS, POLL_STATS_MS, POLL_SUPPORT_MS, PREMIUM_30_DAYS_MS, PREMIUM_DAYS_2MONTH, PREMIUM_DAYS_WEEK, PREMIUM_PRICE_2MONTH_FCFA, PREMIUM_PRICE_EUR, PREMIUM_PRICE_FCFA, PREMIUM_PRICE_WEEK_FCFA, PREMIUM_STAT_COUPLES, PREMIUM_STAT_MEMBERS, PremiumBadge, REFERRAL_BONUS_2MONTH, REFERRAL_BONUS_MONTH, REFERRAL_BONUS_WEEK, AFFILIATE_COMMISSION_WEEK, AFFILIATE_COMMISSION_MONTH, AFFILIATE_COMMISSION_2MONTH, AFFILIATE_PAYABLE_DELAY_DAYS, SOCIAL_FACEBOOK, SOCIAL_INSTAGRAM, SOCIAL_TIKTOK, SOCIAL_YOUTUBE, STORE_LINK_ANDROID, STORE_LINK_IOS, SUPABASE_KEY, SUPABASE_URL, SUPER_ADMIN_ID, SUPPORT_PREFIX_REPLY, SUPPORT_PREFIX_USER, SUPPORT_TEAM_ID, SUPPORT_TEAM_NAME, SUPPORT_TEAM_PHOTO, Toast, VerifiedBadge, apptStatusInfo, buildContactBannedRegex, buildCustomBannedRegex, setExemptedBuiltinWords, setExemptedContactWords, cleanSupportReason, dedupeMatchesByCouple, fmtApptDT, fmtDate, formatMoney, isSupportReason, logAdminAction, mmLevel, mmScore, paymentCurrency, resolveStatusImageUrl, sb, sendMatchWelcomeMessage,
+  setAPPOINTMENT_PHYSICAL_PRICE, setAUTO_MOD_CONTACT_REPLY, setBLOCK_SAME_GENDER, setCONTACT_ADDRESS, setCONTACT_EMAIL, setCONTACT_WHATSAPP, setDISCOVER_DEFAULT_MODE, setEUR_TO_FCFA, setLANDING_MEMBERS, setLANDING_SLOGAN, setLANDING_STAT_CITIES, setLANDING_STAT_COUPLES, setLANDING_STAT_MEMBERS, setLANDING_TITLE_END, setLANDING_TITLE_HIGHLIGHT, setLANDING_TITLE_START, setPAY_AIRTEL_ENABLED, setPAY_AIRTEL_NUMBER, setPAY_AIRTEL_RESPONSABLE, setPAY_CB_ENABLED, setPAY_MTN_ENABLED, setPAY_MTN_NUMBER, setPAY_MTN_RESPONSABLE, setPAY_WERO_ENABLED, setPAY_WERO_NUMBER, setPAY_PAYPAL_ENABLED, setPAY_PAYPAL_NUMBER, setPLAN_2MONTH_ENABLED, setPLAN_MONTH_ENABLED, setPLAN_WEEK_ENABLED, setPOLL_ADMIN_BADGE_MS, setPOLL_BADGES_MS, setPOLL_BROADCAST_MS, setPOLL_STATS_MS, setPOLL_SUPPORT_MS, setPREMIUM_30_DAYS_MS, setPREMIUM_DAYS_2MONTH, setPREMIUM_DAYS_WEEK, setPREMIUM_PRICE_2MONTH_FCFA, setPREMIUM_PRICE_EUR, setPREMIUM_PRICE_FCFA, setPREMIUM_PRICE_WEEK_FCFA, setPREMIUM_STAT_COUPLES, setPREMIUM_STAT_MEMBERS, setPREMIUM_BOOST_ENABLED, setPREMIUM_SCREEN_VARIANT, setFEATURE_SHOW_LIKES_VIEWS_FREE, setPRIVACY_NOTICE_ENABLED, setSOCIAL_FACEBOOK, setSOCIAL_INSTAGRAM, setSOCIAL_TIKTOK, setSOCIAL_YOUTUBE, setSTORE_LINK_ANDROID, setSTORE_LINK_IOS, setSUPPORT_TEAM_PHOTO, setAFFILIATE_COMMISSION_WEEK, setAFFILIATE_COMMISSION_MONTH, setAFFILIATE_COMMISSION_2MONTH, setAFFILIATE_PAYABLE_DELAY_DAYS,
 } from "./App";
 
 async function saveSetting(key: string, value: string, token: string): Promise<boolean> {
@@ -31,6 +31,21 @@ function referralBonusForAmount(amount: number): number {
   if (amount >= PREMIUM_PRICE_FCFA) return REFERRAL_BONUS_MONTH;
   if (amount >= PREMIUM_PRICE_WEEK_FCFA) return REFERRAL_BONUS_WEEK;
   return 0;
+}
+
+// Commission en FCFA (programme affiliés) selon la formule achetée par le filleul — même logique
+// par palier que referralBonusForAmount ci-dessus, mais en argent plutôt qu'en jours Premium.
+function affiliateCommissionForAmount(amount: number): number {
+  if (amount >= PREMIUM_PRICE_2MONTH_FCFA) return AFFILIATE_COMMISSION_2MONTH;
+  if (amount >= PREMIUM_PRICE_FCFA) return AFFILIATE_COMMISSION_MONTH;
+  if (amount >= PREMIUM_PRICE_WEEK_FCFA) return AFFILIATE_COMMISSION_WEEK;
+  return 0;
+}
+function planLabelForAmount(amount: number): string {
+  if (amount >= PREMIUM_PRICE_2MONTH_FCFA) return "2 mois";
+  if (amount >= PREMIUM_PRICE_FCFA) return "1 mois";
+  if (amount >= PREMIUM_PRICE_WEEK_FCFA) return "1 semaine";
+  return "?";
 }
 
 function DateTimeModal({ title, initialISO, confirmLabel, onConfirm, onClose }: { title: string; initialISO?: string; confirmLabel?: string; onConfirm: (iso: string) => void; onClose: () => void }) {
@@ -530,10 +545,14 @@ export function AdminDesktopPage() {
     featureModerationContact: "true",
     disabledBuiltinWords: "",
     disabledBuiltinContactWords: "",
+    affiliateCommissionWeekFcfa: "300",
+    affiliateCommissionMonthFcfa: "800",
+    affiliateCommission2monthFcfa: "1500",
+    affiliatePayableDelayDays: "15",
   });
   const [editingConfig, setEditingConfig] = React.useState<string | null>(null);
   const [editingConfigValue, setEditingConfigValue] = React.useState("");
-  const [configTab, setConfigTab] = React.useState<"general" | "contenus" | "tarifs" | "equipe" | "securite" | "auto">("general");
+  const [configTab, setConfigTab] = React.useState<"general" | "contenus" | "tarifs" | "equipe" | "securite" | "auto" | "affilies">("general");
   // ── Vue d'ensemble Automatisations : nombre de diffusions générales actives en ce moment
   //    (pas juste le coupe-circuit broadcast_enabled — plusieurs annonces peuvent être actives
   //    simultanément, ce qui est justement ce que cette vue permet de repérer d'un coup d'œil). ──
@@ -568,6 +587,7 @@ export function AdminDesktopPage() {
       "disabled_builtin_words",
       "disabled_builtin_contact_words",
       "auto_mod_contact_reply",
+      "affiliate_commission_week_fcfa","affiliate_commission_month_fcfa","affiliate_commission_2month_fcfa","affiliate_payable_delay_days",
     ];
     fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(${allKeys.join(",")})&select=key,value`, {
       headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` },
@@ -608,6 +628,10 @@ export function AdminDesktopPage() {
         featureModerationContact: map["feature_moderation_contact"] || c.featureModerationContact,
         disabledBuiltinWords: map["disabled_builtin_words"] !== undefined ? map["disabled_builtin_words"] : c.disabledBuiltinWords,
         disabledBuiltinContactWords: map["disabled_builtin_contact_words"] !== undefined ? map["disabled_builtin_contact_words"] : c.disabledBuiltinContactWords,
+        affiliateCommissionWeekFcfa: map["affiliate_commission_week_fcfa"] || c.affiliateCommissionWeekFcfa,
+        affiliateCommissionMonthFcfa: map["affiliate_commission_month_fcfa"] || c.affiliateCommissionMonthFcfa,
+        affiliateCommission2monthFcfa: map["affiliate_commission_2month_fcfa"] || c.affiliateCommission2monthFcfa,
+        affiliatePayableDelayDays: map["affiliate_payable_delay_days"] || c.affiliatePayableDelayDays,
         appointmentsEnabled: map["appointments_enabled"] || c.appointmentsEnabled,
         phoneAppointmentsEnabled: map["phone_appointments_enabled"] || c.phoneAppointmentsEnabled,
         physicalAppointmentsEnabled: map["physical_appointments_enabled"] || c.physicalAppointmentsEnabled,
@@ -735,6 +759,7 @@ export function AdminDesktopPage() {
                 ["equipe", "Équipe & Alertes", "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2 M9 7a4 4 0 1 0 0 8 4 4 0 0 0 0-8 M23 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75"],
                 ["securite", "Sécurité & Système", "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"],
                 ["auto", "Automatisations", "M12 2v4 M12 18v4 M4.93 4.93l2.83 2.83 M16.24 16.24l2.83 2.83 M2 12h4 M18 12h4 M4.93 19.07l2.83-2.83 M16.24 7.76l2.83-2.83"],
+                ["affilies", "Programme affiliés", "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2 M9 7a4 4 0 1 0 0 8 4 4 0 0 0 0-8 M23 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75"],
               ] as [typeof configTab, string, string][]).map(([key, label, icon]) => {
                 const active = configTab === key;
                 return (
@@ -852,6 +877,29 @@ export function AdminDesktopPage() {
                   <span style={{ fontSize: "0.72rem", color: "#bbb" }}>—</span>
                 )}
               </div>
+            </OffCanvasSection>}
+
+            {configTab === "affilies" && <OffCanvasSection title="Programme affiliés">
+              <div style={{ fontSize: "0.72rem", color: "#999", marginBottom: 10, lineHeight: 1.5 }}>Commission cash (pas de jours Premium) versée à un affilié enregistré quand son filleul passe Premium — un montant différent selon la formule achetée. La gestion des affiliés eux-mêmes (ajout, historique, paiements) se fait depuis Marketing → Programme affiliés.</div>
+              {([
+                ["affiliate_commission_week_fcfa", "affiliateCommissionWeekFcfa" as keyof typeof appConfig, "Commission — formule Semaine (FCFA)", appConfig.affiliateCommissionWeekFcfa, setAFFILIATE_COMMISSION_WEEK],
+                ["affiliate_commission_month_fcfa", "affiliateCommissionMonthFcfa" as keyof typeof appConfig, "Commission — formule Mois (FCFA)", appConfig.affiliateCommissionMonthFcfa, setAFFILIATE_COMMISSION_MONTH],
+                ["affiliate_commission_2month_fcfa", "affiliateCommission2monthFcfa" as keyof typeof appConfig, "Commission — formule 2 mois (FCFA)", appConfig.affiliateCommission2monthFcfa, setAFFILIATE_COMMISSION_2MONTH],
+                ["affiliate_payable_delay_days", "affiliatePayableDelayDays" as keyof typeof appConfig, "Délai avant commission payable (jours)", appConfig.affiliatePayableDelayDays, setAFFILIATE_PAYABLE_DELAY_DAYS],
+              ] as [string, keyof typeof appConfig, string, string, (v: any) => void][]).map(([key, ck, label, value, setter]) => (
+                <EditableRow key={key} label={label} value={value} open={editingConfig === key} type="number"
+                  onOpen={() => { setEditingConfig(editingConfig === key ? null : key); setEditingConfigValue(value); }}
+                  editValue={editingConfigValue} onEdit={setEditingConfigValue}
+                  onSave={async () => {
+                    if (!auth) return;
+                    // Upsert (pas PATCH) : ces réglages n'existent pas encore en base la première fois —
+                    // un PATCH sur une ligne inexistante échoue silencieusement (0 ligne modifiée).
+                    await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ key, value: editingConfigValue }) });
+                    setAppConfig(c => ({ ...c, [ck]: editingConfigValue }));
+                    setter(editingConfigValue);
+                    setEditingConfig(null);
+                  }} />
+              ))}
             </OffCanvasSection>}
 
             {configTab === "general" && <OffCanvasSection title="Règles">
@@ -2313,7 +2361,7 @@ function AssistantPhotoConfig({ auth }: { auth: Auth }) {
 export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () => void }) {
   const [rules, setRules] = React.useState({ blockSameGenderLike: true });
   const [modalTexts, setModalTexts] = React.useState({ sameGenderHomme: "Eh frère, reste du bon côté ! 😂", sameGenderFemme: "Eh soeur, reste du bon côté ! 😂", sameGenderSub: "Moyo Dating c'est pour les rencontres hétérosexuelles 😄", signupSuccess: "Ton compte est prêt ! Connecte-toi maintenant.", matchTitle: "C'est un Match !", matchSubtitle: "Toi et {name} vous plaisez mutuellement !", premiumDefault: "Passe Premium pour débloquer toutes les fonctionnalités de Moyo Dating !", likesEpuises: "Tu as utilisé tes {n} likes gratuits aujourd'hui. Passe Premium pour liker sans limite !" });
-  const [appConfig, setAppConfig] = React.useState({ limitLikes: "5", limitMessages: "3", limitMessagesFemme: "100", limitMatchRequests: "2", limitStatusBoosts: "2", limitPhotoSizeMb: "5", matchWelcomeMessage: "Vous avez un nouveau match ! Dites bonjour 👋", premiumPriceFcfa: "3500", premiumPriceEur: "10", eurToFcfaRate: "655.957", premiumDurationDays: "31", premiumPriceWeekFcfa: "1200", premiumPrice2monthFcfa: "5900", premiumDaysWeek: "7", premiumDays2month: "62", likesNotifDelayHours: "24", featureStatuses: "true", featureGiftPremium: "true", featureAssistant: "true", featureGroupPremium: "true", featureGroupPhotos: "true", maintenanceMode: "false", maintenanceMessage: "Moyo Dating est en maintenance. Nous revenons très vite ! 🔧", customBannedWords: "", contactBannedWords: "", autoModContactReply: AUTO_MOD_CONTACT_REPLY, featureModerationInsults: "true", featureModerationContact: "true", disabledBuiltinWords: "", disabledBuiltinContactWords: "" });
+  const [appConfig, setAppConfig] = React.useState({ limitLikes: "5", limitMessages: "3", limitMessagesFemme: "100", limitMatchRequests: "2", limitStatusBoosts: "2", limitPhotoSizeMb: "5", matchWelcomeMessage: "Vous avez un nouveau match ! Dites bonjour 👋", premiumPriceFcfa: "3500", premiumPriceEur: "10", eurToFcfaRate: "655.957", premiumDurationDays: "31", premiumPriceWeekFcfa: "1200", premiumPrice2monthFcfa: "5900", premiumDaysWeek: "7", premiumDays2month: "62", likesNotifDelayHours: "24", featureStatuses: "true", featureGiftPremium: "true", featureAssistant: "true", featureGroupPremium: "true", featureGroupPhotos: "true", maintenanceMode: "false", maintenanceMessage: "Moyo Dating est en maintenance. Nous revenons très vite ! 🔧", customBannedWords: "", contactBannedWords: "", autoModContactReply: AUTO_MOD_CONTACT_REPLY, featureModerationInsults: "true", featureModerationContact: "true", disabledBuiltinWords: "", disabledBuiltinContactWords: "", affiliateCommissionWeekFcfa: "300", affiliateCommissionMonthFcfa: "800", affiliateCommission2monthFcfa: "1500", affiliatePayableDelayDays: "15" });
   const [editingModal, setEditingModal] = React.useState<string | null>(null);
   const [editingValue, setEditingValue] = React.useState("");
   const [editingConfig, setEditingConfig] = React.useState<string | null>(null);
@@ -2321,7 +2369,7 @@ export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () =
   const [matchProposalExpiryDaysM, setMatchProposalExpiryDaysM] = React.useState("30");
 
   React.useEffect(() => {
-    const allKeys = ["rule_block_same_gender_like","modal_same_gender_homme","modal_same_gender_femme","modal_same_gender_sub","modal_signup_success","modal_match_title","modal_match_subtitle","modal_premium_default","modal_likes_epuises","limit_likes_free","limit_messages_free","limit_messages_free_femme","limit_match_requests","limit_status_boosts","limit_photo_size_mb","match_welcome_message","match_proposal_expiry_days","premium_price_fcfa","premium_price_week_fcfa","premium_price_2month_fcfa","premium_days_week","premium_days_2month","premium_duration_days","feature_statuses","feature_gift_premium","feature_assistant","feature_group_premium","feature_moderation_insults","feature_moderation_contact","maintenance_mode","maintenance_message","custom_banned_words","contact_banned_words","disabled_builtin_words","disabled_builtin_contact_words","auto_mod_contact_reply","poll_badges_ms","poll_admin_badge_ms","poll_stats_ms","poll_broadcast_ms","poll_support_ms"];
+    const allKeys = ["rule_block_same_gender_like","modal_same_gender_homme","modal_same_gender_femme","modal_same_gender_sub","modal_signup_success","modal_match_title","modal_match_subtitle","modal_premium_default","modal_likes_epuises","limit_likes_free","limit_messages_free","limit_messages_free_femme","limit_match_requests","limit_status_boosts","limit_photo_size_mb","match_welcome_message","match_proposal_expiry_days","premium_price_fcfa","premium_price_week_fcfa","premium_price_2month_fcfa","premium_days_week","premium_days_2month","premium_duration_days","feature_statuses","feature_gift_premium","feature_assistant","feature_group_premium","feature_moderation_insults","feature_moderation_contact","maintenance_mode","maintenance_message","custom_banned_words","contact_banned_words","disabled_builtin_words","disabled_builtin_contact_words","auto_mod_contact_reply","poll_badges_ms","poll_admin_badge_ms","poll_stats_ms","poll_broadcast_ms","poll_support_ms","affiliate_commission_week_fcfa","affiliate_commission_month_fcfa","affiliate_commission_2month_fcfa","affiliate_payable_delay_days"];
     fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(${allKeys.join(",")})&select=key,value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } })
       .then(r => r.json()).then(data => {
         if (!Array.isArray(data)) return;
@@ -2331,7 +2379,7 @@ export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () =
         if (map["rule_block_same_gender_like"]) setRules(r => ({ ...r, blockSameGenderLike: map["rule_block_same_gender_like"] === "true" }));
         setModalTexts(t => ({ sameGenderHomme: map["modal_same_gender_homme"] || t.sameGenderHomme, sameGenderFemme: map["modal_same_gender_femme"] || t.sameGenderFemme, sameGenderSub: map["modal_same_gender_sub"] || t.sameGenderSub, signupSuccess: map["modal_signup_success"] || t.signupSuccess, matchTitle: map["modal_match_title"] || t.matchTitle, matchSubtitle: map["modal_match_subtitle"] || t.matchSubtitle, premiumDefault: map["modal_premium_default"] || t.premiumDefault, likesEpuises: map["modal_likes_epuises"] || t.likesEpuises }));
         setAppConfig(c => ({ limitLikes: map["limit_likes_free"] || c.limitLikes, limitMessages: map["limit_messages_free"] || c.limitMessages, limitMessagesFemme: map["limit_messages_free_femme"] || c.limitMessagesFemme, limitMatchRequests: map["limit_match_requests"] || c.limitMatchRequests, limitStatusBoosts: map["limit_status_boosts"] || c.limitStatusBoosts, limitPhotoSizeMb: map["limit_photo_size_mb"] || c.limitPhotoSizeMb, matchWelcomeMessage: map["match_welcome_message"] || c.matchWelcomeMessage, premiumPriceFcfa: map["premium_price_fcfa"] || c.premiumPriceFcfa, premiumPriceWeekFcfa: map["premium_price_week_fcfa"] || c.premiumPriceWeekFcfa, premiumPrice2monthFcfa: map["premium_price_2month_fcfa"] || c.premiumPrice2monthFcfa, premiumDaysWeek: map["premium_days_week"] || c.premiumDaysWeek, premiumDays2month: map["premium_days_2month"] || c.premiumDays2month, premiumPriceEur: map["premium_price_eur"] || c.premiumPriceEur, eurToFcfaRate: map["eur_to_fcfa_rate"] || c.eurToFcfaRate, premiumDurationDays: map["premium_duration_days"] || c.premiumDurationDays, likesNotifDelayHours: map["likes_notification_delay_hours"] || c.likesNotifDelayHours, featureStatuses: map["feature_statuses"] || c.featureStatuses, featureGiftPremium: map["feature_gift_premium"] || c.featureGiftPremium, featureAssistant: map["feature_assistant"] || c.featureAssistant, featureGroupPremium: map["feature_group_premium"] || c.featureGroupPremium,
-        featureGroupPhotos: map["feature_group_photos"] || c.featureGroupPhotos, maintenanceMode: map["maintenance_mode"] || c.maintenanceMode, maintenanceMessage: map["maintenance_message"] || c.maintenanceMessage, customBannedWords: map["custom_banned_words"] || c.customBannedWords, contactBannedWords: map["contact_banned_words"] || c.contactBannedWords, autoModContactReply: map["auto_mod_contact_reply"] || c.autoModContactReply, featureModerationInsults: map["feature_moderation_insults"] || c.featureModerationInsults, featureModerationContact: map["feature_moderation_contact"] || c.featureModerationContact, disabledBuiltinWords: map["disabled_builtin_words"] !== undefined ? map["disabled_builtin_words"] : c.disabledBuiltinWords, disabledBuiltinContactWords: map["disabled_builtin_contact_words"] !== undefined ? map["disabled_builtin_contact_words"] : c.disabledBuiltinContactWords }));
+        featureGroupPhotos: map["feature_group_photos"] || c.featureGroupPhotos, maintenanceMode: map["maintenance_mode"] || c.maintenanceMode, maintenanceMessage: map["maintenance_message"] || c.maintenanceMessage, customBannedWords: map["custom_banned_words"] || c.customBannedWords, contactBannedWords: map["contact_banned_words"] || c.contactBannedWords, autoModContactReply: map["auto_mod_contact_reply"] || c.autoModContactReply, featureModerationInsults: map["feature_moderation_insults"] || c.featureModerationInsults, featureModerationContact: map["feature_moderation_contact"] || c.featureModerationContact, disabledBuiltinWords: map["disabled_builtin_words"] !== undefined ? map["disabled_builtin_words"] : c.disabledBuiltinWords, disabledBuiltinContactWords: map["disabled_builtin_contact_words"] !== undefined ? map["disabled_builtin_contact_words"] : c.disabledBuiltinContactWords, affiliateCommissionWeekFcfa: map["affiliate_commission_week_fcfa"] || c.affiliateCommissionWeekFcfa, affiliateCommissionMonthFcfa: map["affiliate_commission_month_fcfa"] || c.affiliateCommissionMonthFcfa, affiliateCommission2monthFcfa: map["affiliate_commission_2month_fcfa"] || c.affiliateCommission2monthFcfa, affiliatePayableDelayDays: map["affiliate_payable_delay_days"] || c.affiliatePayableDelayDays }));
         if (map["custom_banned_words"] !== undefined) buildCustomBannedRegex(map["custom_banned_words"]);
         if (map["contact_banned_words"] !== undefined) buildContactBannedRegex(map["contact_banned_words"]);
       }).catch(() => {});
@@ -2339,6 +2387,11 @@ export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () =
 
   const patch = async (key: string, value: string) => {
     await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value }) });
+  };
+  // Upsert (pas PATCH) : pour des réglages tout juste créés qui n'ont pas encore de ligne en
+  // base — un PATCH échouerait silencieusement dans ce cas (0 ligne modifiée, aucune erreur).
+  const upsertSetting = async (key: string, value: string) => {
+    await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ key, value }) });
   };
 
   return (
@@ -2383,6 +2436,12 @@ export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () =
         {([["premium_price_fcfa","premiumPriceFcfa" as keyof typeof appConfig,"Prix 1 mois (FCFA)",appConfig.premiumPriceFcfa],["premium_price_week_fcfa","premiumPriceWeekFcfa" as keyof typeof appConfig,"Prix 1 semaine (FCFA)",appConfig.premiumPriceWeekFcfa],["premium_price_2month_fcfa","premiumPrice2monthFcfa" as keyof typeof appConfig,"Prix 2 mois (FCFA)",appConfig.premiumPrice2monthFcfa],["premium_price_eur","premiumPriceEur" as keyof typeof appConfig,"Prix Premium Diaspora (€)",appConfig.premiumPriceEur],["eur_to_fcfa_rate","eurToFcfaRate" as keyof typeof appConfig,"Taux 1 € en FCFA",appConfig.eurToFcfaRate],["premium_duration_days","premiumDurationDays" as keyof typeof appConfig,"Durée 1 mois (jours)",appConfig.premiumDurationDays],["premium_days_week","premiumDaysWeek" as keyof typeof appConfig,"Durée 1 semaine (jours)",appConfig.premiumDaysWeek],["premium_days_2month","premiumDays2month" as keyof typeof appConfig,"Durée 2 mois (jours)",appConfig.premiumDays2month],["likes_notification_delay_hours","likesNotifDelayHours" as keyof typeof appConfig,"Notif likes après (heures)",appConfig.likesNotifDelayHours]] as [string, keyof typeof appConfig, string, string][]).map(([key,ck,label,value]) => (
           <EditableRow key={key} label={label} value={key === "premium_price_eur" ? value + " €" : value} type="number" open={editingConfig === key} onOpen={() => { setEditingConfig(editingConfig === key ? null : key); setEditingConfigValue(value); }} editValue={editingConfigValue} onEdit={setEditingConfigValue} onSave={async () => { await patch(key, editingConfigValue); setAppConfig(c => ({ ...c, [ck]: editingConfigValue })); if (key === "premium_price_fcfa") setPREMIUM_PRICE_FCFA(parseInt(editingConfigValue) || 3500); if (key === "premium_price_week_fcfa") setPREMIUM_PRICE_WEEK_FCFA(parseInt(editingConfigValue) || 1200); if (key === "premium_price_2month_fcfa") setPREMIUM_PRICE_2MONTH_FCFA(parseInt(editingConfigValue) || 5900); if (key === "premium_days_week") setPREMIUM_DAYS_WEEK(parseInt(editingConfigValue) || 7); if (key === "premium_days_2month") setPREMIUM_DAYS_2MONTH(parseInt(editingConfigValue) || 62); if (key === "premium_price_eur") setPREMIUM_PRICE_EUR(parseFloat(editingConfigValue) || 10); if (key === "eur_to_fcfa_rate") setEUR_TO_FCFA(parseFloat(editingConfigValue) || 655.957); if (key === "premium_duration_days") setPREMIUM_30_DAYS_MS((parseInt(editingConfigValue) || 31) * 24 * 60 * 60 * 1000); if (key === "appointment_physical_price") setAPPOINTMENT_PHYSICAL_PRICE(parseInt(editingConfigValue) || 10000); setEditingConfig(null); }} />
         ))}
+      </OffCanvasSection>
+      <OffCanvasSection title="Programme affiliés">
+        {([["affiliate_commission_week_fcfa","affiliateCommissionWeekFcfa" as keyof typeof appConfig,"Commission — formule Semaine (FCFA)",appConfig.affiliateCommissionWeekFcfa,setAFFILIATE_COMMISSION_WEEK],["affiliate_commission_month_fcfa","affiliateCommissionMonthFcfa" as keyof typeof appConfig,"Commission — formule Mois (FCFA)",appConfig.affiliateCommissionMonthFcfa,setAFFILIATE_COMMISSION_MONTH],["affiliate_commission_2month_fcfa","affiliateCommission2monthFcfa" as keyof typeof appConfig,"Commission — formule 2 mois (FCFA)",appConfig.affiliateCommission2monthFcfa,setAFFILIATE_COMMISSION_2MONTH],["affiliate_payable_delay_days","affiliatePayableDelayDays" as keyof typeof appConfig,"Délai avant commission payable (jours)",appConfig.affiliatePayableDelayDays,setAFFILIATE_PAYABLE_DELAY_DAYS]] as [string, keyof typeof appConfig, string, string, (v: any) => void][]).map(([key,ck,label,value,setter]) => (
+          <EditableRow key={key} label={label} value={value} type="number" open={editingConfig === key} onOpen={() => { setEditingConfig(editingConfig === key ? null : key); setEditingConfigValue(value); }} editValue={editingConfigValue} onEdit={setEditingConfigValue} onSave={async () => { await upsertSetting(key, editingConfigValue); setAppConfig(c => ({ ...c, [ck]: editingConfigValue })); setter(editingConfigValue); setEditingConfig(null); }} />
+        ))}
+        <div style={{ fontSize: "0.72rem", color: "#999", padding: "4px 4px 0", lineHeight: 1.5 }}>La gestion des affiliés eux-mêmes (ajout, historique, paiements) se fait depuis Marketing → Programme affiliés.</div>
       </OffCanvasSection>
       <OffCanvasSection title="Fonctionnalités">
         {([["feature_statuses","featureStatuses" as keyof typeof appConfig,"Statuts (Stories)"],["feature_gift_premium","featureGiftPremium" as keyof typeof appConfig,"Cadeau Premium"],["feature_assistant","featureAssistant" as keyof typeof appConfig,"Assistant IA"],["feature_group_premium","featureGroupPremium" as keyof typeof appConfig,"Groupe Premium"],["feature_group_photos","featureGroupPhotos" as keyof typeof appConfig,"Photos dans le Groupe"],["feature_moderation_insults","featureModerationInsults" as keyof typeof appConfig,"Modération auto (insultes, menaces, arnaques, sexuel)"],["feature_moderation_contact","featureModerationContact" as keyof typeof appConfig,"Blocage partage de contact (comptes gratuits)"],["maintenance_mode","maintenanceMode" as keyof typeof appConfig,"Mode maintenance"]] as [string, keyof typeof appConfig, string][]).map(([key,ck,label]) => (
@@ -3634,6 +3693,8 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
     admin_level?: string | null;
     account_deleted?: boolean;
     phone?: string | null;
+    religion?: string;
+    relational_profile?: any;
   };
 
   // ── Onglet actif ──
@@ -3741,7 +3802,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
     status: "pending" | "processing" | "done" | "cancelled";
     created_at: string;
     profile?: AdminProfile;
-    compatibleProfiles?: AdminProfile[];
+    compatibleProfiles?: (AdminProfile & { mmScoreValue?: number; mmReasons?: string[] })[];
     showCompatible?: boolean;
     compatibleNote?: string;
   };
@@ -4227,59 +4288,87 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
     setMatchRequestsLoading(false);
   };
 
+  // Trouve les profils réellement compatibles avec le demandeur, selon le même calcul que
+  // Matchmaking intelligent (religion, objectif de vie, centres d'intérêt et valeurs communes) —
+  // plutôt qu'un simple filtre âge/genre/ville qui ignore le profil relationnel renseigné.
   const loadCompatibleProfiles = async (req: MatchRequest) => {
     try {
+      const H = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` };
+
+      // Le profil relationnel n'est pas forcément déjà chargé dans la liste des demandes —
+      // on va le chercher précisément pour être sûr de calculer sur des données à jour.
+      const reqProfileRes = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${req.user_id}&select=id,name,age,city,religion,gender,relational_profile&limit=1`, { headers: H });
+      const reqProfileData = await reqProfileRes.json().catch(() => []);
+      const requester: AdminProfile | undefined = (Array.isArray(reqProfileData) && reqProfileData[0]) || req.profile;
+      if (!requester) { setMatchRequests(prev => prev.map(mr => mr.id === req.id ? { ...mr, compatibleProfiles: [], showCompatible: true, compatibleNote: "Profil du demandeur introuvable" } : mr)); return; }
+
       const ageMin = (req.target_age_min || 18) - 2;
       const ageMax = (req.target_age_max || 99) + 2;
+      const targetGender = req.target_gender || (requester.gender === "Homme" ? "Femme" : "Homme");
 
-      // Construire les filtres
       const params: string[] = [
-        `select=id,name,age,city,photo_url,gender`,
+        `select=id,name,age,city,religion,gender,photo_url,relational_profile`,
         `age=gte.${ageMin}`,
         `age=lte.${ageMax}`,
         `id=neq.${req.user_id}`,
-        `limit=20`,
+        `gender=eq.${encodeURIComponent(targetGender)}`,
+        `relational_profile=not.is.null`,
+        `is_banned=eq.false`,
+        `limit=200`,
       ];
+      if (req.target_city) params.push(`city=eq.${encodeURIComponent(req.target_city)}`);
 
-      // Filtrer par genre : genre cible ou opposé du demandeur par défaut
-      if (req.target_gender) {
-        params.push(`gender=eq.${encodeURIComponent(req.target_gender)}`);
-      } else if (req.profile?.gender) {
-        const opposite = req.profile.gender === "Homme" ? "Femme" : "Homme";
-        params.push(`gender=eq.${encodeURIComponent(opposite)}`);
-      }
-
-      // Filtrer STRICTEMENT par ville si précisée
-      if (req.target_city) {
-        params.push(`city=eq.${encodeURIComponent(req.target_city)}`);
-      }
-
-      const query = `${SUPABASE_URL}/rest/v1/profiles?${params.join("&")}`;
-      const r = await fetch(query, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
-      const data = await r.json().catch(() => []);
-      if (!Array.isArray(data)) return;
-
-      // Si aucun résultat avec la ville exacte, relancer sans filtre ville (résultats approx)
-      if (Array.isArray(data) && data.length === 0 && req.target_city) {
+      let data = await fetch(`${SUPABASE_URL}/rest/v1/profiles?${params.join("&")}`, { headers: H }).then(r => r.json()).catch(() => []);
+      let note: string | undefined;
+      // Si aucun résultat avec la ville exacte, relance sans ce filtre (résultats approx, signalés comme tels).
+      if ((!Array.isArray(data) || data.length === 0) && req.target_city) {
         const paramsNoCity = params.filter(p => !p.startsWith("city="));
-        const queryNoCity = `${SUPABASE_URL}/rest/v1/profiles?${paramsNoCity.join("&")}`;
-        const r2 = await fetch(queryNoCity, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
-        const data2 = await r2.json().catch(() => []);
-        if (Array.isArray(data2) && data2.length > 0) {
-          // Trier par âge le plus proche
-          const targetAge = req.target_age_min ? (req.target_age_min + (req.target_age_max || req.target_age_min)) / 2 : 25;
-          const sorted2 = [...data2].sort((a: any, b: any) => Math.abs(a.age - targetAge) - Math.abs(b.age - targetAge));
-          setMatchRequests(prev => prev.map(mr => mr.id === req.id ? { ...mr, compatibleProfiles: sorted2, showCompatible: true, compatibleNote: `Aucun profil à ${req.target_city}, voici des profils similaires` } : mr));
-          return;
-        }
+        data = await fetch(`${SUPABASE_URL}/rest/v1/profiles?${paramsNoCity.join("&")}`, { headers: H }).then(r => r.json()).catch(() => []);
+        note = `Aucun profil compatible à ${req.target_city} — meilleures compatibilités ailleurs`;
       }
+      if (!Array.isArray(data)) data = [];
 
-      // Trier par âge le plus proche de la cible
-      const targetAge = req.target_age_min ? (req.target_age_min + (req.target_age_max || req.target_age_min)) / 2 : 25;
-      const sorted = [...data].sort((a: any, b: any) => Math.abs(a.age - targetAge) - Math.abs(b.age - targetAge));
+      // Même calcul de compatibilité que Matchmaking intelligent (religion, objectif de vie,
+      // centres d'intérêt et valeurs communes), pas juste l'âge/la ville.
+      const scored = data
+        .filter((cand: AdminProfile) => mmEligible(requester, cand))
+        .map((cand: AdminProfile) => { const { score, reasons } = mmScore(requester, cand); return { ...cand, mmScoreValue: score, mmReasons: reasons }; })
+        .filter((cand: any) => cand.mmScoreValue >= 50)
+        .sort((a: any, b: any) => b.mmScoreValue - a.mmScoreValue)
+        .slice(0, 20);
 
-      setMatchRequests(prev => prev.map(mr => mr.id === req.id ? { ...mr, compatibleProfiles: sorted, showCompatible: true, compatibleNote: undefined } : mr));
+      setMatchRequests(prev => prev.map(mr => mr.id === req.id ? { ...mr, compatibleProfiles: scored, showCompatible: true, compatibleNote: note || (scored.length === 0 ? "Aucun profil avec une compatibilité suffisante (≥ 50%) pour l'instant" : undefined) } : mr));
     } catch {}
+  };
+  const [requestProposingId, setRequestProposingId] = useState<string | null>(null);
+  // Propose directement une paire trouvée depuis une demande de mise en relation — même garde
+  // anti-doublon et même tag d'origine ("matchmaking") que Matchmaking intelligent, pour que la
+  // proposition apparaisse ensuite avec les mêmes détails dans Propositions et Suivi couples
+  // Matchmaking, au lieu d'être une proposition "nue" indiscernable d'une création manuelle.
+  const doProposeFromRequest = async (req: MatchRequest, cand: AdminProfile & { mmScoreValue?: number }) => {
+    if (!req.profile) return;
+    setRequestProposingId(cand.id);
+    try {
+      const expiresAt = new Date(Date.now() + (parseInt(matchProposalExpiryDays) || 30) * 24 * 3600 * 1000).toISOString();
+      const man = req.profile.gender === "Homme" ? req.profile : cand;
+      const woman = req.profile.gender === "Femme" ? req.profile : cand;
+      await fetch(`${SUPABASE_URL}/rest/v1/match_proposals`, {
+        method: "POST",
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
+        body: JSON.stringify({ user1_id: man.id, user2_id: woman.id, expires_at: expiresAt, created_by: auth.userId, source: "request", origin: "matchmaking" })
+      });
+      logAdminAction(auth.token, auth.userId, auth.name, `Couple proposé (demande de mise en relation) : ${man.name} ↔ ${woman.name} - ${cand.mmScoreValue ?? "?"}%`, req.user_id);
+      showToast("Couple proposé !", "success");
+      setMatchRequests(prev => prev.map(mr => mr.id === req.id ? { ...mr, compatibleProfiles: (mr.compatibleProfiles || []).filter(p => p.id !== cand.id) } : mr));
+    } catch { showToast("Erreur lors de la proposition.", "error"); }
+    setRequestProposingId(null);
+  };
+  const proposeFromRequest = async (req: MatchRequest, cand: AdminProfile & { mmScoreValue?: number }) => {
+    if (!req.profile) return;
+    const v = await coupleGuard(req.profile.id, cand.id, req.profile.name, cand.name);
+    if (v.kind === "block") { showToast(v.message!, "error"); return; }
+    if (v.kind === "warn") { setConfirmModal({ msg: v.message!, onConfirm: () => doProposeFromRequest(req, cand) }); return; }
+    doProposeFromRequest(req, cand);
   };
 
   const updateRequestStatus = async (reqId: string, status: MatchRequest["status"]) => {
@@ -5113,18 +5202,29 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
       if (Array.isArray(profileData) && profileData[0]?.referred_by) {
         const parrain = profileData[0].referred_by;
         const filleulName = profileData[0].name || "votre filleul";
-        const parrainRes = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${parrain}&select=premium_until,is_premium,name`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
-        const parrainData = await parrainRes.json().catch(() => []);
-        if (Array.isArray(parrainData) && parrainData[0]) {
-          const bonusDays = referralBonusForAmount(p.amount);
-          if (bonusDays > 0) {
-            const base = parrainData[0].premium_until && new Date(parrainData[0].premium_until) > new Date() ? new Date(parrainData[0].premium_until) : new Date();
-            const newUntil = new Date(base.getTime() + bonusDays * 24 * 60 * 60 * 1000).toISOString();
-            await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${parrain}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ is_premium: true, premium_until: newUntil }) });
-            await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: parrain, admin_id: auth.userId, reason: `Votre filleul ${filleulName} vient de passer Premium ! Vous gagnez ${bonusDays} jour${bonusDays > 1 ? "s" : ""} de Premium offert${bonusDays > 1 ? "s" : ""}. Actualisez l'application pour en profiter 🌟`, warning_number: 0, acknowledged: false }) });
-            // Trace du bonus dans l'historique "Suivi parrainage" (Marketing) — sans cet enregistrement,
-            // rien ne distingue un compte Premium par parrainage d'un compte Premium payé normalement.
-            fetch(`${SUPABASE_URL}/rest/v1/referral_credits`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ parrain_id: parrain, parrain_name: parrainData[0].name || null, filleul_id: targetId, filleul_name: filleulName, bonus_days: bonusDays }) }).catch(() => {});
+        // Le parrain est-il un affilié enregistré (programme affiliés, commission cash) ?
+        // Si oui, il reçoit une commission FCFA à la place des jours Premium — jamais les deux.
+        const affRes = await fetch(`${SUPABASE_URL}/rest/v1/affiliates?user_id=eq.${parrain}&status=eq.active&select=id,name`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+        const affData = await affRes.json().catch(() => []);
+        if (Array.isArray(affData) && affData[0]) {
+          const commission = affiliateCommissionForAmount(p.amount);
+          if (commission > 0) {
+            await fetch(`${SUPABASE_URL}/rest/v1/affiliate_conversions`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ affiliate_id: affData[0].id, affiliate_name: affData[0].name || null, filleul_id: targetId, filleul_name: filleulName, plan_label: planLabelForAmount(p.amount), commission_amount: commission, status: "pending" }) });
+          }
+        } else {
+          const parrainRes = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${parrain}&select=premium_until,is_premium,name`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+          const parrainData = await parrainRes.json().catch(() => []);
+          if (Array.isArray(parrainData) && parrainData[0]) {
+            const bonusDays = referralBonusForAmount(p.amount);
+            if (bonusDays > 0) {
+              const base = parrainData[0].premium_until && new Date(parrainData[0].premium_until) > new Date() ? new Date(parrainData[0].premium_until) : new Date();
+              const newUntil = new Date(base.getTime() + bonusDays * 24 * 60 * 60 * 1000).toISOString();
+              await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${parrain}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ is_premium: true, premium_until: newUntil }) });
+              await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: parrain, admin_id: auth.userId, reason: `Votre filleul ${filleulName} vient de passer Premium ! Vous gagnez ${bonusDays} jour${bonusDays > 1 ? "s" : ""} de Premium offert${bonusDays > 1 ? "s" : ""}. Actualisez l'application pour en profiter 🌟`, warning_number: 0, acknowledged: false }) });
+              // Trace du bonus dans l'historique "Suivi parrainage" (Marketing) — sans cet enregistrement,
+              // rien ne distingue un compte Premium par parrainage d'un compte Premium payé normalement.
+              fetch(`${SUPABASE_URL}/rest/v1/referral_credits`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ parrain_id: parrain, parrain_name: parrainData[0].name || null, filleul_id: targetId, filleul_name: filleulName, bonus_days: bonusDays }) }).catch(() => {});
+            }
           }
         }
       }
@@ -5973,7 +6073,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
       default: return base;
     }
   };
-  const [mktTab, setMktTab] = useState<"statuts" | "features" | "event" | "promo" | "phoneprompt" | "premiumnudge" | "referrals">("statuts");
+  const [mktTab, setMktTab] = useState<"statuts" | "features" | "event" | "promo" | "phoneprompt" | "premiumnudge" | "referrals" | "affiliates">("statuts");
   // ── SUPER PROMO (formule 1 mois à prix réduit, ciblée, affichée côté membre max 1x/jour) ──
   const PROMO_LABEL = "Super promo (1 mois)"; // doit rester identique au label envoyé par PremiumModal (subscription_selected)
   // promoActive n'est plus un state local : on lit désormais autoShortcuts.promo_active,
@@ -6180,6 +6280,72 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
       setReferralCreditsLoading(false);
     };
     useEffect(() => { if (mktTab === "referrals") loadReferralCredits(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [mktTab]);
+
+    // ── Programme affiliés : liste des affiliés + historique de leurs commissions ──
+    const [affiliatesList, setAffiliatesList] = useState<{ id: string; user_id: string; name: string; phone?: string; status: string; created_at: string }[]>([]);
+    const [affiliatesLoading, setAffiliatesLoading] = useState(false);
+    const [affiliateConversions, setAffiliateConversions] = useState<{ id: string; affiliate_id: string; affiliate_name: string; filleul_id: string; filleul_name: string; plan_label: string; commission_amount: number; status: string; created_at: string; paid_at?: string }[]>([]);
+    const [affiliateConversionsLoading, setAffiliateConversionsLoading] = useState(false);
+    const [affiliateSearch, setAffiliateSearch] = useState("");
+    const [affiliateAddQuery, setAffiliateAddQuery] = useState("");
+    const [affiliateAddResults, setAffiliateAddResults] = useState<{ id: string; name: string; phone?: string }[]>([]);
+    const [affiliateAddSearching, setAffiliateAddSearching] = useState(false);
+    const loadAffiliates = async () => {
+      if (!auth) return;
+      setAffiliatesLoading(true);
+      try {
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/affiliates?select=*&order=created_at.desc&limit=200`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+        const data = await r.json().catch(() => []);
+        setAffiliatesList(Array.isArray(data) ? data : []);
+      } catch {}
+      setAffiliatesLoading(false);
+    };
+    const loadAffiliateConversions = async () => {
+      if (!auth) return;
+      setAffiliateConversionsLoading(true);
+      try {
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/affiliate_conversions?select=*&order=created_at.desc&limit=500`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+        const data = await r.json().catch(() => []);
+        setAffiliateConversions(Array.isArray(data) ? data : []);
+      } catch {}
+      setAffiliateConversionsLoading(false);
+    };
+    useEffect(() => { if (mktTab === "affiliates") { loadAffiliates(); loadAffiliateConversions(); } /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [mktTab]);
+    // Recherche débattue de profils pour en désigner un nouvel affilié.
+    useEffect(() => {
+      if (!auth || mktTab !== "affiliates") return;
+      const q = affiliateAddQuery.trim();
+      if (!q) { setAffiliateAddResults([]); return; }
+      setAffiliateAddSearching(true);
+      const t = setTimeout(async () => {
+        try {
+          const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?name=ilike.*${encodeURIComponent(q)}*&select=id,name,phone&limit=8`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+          const data = await r.json().catch(() => []);
+          setAffiliateAddResults(Array.isArray(data) ? data : []);
+        } catch {}
+        setAffiliateAddSearching(false);
+      }, 400);
+      return () => clearTimeout(t);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [affiliateAddQuery, mktTab]);
+    const addAffiliate = async (profile: { id: string; name: string; phone?: string }) => {
+      if (!auth) return;
+      await fetch(`${SUPABASE_URL}/rest/v1/affiliates`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ user_id: profile.id, name: profile.name, phone: profile.phone || null, status: "active" }) });
+      setAffiliateAddQuery(""); setAffiliateAddResults([]);
+      showToast(`${profile.name} ajouté au programme affiliés.`, "success");
+      loadAffiliates();
+    };
+    const setAffiliateStatus = async (aff: { id: string; name: string }, status: "active" | "paused") => {
+      if (!auth) return;
+      await fetch(`${SUPABASE_URL}/rest/v1/affiliates?id=eq.${aff.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ status }) });
+      setAffiliatesList(list => list.map(a => a.id === aff.id ? { ...a, status } : a));
+    };
+    const markConversionPaid = async (conv: { id: string }) => {
+      if (!auth) return;
+      const paidAt = new Date().toISOString();
+      await fetch(`${SUPABASE_URL}/rest/v1/affiliate_conversions?id=eq.${conv.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ status: "paid", paid_at: paidAt }) });
+      setAffiliateConversions(list => list.map(c => c.id === conv.id ? { ...c, status: "paid", paid_at: paidAt } : c));
+    };
     useEffect(() => {
       if (!auth) return;
       (async () => {
@@ -10992,13 +11158,13 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
       {activeTab === "marketing" && (
         <div style={{ padding: "16px" }}>
           <div style={{ display: "flex", gap: 10, marginBottom: 16, overflowX: "auto", paddingBottom: 2 }}>
-            {([["statuts", "Statuts Moyo Dating", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>], ["features", "Mises en avant", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>], ["event", "Campagnes Premium", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>], ["promo", "Promotion", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/><line x1="9" y1="9" x2="9" y2="9"/></svg>], ["phoneprompt", "Profil incomplet", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>], ["premiumnudge", "Inciter au Premium", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>], ["referrals", "Suivi parrainage", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>]] as [("statuts" | "features" | "event" | "promo" | "phoneprompt" | "premiumnudge" | "referrals"), string, React.ReactElement][]).map(([k, lbl, ico]) => (
+            {([["statuts", "Statuts Moyo Dating", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>], ["features", "Mises en avant", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>], ["event", "Campagnes Premium", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>], ["promo", "Promotion", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/><line x1="9" y1="9" x2="9" y2="9"/></svg>], ["phoneprompt", "Profil incomplet", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>], ["premiumnudge", "Inciter au Premium", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>], ["referrals", "Suivi parrainage", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>], ["affiliates", "Programme affiliés", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.42 4.58a5.4 5.4 0 0 0-7.65 0l-.77.78-.77-.78a5.4 5.4 0 0 0-7.65 7.65l8.42 8.42 8.42-8.42a5.4 5.4 0 0 0 0-7.65z"/></svg>]] as [("statuts" | "features" | "event" | "promo" | "phoneprompt" | "premiumnudge" | "referrals" | "affiliates"), string, React.ReactElement][]).map(([k, lbl, ico]) => (
               <button key={k} onClick={() => setMktTab(k)} style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 7, padding: "9px 18px", borderRadius: 999, cursor: "pointer", fontSize: "0.82rem", fontWeight: 800, background: mktTab === k ? "#E67E22" : "#fff", color: mktTab === k ? "#fff" : "#555", border: mktTab === k ? "none" : `1.5px solid ${G.gris}`, boxShadow: mktTab === k ? "0 4px 12px rgba(230,126,34,0.25)" : "none" }}>{ico}{lbl}{k === "features" && featurePendingCount > 0 && <span style={{ background: mktTab === k ? "#fff" : "#E67E22", color: mktTab === k ? "#E67E22" : "#fff", borderRadius: 50, fontSize: "0.6rem", fontWeight: 800, padding: "1px 6px", lineHeight: 1.5 }}>{featurePendingCount > 99 ? "99+" : featurePendingCount}</span>}</button>
             ))}
           </div>
 
           {/* ── Cartes KPI (contextuelles selon le sous-onglet, masquées sur Événement Premium) ── */}
-          {mktTab !== "event" && mktTab !== "promo" && mktTab !== "phoneprompt" && mktTab !== "premiumnudge" && mktTab !== "referrals" && (
+          {mktTab !== "event" && mktTab !== "promo" && mktTab !== "phoneprompt" && mktTab !== "premiumnudge" && mktTab !== "referrals" && mktTab !== "affiliates" && (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: 12, marginBottom: 16 }}>
             {(mktTab === "statuts" ? [
               { ic: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>, bg: "rgba(192,57,43,0.12)", label: "Statuts actifs", value: officialStatuses.length, sub: "En ligne actuellement", subColor: G.rouge },
@@ -11106,6 +11272,144 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                           </div>
                         </div>
                       ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
+
+          {mktTab === "affiliates" && (() => {
+            const q = affiliateSearch.trim().toLowerCase();
+            const filteredConversions = q ? affiliateConversions.filter(c => c.affiliate_name?.toLowerCase().includes(q) || c.filleul_name?.toLowerCase().includes(q)) : affiliateConversions;
+            const pendingTotal = affiliateConversions.filter(c => c.status === "pending").reduce((s, c) => s + (c.commission_amount || 0), 0);
+            const paidTotal = affiliateConversions.filter(c => c.status === "paid").reduce((s, c) => s + (c.commission_amount || 0), 0);
+            const isPayable = (createdAt: string) => (Date.now() - new Date(createdAt).getTime()) / 86400000 >= AFFILIATE_PAYABLE_DELAY_DAYS;
+            return (
+              <div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: 12, marginBottom: 16 }}>
+                  <div style={{ background: G.blanc, borderRadius: 18, padding: "16px 18px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)", display: "flex", alignItems: "center", gap: 14 }}>
+                    <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(142,68,173,0.14)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.42 4.58a5.4 5.4 0 0 0-7.65 0l-.77.78-.77-.78a5.4 5.4 0 0 0-7.65 7.65l8.42 8.42 8.42-8.42a5.4 5.4 0 0 0 0-7.65z"/></svg>
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: "0.78rem", color: "#888", fontWeight: 600 }}>Affiliés actifs</div>
+                      <div style={{ fontSize: "1.7rem", fontWeight: 900, color: G.brun, lineHeight: 1.1 }}>{affiliatesList.filter(a => a.status === "active").length}</div>
+                      <div style={{ fontSize: "0.72rem", color: "#8e44ad", fontWeight: 700, marginTop: 1 }}>{affiliatesList.length} au total</div>
+                    </div>
+                  </div>
+                  <div style={{ background: G.blanc, borderRadius: 18, padding: "16px 18px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)", display: "flex", alignItems: "center", gap: 14 }}>
+                    <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(230,126,34,0.14)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E67E22" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: "0.78rem", color: "#888", fontWeight: 600 }}>Commissions dues (FCFA)</div>
+                      <div style={{ fontSize: "1.7rem", fontWeight: 900, color: G.brun, lineHeight: 1.1 }}>{pendingTotal.toLocaleString()}</div>
+                      <div style={{ fontSize: "0.72rem", color: "#E67E22", fontWeight: 700, marginTop: 1 }}>Pas encore marquées payées</div>
+                    </div>
+                  </div>
+                  <div style={{ background: G.blanc, borderRadius: 18, padding: "16px 18px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)", display: "flex", alignItems: "center", gap: 14 }}>
+                    <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(26,92,58,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1A5C3A" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: "0.78rem", color: "#888", fontWeight: 600 }}>Déjà versé (FCFA)</div>
+                      <div style={{ fontSize: "1.7rem", fontWeight: 900, color: G.brun, lineHeight: 1.1 }}>{paidTotal.toLocaleString()}</div>
+                      <div style={{ fontSize: "0.72rem", color: "#1A5C3A", fontWeight: 700, marginTop: 1 }}>Total historique</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Ajouter un affilié */}
+                <div style={{ background: G.blanc, borderRadius: 18, padding: 18, boxShadow: "0 2px 10px rgba(0,0,0,0.05)", marginBottom: 16 }}>
+                  <div style={{ fontSize: "0.9rem", fontWeight: 800, color: G.brun, marginBottom: 10 }}>Désigner un nouvel affilié</div>
+                  <div style={{ position: "relative", maxWidth: 420 }}>
+                    <input value={affiliateAddQuery} onChange={e => setAffiliateAddQuery(e.target.value)} placeholder="Rechercher un membre par nom..." style={{ width: "100%", boxSizing: "border-box", padding: "10px 14px", borderRadius: 12, border: `1.5px solid ${G.gris}`, fontSize: "0.85rem" }} />
+                    {affiliateAddQuery.trim() && (
+                      <div style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, right: 0, zIndex: 5, background: G.blanc, borderRadius: 12, boxShadow: "0 8px 24px rgba(0,0,0,0.15)", border: `1px solid ${G.gris}`, maxHeight: 260, overflowY: "auto" }}>
+                        {affiliateAddSearching ? (
+                          <div style={{ padding: 14, fontSize: "0.8rem", color: "#999", textAlign: "center" }}>Recherche...</div>
+                        ) : affiliateAddResults.length === 0 ? (
+                          <div style={{ padding: 14, fontSize: "0.8rem", color: "#999", textAlign: "center" }}>Aucun résultat</div>
+                        ) : affiliateAddResults.map(p => {
+                          const already = affiliatesList.some(a => a.user_id === p.id);
+                          return (
+                            <div key={p.id} onClick={() => !already && addAffiliate(p)} style={{ padding: "10px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: already ? "default" : "pointer", borderBottom: `1px solid ${G.creme}`, opacity: already ? 0.5 : 1 }}>
+                              <span style={{ fontSize: "0.85rem", color: G.brun }}>{p.name}</span>
+                              <span style={{ fontSize: "0.72rem", color: already ? "#999" : G.rouge, fontWeight: 700 }}>{already ? "Déjà affilié" : "+ Ajouter"}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Liste des affiliés */}
+                <div style={{ background: G.blanc, borderRadius: 18, padding: 18, boxShadow: "0 2px 10px rgba(0,0,0,0.05)", marginBottom: 16 }}>
+                  <div style={{ fontSize: "0.9rem", fontWeight: 800, color: G.brun, marginBottom: 10 }}>Affiliés</div>
+                  {affiliatesLoading ? (
+                    <div style={{ textAlign: "center", padding: "24px 20px", color: "#aaa" }}>Chargement...</div>
+                  ) : affiliatesList.length === 0 ? (
+                    <div style={{ textAlign: "center", padding: "24px 20px", color: "#aaa", fontSize: "0.85rem" }}>Aucun affilié pour l'instant.</div>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {affiliatesList.map(a => {
+                        const own = affiliateConversions.filter(c => c.affiliate_id === a.id);
+                        const ownPending = own.filter(c => c.status === "pending").reduce((s, c) => s + c.commission_amount, 0);
+                        return (
+                          <div key={a.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "10px 14px", background: G.creme, borderRadius: 12, flexWrap: "wrap" }}>
+                            <div>
+                              <div style={{ fontSize: "0.85rem", fontWeight: 700, color: G.brun }}>{a.name}{a.phone ? ` · ${a.phone}` : ""}</div>
+                              <div style={{ fontSize: "0.72rem", color: "#888" }}>{own.length} conversion{own.length > 1 ? "s" : ""} · {ownPending.toLocaleString()} FCFA en attente</div>
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                              <span style={{ fontSize: "0.7rem", fontWeight: 800, color: a.status === "active" ? "#1A5C3A" : "#999" }}>{a.status === "active" ? "● Actif" : "○ En pause"}</span>
+                              <button onClick={() => setAffiliateStatus(a, a.status === "active" ? "paused" : "active")} style={{ background: "#fff", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "5px 12px", fontSize: "0.74rem", fontWeight: 700, cursor: "pointer", color: "#555" }}>{a.status === "active" ? "Mettre en pause" : "Réactiver"}</button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Historique des conversions */}
+                <div style={{ background: G.blanc, borderRadius: 18, padding: 18, boxShadow: "0 2px 10px rgba(0,0,0,0.05)" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
+                    <div style={{ fontSize: "0.9rem", fontWeight: 800, color: G.brun }}>Historique des commissions</div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <input value={affiliateSearch} onChange={e => setAffiliateSearch(e.target.value)} placeholder="Rechercher un affilié ou un filleul..." style={{ padding: "8px 14px", borderRadius: 50, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", minWidth: 220 }} />
+                      <button onClick={loadAffiliateConversions} style={{ background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "8px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: "#555", fontSize: "0.78rem", fontWeight: 700 }}><IcoRefresh /> Actualiser</button>
+                    </div>
+                  </div>
+                  {affiliateConversionsLoading ? (
+                    <div style={{ textAlign: "center", padding: "40px 20px", color: "#aaa" }}>Chargement...</div>
+                  ) : filteredConversions.length === 0 ? (
+                    <div style={{ textAlign: "center", padding: "40px 20px", color: "#aaa", fontSize: "0.88rem" }}>{q ? `Aucun résultat pour « ${affiliateSearch} »` : "Aucune commission enregistrée pour l'instant. Seules les commissions générées à partir de maintenant apparaîtront ici."}</div>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {filteredConversions.map(c => {
+                        const payable = c.status === "pending" && isPayable(c.created_at);
+                        return (
+                          <div key={c.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "12px 14px", background: G.creme, borderRadius: 12, flexWrap: "wrap" }}>
+                            <div style={{ fontSize: "0.85rem", color: G.brun }}>
+                              <b>{c.affiliate_name || "?"}</b> — filleul <b>{c.filleul_name || "?"}</b> ({c.plan_label})
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                              <span style={{ background: "rgba(230,126,34,0.14)", color: "#E67E22", fontWeight: 800, fontSize: "0.78rem", borderRadius: 50, padding: "3px 10px" }}>{c.commission_amount.toLocaleString()} FCFA</span>
+                              <span style={{ fontSize: "0.72rem", color: "#999" }}>{new Date(c.created_at).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" })}</span>
+                              {c.status === "paid" ? (
+                                <span style={{ fontSize: "0.72rem", fontWeight: 800, color: "#1A5C3A" }}>✓ Payé</span>
+                              ) : payable ? (
+                                <button onClick={() => markConversionPaid(c)} style={{ background: G.rouge, color: "#fff", border: "none", borderRadius: 50, padding: "6px 14px", fontSize: "0.74rem", fontWeight: 700, cursor: "pointer" }}>Marquer payé</button>
+                              ) : (
+                                <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "#999" }}>En attente ({AFFILIATE_PAYABLE_DELAY_DAYS}j)</span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -13753,36 +14057,34 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 {req.compatibleNote && <span style={{ marginLeft: 8, fontSize: "0.65rem", color: "#e67e22", fontWeight: 600 }}>⚠ {req.compatibleNote}</span>}
               </div>
                             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                              {req.compatibleProfiles.map(cp => (
+                              {req.compatibleProfiles.map(cp => {
+                                const level = mmLevel(cp.mmScoreValue || 0);
+                                return (
                                 <div key={cp.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", background: G.creme, borderRadius: 10 }}>
                                   <div style={{ width: 36, height: 36, borderRadius: "50%", overflow: "hidden", background: G.gris, flexShrink: 0 }}>{cp.photo_url && <img src={cp.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}</div>
                                   <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div style={{ fontWeight: 700, fontSize: "0.8rem" }}>{cp.name}</div>
+                                    <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                                      <span style={{ fontWeight: 700, fontSize: "0.8rem" }}>{cp.name}</span>
+                                      <span style={{ fontSize: "0.62rem", fontWeight: 800, color: level.color, background: `${level.color}18`, padding: "1px 7px", borderRadius: 50 }}>{cp.mmScoreValue || 0}% · {level.label}</span>
+                                    </div>
                                     <div style={{ fontSize: "0.65rem", color: "#888" }}>{cp.age} ans · {cp.city}</div>
+                                    {cp.mmReasons && cp.mmReasons.length > 0 && <div style={{ fontSize: "0.62rem", color: "#999", marginTop: 2 }}>{cp.mmReasons.join(" · ")}</div>}
                                   </div>
-                                  <button onClick={async () => {
-                                    if (req.profile) {
-                                      // Vérifier si match existant
-                                      const r = await fetch(`${SUPABASE_URL}/rest/v1/matches?or=(and(user1.eq.${req.profile.id},user2.eq.${cp.id}),and(user1.eq.${cp.id},user2.eq.${req.profile.id}))&select=id&limit=1`, {
-                                        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
-                                      });
-                                      const d = await r.json().catch(() => []);
-                                      if (Array.isArray(d) && d.length > 0) { showToast("⚠️ Ces deux personnes ont déjà un match", "error"); return; }
-                                      setProposeSelected1(req.profile);
-                                      setProposeSelected2(cp);
-                                      setShowProposeMatch(true);
-                                    }
-                                  }} style={{ background: `linear-gradient(135deg,#e67e22,#d35400)`, color: "#fff", border: "none", borderRadius: 50, padding: "5px 12px", fontSize: "0.7rem", fontWeight: 700, cursor: "pointer", flexShrink: 0, display: "flex", alignItems: "center", gap: 4 }}>
+                                  <button
+                                    disabled={requestProposingId === cp.id}
+                                    onClick={() => proposeFromRequest(req, cp)}
+                                    style={{ background: `linear-gradient(135deg,#e67e22,#d35400)`, color: "#fff", border: "none", borderRadius: 50, padding: "5px 12px", fontSize: "0.7rem", fontWeight: 700, cursor: requestProposingId === cp.id ? "not-allowed" : "pointer", flexShrink: 0, display: "flex", alignItems: "center", gap: 4, opacity: requestProposingId === cp.id ? 0.6 : 1 }}>
                                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>
-                                    Proposer
+                                    {requestProposingId === cp.id ? "..." : "Proposer"}
                                   </button>
                                 </div>
-                              ))}
+                                );
+                              })}
                             </div>
                           </div>
                         )}
                         {req.showCompatible && req.compatibleProfiles && req.compatibleProfiles.length === 0 && (
-                          <div style={{ textAlign: "center", padding: "10px 0", color: "#aaa", fontSize: "0.78rem", borderTop: `1px solid ${G.gris}`, paddingTop: 12, marginBottom: 10 }}>Aucun profil compatible trouvé avec ces critères</div>
+                          <div style={{ textAlign: "center", padding: "10px 0", color: "#aaa", fontSize: "0.78rem", borderTop: `1px solid ${G.gris}`, paddingTop: 12, marginBottom: 10 }}>{req.compatibleNote || "Aucun profil compatible trouvé"}</div>
                         )}
                         {/* Actions */}
                         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>

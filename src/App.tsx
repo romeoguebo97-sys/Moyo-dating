@@ -259,6 +259,17 @@ export const SUPER_ADMIN_ID = "2b70da16-9e1e-48b0-802e-580d8d150b44";
 export let REFERRAL_BONUS_WEEK = 2;    // filleul prend 1 semaine -> parrain gagne 2 jours
 export let REFERRAL_BONUS_MONTH = 7;   // filleul prend 1 mois     -> parrain gagne 7 jours
 export let REFERRAL_BONUS_2MONTH = 14; // filleul prend 2 mois     -> parrain gagne 14 jours
+// Programme affiliés : commission en FCFA (pas de jours Premium) selon la formule achetée par le
+// filleul — distinct du parrainage classique ci-dessus. Un parrain marqué "affilié" (table
+// affiliates) reçoit ceci à la place des jours, un parrain normal garde le système au-dessus.
+export let AFFILIATE_COMMISSION_WEEK = 300;
+export let AFFILIATE_COMMISSION_MONTH = 800;
+export let AFFILIATE_COMMISSION_2MONTH = 1500;
+export let AFFILIATE_PAYABLE_DELAY_DAYS = 15; // délai avant qu'une commission soit "payable"
+export function setAFFILIATE_COMMISSION_WEEK(v: any) { AFFILIATE_COMMISSION_WEEK = parseInt(v) || 300; }
+export function setAFFILIATE_COMMISSION_MONTH(v: any) { AFFILIATE_COMMISSION_MONTH = parseInt(v) || 800; }
+export function setAFFILIATE_COMMISSION_2MONTH(v: any) { AFFILIATE_COMMISSION_2MONTH = parseInt(v) || 1500; }
+export function setAFFILIATE_PAYABLE_DELAY_DAYS(v: any) { AFFILIATE_PAYABLE_DELAY_DAYS = parseInt(v) || 15; }
 // Intervalles de polling — modifiables via app_settings
 export let POLL_BADGES_MS = 8000;        // Fallback badges (messages/likes/matchs/vues)
 export let POLL_ADMIN_BADGE_MS = 5000;   // Badge admin
@@ -472,7 +483,7 @@ export function dedupeMatchesByCouple<T extends { user1?: string; user2?: string
 }
 
 // Charger les settings dynamiques depuis Supabase au démarrage
-fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_messages_free_femme,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,pay_wero_enabled,pay_paypal_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,feature_show_likes_views_free,feature_group_premium,feature_group_photos,feature_moderation_insults,feature_moderation_contact,premium_screen_variant,custom_banned_words,contact_banned_words,disabled_builtin_words,disabled_builtin_contact_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,pay_wero_number,pay_paypal_number,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,store_link_android,store_link_ios,plan_week_enabled,plan_month_enabled,plan_2month_enabled,discover_default_mode,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,auto_warn_ban_contact_enabled,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price,privacy_notice_enabled,premium_boost_enabled,assistant_photo_url,broadcast_enabled,modal_match_title,modal_match_subtitle)&select=key,value`, {
+fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_messages_free_femme,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,pay_wero_enabled,pay_paypal_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,feature_show_likes_views_free,feature_group_premium,feature_group_photos,feature_moderation_insults,feature_moderation_contact,premium_screen_variant,custom_banned_words,contact_banned_words,disabled_builtin_words,disabled_builtin_contact_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,pay_wero_number,pay_paypal_number,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,store_link_android,store_link_ios,plan_week_enabled,plan_month_enabled,plan_2month_enabled,discover_default_mode,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,auto_warn_ban_contact_enabled,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price,privacy_notice_enabled,premium_boost_enabled,assistant_photo_url,broadcast_enabled,modal_match_title,modal_match_subtitle,referral_bonus_week_days,referral_bonus_month_days,referral_bonus_2month_days,affiliate_commission_week_fcfa,affiliate_commission_month_fcfa,affiliate_commission_2month_fcfa,affiliate_payable_delay_days)&select=key,value`, {
   headers: { "apikey": SUPABASE_KEY },
 }).then(r => r.json()).then((data: { key: string; value: string }[]) => {
   if (!Array.isArray(data)) return;
@@ -551,6 +562,10 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
   if (map["referral_bonus_week_days"]) REFERRAL_BONUS_WEEK = parseInt(map["referral_bonus_week_days"]) || 2;
   if (map["referral_bonus_month_days"]) REFERRAL_BONUS_MONTH = parseInt(map["referral_bonus_month_days"]) || 7;
   if (map["referral_bonus_2month_days"]) REFERRAL_BONUS_2MONTH = parseInt(map["referral_bonus_2month_days"]) || 14;
+  if (map["affiliate_commission_week_fcfa"]) setAFFILIATE_COMMISSION_WEEK(map["affiliate_commission_week_fcfa"]);
+  if (map["affiliate_commission_month_fcfa"]) setAFFILIATE_COMMISSION_MONTH(map["affiliate_commission_month_fcfa"]);
+  if (map["affiliate_commission_2month_fcfa"]) setAFFILIATE_COMMISSION_2MONTH(map["affiliate_commission_2month_fcfa"]);
+  if (map["affiliate_payable_delay_days"]) setAFFILIATE_PAYABLE_DELAY_DAYS(map["affiliate_payable_delay_days"]);
   if (map["premium_price_eur"]) PREMIUM_PRICE_EUR = parseFloat(map["premium_price_eur"]) || 10;
   if (map["eur_to_fcfa_rate"]) EUR_TO_FCFA = parseFloat(map["eur_to_fcfa_rate"]) || 655.957;
   if (map["poll_badges_ms"]) POLL_BADGES_MS = parseInt(map["poll_badges_ms"]) || 8000;
@@ -9203,7 +9218,6 @@ function CameraCapture({ onCapture, onClose }: {
   const thumbBlobRef = useRef<Blob | null>(null);
   const thumbTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const shutterRef = useRef<HTMLDivElement>(null);
-  const rootRef = useRef<HTMLDivElement>(null);
 
   const stopStream = () => {
     streamRef.current?.getTracks().forEach(t => t.stop());
@@ -9228,9 +9242,12 @@ function CameraCapture({ onCapture, onClose }: {
     //    lui-même — le CSS (user-select:none) seul s'est révélé insuffisant sur iPhone : React
     //    attache ses gestionnaires tactiles en mode passif par défaut, donc preventDefault() dans
     //    un onTouchStart React est silencieusement ignoré. On attache ici un VRAI écouteur natif
-    //    non-passif ({ passive: false }), le seul moyen fiable d'empêcher le geste. ──
+    //    non-passif ({ passive: false }), le seul moyen fiable d'empêcher le geste.
+    //    IMPORTANT : uniquement sur le bouton obturateur, jamais sur l'écran entier — un
+    //    preventDefault() sur touchstart empêche aussi le clic normal d'être généré ensuite sur
+    //    la plupart des navigateurs mobiles, ce qui rendait galerie/fermer/bascule caméra inertes. ──
     const block = (e: TouchEvent) => { e.preventDefault(); };
-    const targets = [shutterRef.current, rootRef.current].filter(Boolean) as HTMLElement[];
+    const targets = [shutterRef.current].filter(Boolean) as HTMLElement[];
     targets.forEach(el => {
       el.addEventListener("touchstart", block, { passive: false });
       el.addEventListener("touchmove", block, { passive: false });
@@ -9373,7 +9390,6 @@ function CameraCapture({ onCapture, onClose }: {
 
   return (
     <div
-      ref={rootRef}
       className="no-select-callout voice-recording-zone"
       onContextMenu={(e) => e.preventDefault()}
       onDragStart={(e) => e.preventDefault()}
@@ -18118,135 +18134,165 @@ export default function App() {
     {/* ── MODAL PROPOSITION DE MATCH ── */}
     {/* Flux A : proposition suite à une demande de mise en relation */}
     {pendingProposal && pendingProposal.source === "request" && !pendingWarning && !pendingBroadcast && (
-      <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", zIndex: 10001, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-        <div className="moyo-card-in" style={{ background: G.blanc, maxHeight: "85vh", overflowY: "auto", borderRadius: 24, width: "100%", maxWidth: 360, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.3)", animation: "fadeUp 0.3s ease" }}>
-          <div style={{ background: `linear-gradient(135deg,${G.vert},#0f3d25)`, padding: "24px 20px 18px", textAlign: "center" }}>
-            <div style={{ display: "flex", justifyContent: "center", marginBottom: 10 }}>
-              <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+      <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.9)", zIndex: 10001, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+        <div className="moyo-card-in" style={{ background: "linear-gradient(180deg,#0a1a12,#050d09)", border: "1px solid rgba(26,92,58,0.4)", maxHeight: "90vh", overflowY: "auto", borderRadius: 24, width: "100%", maxWidth: 380, boxShadow: "0 24px 64px rgba(0,0,0,0.5)", padding: "30px 26px 26px", textAlign: "center" }}>
+          {/* Coche + étincelles décoratives */}
+          <div style={{ position: "relative", height: 46, marginBottom: 6 }}>
+            <div style={{ position: "absolute", left: "50%", top: 0, transform: "translateX(-50%)", width: 30, height: 30, borderRadius: "50%", border: `1.5px solid ${G.vert}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
             </div>
-            <div style={{ fontWeight: 800, fontSize: "1.1rem", color: "#fff" }}>Suite à votre demande de mise en relation</div>
-            <div style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.85)", marginTop: 4 }}>Nous avons une proposition pour vous</div>
+            <svg width="9" height="9" viewBox="0 0 24 24" fill={G.or} style={{ position: "absolute", left: "32%", top: 2 }}><path d="M12 2l1.5 6.5L20 10l-6.5 1.5L12 18l-1.5-6.5L4 10l6.5-1.5L12 2z"/></svg>
+            <svg width="7" height="7" viewBox="0 0 24 24" fill={G.or} style={{ position: "absolute", left: "66%", top: 10 }}><path d="M12 2l1.5 6.5L20 10l-6.5 1.5L12 18l-1.5-6.5L4 10l6.5-1.5L12 2z"/></svg>
           </div>
-          <div style={{ padding: "24px 20px 8px", textAlign: "center" }}>
-            <div style={{ width: 90, height: 90, borderRadius: "50%", background: G.creme, margin: "0 auto 12px", overflow: "hidden", border: `3px solid ${G.vert}`, boxShadow: "0 4px 16px rgba(26,92,58,0.3)" }}>
+          {/* Titre serif */}
+          <div style={{ fontFamily: "Georgia, serif", fontSize: "1.4rem", lineHeight: 1.3, color: "#fff" }}>Votre mise en relation</div>
+          <div style={{ fontFamily: "Georgia, serif", fontSize: "1.4rem", lineHeight: 1.3, fontWeight: 700, color: G.vert, marginBottom: 14 }}>est arrivée</div>
+          {/* Séparateur */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "0 auto 16px", maxWidth: 200 }}>
+            <div style={{ flex: 1, height: 1, background: "rgba(26,92,58,0.4)" }} />
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+            <div style={{ flex: 1, height: 1, background: "rgba(26,92,58,0.4)" }} />
+          </div>
+          <div style={{ color: "rgba(255,255,255,0.65)", fontSize: "0.82rem", lineHeight: 1.6, marginBottom: 22 }}>
+            Suite à votre demande, notre équipe a une proposition pour vous.
+          </div>
+          {/* Photo avec halo et badge coche */}
+          <div style={{ position: "relative", width: 160, height: 160, margin: "0 auto 16px" }}>
+            <div style={{ position: "absolute", inset: 0, borderRadius: "50%", boxShadow: `0 0 0 1px rgba(212,168,67,0.4), 0 0 34px rgba(26,92,58,0.4)` }} />
+            <div style={{ width: 160, height: 160, borderRadius: "50%", overflow: "hidden", background: G.creme, border: `3px solid ${G.vert}` }}>
               {pendingProposal.proposerPhoto
                 ? <img src={pendingProposal.proposerPhoto} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="rgba(150,150,150,0.7)" strokeWidth="1.8" strokeLinecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+                : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
               }
             </div>
-            <div style={{ fontWeight: 800, fontSize: "1.1rem", color: G.brun }}>{pendingProposal.proposerName}</div>
-            {pendingProposal.proposerAge ? <div style={{ fontSize: "0.82rem", color: "#888", marginTop: 4 }}>{pendingProposal.proposerAge} ans</div> : null}
+            <div style={{ position: "absolute", bottom: -6, left: "50%", transform: "translateX(-50%)", width: 38, height: 38, borderRadius: "50%", background: "#0a1a12", border: `2px solid ${G.vert}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+            </div>
           </div>
-          <div style={{ padding: "12px 20px 24px" }}>
-            <button onClick={() => { setPendingProposal(null); setPropJump(n => n + 1); setTab("matches"); }} style={{ width: "100%", background: `linear-gradient(135deg,${G.vert},#0f3d25)`, color: "#fff", border: "none", borderRadius: 50, padding: "14px", fontSize: "0.95rem", fontWeight: 700, cursor: "pointer" }}>Voir la proposition</button>
-          </div>
+          <div style={{ fontFamily: "Georgia, serif", fontWeight: 700, fontSize: "1.35rem", color: "#fff", marginBottom: 4 }}>{pendingProposal.proposerName}</div>
+          {pendingProposal.proposerAge ? <div style={{ fontSize: "0.86rem", color: "rgba(255,255,255,0.6)", marginBottom: 26 }}>{pendingProposal.proposerAge} ans</div> : <div style={{ marginBottom: 12 }} />}
+          <button onClick={() => { setPendingProposal(null); setPropJump(n => n + 1); setTab("matches"); }} style={{ width: "100%", background: `linear-gradient(135deg,${G.vert},#0f3d25)`, color: "#fff", border: "none", borderRadius: 999, padding: "15px", fontSize: "0.95rem", fontWeight: 700, cursor: "pointer", boxShadow: "0 8px 24px rgba(26,92,58,0.4)" }}>Voir la proposition</button>
         </div>
       </div>
     )}
     {/* Flux B : suggestion spontanée Moyo Dating (modal existant "On pense à toi") */}
     {pendingProposal && pendingProposal.source !== "request" && !pendingWarning && !pendingBroadcast && (
-      <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", zIndex: 10001, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-        <div className="moyo-card-in" style={{ background: G.blanc, maxHeight: "85vh", overflowY: "auto", borderRadius: 24, width: "100%", maxWidth: 360, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.3)", animation: "fadeUp 0.3s ease" }}>
-          {/* Header */}
-          <div style={{ background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, padding: "24px 20px 18px", textAlign: "center" }}>
-            <div style={{ display: "flex", justifyContent: "center", marginBottom: 10 }}>
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="white" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-            </div>
-            <div style={{ fontWeight: 800, fontSize: "1.1rem", color: "#fff" }}>On pense à toi !</div>
-            <div style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.85)", marginTop: 4 }}>L'équipe Moyo Dating te propose une rencontre</div>
+      <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.9)", zIndex: 10001, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+        <div className="moyo-card-in" style={{ background: "linear-gradient(180deg,#1a0d0a,#0d0605)", border: "1px solid rgba(212,168,67,0.25)", maxHeight: "90vh", overflowY: "auto", borderRadius: 24, width: "100%", maxWidth: 380, boxShadow: "0 24px 64px rgba(0,0,0,0.5)", padding: "30px 26px 26px", textAlign: "center" }}>
+          {/* Cœur + étincelles décoratives */}
+          <div style={{ position: "relative", height: 46, marginBottom: 6 }}>
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="1.5" style={{ position: "absolute", left: "50%", top: 0, transform: "translateX(-50%)" }}><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            <svg width="9" height="9" viewBox="0 0 24 24" fill={G.or} style={{ position: "absolute", left: "32%", top: 2 }}><path d="M12 2l1.5 6.5L20 10l-6.5 1.5L12 18l-1.5-6.5L4 10l6.5-1.5L12 2z"/></svg>
+            <svg width="7" height="7" viewBox="0 0 24 24" fill={G.or} style={{ position: "absolute", left: "66%", top: 10 }}><path d="M12 2l1.5 6.5L20 10l-6.5 1.5L12 18l-1.5-6.5L4 10l6.5-1.5L12 2z"/></svg>
           </div>
-          {/* Profil proposé */}
-          <div style={{ padding: "24px 20px 8px", textAlign: "center" }}>
-            <div style={{ width: 90, height: 90, borderRadius: "50%", background: G.creme, margin: "0 auto 12px", overflow: "hidden", border: `3px solid #e67e22`, boxShadow: "0 4px 16px rgba(230,126,34,0.3)" }}>
+          {/* Titre serif */}
+          <div style={{ fontFamily: "Georgia, serif", fontSize: "1.5rem", lineHeight: 1.3, color: "#fff" }}>Une rencontre</div>
+          <div style={{ fontFamily: "Georgia, serif", fontSize: "1.5rem", lineHeight: 1.3, fontWeight: 700, color: G.rouge, marginBottom: 14 }}>sélectionnée pour vous</div>
+          {/* Séparateur */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "0 auto 16px", maxWidth: 200 }}>
+            <div style={{ flex: 1, height: 1, background: "rgba(212,168,67,0.35)" }} />
+            <svg width="10" height="10" viewBox="0 0 24 24" fill={G.rouge} stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            <div style={{ flex: 1, height: 1, background: "rgba(212,168,67,0.35)" }} />
+          </div>
+          <div style={{ color: "rgba(255,255,255,0.65)", fontSize: "0.82rem", lineHeight: 1.6, marginBottom: 12 }}>
+            Chez Moyo Dating, nous prenons le temps de créer des rencontres qui ont du sens.
+          </div>
+          <div style={{ color: "rgba(255,255,255,0.85)", fontSize: "0.85rem", marginBottom: 22 }}>Aujourd'hui, nous aimerions vous présenter</div>
+          {/* Photo avec halo et badge cœur */}
+          <div style={{ position: "relative", width: 160, height: 160, margin: "0 auto 16px" }}>
+            <div style={{ position: "absolute", inset: 0, borderRadius: "50%", boxShadow: `0 0 0 1px rgba(212,168,67,0.4), 0 0 34px rgba(192,57,43,0.35)` }} />
+            <svg width="18" height="18" viewBox="0 0 24 24" fill={G.rouge} stroke="none" style={{ position: "absolute", top: -8, left: -18, opacity: 0.85 }}><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill={G.rouge} stroke="none" style={{ position: "absolute", bottom: 6, right: -16, opacity: 0.75 }}><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            <div style={{ width: 160, height: 160, borderRadius: "50%", overflow: "hidden", background: G.creme, border: "3px solid rgba(212,168,67,0.55)" }}>
               {pendingProposal.proposerPhoto
                 ? <img src={pendingProposal.proposerPhoto} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.8" strokeLinecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+                : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
               }
             </div>
-            <div style={{ fontWeight: 800, fontSize: "1.1rem", color: G.brun }}>{pendingProposal.proposerName}</div>
-            {(pendingProposal.proposerAge || pendingProposal.proposerCity) && (
-              <div style={{ fontSize: "0.82rem", color: "#888", marginTop: 4 }}>
-                {pendingProposal.proposerAge ? `${pendingProposal.proposerAge} ans` : ""}{pendingProposal.proposerAge && pendingProposal.proposerCity ? " · " : ""}{pendingProposal.proposerCity || ""}
-              </div>
-            )}
-            <div style={{ fontSize: "0.78rem", color: "#aaa", marginTop: 12, lineHeight: 1.6, padding: "0 10px" }}>
-              Tu es intéressé(e) par cette rencontre ?
+            <div style={{ position: "absolute", bottom: -6, left: "50%", transform: "translateX(-50%)", width: 38, height: 38, borderRadius: "50%", background: "#1a0d0a", border: `2px solid ${G.rouge}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill={G.rouge} stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
             </div>
           </div>
+          <div style={{ fontFamily: "Georgia, serif", fontWeight: 700, fontSize: "1.35rem", color: "#fff", marginBottom: 4 }}>{pendingProposal.proposerName}</div>
+          {(pendingProposal.proposerAge || pendingProposal.proposerCity) && (
+            <div style={{ fontSize: "0.86rem", color: "rgba(255,255,255,0.6)", marginBottom: 26 }}>
+              {pendingProposal.proposerAge ? `${pendingProposal.proposerAge} ans` : ""}{pendingProposal.proposerAge && pendingProposal.proposerCity ? " · " : ""}{pendingProposal.proposerCity || ""}
+            </div>
+          )}
           {/* Boutons */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, padding: "16px 20px 24px" }}>
-            <button
-              disabled={proposalResponding}
-              onClick={async () => {
-                setProposalResponding(true);
-                try {
-                  const myResponseField = pendingProposal.myRole === "user1" ? "user1_response" : "user2_response";
-                  // Récupérer la proposition actuelle pour vérifier l'autre réponse
-                  const r = await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?id=eq.${pendingProposal.id}&select=user1_response,user2_response,user1_id,user2_id&limit=1`, {
-                    headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth!.token}` }
+          <button
+            disabled={proposalResponding}
+            onClick={async () => {
+              setProposalResponding(true);
+              try {
+                const myResponseField = pendingProposal.myRole === "user1" ? "user1_response" : "user2_response";
+                // Récupérer la proposition actuelle pour vérifier l'autre réponse
+                const r = await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?id=eq.${pendingProposal.id}&select=user1_response,user2_response,user1_id,user2_id&limit=1`, {
+                  headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth!.token}` }
+                });
+                const pdata = await r.json().catch(() => []);
+                const prop = Array.isArray(pdata) ? pdata[0] : null;
+                const otherResponse = pendingProposal.myRole === "user1" ? prop?.user2_response : prop?.user1_response;
+                const newStatus = otherResponse === "accepted" ? "accepted" : "pending";
+                await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?id=eq.${pendingProposal.id}`, {
+                  method: "PATCH",
+                  headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth!.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
+                  body: JSON.stringify({ [myResponseField]: "accepted", status: newStatus })
+                });
+                // Si les deux ont accepté → créer le match
+                if (newStatus === "accepted" && prop) {
+                  const mr = await fetch(`${SUPABASE_URL}/rest/v1/matches`, {
+                    method: "POST",
+                    headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth!.token}`, "Content-Type": "application/json", "Prefer": "return=representation" },
+                    body: JSON.stringify({ user1: prop.user1_id, user2: prop.user2_id })
                   });
-                  const pdata = await r.json().catch(() => []);
-                  const prop = Array.isArray(pdata) ? pdata[0] : null;
-                  const otherResponse = pendingProposal.myRole === "user1" ? prop?.user2_response : prop?.user1_response;
-                  const newStatus = otherResponse === "accepted" ? "accepted" : "pending";
-                  await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?id=eq.${pendingProposal.id}`, {
-                    method: "PATCH",
-                    headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth!.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
-                    body: JSON.stringify({ [myResponseField]: "accepted", status: newStatus })
-                  });
-                  // Si les deux ont accepté → créer le match
-                  if (newStatus === "accepted" && prop) {
-                    const mr = await fetch(`${SUPABASE_URL}/rest/v1/matches`, {
-                      method: "POST",
-                      headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth!.token}`, "Content-Type": "application/json", "Prefer": "return=representation" },
-                      body: JSON.stringify({ user1: prop.user1_id, user2: prop.user2_id })
-                    });
-                    const matchData = await mr.json().catch(() => null);
-                    const matchId = Array.isArray(matchData) ? matchData[0]?.id : matchData?.id;
-                    if (matchId) {
-                      await sendMatchWelcomeMessage(auth!.token, matchId, auth!.name, pendingProposal.proposerName);
-                      logAdminAction(auth!.token, auth!.userId, "Système", `Proposition acceptée : match créé entre ${auth!.name} et ${pendingProposal.proposerName}`, auth!.userId);
-                    }
-                    await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?id=eq.${pendingProposal.id}`, {
-                      method: "PATCH",
-                      headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth!.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
-                      body: JSON.stringify({ status: "accepted" })
-                    });
+                  const matchData = await mr.json().catch(() => null);
+                  const matchId = Array.isArray(matchData) ? matchData[0]?.id : matchData?.id;
+                  if (matchId) {
+                    await sendMatchWelcomeMessage(auth!.token, matchId, auth!.name, pendingProposal.proposerName);
+                    logAdminAction(auth!.token, auth!.userId, "Système", `Proposition acceptée : match créé entre ${auth!.name} et ${pendingProposal.proposerName}`, auth!.userId);
                   }
-                  setPendingProposal(null);
-                  // Vérifier immédiatement s'il y a une autre proposition en attente
-                  // (sinon il faut attendre jusqu'à POLL_BADGES_MS avant qu'elle n'apparaisse).
-                  checkProposalsRef.current?.();
-                } catch {}
-                setProposalResponding(false);
-              }}
-              style={{ background: "linear-gradient(135deg,#27ae60,#1e8449)", color: "#fff", border: "none", borderRadius: 50, padding: "14px", fontSize: "0.95rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Accepter
-            </button>
-            <button
-              disabled={proposalResponding}
-              onClick={async () => {
-                setProposalResponding(true);
-                try {
-                  const myResponseField = pendingProposal.myRole === "user1" ? "user1_response" : "user2_response";
                   await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?id=eq.${pendingProposal.id}`, {
                     method: "PATCH",
                     headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth!.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
-                    body: JSON.stringify({ [myResponseField]: "refused", status: "refused", refused_by: auth!.userId })
+                    body: JSON.stringify({ status: "accepted" })
                   });
-                  logAdminAction(auth!.token, auth!.userId, "Système", `Proposition refusée par ${auth!.name} (proposé : ${pendingProposal.proposerName})`, auth!.userId);
-                  setPendingProposal(null);
-                  // Vérifier immédiatement s'il y a une autre proposition en attente
-                  checkProposalsRef.current?.();
-                } catch {}
-                setProposalResponding(false);
-              }}
-              style={{ background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "14px", fontSize: "0.95rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Refuser
-            </button>
-          </div>
+                }
+                setPendingProposal(null);
+                // Vérifier immédiatement s'il y a une autre proposition en attente
+                // (sinon il faut attendre jusqu'à POLL_BADGES_MS avant qu'elle n'apparaisse).
+                checkProposalsRef.current?.();
+              } catch {}
+              setProposalResponding(false);
+            }}
+            style={{ width: "100%", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: "#fff", border: "none", borderRadius: 999, padding: "15px", fontSize: "0.95rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 9, boxShadow: "0 8px 24px rgba(192,57,43,0.4)", marginBottom: 12 }}
+          >
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="#fff" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            Oui, je suis intéressé(e)
+          </button>
+          <button
+            disabled={proposalResponding}
+            onClick={async () => {
+              setProposalResponding(true);
+              try {
+                const myResponseField = pendingProposal.myRole === "user1" ? "user1_response" : "user2_response";
+                await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?id=eq.${pendingProposal.id}`, {
+                  method: "PATCH",
+                  headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth!.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
+                  body: JSON.stringify({ [myResponseField]: "refused", status: "refused", refused_by: auth!.userId })
+                });
+                logAdminAction(auth!.token, auth!.userId, "Système", `Proposition refusée par ${auth!.name} (proposé : ${pendingProposal.proposerName})`, auth!.userId);
+                setPendingProposal(null);
+                // Vérifier immédiatement s'il y a une autre proposition en attente
+                checkProposalsRef.current?.();
+              } catch {}
+              setProposalResponding(false);
+            }}
+            style={{ width: "100%", background: "transparent", color: "rgba(255,255,255,0.7)", border: "1.5px solid rgba(255,255,255,0.25)", borderRadius: 999, padding: "14px", fontSize: "0.9rem", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            Pas cette fois
+          </button>
         </div>
       </div>
     )}
