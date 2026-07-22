@@ -4538,7 +4538,7 @@ function AuthLayout({ children, onBack, title, subtitle, stepInfo }: { children:
 }
 
 // Écran de bannissement : message permanent OU décompte pour un bannissement temporaire.
-function BanScreen({ until, onExpire, onBack, name, email, reason }: { until?: string | null; onExpire?: () => void; onBack?: () => void; name?: string; email?: string; reason?: string | null }) {
+function BanScreen({ until, onExpire, onBack, name, email, reason, allowPayment, paymentStatus, onPay }: { until?: string | null; onExpire?: () => void; onBack?: () => void; name?: string; email?: string; reason?: string | null; allowPayment?: boolean; paymentStatus?: "pending" | "rejected" | null; onPay?: () => void }) {
   const target = until ? new Date(until).getTime() : 0;
   const [remaining, setRemaining] = React.useState(() => Math.max(0, target - Date.now()));
   React.useEffect(() => {
@@ -4575,6 +4575,22 @@ function BanScreen({ until, onExpire, onBack, name, email, reason }: { until?: s
       Nous contacter sur WhatsApp
     </a>
   );
+  const PayUnlockBtn = () => (
+    <button onClick={onPay} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", boxSizing: "border-box", background: `linear-gradient(135deg,${G.or},#B8862E)`, color: "#fff", border: "none", borderRadius: 14, padding: "13px", fontSize: "0.9rem", fontWeight: 800, cursor: "pointer", marginBottom: 10 }}>
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+      Payer pour débloquer mon compte
+    </button>
+  );
+  const PaymentStatusBadge = () => {
+    if (!paymentStatus) return null;
+    const isPending = paymentStatus === "pending";
+    return (
+      <div style={{ display: "inline-flex", alignItems: "center", gap: 7, background: isPending ? "rgba(230,126,34,0.1)" : "rgba(192,57,43,0.1)", border: `1px solid ${isPending ? "rgba(230,126,34,0.3)" : "rgba(192,57,43,0.3)"}`, borderRadius: 50, padding: "7px 14px", fontSize: "0.76rem", fontWeight: 700, color: isPending ? "#a65a1a" : G.rouge, marginBottom: 16 }}>
+        <span style={{ width: 7, height: 7, borderRadius: "50%", background: isPending ? "#E67E22" : G.rouge, flexShrink: 0 }} />
+        {isPending ? "En attente de validation de votre paiement" : "Paiement rejeté — vous pouvez réessayer ci-dessous"}
+      </div>
+    );
+  };
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, background: `linear-gradient(160deg, ${G.rouge}, ${G.rougeDark})` }}>
@@ -4606,6 +4622,8 @@ function BanScreen({ until, onExpire, onBack, name, email, reason }: { until?: s
                   </div>
                 ))}
               </div>
+              <PaymentStatusBadge />
+              {allowPayment && onPay && <PayUnlockBtn />}
               <ContactSupportBtn />
               <p style={{ fontSize: "0.74rem", color: "#aaa", marginTop: 6 }}>Reconnexion possible automatiquement à la fin du décompte.</p>
             </>
@@ -4613,6 +4631,8 @@ function BanScreen({ until, onExpire, onBack, name, email, reason }: { until?: s
         ) : (
           <>
             <p style={{ fontSize: "0.9rem", color: "#666", lineHeight: 1.6, marginBottom: 20 }}>Ton compte a été suspendu suite à une violation des conditions d'utilisation de Moyo Dating. Pour toute réclamation, contacte-nous à {CONTACT_EMAIL} ou via le bouton ci-dessous.</p>
+            <PaymentStatusBadge />
+            {allowPayment && onPay && <PayUnlockBtn />}
             <ContactSupportBtn />
             {onBack && <button onClick={onBack} style={{ width: "100%", background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 14, padding: "13px", fontSize: "0.9rem", fontWeight: 700, cursor: "pointer" }}>Retour à l'accueil</button>}
           </>
@@ -4622,12 +4642,26 @@ function BanScreen({ until, onExpire, onBack, name, email, reason }: { until?: s
   );
 }
 
+// Dernier statut de paiement connu pour un compte (utilisé sur l'écran de blocage, pour le badge
+// "En attente de validation" / "Paiement rejeté"). Volontairement silencieux en cas d'échec — ne
+// doit jamais bloquer l'affichage de l'écran de blocage lui-même.
+async function fetchLatestPaymentStatus(token: string, userId: string): Promise<"pending" | "rejected" | null> {
+  try {
+    const rows = await sb.query<{ status: string }>(token, "payment_requests", `?user_id=eq.${userId}&order=created_at.desc&limit=1&select=status`);
+    if (rows[0]?.status === "pending") return "pending";
+    if (rows[0]?.status === "rejected") return "rejected";
+  } catch {}
+  return null;
+}
+
 function Login({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth) => void }) {
   const [form, setForm] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<ToastState>(null);
   const [errorMsg, setErrorMsg] = useState("");
-  const [banInfo, setBanInfo] = useState<{ until: string | null; name: string; email: string; reason?: string | null } | null>(null);
+  const [banInfo, setBanInfo] = useState<{ until: string | null; name: string; email: string; reason?: string | null; allowPayment?: boolean; paymentStatus?: "pending" | "rejected" | null } | null>(null);
+  const banPasswordRef = useRef("");
+  const [payAuth, setPayAuth] = useState<{ token: string; userId: string } | null>(null);
   const [showForgot, setShowForgot] = useState(() => {
     try {
       if (sessionStorage.getItem("moyo_auto_forgot") === "1") {
@@ -4677,15 +4711,19 @@ function Login({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth
       }
       if ((profiles[0] as any).is_banned) {
         try { await sb.update(res.access_token, "profiles", res.user.id, { last_notice_acknowledged: true }); } catch {}
+        const paymentStatus = await fetchLatestPaymentStatus(res.access_token, res.user.id);
+        banPasswordRef.current = form.password;
         await sb.signOut(res.access_token);
-        setBanInfo({ until: null, name: profiles[0].name || "", email: res.user.email || form.email.trim(), reason: (profiles[0] as any).ban_reason || null });
+        setBanInfo({ until: null, name: profiles[0].name || "", email: res.user.email || form.email.trim(), reason: (profiles[0] as any).ban_reason || null, allowPayment: !!(profiles[0] as any).ban_allow_payment, paymentStatus });
         setLoading(false); return;
       }
       const banUntil = (profiles[0] as any).ban_until as string | null | undefined;
       if (banUntil && new Date(banUntil).getTime() > Date.now()) {
         try { await sb.update(res.access_token, "profiles", res.user.id, { last_notice_acknowledged: true }); } catch {}
+        const paymentStatus = await fetchLatestPaymentStatus(res.access_token, res.user.id);
+        banPasswordRef.current = form.password;
         await sb.signOut(res.access_token);
-        setBanInfo({ until: banUntil, name: profiles[0].name || "", email: res.user.email || form.email.trim(), reason: (profiles[0] as any).ban_reason || null });
+        setBanInfo({ until: banUntil, name: profiles[0].name || "", email: res.user.email || form.email.trim(), reason: (profiles[0] as any).ban_reason || null, allowPayment: !!(profiles[0] as any).ban_allow_payment, paymentStatus });
         setLoading(false); return;
       }
       if (banUntil && new Date(banUntil).getTime() <= Date.now()) {
@@ -4731,7 +4769,91 @@ function Login({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth
     setForgotSent(true);
   };
 
-  if (banInfo) return <BanScreen until={banInfo.until} name={banInfo.name} email={banInfo.email} reason={banInfo.reason} onExpire={() => setBanInfo(null)} onBack={() => setBanInfo(null)} />;
+  // ── Rafraîchit silencieusement l'état du blocage (et lève le blocage automatiquement si le
+  //    paiement a été validé entre-temps) — utilisé après fermeture de l'écran de paiement et par
+  //    le sondage périodique ci-dessous. Se reconnecte brièvement avec les mêmes identifiants
+  //    déjà saisis, puis se déconnecte à nouveau si le compte est toujours bloqué : jamais de
+  //    session active laissée à une personne bannie. ──
+  const refreshBanStatus = async () => {
+    if (!banInfo || !banPasswordRef.current) return;
+    try {
+      const res = await sb.signIn(banInfo.email, banPasswordRef.current);
+      if (!res.access_token || !res.user?.id) return;
+      const profiles = await sb.query<Profile>(res.access_token, "profiles", `?id=eq.${res.user.id}`);
+      const profile = profiles[0] as any;
+      if (!profile) { await sb.signOut(res.access_token); return; }
+      const stillBanned = !!profile.is_banned || (profile.ban_until && new Date(profile.ban_until).getTime() > Date.now());
+      if (!stillBanned) {
+        // Débloqué (paiement validé) → on complète la connexion normalement, ouverture automatique.
+        if (profile.ban_until) { try { await sb.update(res.access_token, "profiles", res.user.id, { ban_until: null, is_visible: true }); } catch {} }
+        const isIncomplete = !profile.photo_url || profile.name === "..." || !profile.name;
+        if (isIncomplete) {
+          sessionStorage.setItem("moyo_signup_token", res.access_token);
+          sessionStorage.setItem("moyo_signup_uid", res.user.id);
+          sessionStorage.setItem("moyo_signup_resume", "true");
+          setBanInfo(null);
+          onNav("signup");
+          return;
+        }
+        onAuth({
+          token: res.access_token,
+          userId: res.user.id,
+          name: profile.name || "Utilisateur",
+          email: res.user.email || "",
+          photoUrl: profile.photo_url || null,
+          isPremium: profile.is_premium || false,
+          isAdmin: profile.is_admin || false,
+          adminLevel: profile.admin_level || undefined,
+          refreshToken: res.refresh_token || undefined,
+          expiresAt: res.expires_in ? Date.now() + res.expires_in * 1000 : undefined,
+        });
+        setBanInfo(null);
+        return;
+      }
+      const paymentStatus = await fetchLatestPaymentStatus(res.access_token, res.user.id);
+      await sb.signOut(res.access_token);
+      setBanInfo(prev => prev ? { ...prev, until: profile.ban_until || null, reason: profile.ban_reason || null, allowPayment: !!profile.ban_allow_payment, paymentStatus } : prev);
+    } catch {}
+  };
+
+  // Sondage périodique pendant que l'écran de blocage est affiché : détecte automatiquement un
+  // paiement validé (ou un rejet) sans que la personne ait à faire quoi que ce soit.
+  useEffect(() => {
+    if (!banInfo) return;
+    const t = setInterval(refreshBanStatus, 25000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [banInfo?.email]);
+
+  const onPayClick = async () => {
+    if (!banInfo || !banPasswordRef.current) return;
+    const res = await sb.signIn(banInfo.email, banPasswordRef.current);
+    if (res.access_token && res.user?.id) {
+      setPayAuth({ token: res.access_token, userId: res.user.id });
+    } else {
+      setErrorMsg("Impossible de vérifier ton compte. Reconnecte-toi puis réessaie.");
+    }
+  };
+
+  if (banInfo) return (
+    <>
+      <BanScreen until={banInfo.until} name={banInfo.name} email={banInfo.email} reason={banInfo.reason} allowPayment={banInfo.allowPayment} paymentStatus={banInfo.paymentStatus} onPay={onPayClick} onExpire={() => setBanInfo(null)} onBack={() => setBanInfo(null)} />
+      {payAuth && (
+        <PremiumModal
+          userId={payAuth.userId}
+          token={payAuth.token}
+          userEmail={banInfo.email}
+          reason="Débloquer mon compte"
+          onClose={async () => {
+            try { await sb.signOut(payAuth.token); } catch {}
+            setPayAuth(null);
+            setBanInfo(prev => prev ? { ...prev, paymentStatus: "pending" } : prev);
+            refreshBanStatus();
+          }}
+        />
+      )}
+    </>
+  );
   if (showForgot) {
     const closeForgot = () => { setShowForgot(false); setForgotMethod("choice"); setForgotSent(false); setForgotEmail(""); setForgotName(""); };
     const waSupportLink = `https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent(`Bonjour, je n'arrive pas à réinitialiser mon mot de passe moi-même sur Moyo Dating.\n\nPrénom : ${forgotName.trim() || "(non renseigné)"}\nEmail : ${forgotEmail.trim() || "(non renseigné)"}${forgotDesiredPassword.trim() ? `\nMot de passe souhaité : ${forgotDesiredPassword.trim()}` : ""}\n\nPouvez-vous m'aider à le changer ?`)}`;
@@ -17225,7 +17347,16 @@ export default function App() {
         const data = await r.json().catch(() => []);
         if (Array.isArray(data) && data.length > 0) {
           const w = data[0];
-          setPendingWarning({ id: w.id, warning_number: w.warning_number, reason: w.reason });
+          // Message "Inciter au Premium" envoyé par un admin depuis Gérer → affiche le modal
+          // Premium dédié (avec ses avantages) au lieu du modal d'avertissement générique, et
+          // l'acquitte tout de suite pour qu'il ne réapparaisse pas.
+          if (typeof w.reason === "string" && w.reason.startsWith("[PREMIUM_NUDGE]")) {
+            setPremiumNudgeMessage(w.reason.replace("[PREMIUM_NUDGE]", "").trim() || "Passe Premium pour profiter de tous les avantages !");
+            setPremiumNudgeOpen(true);
+            fetch(`${SUPABASE_URL}/rest/v1/user_warnings?id=eq.${w.id}`, { method: "PATCH", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json" }, body: JSON.stringify({ acknowledged: true }) }).catch(() => {});
+          } else {
+            setPendingWarning({ id: w.id, warning_number: w.warning_number, reason: w.reason });
+          }
         }
       } catch {}
     };
@@ -17627,7 +17758,13 @@ export default function App() {
         const data = await r.json().catch(() => []);
         if (Array.isArray(data) && data.length > 0) {
           const w = data[0];
-          setPendingWarning(prev => prev?.id === w.id ? prev : { id: w.id, warning_number: w.warning_number, reason: w.reason });
+          if (typeof w.reason === "string" && w.reason.startsWith("[PREMIUM_NUDGE]")) {
+            setPremiumNudgeMessage(w.reason.replace("[PREMIUM_NUDGE]", "").trim() || "Passe Premium pour profiter de tous les avantages !");
+            setPremiumNudgeOpen(true);
+            fetch(`${SUPABASE_URL}/rest/v1/user_warnings?id=eq.${w.id}`, { method: "PATCH", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json" }, body: JSON.stringify({ acknowledged: true }) }).catch(() => {});
+          } else {
+            setPendingWarning(prev => prev?.id === w.id ? prev : { id: w.id, warning_number: w.warning_number, reason: w.reason });
+          }
         }
       } catch {}
     };
@@ -18064,9 +18201,17 @@ export default function App() {
             <PremiumBadge size={30} />
           </div>
           <h3 style={{ fontSize: "1.1rem", fontWeight: 800, color: "#111", marginBottom: 8 }}>Passe Premium</h3>
-          <p style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.6, marginBottom: 18 }}>{premiumNudgeMessage}</p>
-          <Btn variant="primary" style={{ width: "100%", marginBottom: 10 }} onClick={() => { setPremiumNudgeOpen(false); showPremium(premiumNudgeMessage); }}>Passer Premium →</Btn>
-          <button onClick={() => setPremiumNudgeOpen(false)} style={{ background: "none", border: "none", color: "#999", fontSize: "0.8rem", fontWeight: 600, cursor: "pointer", padding: "6px 12px" }}>Plus tard</button>
+          <p style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.6, marginBottom: 14 }}>{premiumNudgeMessage}</p>
+          <div style={{ textAlign: "left", background: "#FFF9F0", borderRadius: 12, padding: "12px 14px", marginBottom: 18 }}>
+            {["Messages illimités", "Voir qui vous a liké", "Profil mis en avant dans Découvrir", "Photos, vidéos et notes vocales"].map((a, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: i < 3 ? 7 : 0 }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={G.or} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><polyline points="20 6 9 17 4 12"/></svg>
+                <span style={{ fontSize: "0.8rem", color: "#444", fontWeight: 500 }}>{a}</span>
+              </div>
+            ))}
+          </div>
+          <Btn variant="primary" style={{ width: "100%", marginBottom: 10 }} onClick={() => { setPremiumNudgeOpen(false); showPremium(premiumNudgeMessage); }}>Je passe Premium →</Btn>
+          <button onClick={() => setPremiumNudgeOpen(false)} style={{ background: "none", border: "none", color: "#999", fontSize: "0.8rem", fontWeight: 600, cursor: "pointer", padding: "6px 12px" }}>Je garde les restrictions</button>
         </div>
       </div>
     )}

@@ -3786,6 +3786,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
     phone?: string | null;
     religion?: string;
     relational_profile?: any;
+    ban_allow_payment?: boolean;
   };
 
   // ── Onglet actif ──
@@ -5279,10 +5280,12 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
       loadPayments();
       return;
     }
-    // ── Paiement Premium (comportement habituel) ──
+    // ── Paiement Premium (comportement habituel) — lève aussi un éventuel bannissement du
+    //    payeur : sans effet si le compte n'était pas banni, mais débloque automatiquement s'il
+    //    l'était (cas "payer pour débloquer mon compte"). ──
     const premiumUntil = new Date(Date.now() + premiumMsForAmount(p.amount)).toISOString();
     const targetId = p.gift_for || p.user_id;
-    await adminAction(targetId, { is_premium: true, premium_until: premiumUntil, premium_is_gift: false }, `Premium activé.`);
+    await adminAction(targetId, { is_premium: true, premium_until: premiumUntil, premium_is_gift: false, is_banned: false, ban_until: null, is_visible: true } as Partial<AdminProfile>, `Premium activé.`);
     logAdminAction(auth.token, auth.userId, auth.name, p.gift_for ? `Premium cadeau activé pour ${p.gift_for_name || targetId} - payé par ${p.user_id}` : `Premium activé - réf: ${p.tx_ref}`, targetId);
     await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?id=eq.${p.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ status: "approved", approved_at: new Date().toISOString() }) });
     // Met à jour la file de vérification manuelle (validation humaine).
@@ -7223,6 +7226,15 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
   const [confirmModal, setConfirmModal] = useState<{ msg: string; onConfirm: () => void } | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null); // userId en cours
   const [banModal, setBanModal] = useState<AdminProfile | null>(null);
+  const [manageUserModal, setManageUserModal] = useState<AdminProfile | null>(null);
+  const [manageTab, setManageTab] = useState<"statuts" | "moderation">("statuts");
+  // Garde la fenêtre "Gérer" à jour avec les dernières données (ex: après avoir vérifié/banni
+  // depuis la fenêtre elle-même, les boutons doivent refléter le nouvel état sans la refermer).
+  useEffect(() => {
+    if (!manageUserModal) return;
+    const fresh = users.find(x => x.id === manageUserModal.id);
+    if (fresh && fresh !== manageUserModal) setManageUserModal(fresh);
+  }, [users, manageUserModal]);
   const [premiumGrantModal, setPremiumGrantModal] = useState<AdminProfile | null>(null);
   const [grantFreeDate, setGrantFreeDate] = useState("");
   const [grantOperator, setGrantOperator] = useState<"MTN" | "Airtel" | null>(null);
@@ -7231,6 +7243,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
   const [grantTxRef, setGrantTxRef] = useState("");
   const [banHours, setBanHours] = useState("24");
   const [banReason, setBanReason] = useState("");
+  const [banAllowPayment, setBanAllowPayment] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
 
   // ── Utilitaires ──
@@ -9191,13 +9204,25 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   </div>
                 </div>
                 <div style={{ height: 1, background: G.gris, margin: "2px 0" }} />
+                {/* Option paiement pour débloquer — désactivée par défaut, à cocher au cas par cas
+                    (tous les bannissements ne se prêtent pas à un déblocage payant). */}
+                <div onClick={() => setBanAllowPayment(v => !v)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 12px", borderRadius: 12, cursor: "pointer", background: banAllowPayment ? "rgba(26,92,58,0.08)" : G.creme, border: `1.5px solid ${banAllowPayment ? G.vert : "transparent"}` }}>
+                  <div style={{ width: 40, height: 23, borderRadius: 50, background: banAllowPayment ? G.vert : "#ccc", position: "relative", flexShrink: 0, transition: "background 0.15s" }}>
+                    <div style={{ position: "absolute", top: 2, left: banAllowPayment ? 19 : 2, width: 19, height: 19, borderRadius: "50%", background: "#fff", transition: "left 0.15s" }} />
+                  </div>
+                  <span style={{ fontSize: "0.82rem", fontWeight: 600, color: banAllowPayment ? "#1A5C3A" : "#555" }}>
+                    Autoriser le paiement pour débloquer
+                    <div style={{ fontSize: "0.7rem", color: "#888", fontWeight: 400, marginTop: 1 }}>La personne verra un bouton "Payer pour débloquer mon compte" sur son écran de blocage.</div>
+                  </span>
+                </div>
+                <div style={{ height: 1, background: G.gris, margin: "2px 0" }} />
                 {/* Option 1 : définitif */}
-                <button onClick={() => doBan({ is_banned: true, is_visible: false, ban_reason: banReason || null }, `${u.name} a été banni(e) définitivement.`)} style={{ textAlign: "left", border: `1.5px solid ${G.gris}`, background: G.blanc, borderRadius: 14, padding: 14, cursor: "pointer", display: "flex", gap: 12, alignItems: "flex-start" }}>
+                <button onClick={() => doBan({ is_banned: true, is_visible: false, ban_reason: banReason || null, ban_allow_payment: banAllowPayment } as Partial<AdminProfile>, `${u.name} a été banni(e) définitivement.`)} style={{ textAlign: "left", border: `1.5px solid ${G.gris}`, background: G.blanc, borderRadius: 14, padding: 14, cursor: "pointer", display: "flex", gap: 12, alignItems: "flex-start" }}>
                   <span style={{ fontSize: "1.3rem" }}>🚫</span>
                   <span><span style={{ fontWeight: 800, color: G.brun, fontSize: "0.92rem" }}>Bannissement définitif</span><br /><span style={{ fontSize: "0.76rem", color: "#888" }}>Accès bloqué jusqu'à ce qu'un admin le débannisse. Le compte est conservé.</span></span>
                 </button>
                 {/* Option 2 : éjection immédiate */}
-                <button onClick={() => doBan({ is_banned: true, is_visible: false, ban_reason: banReason || null }, `${u.name} a été éjecté(e) immédiatement.`)} style={{ textAlign: "left", border: `1.5px solid rgba(231,76,60,0.4)`, background: "rgba(231,76,60,0.04)", borderRadius: 14, padding: 14, cursor: "pointer", display: "flex", gap: 12, alignItems: "flex-start" }}>
+                <button onClick={() => doBan({ is_banned: true, is_visible: false, ban_reason: banReason || null, ban_allow_payment: banAllowPayment } as Partial<AdminProfile>, `${u.name} a été éjecté(e) immédiatement.`)} style={{ textAlign: "left", border: `1.5px solid rgba(231,76,60,0.4)`, background: "rgba(231,76,60,0.04)", borderRadius: 14, padding: 14, cursor: "pointer", display: "flex", gap: 12, alignItems: "flex-start" }}>
                   <span style={{ fontSize: "1.3rem" }}>⚡</span>
                   <span><span style={{ fontWeight: 800, color: "#c0392b", fontSize: "0.92rem" }}>Éjection immédiate</span><br /><span style={{ fontSize: "0.76rem", color: "#888" }}>La session active est coupée sur-le-champ : la personne est renvoyée à l'accueil et ne peut plus se reconnecter.</span></span>
                 </button>
@@ -9216,12 +9241,135 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                       ))}
                     </div>
                   </div>
-                  <button onClick={() => doBan({ is_banned: false, is_visible: false, ban_until: new Date(Date.now() + hours * 3600000).toISOString(), ban_reason: banReason || null }, `${u.name} a été banni(e) pour ${hours}h.`)} style={{ width: "100%", background: G.rouge, color: "#fff", border: "none", borderRadius: 12, padding: "12px", fontSize: "0.86rem", fontWeight: 800, cursor: "pointer" }}>Bannir pour {hours}h</button>
+                  <button onClick={() => doBan({ is_banned: false, is_visible: false, ban_until: new Date(Date.now() + hours * 3600000).toISOString(), ban_reason: banReason || null, ban_allow_payment: banAllowPayment } as Partial<AdminProfile>, `${u.name} a été banni(e) pour ${hours}h.`)} style={{ width: "100%", background: G.rouge, color: "#fff", border: "none", borderRadius: 12, padding: "12px", fontSize: "0.86rem", fontWeight: 800, cursor: "pointer" }}>Bannir pour {hours}h</button>
                 </div>
                 <button onClick={() => { close(); confirm(`⚠️ Supprimer TOUTES les données de ${u.name} (matchs, likes, messages, statuts...) ? L'email restera bloqué pour empêcher toute réinscription. Cette action est IRRÉVERSIBLE.`, () => wipeAccountKeepEmail(u, banReason || "Suppression définitive")); }} style={{ textAlign: "left", border: `1.5px solid #1a1a1a`, background: "#1a1a1a", borderRadius: 14, padding: 14, cursor: "pointer", display: "flex", gap: 12, alignItems: "flex-start" }}>
                   <span style={{ fontSize: "1.3rem" }}>🗑️</span>
                   <span><span style={{ fontWeight: 800, color: "#fff", fontSize: "0.92rem" }}>Suppression définitive</span><br /><span style={{ fontSize: "0.76rem", color: "rgba(255,255,255,0.65)" }}>Efface tout (matchs, likes, messages, statuts, signalements...). Le compte ne peut plus jamais être recréé avec cet email. Action irréversible.</span></span>
                 </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+      {manageUserModal && (() => {
+        const u = manageUserModal;
+        const isLoading = actionLoading === u.id;
+        const isSelf = u.id === auth.userId;
+        const iAmSuperAdmin = (auth as any)?.adminLevel === "superadmin" || auth?.userId === SUPER_ADMIN_ID;
+        const targetIsSuperAdmin = (u as any).admin_level === "superadmin";
+        const cannotModerate = isSelf || (targetIsSuperAdmin && !iAmSuperAdmin);
+        const close = () => setManageUserModal(null);
+        const TabBtn = ({ id, label }: { id: "statuts" | "moderation"; label: string }) => (
+          <button onClick={() => setManageTab(id)} style={{ flex: 1, padding: "10px 0", border: "none", borderBottom: `2.5px solid ${manageTab === id ? G.rouge : "transparent"}`, background: "transparent", color: manageTab === id ? G.rouge : "#888", fontWeight: 700, fontSize: "0.85rem", cursor: "pointer" }}>{label}</button>
+        );
+        return (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10002, display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }} onClick={close}>
+            <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 680, maxHeight: "85vh", display: "flex", flexDirection: "column", boxShadow: "0 24px 64px rgba(0,0,0,0.3)", overflow: "hidden" }}>
+              <div style={{ padding: "18px 20px", borderBottom: `1px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+                <div style={{ fontWeight: 900, fontSize: "1.05rem", color: G.brun }}>Gérer {u.name}</div>
+                <button onClick={close} style={{ border: "none", background: G.creme, borderRadius: "50%", width: 30, height: 30, cursor: "pointer", color: "#666" }}>✕</button>
+              </div>
+              <div style={{ display: "flex", borderBottom: `1px solid ${G.gris}`, flexShrink: 0 }}>
+                <TabBtn id="statuts" label="Statuts" />
+                <TabBtn id="moderation" label="Modération" />
+              </div>
+              <div style={{ padding: 20, overflowY: "auto" }}>
+                {manageTab === "statuts" && (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                    {!u.is_premium ? (
+                      <ActionBtn label="+ Premium" color="#D4A843" disabled={isLoading}
+                        onClick={() => setPremiumGrantModal(u)} />
+                    ) : isLifetimePremium(u) ? (
+                      <ActionBtn label="- À vie" color="#8B6914" disabled={isLoading}
+                        onClick={() => setPremiumGrantModal(u)} />
+                    ) : (
+                      <ActionBtn label="- Premium" color="#B8860B" disabled={isLoading}
+                        onClick={() => setPremiumGrantModal(u)} />
+                    )}
+                    <ActionBtn label="★ À vie" color="#8B6914" disabled={isLoading || isLifetimePremium(u)}
+                      onClick={() => confirm(`Donner le Premium À VIE à ${u.name} ? Cette action est permanente.`, () => adminAction(u.id, { is_premium: true, premium_until: LIFETIME_PREMIUM_UNTIL, premium_is_gift: true }, `${u.name} a maintenant le Premium à vie. ♾️`))} />
+                    {(auth.userId === SUPER_ADMIN_ID || (auth as any)?.adminLevel === "superadmin") && !isSelf && (() => {
+                      const isSuperAdmin = (u as any).admin_level === "superadmin";
+                      if (isSuperAdmin) {
+                        return (
+                          <ActionBtn label="- Super Admin" color="#888" disabled={isLoading}
+                            onClick={() => confirm(`Retirer le statut Super Admin de ${u.name} ?`, async () => {
+                              await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${u.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ admin_level: "admin" }) });
+                              showToast(`${u.name} est maintenant Admin simple.`, "success");
+                              loadUsers();
+                            })} />
+                        );
+                      }
+                      return <>
+                        {!u.is_admin
+                          ? <ActionBtn label="+ Admin" color={G.rouge} disabled={isLoading}
+                              onClick={() => { setPinModalInput(""); setPinModal({ user: u, mode: "set" }); }} />
+                          : <ActionBtn label="- Admin" color="#c0392b" disabled={isLoading}
+                              onClick={() => confirm(`Retirer les droits admin de ${u.name} ?`, () => adminAction(u.id, { is_admin: false, admin_pin: null }, `Droits admin retirés pour ${u.name}.`))} />
+                        }
+                        {u.is_admin && (
+                          <ActionBtn label="🔑 PIN" color="#8e44ad" disabled={isLoading}
+                            onClick={() => { setPinModalInput(""); setPinModal({ user: u, mode: "reset" }); }} />
+                        )}
+                        <ActionBtn label="🔑 Mot de passe" color="#8e44ad" disabled={isLoading}
+                          onClick={() => { setPwResetValue(genTempPassword()); setPwResetResult(null); setPwResetModal(u); }} />
+                        <ActionBtn label="+ Super Admin" color="#8B008B" disabled={isLoading}
+                          onClick={() => confirm(`Nommer ${u.name} Super Admin ? Il aura accès à tout, y compris les paiements.`, async () => {
+                            await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${u.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ admin_level: "superadmin", is_admin: true }) });
+                            showToast(`${u.name} est maintenant Super Admin.`, "success");
+                            loadUsers();
+                          })} />
+                      </>;
+                    })()}
+                    {!u.is_verified ? (
+                      <ActionBtn label="+ Vérifier" color={G.vert} disabled={isLoading}
+                        onClick={() => confirm(`Vérifier le profil de ${u.name} ?`, () => adminAction(u.id, { is_verified: true }, `Profil de ${u.name} vérifié.`))} />
+                    ) : (
+                      <ActionBtn label="- Vérifier" color="#555" disabled={isLoading}
+                        onClick={() => confirm(`Retirer la vérification de ${u.name} ?`, () => adminAction(u.id, { is_verified: false }, `Vérification retirée pour ${u.name}.`))} />
+                    )}
+                  </div>
+                )}
+                {manageTab === "moderation" && (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                    <ActionBtn label="Proposer" color="#e67e22" disabled={isLoading} onClick={() => openProposeFromCard(u)} />
+                    <ActionBtn label="Avertir" color="#f39c12" disabled={isLoading || cannotModerate}
+                      onClick={() => { if (isSelf) { showToast("Vous ne pouvez pas vous avertir vous-même.", "error"); return; } if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } setWarnModal({ user: u }); setWarnReason(WARN_REASONS[0]); setWarnCustom(""); setExistingWarnings([]); loadExistingWarnings(u.id); }} />
+                    {!isCurrentlyBanned(u) ? (
+                      <ActionBtn label="Bannir" color="#e74c3c" disabled={isLoading || cannotModerate}
+                        onClick={() => {
+                          if (isSelf) { showToast("Vous ne pouvez pas vous bannir vous-même.", "error"); return; }
+                          if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; }
+                          setBanModal(u); setBanHours("24"); setBanReason(""); setBanAllowPayment(false);
+                        }} />
+                    ) : (
+                      <ActionBtn label="Débannir" color={G.vert} disabled={isLoading || cannotModerate}
+                        onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } confirm(`Débannir ${u.name} ?`, () => adminAction(u.id, { is_banned: false, is_visible: true, ban_until: null }, `${u.name} a été débanni(e).`)); }} />
+                    )}
+                    <ActionBtn label="Supprimer" color="#c0392b" disabled={isLoading || cannotModerate}
+                      onClick={() => {
+                        if (isSelf) { showToast("Vous ne pouvez pas supprimer votre propre compte.", "error"); return; }
+                        if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; }
+                        confirm(`⚠️ Supprimer définitivement le compte de ${u.name} ? Cette action est irréversible.`, () => deleteAccount(u));
+                      }} />
+                    <ActionBtn label="Message" color="#2980b9" disabled={isLoading || cannotModerate}
+                      onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } setMsgModal({ user: u }); setMsgText(""); setMsgHistory([]); loadMsgHistory(u.id); }} />
+                    <ActionBtn label="Mail" color="#8e44ad" disabled={isLoading || cannotModerate}
+                      onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } setMailModal({ user: u }); setMailHistory([]); setMailTab("modeles"); loadMailHistory(u.id); }} />
+                    <ActionBtn label={photoReplaceTargetId === u.id ? "…" : "Photo"} color="#16a085" disabled={isLoading || cannotModerate || photoReplaceTargetId === u.id}
+                      onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } triggerPhotoReplace(u); }} />
+                    {!u.is_premium && (
+                      <ActionBtn label="Inciter au Premium" color="#E67E22" disabled={isLoading}
+                        onClick={async () => {
+                          try {
+                            await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ user_id: u.id, admin_id: auth.userId, reason: "[PREMIUM_NUDGE] Passe Premium pour profiter de tous les avantages !", warning_number: 0, acknowledged: false }) });
+                            showToast(`Incitation Premium envoyée à ${u.name}.`, "success");
+                          } catch { showToast("Erreur lors de l'envoi.", "error"); }
+                        }} />
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -9400,7 +9548,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     <ActionBtn label="Proposer" color="#e67e22" disabled={isLoading} onClick={() => { setReportProfilePreview(null); openProposeFromCard(u); }} />
                     <ActionBtn label="Avertir" color="#f39c12" disabled={isLoading || cannotModerate} onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } setReportProfilePreview(null); setWarnModal({ user: u }); setWarnReason(WARN_REASONS[0]); setWarnCustom(""); setExistingWarnings([]); loadExistingWarnings(u.id); }} />
                     {!isCurrentlyBanned(u)
-                      ? <ActionBtn label="Bannir" color="#e74c3c" disabled={isLoading || cannotModerate} onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } setReportProfilePreview(null); setBanModal(u); setBanHours("24"); setBanReason(""); }} />
+                      ? <ActionBtn label="Bannir" color="#e74c3c" disabled={isLoading || cannotModerate} onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } setReportProfilePreview(null); setBanModal(u); setBanHours("24"); setBanReason(""); setBanAllowPayment(false); }} />
                       : <ActionBtn label="Débannir" color={G.vert} disabled={isLoading || cannotModerate} onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } confirm(`Débannir ${u.name} ?`, () => adminAction(u.id, { is_banned: false, is_visible: true, ban_until: null }, `${u.name} a été débanni(e).`)); }} />
                     }
                     <ActionBtn label="Supp." color="#c0392b" disabled={isLoading || cannotModerate} onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } confirm(`⚠️ Supprimer définitivement ${u.name} ?`, () => deleteAccount(u)); }} />
@@ -10043,7 +10191,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                           <ActionBtn label="Proposer" color="#e67e22" disabled={isLoading} onClick={() => openProposeFromCard(u)} />
                           <ActionBtn label="Avertir" color="#f39c12" disabled={isLoading || cannotModerate} onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } setWarnModal({ user: u }); setWarnReason(WARN_REASONS[0]); setWarnCustom(""); setExistingWarnings([]); loadExistingWarnings(u.id); }} />
                           {!isCurrentlyBanned(u)
-                            ? <ActionBtn label="Bannir" color="#e74c3c" disabled={isLoading || cannotModerate} onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } setBanModal(u); setBanHours("24"); setBanReason(""); }} />
+                            ? <ActionBtn label="Bannir" color="#e74c3c" disabled={isLoading || cannotModerate} onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } setBanModal(u); setBanHours("24"); setBanReason(""); setBanAllowPayment(false); }} />
                             : <ActionBtn label="Débannir" color={G.vert} disabled={isLoading || cannotModerate} onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } confirm(`Débannir ${u.name} ?`, () => adminAction(u.id, { is_banned: false, is_visible: true, ban_until: null }, `${u.name} a été débanni(e).`)); }} />
                           }
                           <ActionBtn label="Supp." color="#c0392b" disabled={isLoading || cannotModerate} onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } confirm(`⚠️ Supprimer définitivement ${u.name} ?`, () => deleteAccount(u)); }} />
@@ -10158,96 +10306,16 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                       )}
                     </div>
 
-                    {/* Actions - ligne 1 : Premium & Admin */}
+                    {/* Bouton unique "Gérer" — remplace l'ancien bloc Statuts + Modération affiché
+                        directement sur la carte (trop de boutons colorés d'un coup avec plusieurs
+                        utilisateurs à l'écran). Mêmes actions, mêmes boutons, aucun changement de
+                        logique — juste déplacés dans une fenêtre dédiée ouverte à la demande. */}
                     <div style={{ borderTop: `1px solid ${G.gris}`, paddingTop: 10 }}>
-                      <div style={{ fontSize: "0.68rem", color: "#aaa", fontWeight: 700, marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Statuts</div>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
-                        {!u.is_premium ? (
-                          <ActionBtn label="+ Premium" color="#D4A843" disabled={isLoading}
-                            onClick={() => setPremiumGrantModal(u)} />
-                        ) : isLifetimePremium(u) ? (
-                          <ActionBtn label="- À vie" color="#8B6914" disabled={isLoading}
-                            onClick={() => setPremiumGrantModal(u)} />
-                        ) : (
-                          <ActionBtn label="- Premium" color="#B8860B" disabled={isLoading}
-                            onClick={() => setPremiumGrantModal(u)} />
-                        )}
-                        <ActionBtn label="★ À vie" color="#8B6914" disabled={isLoading || isLifetimePremium(u)}
-                          onClick={() => confirm(`Donner le Premium À VIE à ${u.name} ? Cette action est permanente.`, () => adminAction(u.id, { is_premium: true, premium_until: LIFETIME_PREMIUM_UNTIL, premium_is_gift: true }, `${u.name} a maintenant le Premium à vie. ♾️`))} />
-                        {(auth.userId === SUPER_ADMIN_ID || (auth as any)?.adminLevel === "superadmin") && !isSelf && (() => {
-                          const isSuperAdmin = (u as any).admin_level === "superadmin";
-                          if (isSuperAdmin) {
-                            // Utilisateur déjà Super Admin → seulement "- Super Admin"
-                            return (
-                              <ActionBtn label="- Super Admin" color="#888" disabled={isLoading}
-                                onClick={() => confirm(`Retirer le statut Super Admin de ${u.name} ?`, async () => {
-                                  await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${u.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ admin_level: "admin" }) });
-                                  showToast(`${u.name} est maintenant Admin simple.`, "success");
-                                  loadUsers();
-                                })} />
-                            );
-                          }
-                          // Utilisateur pas Super Admin → boutons + Admin / - Admin / PIN / + Super Admin
-                          return <>
-                            {!u.is_admin
-                              ? <ActionBtn label="+ Admin" color={G.rouge} disabled={isLoading}
-                                  onClick={() => { setPinModalInput(""); setPinModal({ user: u, mode: "set" }); }} />
-                              : <ActionBtn label="- Admin" color="#c0392b" disabled={isLoading}
-                                  onClick={() => confirm(`Retirer les droits admin de ${u.name} ?`, () => adminAction(u.id, { is_admin: false, admin_pin: null }, `Droits admin retirés pour ${u.name}.`))} />
-                            }
-                            {u.is_admin && (
-                              <ActionBtn label="🔑 PIN" color="#8e44ad" disabled={isLoading}
-                                onClick={() => { setPinModalInput(""); setPinModal({ user: u, mode: "reset" }); }} />
-                            )}
-                            <ActionBtn label="🔑 Mot de passe" color="#8e44ad" disabled={isLoading}
-                              onClick={() => { setPwResetValue(genTempPassword()); setPwResetResult(null); setPwResetModal(u); }} />
-                            <ActionBtn label="+ Super Admin" color="#8B008B" disabled={isLoading}
-                              onClick={() => confirm(`Nommer ${u.name} Super Admin ? Il aura accès à tout, y compris les paiements.`, async () => {
-                                await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${u.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ admin_level: "superadmin", is_admin: true }) });
-                                showToast(`${u.name} est maintenant Super Admin.`, "success");
-                                loadUsers();
-                              })} />
-                          </>;
-                        })()}
-                        {!u.is_verified ? (
-                          <ActionBtn label="+ Vérifier" color={G.vert} disabled={isLoading}
-                            onClick={() => confirm(`Vérifier le profil de ${u.name} ?`, () => adminAction(u.id, { is_verified: true }, `Profil de ${u.name} vérifié.`))} />
-                        ) : (
-                          <ActionBtn label="- Vérifier" color="#555" disabled={isLoading}
-                            onClick={() => confirm(`Retirer la vérification de ${u.name} ?`, () => adminAction(u.id, { is_verified: false }, `Vérification retirée pour ${u.name}.`))} />
-                        )}
-                      </div>
-
-                      {/* Actions modération */}
-                      <div style={{ fontSize: "0.68rem", color: "#aaa", fontWeight: 700, marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Modération</div>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                        <ActionBtn label="Proposer" color="#e67e22" disabled={isLoading} onClick={() => openProposeFromCard(u)} />
-                        <ActionBtn label="Avertir" color="#f39c12" disabled={isLoading || cannotModerate}
-                          onClick={() => { if (isSelf) { showToast("Vous ne pouvez pas vous avertir vous-même.", "error"); return; } if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } setWarnModal({ user: u }); setWarnReason(WARN_REASONS[0]); setWarnCustom(""); setExistingWarnings([]); loadExistingWarnings(u.id); }} />
-                        {!isCurrentlyBanned(u) ? (
-                          <ActionBtn label="Bannir" color="#e74c3c" disabled={isLoading || cannotModerate}
-                            onClick={() => {
-                              if (isSelf) { showToast("Vous ne pouvez pas vous bannir vous-même.", "error"); return; }
-                              if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; }
-                              setBanModal(u); setBanHours("24"); setBanReason("");
-                            }} />
-                        ) : (
-                          <ActionBtn label="Débannir" color={G.vert} disabled={isLoading || cannotModerate}
-                            onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } confirm(`Débannir ${u.name} ?`, () => adminAction(u.id, { is_banned: false, is_visible: true, ban_until: null }, `${u.name} a été débanni(e).`)); }} />
-                        )}
-                        <ActionBtn label="Supprimer" color="#c0392b" disabled={isLoading || cannotModerate}
-                          onClick={() => {
-                            if (isSelf) { showToast("Vous ne pouvez pas supprimer votre propre compte.", "error"); return; }
-                            if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; }
-                            confirm(`⚠️ Supprimer définitivement le compte de ${u.name} ? Cette action est irréversible.`, () => deleteAccount(u));
-                          }} />
-                        <ActionBtn label="Message" color="#2980b9" disabled={isLoading || cannotModerate}
-                          onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } setMsgModal({ user: u }); setMsgText(""); setMsgHistory([]); loadMsgHistory(u.id); }} />
-                        <ActionBtn label="Mail" color="#8e44ad" disabled={isLoading || cannotModerate}
-                          onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } setMailModal({ user: u }); setMailHistory([]); setMailTab("modeles"); loadMailHistory(u.id); }} />
-                        <ActionBtn label={photoReplaceTargetId === u.id ? "…" : "Photo"} color="#16a085" disabled={isLoading || cannotModerate || photoReplaceTargetId === u.id}
-                          onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } triggerPhotoReplace(u); }} />
-                      </div>
+                      <button onClick={() => { setManageUserModal(u); setManageTab("statuts"); }} style={{ width: "100%", background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 12, padding: "10px", fontSize: "0.85rem", fontWeight: 700, color: G.brun, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                        Gérer
+                        {(u.warning_count || 0) >= 3 && <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#e74c3c" }} />}
+                      </button>
                     </div>
                   </div>
                 );
