@@ -71,6 +71,7 @@ export function setSOCIAL_FACEBOOK(v: any) { SOCIAL_FACEBOOK = v; }
 export function setSOCIAL_INSTAGRAM(v: any) { SOCIAL_INSTAGRAM = v; }
 export function setSOCIAL_TIKTOK(v: any) { SOCIAL_TIKTOK = v; }
 export function setSOCIAL_YOUTUBE(v: any) { SOCIAL_YOUTUBE = v; }
+export function setSOCIAL_LINKEDIN(v: any) { SOCIAL_LINKEDIN = v; }
 export function setSTORE_LINK_ANDROID(v: any) { STORE_LINK_ANDROID = v; }
 export function setSTORE_LINK_IOS(v: any) { STORE_LINK_IOS = v; }
 
@@ -306,6 +307,10 @@ export function setPRIVACY_NOTICE_STEP2_TEXT(v: any) { PRIVACY_NOTICE_STEP2_TEXT
 // modifiable depuis Configuration.
 export let BAN_SCREEN_TEXT = "Ton compte a été suspendu suite à une violation des conditions d'utilisation de Moyo Dating. Ce que vous pouvez faire pour toute réclamation ou débloquer votre compte :";
 export function setBAN_SCREEN_TEXT(v: any) { BAN_SCREEN_TEXT = v; }
+// Autorise ou non les membres à générer eux-mêmes un lien de paiement à faire payer par un proche
+// (Profil → "Faire payer par quelqu'un d'autre" + lien discret sur l'écran de paiement).
+export let PAY_LINK_ENABLED = true;
+export function setPAY_LINK_ENABLED(v: any) { PAY_LINK_ENABLED = v; }
 // Mise en avant des profils Premium/Vérifiés dans le fil Découvrir (activable/désactivable par l'admin)
 export let PREMIUM_BOOST_ENABLED = true;
 // Prix le plus bas parmi les formules actuellement ACTIVES (ignore les formules désactivées)
@@ -452,6 +457,7 @@ export let SOCIAL_FACEBOOK = "https://facebook.com/MoyoCongoOfficiel";
 export let SOCIAL_INSTAGRAM = "https://www.instagram.com/moyo_congo";
 export let SOCIAL_TIKTOK = "https://www.tiktok.com/@moyo_congo";
 export let SOCIAL_YOUTUBE = "https://www.youtube.com/@Moyo-congo";
+export let SOCIAL_LINKEDIN = "https://www.linkedin.com/company/moyo-dating/about/";
 // Liens de téléchargement (vide = affiche les instructions d'installation PWA à la place)
 export let STORE_LINK_ANDROID = "";
 export let STORE_LINK_IOS = "";
@@ -492,7 +498,7 @@ export function dedupeMatchesByCouple<T extends { user1?: string; user2?: string
 }
 
 // Charger les settings dynamiques depuis Supabase au démarrage
-fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_messages_free_femme,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,pay_wero_enabled,pay_paypal_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,feature_show_likes_views_free,feature_group_premium,feature_group_photos,feature_moderation_insults,feature_moderation_contact,premium_screen_variant,custom_banned_words,contact_banned_words,disabled_builtin_words,disabled_builtin_contact_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,pay_wero_number,pay_paypal_number,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,store_link_android,store_link_ios,plan_week_enabled,plan_month_enabled,plan_2month_enabled,discover_default_mode,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,auto_warn_ban_contact_enabled,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price,privacy_notice_enabled,premium_boost_enabled,assistant_photo_url,broadcast_enabled,modal_match_title,modal_match_subtitle,referral_bonus_week_days,referral_bonus_month_days,referral_bonus_2month_days,affiliate_commission_week_fcfa,affiliate_commission_month_fcfa,affiliate_commission_2month_fcfa,affiliate_payable_delay_days,privacy_notice_step1_text,privacy_notice_step2_text,ban_screen_text)&select=key,value`, {
+fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_messages_free_femme,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,pay_wero_enabled,pay_paypal_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,feature_show_likes_views_free,feature_group_premium,feature_group_photos,feature_moderation_insults,feature_moderation_contact,premium_screen_variant,custom_banned_words,contact_banned_words,disabled_builtin_words,disabled_builtin_contact_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,pay_wero_number,pay_paypal_number,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,social_linkedin,store_link_android,store_link_ios,plan_week_enabled,plan_month_enabled,plan_2month_enabled,discover_default_mode,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,auto_warn_ban_contact_enabled,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price,privacy_notice_enabled,premium_boost_enabled,assistant_photo_url,broadcast_enabled,modal_match_title,modal_match_subtitle,referral_bonus_week_days,referral_bonus_month_days,referral_bonus_2month_days,affiliate_commission_week_fcfa,affiliate_commission_month_fcfa,affiliate_commission_2month_fcfa,affiliate_payable_delay_days,privacy_notice_step1_text,privacy_notice_step2_text,ban_screen_text,pay_link_enabled)&select=key,value`, {
   headers: { "apikey": SUPABASE_KEY },
 }).then(r => r.json()).then((data: { key: string; value: string }[]) => {
   if (!Array.isArray(data)) return;
@@ -538,6 +544,7 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
   if (map["social_instagram"] !== undefined) SOCIAL_INSTAGRAM = map["social_instagram"];
   if (map["social_tiktok"] !== undefined) SOCIAL_TIKTOK = map["social_tiktok"];
   if (map["social_youtube"] !== undefined) SOCIAL_YOUTUBE = map["social_youtube"];
+  if (map["social_linkedin"] !== undefined) SOCIAL_LINKEDIN = map["social_linkedin"];
   if (map["store_link_android"] !== undefined) STORE_LINK_ANDROID = map["store_link_android"];
   if (map["store_link_ios"] !== undefined) STORE_LINK_IOS = map["store_link_ios"];
   if (map["plan_week_enabled"] !== undefined) PLAN_WEEK_ENABLED = map["plan_week_enabled"] !== "false";
@@ -548,6 +555,7 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
   if (map["privacy_notice_step1_text"]) setPRIVACY_NOTICE_STEP1_TEXT(map["privacy_notice_step1_text"]);
   if (map["privacy_notice_step2_text"]) setPRIVACY_NOTICE_STEP2_TEXT(map["privacy_notice_step2_text"]);
   if (map["ban_screen_text"]) setBAN_SCREEN_TEXT(map["ban_screen_text"]);
+  if (map["pay_link_enabled"] !== undefined) PAY_LINK_ENABLED = map["pay_link_enabled"] !== "false";
   if (map["premium_boost_enabled"] !== undefined) PREMIUM_BOOST_ENABLED = map["premium_boost_enabled"] !== "false";
   if (map["assistant_photo_url"] !== undefined) SUPPORT_TEAM_PHOTO = map["assistant_photo_url"];
   if (map["landing_members_count"]) LANDING_MEMBERS = map["landing_members_count"];
@@ -2646,7 +2654,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail, giftFor, prom
               </div>
             </>
           )}
-          {!giftFor && (
+          {!giftFor && PAY_LINK_ENABLED && (
             <div onClick={async () => { const ok = await copyMyPaymentLink(token, userId); if (ok) { setMyLinkCopied(true); setTimeout(() => setMyLinkCopied(false), 3000); } }} style={{ textAlign: "center", padding: "10px 0 20px", cursor: "pointer" }}>
               {myLinkCopied ? (
                 <span style={{ fontSize: "0.78rem", color: G.vert, fontWeight: 700 }}>✓ Lien copié ! Envoie-le à la personne qui va payer pour toi.</span>
@@ -2983,7 +2991,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail, giftFor, prom
             </button>
           </>
         )}
-        {!giftFor && (
+        {!giftFor && PAY_LINK_ENABLED && (
           <div onClick={async () => { const ok = await copyMyPaymentLink(token, userId); if (ok) { setMyLinkCopied(true); setTimeout(() => setMyLinkCopied(false), 3000); } }} style={{ textAlign: "center", marginBottom: 14, cursor: "pointer" }}>
             {myLinkCopied ? (
               <span style={{ fontSize: "0.78rem", color: G.vert, fontWeight: 700 }}>✓ Lien copié ! Envoie-le à la personne qui va payer pour toi.</span>
@@ -3270,6 +3278,14 @@ function useWindowWidth() {
   return width;
 }
 
+// ── Icônes des réseaux sociaux — au niveau module pour être réutilisées partout (Landing, Profil,
+//    etc.), une seule source au lieu d'être redéfinies à chaque endroit. ──
+const svgFb = (size = 20) => <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>;
+const svgIg = (size = 20) => <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>;
+const svgTk = (size = 20) => <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.18 8.18 0 004.78 1.52V6.75a4.85 4.85 0 01-1.01-.06z"/></svg>;
+const svgYt = (size = 20) => <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>;
+const svgLi = (size = 20) => <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 1 1 0-4.125 2.062 2.062 0 0 1 0 4.125zM7.114 20.452H3.558V9h3.556v11.452z"/></svg>;
+
 function Landing({ onNav }: { onNav: (p: string) => void }) {
   const [featuredAvis, setFeaturedAvis] = React.useState<{ id: string; name: string; city: string; comment: string; rating: number }[]>([]);
   const [showMobileLanding, setShowMobileLanding] = React.useState(true);
@@ -3345,9 +3361,6 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
       .catch(() => {});
   }, []);
   const NEW_FB = "https://facebook.com/MoyoCongoOfficiel";
-  const svgFb = <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>;
-  const svgIg = <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>;
-  const svgTk = <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.18 8.18 0 004.78 1.52V6.75a4.85 4.85 0 01-1.01-.06z"/></svg>;
   const svgWa = <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>;
   const [showLandingMenu, setShowLandingMenu] = useState(false);
   const [openMenuSection, setOpenMenuSection] = useState<string | null>(null);
@@ -4256,9 +4269,11 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
       <footer style={{ background: G.vert, padding: "28px 24px" }}>
         <div className="landing-sections" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
           <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
-            {SOCIAL_FACEBOOK && <a href={SOCIAL_FACEBOOK} target="_blank" rel="noopener noreferrer" className="social-icon" style={{ color: "#fff", opacity: 0.7, display: "flex" }} title="Facebook">{svgFb}</a>}
-            {SOCIAL_INSTAGRAM && <a href={SOCIAL_INSTAGRAM} target="_blank" rel="noopener noreferrer" className="social-icon" style={{ color: "#fff", opacity: 0.7, display: "flex" }} title="Instagram">{svgIg}</a>}
-            {SOCIAL_TIKTOK && <a href={SOCIAL_TIKTOK} target="_blank" rel="noopener noreferrer" className="social-icon" style={{ color: "#fff", opacity: 0.7, display: "flex" }} title="TikTok">{svgTk}</a>}
+            {SOCIAL_FACEBOOK && <a href={SOCIAL_FACEBOOK} target="_blank" rel="noopener noreferrer" className="social-icon" style={{ color: "#fff", opacity: 0.7, display: "flex" }} title="Facebook">{svgFb()}</a>}
+            {SOCIAL_INSTAGRAM && <a href={SOCIAL_INSTAGRAM} target="_blank" rel="noopener noreferrer" className="social-icon" style={{ color: "#fff", opacity: 0.7, display: "flex" }} title="Instagram">{svgIg()}</a>}
+            {SOCIAL_TIKTOK && <a href={SOCIAL_TIKTOK} target="_blank" rel="noopener noreferrer" className="social-icon" style={{ color: "#fff", opacity: 0.7, display: "flex" }} title="TikTok">{svgTk()}</a>}
+            {SOCIAL_YOUTUBE && <a href={SOCIAL_YOUTUBE} target="_blank" rel="noopener noreferrer" className="social-icon" style={{ color: "#fff", opacity: 0.7, display: "flex" }} title="YouTube">{svgYt()}</a>}
+            {SOCIAL_LINKEDIN && <a href={SOCIAL_LINKEDIN} target="_blank" rel="noopener noreferrer" className="social-icon" style={{ color: "#fff", opacity: 0.7, display: "flex" }} title="LinkedIn">{svgLi()}</a>}
             {CONTACT_WHATSAPP && <a href={`https://wa.me/${CONTACT_WHATSAPP}`} target="_blank" rel="noopener noreferrer" className="social-icon" style={{ color: "#fff", opacity: 0.7, display: "flex" }} title="WhatsApp">{svgWa}</a>}
           </div>
           <div style={{ display: "flex", gap: 20, flexWrap: "wrap", justifyContent: "center" }}>
@@ -4429,6 +4444,17 @@ function About({ onBack }: { onBack: () => void }) {
             <div>
               <div style={{ color: "rgba(255,255,255,0.85)", fontSize: "0.72rem", fontWeight: 500 }}>Abonne-toi sur</div>
               <div style={{ color: "#fff", fontSize: "0.95rem", fontWeight: 700 }}>YouTube - MOYO Congo</div>
+            </div>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: "auto", flexShrink: 0 }}><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </a>}
+          {SOCIAL_LINKEDIN && <a href={SOCIAL_LINKEDIN} target="_blank" rel="noopener noreferrer"
+            style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 16px", background: "#0A66C2", borderRadius: 14, marginBottom: 10, textDecoration: "none" }}>
+            <div style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              {svgLi(20)}
+            </div>
+            <div>
+              <div style={{ color: "rgba(255,255,255,0.85)", fontSize: "0.72rem", fontWeight: 500 }}>Suis-nous sur</div>
+              <div style={{ color: "#fff", fontSize: "0.95rem", fontWeight: 700 }}>LinkedIn - Moyo Dating</div>
             </div>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: "auto", flexShrink: 0 }}><path d="M5 12h14M12 5l7 7-7 7"/></svg>
           </a>}
@@ -4628,20 +4654,20 @@ function BanScreen({ until, onExpire, onBack, name, email, reason, allowPayment,
   })();
   const waLink = `https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent(waMessage)}`;
   const ContactSupportBtn = () => (
-    <a href={waLink} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", boxSizing: "border-box", background: "#25D366", color: "#fff", border: "none", borderRadius: 14, padding: "13px", fontSize: "0.9rem", fontWeight: 800, cursor: "pointer", textDecoration: "none", marginBottom: 10 }}>
-      <svg width="17" height="17" viewBox="0 0 24 24" fill="#fff"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24z"/></svg>
+    <a href={waLink} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7, width: "100%", boxSizing: "border-box", background: "#25D366", color: "#fff", border: "none", borderRadius: 12, padding: "11px", fontSize: "0.84rem", fontWeight: 800, cursor: "pointer", textDecoration: "none", marginBottom: 8 }}>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="#fff"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24z"/></svg>
       Nous contacter sur WhatsApp
     </a>
   );
   const ContactMailBtn = () => (
-    <a href={`mailto:${CONTACT_EMAIL}`} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", boxSizing: "border-box", background: G.creme, color: G.brun, border: `1.5px solid ${G.gris}`, borderRadius: 14, padding: "13px", fontSize: "0.9rem", fontWeight: 800, cursor: "pointer", textDecoration: "none", marginBottom: 10 }}>
-      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={G.brun} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+    <a href={`mailto:${CONTACT_EMAIL}`} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7, width: "100%", boxSizing: "border-box", background: G.creme, color: G.brun, border: `1.5px solid ${G.gris}`, borderRadius: 12, padding: "11px", fontSize: "0.84rem", fontWeight: 800, cursor: "pointer", textDecoration: "none", marginBottom: 8 }}>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={G.brun} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
       Nous contacter par mail
     </a>
   );
   const PayUnlockBtn = () => (
-    <button onClick={onPay} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", boxSizing: "border-box", background: `linear-gradient(135deg,${G.or},#B8862E)`, color: "#fff", border: "none", borderRadius: 14, padding: "13px", fontSize: "0.9rem", fontWeight: 800, cursor: "pointer", marginBottom: 10 }}>
-      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+    <button onClick={onPay} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7, width: "100%", boxSizing: "border-box", background: `linear-gradient(135deg,${G.or},#B8862E)`, color: "#fff", border: "none", borderRadius: 12, padding: "11px", fontSize: "0.84rem", fontWeight: 800, cursor: "pointer", marginBottom: 8 }}>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
       Payer pour débloquer mon compte
     </button>
   );
@@ -4649,57 +4675,57 @@ function BanScreen({ until, onExpire, onBack, name, email, reason, allowPayment,
     if (!paymentStatus) return null;
     const isPending = paymentStatus === "pending";
     return (
-      <div style={{ display: "inline-flex", alignItems: "center", gap: 7, background: isPending ? "rgba(230,126,34,0.1)" : "rgba(192,57,43,0.1)", border: `1px solid ${isPending ? "rgba(230,126,34,0.3)" : "rgba(192,57,43,0.3)"}`, borderRadius: 50, padding: "7px 14px", fontSize: "0.76rem", fontWeight: 700, color: isPending ? "#a65a1a" : G.rouge, marginBottom: 16 }}>
-        <span style={{ width: 7, height: 7, borderRadius: "50%", background: isPending ? "#E67E22" : G.rouge, flexShrink: 0 }} />
+      <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: isPending ? "rgba(230,126,34,0.1)" : "rgba(192,57,43,0.1)", border: `1px solid ${isPending ? "rgba(230,126,34,0.3)" : "rgba(192,57,43,0.3)"}`, borderRadius: 50, padding: "6px 12px", fontSize: "0.7rem", fontWeight: 700, color: isPending ? "#a65a1a" : G.rouge, marginBottom: 12 }}>
+        <span style={{ width: 6, height: 6, borderRadius: "50%", background: isPending ? "#E67E22" : G.rouge, flexShrink: 0 }} />
         {isPending ? "En attente de validation de votre paiement" : "Paiement rejeté — vous pouvez réessayer ci-dessous"}
       </div>
     );
   };
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, background: `linear-gradient(160deg, ${G.rouge}, ${G.rougeDark})` }}>
-      <div style={{ background: G.blanc, borderRadius: 24, maxWidth: 420, width: "100%", padding: "32px 26px", textAlign: "center", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
-        <div style={{ width: 70, height: 70, borderRadius: "50%", background: "rgba(192,57,43,0.12)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
-          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, background: `linear-gradient(160deg, ${G.rouge}, ${G.rougeDark})` }}>
+      <div style={{ background: G.blanc, borderRadius: 20, maxWidth: 400, width: "100%", padding: "22px 22px", textAlign: "center", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
+        <div style={{ width: 50, height: 50, borderRadius: "50%", background: "rgba(192,57,43,0.12)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
         </div>
-        <h2 style={{ fontSize: "1.3rem", fontWeight: 900, color: G.brun, margin: "0 0 10px" }}>Accès suspendu</h2>
+        <h2 style={{ fontSize: "1.1rem", fontWeight: 900, color: G.brun, margin: "0 0 8px" }}>Accès suspendu</h2>
         {reason && !(isTemp && expired) && (
-          <div style={{ background: "#FFF5F4", border: "1px solid #F5C4B3", borderRadius: 12, padding: "12px 14px", textAlign: "center", marginBottom: 16 }}>
-            <div style={{ fontSize: "0.68rem", fontWeight: 800, color: "#993C1D", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 3 }}>Motif</div>
-            <div style={{ fontSize: "0.85rem", color: "#712B13", fontWeight: 600 }}>{reason}</div>
+          <div style={{ background: "#FFF5F4", border: "1px solid #F5C4B3", borderRadius: 10, padding: "9px 12px", textAlign: "center", marginBottom: 12 }}>
+            <div style={{ fontSize: "0.62rem", fontWeight: 800, color: "#993C1D", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 2 }}>Motif</div>
+            <div style={{ fontSize: "0.78rem", color: "#712B13", fontWeight: 600, lineHeight: 1.35 }}>{reason}</div>
           </div>
         )}
         {isTemp ? (
           expired ? (
             <>
-              <p style={{ fontSize: "0.9rem", color: "#666", lineHeight: 1.6, marginBottom: 20 }}>Ta suspension est terminée. Tu peux te reconnecter.</p>
-              <button onClick={onExpire} style={{ width: "100%", background: G.vert, color: "#fff", border: "none", borderRadius: 14, padding: "14px", fontSize: "0.95rem", fontWeight: 800, cursor: "pointer" }}>Me reconnecter</button>
+              <p style={{ fontSize: "0.84rem", color: "#666", lineHeight: 1.5, marginBottom: 16 }}>Ta suspension est terminée. Tu peux te reconnecter.</p>
+              <button onClick={onExpire} style={{ width: "100%", background: G.vert, color: "#fff", border: "none", borderRadius: 12, padding: "12px", fontSize: "0.88rem", fontWeight: 800, cursor: "pointer" }}>Me reconnecter</button>
             </>
           ) : (
             <>
-              <p style={{ fontSize: "0.9rem", color: "#666", lineHeight: 1.6, marginBottom: 18 }}>Tu as enfreint nos règles d'utilisation. Ton compte est temporairement bloqué. Tu pourras te reconnecter automatiquement à la fin du décompte.</p>
-              <div style={{ display: "flex", justifyContent: "center", gap: 8, marginBottom: 20 }}>
+              <p style={{ fontSize: "0.84rem", color: "#666", lineHeight: 1.5, marginBottom: 14 }}>Tu as enfreint nos règles d'utilisation. Ton compte est temporairement bloqué. Tu pourras te reconnecter automatiquement à la fin du décompte.</p>
+              <div style={{ display: "flex", justifyContent: "center", gap: 6, marginBottom: 16 }}>
                 {[[h, "h"], [m, "min"], [s, "s"]].map(([v, lbl], i) => (
-                  <div key={i} style={{ background: "rgba(192,57,43,0.08)", borderRadius: 14, padding: "12px 14px", minWidth: 64 }}>
-                    <div style={{ fontSize: "1.7rem", fontWeight: 900, color: G.rouge, lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>{pad(v as number)}</div>
-                    <div style={{ fontSize: "0.66rem", color: "#999", marginTop: 4 }}>{lbl as string}</div>
+                  <div key={i} style={{ background: "rgba(192,57,43,0.08)", borderRadius: 12, padding: "9px 10px", minWidth: 52 }}>
+                    <div style={{ fontSize: "1.3rem", fontWeight: 900, color: G.rouge, lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>{pad(v as number)}</div>
+                    <div style={{ fontSize: "0.6rem", color: "#999", marginTop: 3 }}>{lbl as string}</div>
                   </div>
                 ))}
               </div>
               <PaymentStatusBadge />
               {allowPayment && onPay && <PayUnlockBtn />}
               <ContactSupportBtn />
-              <p style={{ fontSize: "0.74rem", color: "#aaa", marginTop: 6 }}>Reconnexion possible automatiquement à la fin du décompte.</p>
+              <p style={{ fontSize: "0.68rem", color: "#aaa", marginTop: 4 }}>Reconnexion possible automatiquement à la fin du décompte.</p>
             </>
           )
         ) : (
           <>
-            <p style={{ fontSize: "0.9rem", color: "#666", lineHeight: 1.6, marginBottom: 20 }}>{BAN_SCREEN_TEXT}</p>
+            <p style={{ fontSize: "0.84rem", color: "#666", lineHeight: 1.5, marginBottom: 16 }}>{BAN_SCREEN_TEXT}</p>
             <PaymentStatusBadge />
             {allowPayment && onPay && <PayUnlockBtn />}
             <ContactSupportBtn />
             <ContactMailBtn />
-            {onBack && <button onClick={onBack} style={{ width: "100%", background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 14, padding: "13px", fontSize: "0.9rem", fontWeight: 700, cursor: "pointer" }}>Retour à l'accueil</button>}
+            {onBack && <button onClick={onBack} style={{ width: "100%", background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 12, padding: "11px", fontSize: "0.84rem", fontWeight: 700, cursor: "pointer" }}>Retour à l'accueil</button>}
           </>
         )}
       </div>
@@ -16149,6 +16175,19 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
           );
         })()}
 
+        {PAY_LINK_ENABLED && (!isWideProfile || activeSection === "main") && (
+          <div onClick={async () => { const ok = await copyMyPaymentLink(auth.token, auth.userId); setToast(ok ? { msg: "Lien copié ! Envoie-le à la personne qui va payer pour toi.", type: "success" } : { msg: "Erreur lors de la génération du lien.", type: "error" }); }} style={{ marginTop: 12, background: G.blanc, borderRadius: 18, boxShadow: "0 2px 10px rgba(0,0,0,0.06)", padding: "15px 18px", display: "flex", alignItems: "center", gap: 14, cursor: "pointer" }}>
+            <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(212,168,67,0.14)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke={G.or} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2" /><line x1="1" y1="10" x2="23" y2="10" /></svg>
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: 700, fontSize: "0.95rem", color: G.brun }}>Faire payer par quelqu'un d'autre</div>
+              <div style={{ fontSize: "0.8rem", color: "#888", marginTop: 2 }}>Copie ton lien de paiement à envoyer à un proche</div>
+            </div>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><polyline points="9 18 15 12 9 6" /></svg>
+          </div>
+        )}
+
         {/* Numéro WhatsApp — affichage/édition ET réglage de visibilité réunis dans une seule
             carte, plutôt que deux cartes séparées qui portaient sur la même donnée avec un
             message contradictoire ("privé" écrit en dur alors que le réglage peut le rendre
@@ -16190,7 +16229,7 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: "0.95rem", fontWeight: 700, color: profile.share_phone_with_matches ? "#1a8a4a" : G.brun, lineHeight: 1.4 }}>{profile.share_phone_with_matches ? "Ton numéro est visible par tes matchs." : "Active pour que tes matchs puissent te contacter directement."}</div>
                 </div>
-                <div style={{ width: 46, height: 26, borderRadius: 50, background: profile.share_phone_with_matches ? "#27ae60" : G.gris, position: "relative", transition: "background 0.3s", flexShrink: 0 }}>
+                <div style={{ width: 46, height: 26, borderRadius: 50, background: profile.share_phone_with_matches ? "#27ae60" : G.rouge, position: "relative", transition: "background 0.3s", flexShrink: 0 }}>
                   <div style={{ position: "absolute", top: 3, left: profile.share_phone_with_matches ? 23 : 3, width: 20, height: 20, borderRadius: "50%", background: G.blanc, boxShadow: "0 2px 6px rgba(0,0,0,0.2)", transition: "left 0.3s" }} />
                 </div>
               </div>
@@ -16210,6 +16249,7 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><polyline points="9 18 15 12 9 6" /></svg>
           </div>
         )}
+
 
         {promoAvailable && (
           <div onClick={onOpenSuperPromo} style={{ marginTop: 12, background: G.creme, border: `1.5px solid ${G.rouge}`, borderRadius: 16, padding: "14px 16px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12 }}>
@@ -16456,7 +16496,7 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
                 await sb.update(auth.token, "profiles", auth.userId, { hide_online_status: newHidden });
                 setProfile(p => p ? { ...p, hide_online_status: newHidden } : null);
                 setToast({ msg: newHidden ? "Statut en ligne masqué 🔒" : "Statut en ligne visible ✅" });
-              }} style={{ width: 52, height: 28, borderRadius: 50, background: !hidden ? "#27ae60" : G.gris, cursor: "pointer", position: "relative", transition: "background 0.3s", flexShrink: 0 }}>
+              }} style={{ width: 52, height: 28, borderRadius: 50, background: !hidden ? "#27ae60" : G.rouge, cursor: "pointer", position: "relative", transition: "background 0.3s", flexShrink: 0 }}>
                 <div style={{ position: "absolute", top: 3, left: !hidden ? 27 : 3, width: 22, height: 22, borderRadius: "50%", background: G.blanc, boxShadow: "0 2px 6px rgba(0,0,0,0.2)", transition: "left 0.3s" }} />
               </div>
             </div>
@@ -16480,7 +16520,7 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
               <div style={{ fontSize: "0.82rem", color: "#888", marginTop: 2 }}>{darkMode ? "Thème sombre activé" : "Thème clair activé"}</div>
             </div>
           </div>
-          <div onClick={onToggleDark} style={{ width: 52, height: 28, borderRadius: 50, background: darkMode ? "#2C1A0E" : G.gris, cursor: "pointer", position: "relative", transition: "background 0.3s", flexShrink: 0 }}>
+          <div onClick={onToggleDark} style={{ width: 52, height: 28, borderRadius: 50, background: darkMode ? G.vert : G.rouge, cursor: "pointer", position: "relative", transition: "background 0.3s", flexShrink: 0 }}>
             <div style={{ position: "absolute", top: 3, left: darkMode ? 27 : 3, width: 22, height: 22, borderRadius: "50%", background: G.blanc, boxShadow: "0 2px 6px rgba(0,0,0,0.2)", transition: "left 0.3s" }} />
           </div>
         </div>}
@@ -16496,7 +16536,7 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
               <div style={{ fontSize: "0.82rem", color: "#888", marginTop: 2 }}>{assistantEnabled ? "Visible sur vos écrans" : "Masqué pour vous"}</div>
             </div>
           </div>
-          <div onClick={onToggleAssistant} style={{ width: 52, height: 28, borderRadius: 50, background: assistantEnabled ? G.vert : G.gris, cursor: "pointer", position: "relative", transition: "background 0.3s", flexShrink: 0 }}>
+          <div onClick={onToggleAssistant} style={{ width: 52, height: 28, borderRadius: 50, background: assistantEnabled ? G.vert : G.rouge, cursor: "pointer", position: "relative", transition: "background 0.3s", flexShrink: 0 }}>
             <div style={{ position: "absolute", top: 3, left: assistantEnabled ? 27 : 3, width: 22, height: 22, borderRadius: "50%", background: G.blanc, boxShadow: "0 2px 6px rgba(0,0,0,0.2)", transition: "left 0.3s" }} />
           </div>
         </div>}
@@ -16552,7 +16592,7 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
                 setNotifLoading(false);
                 if (res === "granted") setToast({ msg: "Notifications activées ✅" });
                 else if (res === "denied") setToast({ msg: "Refusées dans le navigateur. Ouvrez le 🔒 près de l'adresse → Notifications → Autoriser, puis réessayez." });
-              }} style={{ width: 52, height: 28, borderRadius: 50, background: on ? "#27ae60" : G.gris, cursor: on ? "default" : "pointer", position: "relative", transition: "background 0.3s", flexShrink: 0, opacity: notifLoading ? 0.6 : 1 }}>
+              }} style={{ width: 52, height: 28, borderRadius: 50, background: on ? "#27ae60" : G.rouge, cursor: on ? "default" : "pointer", position: "relative", transition: "background 0.3s", flexShrink: 0, opacity: notifLoading ? 0.6 : 1 }}>
                 <div style={{ position: "absolute", top: 3, left: on ? 27 : 3, width: 22, height: 22, borderRadius: "50%", background: G.blanc, boxShadow: "0 2px 6px rgba(0,0,0,0.2)", transition: "left 0.3s" }} />
               </div>
             </div>
@@ -16726,6 +16766,26 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
           <div style={{ marginTop: 14, background: `linear-gradient(135deg,${G.vert},#0D2E1C)`, borderRadius: 16, padding: "16px 14px", textAlign: "center" }}>
             <div style={{ color: "rgba(255,255,255,0.85)", fontSize: "0.78rem", fontWeight: 600, marginBottom: 10 }}>Installe l'application Moyo</div>
             <InstallButtons variant="dark" />
+          </div>
+        )}
+
+        {/* ── Réseaux sociaux ── */}
+        {(!isWideProfile || ["logout","delete","main"].includes(activeSection)) && (SOCIAL_FACEBOOK || SOCIAL_INSTAGRAM || SOCIAL_TIKTOK || SOCIAL_YOUTUBE || SOCIAL_LINKEDIN) && (
+          <div style={{ marginTop: 12, background: G.blanc, borderRadius: 16, padding: "14px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", textAlign: "center" }}>
+            <div style={{ color: "#999", fontSize: "0.76rem", fontWeight: 600, marginBottom: 10 }}>Suis-nous sur les réseaux</div>
+            <div style={{ display: "flex", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
+              {[
+                [SOCIAL_FACEBOOK, "#1877F2", svgFb, "Facebook"],
+                [SOCIAL_INSTAGRAM, "#C1358B", svgIg, "Instagram"],
+                [SOCIAL_TIKTOK, "#111111", svgTk, "TikTok"],
+                [SOCIAL_YOUTUBE, "#FF0000", svgYt, "YouTube"],
+                [SOCIAL_LINKEDIN, "#0A66C2", svgLi, "LinkedIn"],
+              ].map(([url, bg, svgFn, label]: any, i) => url && (
+                <a key={i} href={url} target="_blank" rel="noopener noreferrer" title={label} style={{ width: 42, height: 42, borderRadius: "50%", background: bg, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", flexShrink: 0 }}>
+                  {svgFn(19)}
+                </a>
+              ))}
+            </div>
           </div>
         )}
 
@@ -16941,33 +17001,45 @@ export function logAdminAction(token: string, adminId: string, adminName: string
 // ── Génère un lien de paiement unique pour SON PROPRE compte (contrairement à celui généré par
 //    un admin depuis Gérer, qui vise le compte de quelqu'un d'autre) — pour l'envoyer à une
 //    personne de confiance qui paierait à sa place. Marche en insertion directe (RLS), pas
-//    besoin de fonction serveur puisque la personne est déjà connectée sur son propre compte. ──
+//    besoin de fonction serveur puisque la personne est déjà connectée sur son propre compte.
+//    IMPORTANT : le presse-papier est rempli AVANT l'appel réseau, pas après — sur Safari/iOS,
+//    attendre une réponse serveur avant d'écrire dans le presse-papier fait perdre le "geste
+//    utilisateur" nécessaire, et navigator.clipboard.writeText() échoue silencieusement. ──
 async function copyMyPaymentLink(myToken: string, myUserId: string): Promise<boolean> {
+  if (!PAY_LINK_ENABLED) return false;
+  const linkToken = (crypto as any).randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const link = `${window.location.origin}/?paylink=${linkToken}`;
+  let clipboardOk = true;
   try {
-    const linkToken = (crypto as any).randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    await navigator.clipboard.writeText(link);
+  } catch {
+    clipboardOk = false;
+  }
+  try {
     const expiresAt = new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString();
     const r = await fetch(`${SUPABASE_URL}/rest/v1/payment_links`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${myToken}`, "Prefer": "return=minimal" },
       body: JSON.stringify({ user_id: myUserId, token: linkToken, created_by: myUserId, expires_at: expiresAt }),
     });
-    if (!r.ok) throw new Error();
-    const link = `${window.location.origin}/?paylink=${linkToken}`;
-    await navigator.clipboard.writeText(link);
-    return true;
+    if (!r.ok) return false;
   } catch {
     return false;
   }
+  return clipboardOk;
 }
 
 function PayLinkScreen({ token, onDone }: { token: string; onDone: () => void }) {
   const gold = "#D4A843";
-  const [state, setState] = useState<"loading" | "invalid" | "choose" | "pay" | "sent">("loading");
+  const [state, setState] = useState<"loading" | "invalid" | "choose" | "pay" | "proof" | "sent">("loading");
   const [name, setName] = useState("");
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [planId, setPlanId] = useState(PLAN_MONTH_ENABLED ? "1mois" : (PLAN_WEEK_ENABLED ? "1sem" : "2mois"));
   const [operator, setOperator] = useState<"MTN" | "Airtel" | null>(null);
+  const [proofMode, setProofMode] = useState<"id" | "screenshot">("id");
   const [txRef, setTxRef] = useState("");
+  const [screenshotFile, setScreenshotFile] = useState<File | null>(null);
+  const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [err, setErr] = useState("");
 
@@ -17002,15 +17074,30 @@ function PayLinkScreen({ token, onDone }: { token: string; onDone: () => void })
     ? { name: "MTN MoMo", main: "#FFCC00", onColor: "#1a1a1a", ussd: `*105*1*1*${PAY_MTN_NUMBER}*${selectedPlan?.amount || 0}#`, placeholder: "Ex : 7753031542", logo: null }
     : { name: "Airtel Money", main: "#FF0100", onColor: "#fff", ussd: `*128*2*1*1*${PAY_AIRTEL_NUMBER}*${selectedPlan?.amount || 0}#`, placeholder: "Ex de l'ID : PP260523.2232.A52074", logo: null };
 
+  const fileToBase64 = (file: File): Promise<string> => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(",")[1] || "");
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+
   const submit = async () => {
-    if (!operator || !txRef.trim() || !selectedPlan) return;
+    if (!operator || !selectedPlan) return;
+    if (proofMode === "id" && !txRef.trim()) return;
+    if (proofMode === "screenshot" && !screenshotFile) return;
     setSending(true);
     setErr("");
     try {
+      const payload: any = { token, operator, amount: selectedPlan.amount, plan_label: selectedPlan.label };
+      if (proofMode === "id") {
+        payload.tx_ref = txRef.trim();
+      } else if (screenshotFile) {
+        payload.screenshot_base64 = await fileToBase64(screenshotFile);
+      }
       const r = await fetch(`${SUPABASE_URL}/functions/v1/submit-payment-link`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY },
-        body: JSON.stringify({ token, operator, tx_ref: txRef.trim(), amount: selectedPlan.amount, plan_label: selectedPlan.label }),
+        body: JSON.stringify(payload),
       });
       const data = await r.json().catch(() => ({}));
       if (data?.ok) setState("sent");
@@ -17075,17 +17162,64 @@ function PayLinkScreen({ token, onDone }: { token: string; onDone: () => void })
                 <div onClick={() => setState("choose")} style={{ display: "flex", alignItems: "center", gap: 5, color: "#999", fontSize: "0.78rem", fontWeight: 600, cursor: "pointer", marginBottom: 14 }}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg> Changer de moyen de paiement
                 </div>
-                <div style={{ background: "#FBF6EA", borderRadius: 14, padding: "14px 16px", marginBottom: 14, textAlign: "left" }}>
-                  <div style={{ fontSize: "0.7rem", color: "#7a6a3a", fontWeight: 700, marginBottom: 6 }}>1. Compose ce code sur ton téléphone</div>
+                <div style={{ background: "#FBF6EA", borderRadius: 14, padding: "14px 16px", marginBottom: 20, textAlign: "left" }}>
+                  <div style={{ fontSize: "0.7rem", color: "#7a6a3a", fontWeight: 700, marginBottom: 6 }}>Compose ce code sur ton téléphone</div>
                   <div style={{ fontSize: "1rem", fontWeight: 800, color: "#3a2e10", fontFamily: "monospace" }}>{OP.ussd}</div>
                 </div>
+                <button onClick={() => setState("proof")} style={{ width: "100%", background: OP.main, color: OP.onColor, border: "none", borderRadius: 14, padding: "13px", fontSize: "0.95rem", fontWeight: 800, cursor: "pointer" }}>J'ai payé →</button>
+              </>
+            )}
+          </div>
+        )}
+
+        {state === "proof" && operator && (
+          <div style={{ background: G.blanc, borderRadius: 22, padding: "26px 22px", boxShadow: "0 12px 40px rgba(0,0,0,0.08)" }}>
+            <div onClick={() => setState("pay")} style={{ display: "flex", alignItems: "center", gap: 5, color: "#999", fontSize: "0.78rem", fontWeight: 600, cursor: "pointer", marginBottom: 14 }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg> Retour
+            </div>
+            <div style={{ fontSize: "1.1rem", fontWeight: 800, color: G.brun, marginBottom: 16, textAlign: "left" }}>Comment veux-tu confirmer ?</div>
+
+            {/* Choix du mode de preuve : ID ou capture d'écran — même mécanisme que le reste de
+                l'app, pour les mêmes raisons (certains ont du mal avec les ID de transaction). */}
+            <div style={{ display: "flex", background: "#F0EDE6", borderRadius: 50, padding: 4, marginBottom: 16 }}>
+              <div onClick={() => setProofMode("id")} style={{ flex: 1, textAlign: "center", padding: "9px 4px", borderRadius: 50, cursor: "pointer", background: proofMode === "id" ? gold : "transparent", color: proofMode === "id" ? "#fff" : "#8a8a8a", fontWeight: 800, fontSize: "0.76rem" }}>Envoyer l'ID</div>
+              <div onClick={() => setProofMode("screenshot")} style={{ flex: 1, textAlign: "center", padding: "9px 4px", borderRadius: 50, cursor: "pointer", background: proofMode === "screenshot" ? gold : "transparent", color: proofMode === "screenshot" ? "#fff" : "#8a8a8a", fontWeight: 800, fontSize: "0.76rem" }}>Capture d'écran</div>
+            </div>
+
+            {proofMode === "id" ? (
+              <>
                 <div style={{ textAlign: "left", marginBottom: 16 }}>
-                  <div style={{ fontSize: "0.7rem", color: "#7a6a3a", fontWeight: 700, marginBottom: 6 }}>2. Entre la référence de transaction reçue par SMS</div>
+                  <div style={{ fontSize: "0.7rem", color: "#7a6a3a", fontWeight: 700, marginBottom: 6 }}>Entre la référence de transaction reçue par SMS (Numéro ID)</div>
                   <input value={txRef} onChange={e => setTxRef(e.target.value)} placeholder={OP.placeholder} style={{ width: "100%", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 12, padding: "12px 14px", fontSize: "0.9rem", outline: "none" }} />
                 </div>
                 {err && <div style={{ color: G.rouge, fontSize: "0.8rem", marginBottom: 12 }}>{err}</div>}
                 <button disabled={!txRef.trim() || sending} onClick={submit} style={{ width: "100%", background: !txRef.trim() ? "#ccc" : OP.main, color: OP.onColor, border: "none", borderRadius: 14, padding: "13px", fontSize: "0.95rem", fontWeight: 800, cursor: !txRef.trim() ? "not-allowed" : "pointer" }}>
                   {sending ? "Envoi..." : "Envoyer ma preuve de paiement"}
+                </button>
+              </>
+            ) : (
+              <>
+                <div style={{ fontSize: "0.82rem", color: "#666", lineHeight: 1.5, marginBottom: 12, textAlign: "left" }}>
+                  Envoie la capture d'écran du message que <b>{OP.name}</b> t'a envoyé après ton paiement :
+                </div>
+                <input type="file" accept="image/*" id="moyo-paylink-screenshot" style={{ display: "none" }} onChange={e => {
+                  const f = e.target.files?.[0]; if (!f) return;
+                  setScreenshotFile(f); setScreenshotPreview(URL.createObjectURL(f));
+                }} />
+                {screenshotPreview ? (
+                  <div onClick={() => document.getElementById("moyo-paylink-screenshot")?.click()} style={{ borderRadius: 14, overflow: "hidden", marginBottom: 16, cursor: "pointer", position: "relative" }}>
+                    <img src={screenshotPreview} style={{ width: "100%", maxHeight: 220, objectFit: "cover", display: "block" }} />
+                    <div style={{ position: "absolute", bottom: 8, right: 8, background: "rgba(0,0,0,0.6)", color: "#fff", fontSize: "0.7rem", fontWeight: 700, padding: "4px 10px", borderRadius: 50 }}>Changer</div>
+                  </div>
+                ) : (
+                  <div onClick={() => document.getElementById("moyo-paylink-screenshot")?.click()} style={{ border: "2px dashed #ddd", borderRadius: 14, padding: "28px 16px", textAlign: "center", cursor: "pointer", marginBottom: 16 }}>
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ margin: "0 auto 8px" }}><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" /></svg>
+                    <div style={{ fontSize: "0.82rem", color: "#999", fontWeight: 600 }}>Touche pour choisir une image</div>
+                  </div>
+                )}
+                {err && <div style={{ color: G.rouge, fontSize: "0.8rem", marginBottom: 12 }}>{err}</div>}
+                <button disabled={!screenshotFile || sending} onClick={submit} style={{ width: "100%", background: screenshotFile ? gold : "#dcdcdc", color: "#fff", border: "none", borderRadius: 14, padding: "13px", fontSize: "0.95rem", fontWeight: 800, cursor: screenshotFile ? "pointer" : "not-allowed" }}>
+                  {sending ? "Envoi..." : "Envoyer la capture"}
                 </button>
               </>
             )}
@@ -18497,7 +18631,7 @@ export default function App() {
       return (
         <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 19000, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
           <div onClick={e => e.stopPropagation()} className="moyo-sheet-in" style={{ background: "#FCFBF8", borderRadius: 0, width: "100%", maxWidth: 460, height: "100%", maxHeight: "100vh", overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y", boxShadow: "0 30px 80px rgba(0,0,0,0.4)", position: "relative", display: "flex", flexDirection: "column", justifyContent: "center", padding: "calc(env(safe-area-inset-top) + 18px) 22px calc(env(safe-area-inset-bottom) + 26px)" }}>
-            <div onClick={() => setPremiumNudgeOpen(false)} style={{ position: "absolute", top: "calc(env(safe-area-inset-top) + 16px)", right: 16, cursor: "pointer", background: "#eceae5", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2 }}>
+            <div onClick={() => setPremiumNudgeOpen(false)} style={{ position: "fixed", top: "calc(env(safe-area-inset-top) + 16px)", right: "max(16px, calc((100vw - 460px) / 2 + 16px))", cursor: "pointer", background: "#eceae5", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 19001 }}>
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#777" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
             </div>
             <div style={{ display: "flex", justifyContent: "center", marginBottom: 14, position: "relative" }}>
@@ -18510,13 +18644,13 @@ export default function App() {
             <div style={{ textAlign: "center", fontSize: "1.2rem", fontWeight: 800, color: "#1a1a2e", lineHeight: 1.2, marginBottom: 9, padding: "0 6px" }}>Passe Premium</div>
             <div style={{ textAlign: "center", fontSize: "0.87rem", color: "#8a8a8a", lineHeight: 1.5, marginBottom: 20, padding: "0 8px" }}>{premiumNudgeMessage}</div>
             <div style={{ display: "flex", gap: 10, marginBottom: 18 }}>
-              <div style={{ flex: 1, background: "#FBF6EA", borderRadius: 14, padding: "12px 12px", display: "flex", alignItems: "center", gap: 9 }}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill={gold} stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg>
-                <div style={{ lineHeight: 1.3 }}><span style={{ fontWeight: 800, color: "#3a2e10" }}>{PREMIUM_STAT_COUPLES}</span> <span style={{ fontSize: "0.76rem", color: "#7a6a3a" }}>couples formés cette semaine</span></div>
+              <div style={{ flex: 1, background: "#FBF6EA", borderRadius: 12, padding: "9px 10px", display: "flex", alignItems: "center", gap: 7 }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill={gold} stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg>
+                <div style={{ lineHeight: 1.25 }}><span style={{ fontWeight: 800, fontSize: "0.8rem", color: "#3a2e10" }}>{PREMIUM_STAT_COUPLES}</span> <span style={{ fontSize: "0.66rem", color: "#7a6a3a" }}>couples formés cette semaine</span></div>
               </div>
-              <div style={{ flex: 1, background: "#FBF6EA", borderRadius: 14, padding: "12px 12px", display: "flex", alignItems: "center", gap: 9 }}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill={gold} stroke="none"><path d="M2 18h20l-2.5-9-4.5 4-3-7-3 7-4.5-4z" /></svg>
-                <div style={{ lineHeight: 1.3 }}><span style={{ fontWeight: 800, color: "#3a2e10" }}>{PREMIUM_STAT_MEMBERS}</span> <span style={{ fontSize: "0.76rem", color: "#7a6a3a" }}>membres Premium actifs</span></div>
+              <div style={{ flex: 1, background: "#FBF6EA", borderRadius: 12, padding: "9px 10px", display: "flex", alignItems: "center", gap: 7 }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill={gold} stroke="none"><path d="M2 18h20l-2.5-9-4.5 4-3-7-3 7-4.5-4z" /></svg>
+                <div style={{ lineHeight: 1.25 }}><span style={{ fontWeight: 800, fontSize: "0.8rem", color: "#3a2e10" }}>{PREMIUM_STAT_MEMBERS}</span> <span style={{ fontSize: "0.66rem", color: "#7a6a3a" }}>membres Premium actifs</span></div>
               </div>
             </div>
             <PremiumBenefitsBlock gold={gold} showAll={nudgeShowAllAdv} onToggleShowAll={() => setNudgeShowAllAdv(s => !s)} />

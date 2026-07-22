@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback, memo } from "react";
 import type { Auth, Match, Message, PaymentRequest, Profile, StatusPost, ToastState } from "./App";
 import {
-  APPOINTMENT_PHYSICAL_PRICE, APPT_HOUR_MAX, APPT_HOUR_MIN, AUTO_MOD_CONTACT_REPLY, Avatar, BLOCK_SAME_GENDER, Badge, Btn, CONTACT_ADDRESS, CONTACT_EMAIL, CONTACT_WHATSAPP, ConfirmModal, DISCOVER_DEFAULT_MODE, DateTimePicker, EUR_TO_FCFA, EXPENSE_CATEGORIES, EXPENSE_CAT_COLORS, FREE_LIMITS, G, LANDING_MEMBERS, LANDING_SLOGAN, LANDING_STAT_CITIES, LANDING_STAT_COUPLES, LANDING_STAT_MEMBERS, LANDING_TITLE_END, LANDING_TITLE_HIGHLIGHT, LANDING_TITLE_START, LIFETIME_PREMIUM_UNTIL, Messages, PAY_AIRTEL_ENABLED, PAY_AIRTEL_NUMBER, PAY_AIRTEL_RESPONSABLE, PAY_CB_ENABLED, PAY_MTN_ENABLED, PAY_MTN_NUMBER, PAY_MTN_RESPONSABLE, PAY_WERO_ENABLED, PAY_WERO_NUMBER, PAY_PAYPAL_ENABLED, PAY_PAYPAL_NUMBER, PLAN_2MONTH_ENABLED, PLAN_MONTH_ENABLED, PLAN_WEEK_ENABLED, POLL_ADMIN_BADGE_MS, POLL_BADGES_MS, POLL_BROADCAST_MS, POLL_STATS_MS, POLL_SUPPORT_MS, PREMIUM_30_DAYS_MS, PREMIUM_DAYS_2MONTH, PREMIUM_DAYS_WEEK, PREMIUM_PRICE_2MONTH_FCFA, PREMIUM_PRICE_EUR, PREMIUM_PRICE_FCFA, PREMIUM_PRICE_WEEK_FCFA, PREMIUM_STAT_COUPLES, PREMIUM_STAT_MEMBERS, PremiumBadge, REFERRAL_BONUS_2MONTH, REFERRAL_BONUS_MONTH, REFERRAL_BONUS_WEEK, AFFILIATE_COMMISSION_WEEK, AFFILIATE_COMMISSION_MONTH, AFFILIATE_COMMISSION_2MONTH, AFFILIATE_PAYABLE_DELAY_DAYS, PRIVACY_NOTICE_STEP1_TEXT, PRIVACY_NOTICE_STEP2_TEXT, BAN_SCREEN_TEXT, SOCIAL_FACEBOOK, SOCIAL_INSTAGRAM, SOCIAL_TIKTOK, SOCIAL_YOUTUBE, STORE_LINK_ANDROID, STORE_LINK_IOS, SUPABASE_KEY, SUPABASE_URL, SUPER_ADMIN_ID, SUPPORT_PREFIX_REPLY, SUPPORT_PREFIX_USER, SUPPORT_TEAM_ID, SUPPORT_TEAM_NAME, SUPPORT_TEAM_PHOTO, Toast, VerifiedBadge, apptStatusInfo, buildContactBannedRegex, buildCustomBannedRegex, setExemptedBuiltinWords, setExemptedContactWords, cleanSupportReason, dedupeMatchesByCouple, fmtApptDT, fmtDate, formatMoney, isSupportReason, logAdminAction, mmLevel, mmScore, paymentCurrency, resolveStatusImageUrl, sb, sendMatchWelcomeMessage,
-  setAPPOINTMENT_PHYSICAL_PRICE, setAUTO_MOD_CONTACT_REPLY, setBLOCK_SAME_GENDER, setCONTACT_ADDRESS, setCONTACT_EMAIL, setCONTACT_WHATSAPP, setDISCOVER_DEFAULT_MODE, setEUR_TO_FCFA, setLANDING_MEMBERS, setLANDING_SLOGAN, setLANDING_STAT_CITIES, setLANDING_STAT_COUPLES, setLANDING_STAT_MEMBERS, setLANDING_TITLE_END, setLANDING_TITLE_HIGHLIGHT, setLANDING_TITLE_START, setPAY_AIRTEL_ENABLED, setPAY_AIRTEL_NUMBER, setPAY_AIRTEL_RESPONSABLE, setPAY_CB_ENABLED, setPAY_MTN_ENABLED, setPAY_MTN_NUMBER, setPAY_MTN_RESPONSABLE, setPAY_WERO_ENABLED, setPAY_WERO_NUMBER, setPAY_PAYPAL_ENABLED, setPAY_PAYPAL_NUMBER, setPLAN_2MONTH_ENABLED, setPLAN_MONTH_ENABLED, setPLAN_WEEK_ENABLED, setPOLL_ADMIN_BADGE_MS, setPOLL_BADGES_MS, setPOLL_BROADCAST_MS, setPOLL_STATS_MS, setPOLL_SUPPORT_MS, setPREMIUM_30_DAYS_MS, setPREMIUM_DAYS_2MONTH, setPREMIUM_DAYS_WEEK, setPREMIUM_PRICE_2MONTH_FCFA, setPREMIUM_PRICE_EUR, setPREMIUM_PRICE_FCFA, setPREMIUM_PRICE_WEEK_FCFA, setPREMIUM_STAT_COUPLES, setPREMIUM_STAT_MEMBERS, setPREMIUM_BOOST_ENABLED, setPREMIUM_SCREEN_VARIANT, setFEATURE_SHOW_LIKES_VIEWS_FREE, setPRIVACY_NOTICE_ENABLED, setSOCIAL_FACEBOOK, setSOCIAL_INSTAGRAM, setSOCIAL_TIKTOK, setSOCIAL_YOUTUBE, setSTORE_LINK_ANDROID, setSTORE_LINK_IOS, setSUPPORT_TEAM_PHOTO, setAFFILIATE_COMMISSION_WEEK, setAFFILIATE_COMMISSION_MONTH, setAFFILIATE_COMMISSION_2MONTH, setAFFILIATE_PAYABLE_DELAY_DAYS, setPRIVACY_NOTICE_STEP1_TEXT, setPRIVACY_NOTICE_STEP2_TEXT, setBAN_SCREEN_TEXT,
+  APPOINTMENT_PHYSICAL_PRICE, APPT_HOUR_MAX, APPT_HOUR_MIN, AUTO_MOD_CONTACT_REPLY, Avatar, BLOCK_SAME_GENDER, Badge, Btn, CONTACT_ADDRESS, CONTACT_EMAIL, CONTACT_WHATSAPP, ConfirmModal, DISCOVER_DEFAULT_MODE, DateTimePicker, EUR_TO_FCFA, EXPENSE_CATEGORIES, EXPENSE_CAT_COLORS, FREE_LIMITS, G, LANDING_MEMBERS, LANDING_SLOGAN, LANDING_STAT_CITIES, LANDING_STAT_COUPLES, LANDING_STAT_MEMBERS, LANDING_TITLE_END, LANDING_TITLE_HIGHLIGHT, LANDING_TITLE_START, LIFETIME_PREMIUM_UNTIL, Messages, PAY_AIRTEL_ENABLED, PAY_AIRTEL_NUMBER, PAY_AIRTEL_RESPONSABLE, PAY_CB_ENABLED, PAY_MTN_ENABLED, PAY_MTN_NUMBER, PAY_MTN_RESPONSABLE, PAY_WERO_ENABLED, PAY_WERO_NUMBER, PAY_PAYPAL_ENABLED, PAY_PAYPAL_NUMBER, PLAN_2MONTH_ENABLED, PLAN_MONTH_ENABLED, PLAN_WEEK_ENABLED, POLL_ADMIN_BADGE_MS, POLL_BADGES_MS, POLL_BROADCAST_MS, POLL_STATS_MS, POLL_SUPPORT_MS, PREMIUM_30_DAYS_MS, PREMIUM_DAYS_2MONTH, PREMIUM_DAYS_WEEK, PREMIUM_PRICE_2MONTH_FCFA, PREMIUM_PRICE_EUR, PREMIUM_PRICE_FCFA, PREMIUM_PRICE_WEEK_FCFA, PREMIUM_STAT_COUPLES, PREMIUM_STAT_MEMBERS, PremiumBadge, REFERRAL_BONUS_2MONTH, REFERRAL_BONUS_MONTH, REFERRAL_BONUS_WEEK, AFFILIATE_COMMISSION_WEEK, AFFILIATE_COMMISSION_MONTH, AFFILIATE_COMMISSION_2MONTH, AFFILIATE_PAYABLE_DELAY_DAYS, PRIVACY_NOTICE_STEP1_TEXT, PRIVACY_NOTICE_STEP2_TEXT, BAN_SCREEN_TEXT, SOCIAL_FACEBOOK, SOCIAL_INSTAGRAM, SOCIAL_TIKTOK, SOCIAL_YOUTUBE, SOCIAL_LINKEDIN, STORE_LINK_ANDROID, STORE_LINK_IOS, SUPABASE_KEY, SUPABASE_URL, SUPER_ADMIN_ID, SUPPORT_PREFIX_REPLY, SUPPORT_PREFIX_USER, SUPPORT_TEAM_ID, SUPPORT_TEAM_NAME, SUPPORT_TEAM_PHOTO, Toast, VerifiedBadge, apptStatusInfo, buildContactBannedRegex, buildCustomBannedRegex, setExemptedBuiltinWords, setExemptedContactWords, cleanSupportReason, dedupeMatchesByCouple, fmtApptDT, fmtDate, formatMoney, isSupportReason, logAdminAction, mmLevel, mmScore, paymentCurrency, resolveStatusImageUrl, sb, sendMatchWelcomeMessage,
+  setAPPOINTMENT_PHYSICAL_PRICE, setAUTO_MOD_CONTACT_REPLY, setBLOCK_SAME_GENDER, setCONTACT_ADDRESS, setCONTACT_EMAIL, setCONTACT_WHATSAPP, setDISCOVER_DEFAULT_MODE, setEUR_TO_FCFA, setLANDING_MEMBERS, setLANDING_SLOGAN, setLANDING_STAT_CITIES, setLANDING_STAT_COUPLES, setLANDING_STAT_MEMBERS, setLANDING_TITLE_END, setLANDING_TITLE_HIGHLIGHT, setLANDING_TITLE_START, setPAY_AIRTEL_ENABLED, setPAY_AIRTEL_NUMBER, setPAY_AIRTEL_RESPONSABLE, setPAY_CB_ENABLED, setPAY_MTN_ENABLED, setPAY_MTN_NUMBER, setPAY_MTN_RESPONSABLE, setPAY_WERO_ENABLED, setPAY_WERO_NUMBER, setPAY_PAYPAL_ENABLED, setPAY_PAYPAL_NUMBER, setPLAN_2MONTH_ENABLED, setPLAN_MONTH_ENABLED, setPLAN_WEEK_ENABLED, setPOLL_ADMIN_BADGE_MS, setPOLL_BADGES_MS, setPOLL_BROADCAST_MS, setPOLL_STATS_MS, setPOLL_SUPPORT_MS, setPREMIUM_30_DAYS_MS, setPREMIUM_DAYS_2MONTH, setPREMIUM_DAYS_WEEK, setPREMIUM_PRICE_2MONTH_FCFA, setPREMIUM_PRICE_EUR, setPREMIUM_PRICE_FCFA, setPREMIUM_PRICE_WEEK_FCFA, setPREMIUM_STAT_COUPLES, setPREMIUM_STAT_MEMBERS, setPREMIUM_BOOST_ENABLED, setPREMIUM_SCREEN_VARIANT, setFEATURE_SHOW_LIKES_VIEWS_FREE, setPRIVACY_NOTICE_ENABLED, setSOCIAL_FACEBOOK, setSOCIAL_INSTAGRAM, setSOCIAL_TIKTOK, setSOCIAL_YOUTUBE, setSOCIAL_LINKEDIN, setSTORE_LINK_ANDROID, setSTORE_LINK_IOS, setSUPPORT_TEAM_PHOTO, setAFFILIATE_COMMISSION_WEEK, setAFFILIATE_COMMISSION_MONTH, setAFFILIATE_COMMISSION_2MONTH, setAFFILIATE_PAYABLE_DELAY_DAYS, setPRIVACY_NOTICE_STEP1_TEXT, setPRIVACY_NOTICE_STEP2_TEXT, setBAN_SCREEN_TEXT, setPAY_LINK_ENABLED,
 } from "./App";
 
 async function saveSetting(key: string, value: string, token: string): Promise<boolean> {
   const H = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${token}`, "Content-Type": "application/json" };
   try {
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${encodeURIComponent(key)}`, { method: "PATCH", headers: { ...H, "Prefer": "return=representation" }, body: JSON.stringify({ value }) });
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, { method: "POST", headers: { ...H, "Prefer": "resolution=merge-duplicates,return=representation" }, body: JSON.stringify({ key: key, value }) });
     const updated = await r.json().catch(() => []);
     if (!Array.isArray(updated) || updated.length === 0) {
       const ins = await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, { method: "POST", headers: { ...H, "Prefer": "return=minimal" }, body: JSON.stringify({ key, value }) });
@@ -447,7 +447,7 @@ export function AdminDesktopPage() {
     setMatchProposalExpiryDaysCfg(v);
     if (!auth) return;
     try {
-      await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.match_proposal_expiry_days`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: v }) });
+      await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ key: "match_proposal_expiry_days", value: v }) });
     } catch {}
   };
   // ── Onglet "Automatisations" : raccourcis vers des interrupteurs qui vivent ailleurs
@@ -507,7 +507,7 @@ export function AdminDesktopPage() {
     if (!auth) return;
     setPremiumEventShortcutLoading(true);
     try {
-      await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.premium_event_active`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: "false" }) });
+      await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ key: "premium_event_active", value: "false" }) });
       const now = new Date().toISOString();
       await fetch(`${SUPABASE_URL}/rest/v1/profiles?or=(premium_until.is.null,premium_until.lt.${now})`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ is_premium: false }) });
       setAutoShortcuts(cur => ({ ...cur, premium_event_active: false }));
@@ -917,7 +917,7 @@ export function AdminDesktopPage() {
                   const v = !rules.blockSameGenderLike;
                   setRules(r => ({ ...r, blockSameGenderLike: v }));
                   setBLOCK_SAME_GENDER(v);
-                  await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.rule_block_same_gender_like`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: String(v) }) });
+                  await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ key: "rule_block_same_gender_like", value: String(v) }) });
                 }} />
               </div>
             </OffCanvasSection>}
@@ -937,7 +937,7 @@ export function AdminDesktopPage() {
                   hint={key.includes("subtitle") ? "Utilise {name} pour le prénom" : key.includes("likes") ? "Utilise {n} pour le nombre" : undefined}
                   onSave={async () => {
                     if (!auth) return;
-                    await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: editingValue }) });
+                    await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ key: key, value: editingValue }) });
                     const km: Record<string, keyof typeof modalTexts> = { modal_same_gender_homme: "sameGenderHomme", modal_same_gender_femme: "sameGenderFemme", modal_same_gender_sub: "sameGenderSub", modal_signup_success: "signupSuccess", modal_match_title: "matchTitle", modal_match_subtitle: "matchSubtitle", modal_premium_default: "premiumDefault", modal_likes_epuises: "likesEpuises" };
                     setModalTexts(t => ({ ...t, [km[key]]: editingValue }));
                     setEditingModal(null);
@@ -969,7 +969,7 @@ export function AdminDesktopPage() {
                   editValue={editingConfigValue} onEdit={setEditingConfigValue}
                   onSave={async () => {
                     if (!auth) return;
-                    await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: editingConfigValue }) });
+                    await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ key: key, value: editingConfigValue }) });
                     setAppConfig(c => ({ ...c, [ck]: editingConfigValue }));
                     setEditingConfig(null);
                   }} />
@@ -1017,7 +1017,7 @@ export function AdminDesktopPage() {
                   editValue={editingConfigValue} onEdit={setEditingConfigValue}
                   onSave={async () => {
                     if (!auth) return;
-                    await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: editingConfigValue }) });
+                    await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ key: key, value: editingConfigValue }) });
                     setAppConfig(c => ({ ...c, [ck]: editingConfigValue }));
                     if (key === "premium_price_fcfa") setPREMIUM_PRICE_FCFA(parseInt(editingConfigValue) || 3500); if (key === "premium_price_week_fcfa") setPREMIUM_PRICE_WEEK_FCFA(parseInt(editingConfigValue) || 1200); if (key === "premium_price_2month_fcfa") setPREMIUM_PRICE_2MONTH_FCFA(parseInt(editingConfigValue) || 5900); if (key === "premium_days_week") setPREMIUM_DAYS_WEEK(parseInt(editingConfigValue) || 7); if (key === "premium_days_2month") setPREMIUM_DAYS_2MONTH(parseInt(editingConfigValue) || 62);
                     if (key === "premium_price_eur") setPREMIUM_PRICE_EUR(parseFloat(editingConfigValue) || 10);
@@ -1046,10 +1046,11 @@ export function AdminDesktopPage() {
                     if (!auth) return;
                     const v = appConfig[ck] !== "true" ? "true" : "false";
                     setAppConfig(c => ({ ...c, [ck]: v }));
-                    await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: v }) });
+                    await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ key: key, value: v }) });
                   }} />
                 </div>
               ))}
+              <PayLinkConfig auth={auth} />
             </OffCanvasSection>}
             {configTab === "general" && <OffCanvasSection title="Mode Découvrir par défaut">
               <DiscoverModeConfig auth={auth!} />
@@ -1078,7 +1079,7 @@ export function AdminDesktopPage() {
                 editValue={editingConfigValue} onEdit={setEditingConfigValue}
                 onSave={async () => {
                   if (!auth) return;
-                  await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.likes_notification_delay_hours`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: editingConfigValue }) });
+                  await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ key: "likes_notification_delay_hours", value: editingConfigValue }) });
                   setAppConfig(c => ({ ...c, likesNotifDelayHours: editingConfigValue }));
                   setEditingConfig(null);
                 }} />
@@ -1102,7 +1103,7 @@ export function AdminDesktopPage() {
                   if (!auth) return;
                   const v = appConfig.maintenanceMode !== "true" ? "true" : "false";
                   setAppConfig(c => ({ ...c, maintenanceMode: v }));
-                  await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.maintenance_mode`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: v }) });
+                  await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ key: "maintenance_mode", value: v }) });
                 }} />
               </div>
               {appConfig.maintenanceMode === "true" && (
@@ -1111,7 +1112,7 @@ export function AdminDesktopPage() {
                   editValue={editingConfigValue} onEdit={setEditingConfigValue}
                   onSave={async () => {
                     if (!auth) return;
-                    await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.maintenance_message`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: editingConfigValue }) });
+                    await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ key: "maintenance_message", value: editingConfigValue }) });
                     setAppConfig(c => ({ ...c, maintenanceMessage: editingConfigValue }));
                     setEditingConfig(null);
                   }} />
@@ -1126,13 +1127,13 @@ export function AdminDesktopPage() {
                 builtinValue={appConfig.disabledBuiltinWords}
                 onSave={async (newValue) => {
                   if (!auth) return;
-                  await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.custom_banned_words`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: newValue }) });
+                  await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ key: "custom_banned_words", value: newValue }) });
                   setAppConfig(c => ({ ...c, customBannedWords: newValue }));
                   buildCustomBannedRegex(newValue);
                 }}
                 onSaveBuiltin={async (newValue) => {
                   if (!auth) return;
-                  await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.disabled_builtin_words`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: newValue }) });
+                  await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ key: "disabled_builtin_words", value: newValue }) });
                   setAppConfig(c => ({ ...c, disabledBuiltinWords: newValue }));
                   setExemptedBuiltinWords(newValue);
                 }} />
@@ -1145,13 +1146,13 @@ export function AdminDesktopPage() {
                 builtinWordsList={BUILTIN_CONTACT_WORDS}
                 onSave={async (newValue) => {
                   if (!auth) return;
-                  await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.contact_banned_words`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: newValue }) });
+                  await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ key: "contact_banned_words", value: newValue }) });
                   setAppConfig(c => ({ ...c, contactBannedWords: newValue }));
                   buildContactBannedRegex(newValue);
                 }}
                 onSaveBuiltin={async (newValue) => {
                   if (!auth) return;
-                  await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.disabled_builtin_contact_words`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: newValue }) });
+                  await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ key: "disabled_builtin_contact_words", value: newValue }) });
                   setAppConfig(c => ({ ...c, disabledBuiltinContactWords: newValue }));
                   setExemptedContactWords(newValue);
                 }} />
@@ -1194,7 +1195,7 @@ export function AdminDesktopPage() {
                     onSave={async () => {
                       if (!auth) return;
                       const v = Math.max(3000, parseInt(editingConfigValue) || 8000);
-                      await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: String(v) }) });
+                      await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ key: key, value: String(v) }) });
                       if (key === "poll_badges_ms") setPOLL_BADGES_MS(v);
                       if (key === "poll_admin_badge_ms") setPOLL_ADMIN_BADGE_MS(v);
                       if (key === "poll_stats_ms") setPOLL_STATS_MS(v);
@@ -1382,7 +1383,7 @@ function PaymentMethodsConfig({ auth }: { auth: Auth }) {
     if (which === "paypal") setPAY_PAYPAL_ENABLED(v);
     const key = which === "mtn" ? "pay_mtn_enabled" : which === "airtel" ? "pay_airtel_enabled" : which === "cb" ? "pay_cb_enabled" : which === "wero" ? "pay_wero_enabled" : "pay_paypal_enabled";
     try {
-      await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { ...H, "Content-Type": "application/json", "Prefer": "return=minimal" }, body: JSON.stringify({ value: String(v) }) });
+      await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, { method: "POST", headers: { ...H, "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ key: key, value: String(v) }) });
     } catch {}
   };
 
@@ -1402,7 +1403,7 @@ function PaymentMethodsConfig({ auth }: { auth: Auth }) {
     try {
       // Méthode robuste : on met à jour la ligne existante (PATCH), et on l'insère seulement si elle n'existe pas.
       // Ne dépend d'AUCUNE contrainte d'unicité sur app_settings.key.
-      const r = await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { ...H, "Content-Type": "application/json", "Prefer": "return=representation" }, body: JSON.stringify({ value }) });
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, { method: "POST", headers: { ...H, "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=representation" }, body: JSON.stringify({ key: key, value }) });
       const updated = await r.json().catch(() => []);
       if (!Array.isArray(updated) || updated.length === 0) {
         await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, { method: "POST", headers: { ...H, "Content-Type": "application/json", "Prefer": "return=minimal" }, body: JSON.stringify({ key, value }) });
@@ -1582,6 +1583,7 @@ function SiteInfoConfig({ auth, group }: { auth: Auth; group: "contacts" | "soci
       ["social_instagram", "Lien Instagram (vide = masqué)"],
       ["social_tiktok", "Lien TikTok (vide = masqué)"],
       ["social_youtube", "Lien YouTube (vide = masqué)"],
+      ["social_linkedin", "Lien LinkedIn (vide = masqué)"],
     ],
     landing: [
       ["landing_members_count", "Compteur de membres (ex: 12 000+ membres)"],
@@ -1598,7 +1600,7 @@ function SiteInfoConfig({ auth, group }: { auth: Auth; group: "contacts" | "soci
   };
   const defaults: Record<string, string> = {
     contact_email: CONTACT_EMAIL, contact_whatsapp: CONTACT_WHATSAPP, contact_address: CONTACT_ADDRESS,
-    social_facebook: SOCIAL_FACEBOOK, social_instagram: SOCIAL_INSTAGRAM, social_tiktok: SOCIAL_TIKTOK, social_youtube: SOCIAL_YOUTUBE,
+    social_facebook: SOCIAL_FACEBOOK, social_instagram: SOCIAL_INSTAGRAM, social_tiktok: SOCIAL_TIKTOK, social_youtube: SOCIAL_YOUTUBE, social_linkedin: SOCIAL_LINKEDIN,
     landing_members_count: LANDING_MEMBERS, landing_title_start: LANDING_TITLE_START, landing_title_highlight: LANDING_TITLE_HIGHLIGHT, landing_title_end: LANDING_TITLE_END, landing_slogan: LANDING_SLOGAN,
     premium_stat_couples: PREMIUM_STAT_COUPLES, premium_stat_members: PREMIUM_STAT_MEMBERS,
     landing_stat_members: LANDING_STAT_MEMBERS, landing_stat_couples: LANDING_STAT_COUPLES, landing_stat_cities: LANDING_STAT_CITIES,
@@ -1631,6 +1633,7 @@ function SiteInfoConfig({ auth, group }: { auth: Auth; group: "contacts" | "soci
     if (key === "social_instagram") setSOCIAL_INSTAGRAM(value);
     if (key === "social_tiktok") setSOCIAL_TIKTOK(value);
     if (key === "social_youtube") setSOCIAL_YOUTUBE(value);
+    if (key === "social_linkedin") setSOCIAL_LINKEDIN(value);
     if (key === "landing_members_count") setLANDING_MEMBERS(value);
     if (key === "landing_title_start") setLANDING_TITLE_START(value);
     if (key === "landing_title_highlight") setLANDING_TITLE_HIGHLIGHT(value);
@@ -1651,7 +1654,7 @@ function SiteInfoConfig({ auth, group }: { auth: Auth; group: "contacts" | "soci
     applyGlobal(key, value);
     try {
       // Méthode robuste : PATCH la ligne existante, et POST seulement si elle n'existe pas (ne dépend d'aucun upsert).
-      const r = await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${encodeURIComponent(key)}`, { method: "PATCH", headers: { ...H, "Content-Type": "application/json", "Prefer": "return=representation" }, body: JSON.stringify({ value }) });
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, { method: "POST", headers: { ...H, "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=representation" }, body: JSON.stringify({ key: key, value }) });
       const updated = await r.json().catch(() => []);
       if (!Array.isArray(updated) || updated.length === 0) {
         await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, { method: "POST", headers: { ...H, "Content-Type": "application/json", "Prefer": "return=minimal" }, body: JSON.stringify({ key, value }) });
@@ -1924,6 +1927,42 @@ function RelationalNudgeConfig({ auth }: { auth: Auth }) {
       <div>
         <span style={{ fontSize: "0.82rem", fontWeight: 600, color: "#333" }}>Inviter à remplir le profil relationnel</span>
         <div style={{ fontSize: "0.68rem", color: "#999", marginTop: 2 }}>Les membres sans profil relationnel verront un message les incitant à le remplir. Même réglage que dans Matchmaking intelligent.</div>
+      </div>
+      <SwitchBtn on={loading ? false : on} onToggle={busy || loading ? () => {} : toggle} />
+    </div>
+  );
+}
+
+// Autorise ou non les membres à générer eux-mêmes un lien de paiement à faire payer par un proche.
+function PayLinkConfig({ auth }: { auth: Auth }) {
+  const [on, setOn] = React.useState(true);
+  const [loading, setLoading] = React.useState(true);
+  const [busy, setBusy] = React.useState(false);
+  const H = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` };
+
+  React.useEffect(() => {
+    fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.pay_link_enabled&select=value`, { headers: H })
+      .then(r => r.json()).then((data: { value: string }[]) => {
+        if (Array.isArray(data) && data[0]?.value !== undefined) setOn(data[0].value !== "false");
+      }).catch(() => {}).finally(() => setLoading(false));
+  }, [auth.token]);
+
+  const toggle = async () => {
+    const next = !on;
+    setBusy(true);
+    setOn(next);
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, { method: "POST", headers: { ...H, "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ key: "pay_link_enabled", value: next ? "true" : "false" }) });
+      setPAY_LINK_ENABLED(next);
+    } catch { setOn(!next); }
+    setBusy(false);
+  };
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 4px" }}>
+      <div>
+        <span style={{ fontSize: "0.82rem", fontWeight: 600, color: "#333" }}>Lien "Faire payer par quelqu'un d'autre"</span>
+        <div style={{ fontSize: "0.68rem", color: "#999", marginTop: 2 }}>Autorise les membres à générer eux-mêmes un lien de paiement à envoyer à un proche (Profil + écran de paiement).</div>
       </div>
       <SwitchBtn on={loading ? false : on} onToggle={busy || loading ? () => {} : toggle} />
     </div>
@@ -2528,7 +2567,7 @@ export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () =
   }, [auth.token]);
 
   const patch = async (key: string, value: string) => {
-    await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value }) });
+    await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ key: key, value }) });
   };
   // Upsert (pas PATCH) : pour des réglages tout juste créés qui n'ont pas encore de ligne en
   // base — un PATCH échouerait silencieusement dans ce cas (0 ligne modifiée, aucune erreur).
@@ -2598,6 +2637,7 @@ export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () =
         {appConfig.maintenanceMode === "true" && (
           <EditableRow label="Message de maintenance" value={appConfig.maintenanceMessage} open={editingConfig === "maintenance_message"} onOpen={() => { setEditingConfig(editingConfig === "maintenance_message" ? null : "maintenance_message"); setEditingConfigValue(appConfig.maintenanceMessage); }} editValue={editingConfigValue} onEdit={setEditingConfigValue} onSave={async () => { await patch("maintenance_message", editingConfigValue); setAppConfig(c => ({ ...c, maintenanceMessage: editingConfigValue })); setEditingConfig(null); }} />
         )}
+        <PayLinkConfig auth={auth} />
       </OffCanvasSection>
       <OffCanvasSection title="Mots interdits (modération)">
         <div style={{ fontSize: "0.74rem", color: "#888", marginBottom: 10, lineHeight: 1.5 }}>
@@ -3144,14 +3184,14 @@ export function AdminPinGate({ auth, onBack, onBadgeCount, autoShortcuts: autoSh
     setLocalAutoShortcuts(cur => ({ ...cur, [key]: next }));
     if (!auth) return;
     try {
-      await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: next ? "true" : "false" }) });
+      await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ key: key, value: next ? "true" : "false" }) });
     } catch {}
   };
   const setLocalAutoShortcutValue = async (key: AutoShortcutKeyShared, value: boolean) => {
     setLocalAutoShortcuts(cur => ({ ...cur, [key]: value }));
     if (!auth) return;
     try {
-      await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: value ? "true" : "false" }) });
+      await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ key: key, value: value ? "true" : "false" }) });
     } catch {}
   };
   const autoShortcuts = autoShortcutsProp ?? localAutoShortcuts;
@@ -4001,7 +4041,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
   const saveMmAutoSetting = async (key: string, value: string) => {
     if (!auth) return;
     try {
-      await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value }) });
+      await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ key: key, value }) });
     } catch {}
   };
   const loadMmAutoLog = async () => {
@@ -4575,7 +4615,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
     setProposeDuration(String((parseInt(v) || 30) * 24));
     if (!auth) return;
     try {
-      await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.match_proposal_expiry_days`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: v }) });
+      await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ key: "match_proposal_expiry_days", value: v }) });
     } catch {}
   };
   // ── Propositions spontanées automatiques (règle : homme plus âgé), lues chaque nuit par la
@@ -4604,7 +4644,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
   const saveSpAutoSetting = async (key: string, value: string) => {
     if (!auth) return;
     try {
-      await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value }) });
+      await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ key: key, value }) });
     } catch {}
   };
   const loadSpAutoLog = async () => {
@@ -6124,10 +6164,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
         const expiresAt = new Date(data[0].value);
         if (expiresAt < new Date()) {
           // Événement expiré - désactiver automatiquement
-          await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.premium_event_active`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" },
-            body: JSON.stringify({ value: "false" }),
+          await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ key: "premium_event_active", value: "false" }),
           });
           const now = new Date().toISOString();
           await fetch(`${SUPABASE_URL}/rest/v1/profiles?or=(premium_until.is.null,premium_until.lt.${now})`, {
@@ -6526,7 +6563,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
     const savePremiumNudgeSetting = async (key: string, value: string) => {
       if (!auth) return;
       try {
-        await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.${key}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value }) });
+        await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ key: key, value }) });
       } catch {}
     };
   const campTargetLabel = (t: string) => CAMP_TARGETS.find(x => x.key === t)?.label || "Tous les utilisateurs gratuits";
@@ -6559,8 +6596,8 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
     try {
       const endISO = new Date(campEndDate).toISOString();
       await fetch(`${SUPABASE_URL}/rest/v1/profiles?${campFilter(campTarget)}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ is_premium: true, premium_is_gift: true }) });
-      await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.premium_event_active`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: "true" }) });
-      await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.premium_event_expires_at`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ value: endISO }) });
+      await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ key: "premium_event_active", value: "true" }) });
+      await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ key: "premium_event_expires_at", value: endISO }) });
       setPremiumEventActive(true);
       const rec = { id: `c_${Date.now()}`, name: campName(campTarget), sub: campMessage.trim() ? campMessage.trim().slice(0, 60) : `${campDays} jours offerts`, target: campTarget, targetLabel: campTargetLabel(campTarget), days: campDays, beneficiaries: campCount || 0, start: new Date().toISOString(), end: endISO, message: campMessage.trim() };
       const next = [rec, ...campaignsHistory].slice(0, 50);
@@ -9328,14 +9365,24 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
         // Ligne d'action : badge coloré + description + chevron. Même logique qu'avant, juste
         // une présentation en liste plutôt qu'en petits boutons compacts.
         const Row = ({ label, color, desc, onClick, disabled }: { label: string; color: string; desc: string; onClick: () => void; disabled?: boolean }) => (
-          <div onClick={disabled ? undefined : onClick} style={{ display: "flex", alignItems: "center", gap: 16, padding: "13px 16px", background: G.creme, borderRadius: 12, marginBottom: 9, cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.5 : 1 }}>
-            <div style={{ background: `${color}20`, color, fontWeight: 700, fontSize: "0.8rem", padding: "6px 13px", borderRadius: 50, flexShrink: 0, minWidth: 118, textAlign: "center", whiteSpace: "nowrap" }}>{label}</div>
-            <div style={{ flex: 1, fontSize: "0.8rem", color: "#666", minWidth: 0 }}>{desc}</div>
+          <div className="mng-row" onClick={disabled ? undefined : onClick} style={{ display: "flex", alignItems: "center", gap: 16, padding: "13px 16px", background: G.creme, borderRadius: 12, marginBottom: 9, cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.5 : 1 }}>
+            <div className="mng-row-badge" style={{ background: `${color}20`, color, fontWeight: 700, fontSize: "0.8rem", padding: "6px 13px", borderRadius: 50, flexShrink: 0, minWidth: 118, textAlign: "center", whiteSpace: "nowrap" }}>{label}</div>
+            <div className="mng-row-desc" style={{ flex: 1, fontSize: "0.8rem", color: "#666", minWidth: 0 }}>{desc}</div>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><polyline points="9 18 15 12 9 6"/></svg>
           </div>
         );
         return (
           <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10002, display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }} onClick={close}>
+            <style>{`
+              @media (max-width: 640px) {
+                .mng-body { flex-direction: column !important; }
+                .mng-side { width: 100% !important; flex-direction: row !important; border-right: none !important; border-bottom: 1px solid ${G.gris}; padding: 10px 14px !important; gap: 6px; }
+                .mng-side > div { flex: 1; justify-content: center; margin-bottom: 0 !important; white-space: nowrap; }
+                .mng-row { flex-wrap: wrap; row-gap: 6px; }
+                .mng-row-badge { min-width: 0 !important; }
+                .mng-row-desc { flex-basis: 100%; order: 3; }
+              }
+            `}</style>
             <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 760, maxHeight: "85vh", display: "flex", flexDirection: "column", boxShadow: "0 24px 64px rgba(0,0,0,0.3)", overflow: "hidden" }}>
               <div style={{ padding: "18px 20px", borderBottom: `1px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 9, fontWeight: 900, fontSize: "1.05rem", color: G.brun }}>
@@ -9344,9 +9391,9 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 </div>
                 <button onClick={close} style={{ border: "none", background: G.creme, borderRadius: "50%", width: 30, height: 30, cursor: "pointer", color: "#666" }}>✕</button>
               </div>
-              <div style={{ display: "flex", flex: 1, minHeight: 0 }}>
+              <div className="mng-body" style={{ display: "flex", flex: 1, minHeight: 0 }}>
                 {/* Navigation latérale */}
-                <div style={{ width: 190, flexShrink: 0, borderRight: `1px solid ${G.gris}`, padding: 14 }}>
+                <div className="mng-side" style={{ width: 190, flexShrink: 0, borderRight: `1px solid ${G.gris}`, padding: 14 }}>
                   <NavItem id="statuts" label="Statuts" Icon={() => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>} />
                   <NavItem id="moderation" label="Modération" Icon={() => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>} />
                 </div>
