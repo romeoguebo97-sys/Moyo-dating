@@ -302,6 +302,10 @@ export let PRIVACY_NOTICE_STEP1_TEXT = "Sur Moyo, tu pourrais tomber sur des per
 export let PRIVACY_NOTICE_STEP2_TEXT = "Tu es sur un compte gratuit. Le partage ou la demande de numéro de téléphone est réservé aux membres Premium — merci de respecter cette règle, pour la sécurité de tous.";
 export function setPRIVACY_NOTICE_STEP1_TEXT(v: any) { PRIVACY_NOTICE_STEP1_TEXT = v; }
 export function setPRIVACY_NOTICE_STEP2_TEXT(v: any) { PRIVACY_NOTICE_STEP2_TEXT = v; }
+// Texte affiché sur l'écran de blocage (bannissement définitif), au-dessus des boutons —
+// modifiable depuis Configuration.
+export let BAN_SCREEN_TEXT = "Ton compte a été suspendu suite à une violation des conditions d'utilisation de Moyo Dating. Ce que vous pouvez faire pour toute réclamation ou débloquer votre compte :";
+export function setBAN_SCREEN_TEXT(v: any) { BAN_SCREEN_TEXT = v; }
 // Mise en avant des profils Premium/Vérifiés dans le fil Découvrir (activable/désactivable par l'admin)
 export let PREMIUM_BOOST_ENABLED = true;
 // Prix le plus bas parmi les formules actuellement ACTIVES (ignore les formules désactivées)
@@ -488,7 +492,7 @@ export function dedupeMatchesByCouple<T extends { user1?: string; user2?: string
 }
 
 // Charger les settings dynamiques depuis Supabase au démarrage
-fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_messages_free_femme,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,pay_wero_enabled,pay_paypal_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,feature_show_likes_views_free,feature_group_premium,feature_group_photos,feature_moderation_insults,feature_moderation_contact,premium_screen_variant,custom_banned_words,contact_banned_words,disabled_builtin_words,disabled_builtin_contact_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,pay_wero_number,pay_paypal_number,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,store_link_android,store_link_ios,plan_week_enabled,plan_month_enabled,plan_2month_enabled,discover_default_mode,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,auto_warn_ban_contact_enabled,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price,privacy_notice_enabled,premium_boost_enabled,assistant_photo_url,broadcast_enabled,modal_match_title,modal_match_subtitle,referral_bonus_week_days,referral_bonus_month_days,referral_bonus_2month_days,affiliate_commission_week_fcfa,affiliate_commission_month_fcfa,affiliate_commission_2month_fcfa,affiliate_payable_delay_days,privacy_notice_step1_text,privacy_notice_step2_text)&select=key,value`, {
+fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_messages_free_femme,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,pay_wero_enabled,pay_paypal_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,feature_show_likes_views_free,feature_group_premium,feature_group_photos,feature_moderation_insults,feature_moderation_contact,premium_screen_variant,custom_banned_words,contact_banned_words,disabled_builtin_words,disabled_builtin_contact_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,pay_wero_number,pay_paypal_number,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,store_link_android,store_link_ios,plan_week_enabled,plan_month_enabled,plan_2month_enabled,discover_default_mode,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,auto_warn_ban_contact_enabled,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price,privacy_notice_enabled,premium_boost_enabled,assistant_photo_url,broadcast_enabled,modal_match_title,modal_match_subtitle,referral_bonus_week_days,referral_bonus_month_days,referral_bonus_2month_days,affiliate_commission_week_fcfa,affiliate_commission_month_fcfa,affiliate_commission_2month_fcfa,affiliate_payable_delay_days,privacy_notice_step1_text,privacy_notice_step2_text,ban_screen_text)&select=key,value`, {
   headers: { "apikey": SUPABASE_KEY },
 }).then(r => r.json()).then((data: { key: string; value: string }[]) => {
   if (!Array.isArray(data)) return;
@@ -543,6 +547,7 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
   if (map["privacy_notice_enabled"] !== undefined) PRIVACY_NOTICE_ENABLED = map["privacy_notice_enabled"] !== "false";
   if (map["privacy_notice_step1_text"]) setPRIVACY_NOTICE_STEP1_TEXT(map["privacy_notice_step1_text"]);
   if (map["privacy_notice_step2_text"]) setPRIVACY_NOTICE_STEP2_TEXT(map["privacy_notice_step2_text"]);
+  if (map["ban_screen_text"]) setBAN_SCREEN_TEXT(map["ban_screen_text"]);
   if (map["premium_boost_enabled"] !== undefined) PREMIUM_BOOST_ENABLED = map["premium_boost_enabled"] !== "false";
   if (map["assistant_photo_url"] !== undefined) SUPPORT_TEAM_PHOTO = map["assistant_photo_url"];
   if (map["landing_members_count"]) LANDING_MEMBERS = map["landing_members_count"];
@@ -1687,12 +1692,9 @@ const GLOBAL_CSS = `
   @keyframes fadeUp{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
   @keyframes fadeIn{from{opacity:0}to{opacity:1}}
   @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
-  /* Défilement automatique des avantages Premium (écran de paiement + écran d'incitation) —
-     contenu dupliqué une fois, on translate de -50% pour boucler sans à-coup. Mis en pause sur
-     survol/tap pour ne pas gêner la lecture si quelqu'un s'y attarde. */
-  @keyframes premiumAdvScroll{0%{transform:translateY(0)}100%{transform:translateY(-50%)}}
-  .premium-adv-track{animation:premiumAdvScroll linear infinite}
-  .premium-adv-track:hover,.premium-adv-track:active{animation-play-state:paused}
+  /* Défilement automatique des avantages Premium : règle injectée de façon persistante depuis le
+     composant racine App() (voir "moyo-persistent-anim"), pas ici — <style>{GLOBAL_CSS}</style> vit
+     dans Landing et disparaît du document dès la connexion, une fois cette page démontée. */
   .msg-bg {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' opacity='0.055'%3E%3Ctext x='10' y='20' font-family='Georgia,serif' font-size='11' font-weight='700' fill='%23C0392B'%3EMo%3C/text%3E%3Ctext x='31' y='20' font-family='Georgia,serif' font-size='11' font-weight='700' fill='%23D4A843'%3Eyo%3C/text%3E%3Ccircle cx='15' cy='52' r='5' fill='none' stroke='%23C0392B' stroke-width='1.2'/%3E%3Cpath d='M10,57 Q15,70 20,57' fill='none' stroke='%23C0392B' stroke-width='1.2'/%3E%3Ccircle cx='28' cy='52' r='5' fill='none' stroke='%23D4A843' stroke-width='1.2'/%3E%3Cpath d='M23,57 Q28,70 33,57' fill='none' stroke='%23D4A843' stroke-width='1.2'/%3E%3Cpath d='M19,49 C19,47 22,46 22,49 C22,46 25,47 25,49 C25,52 22,55 22,55Z' fill='%23C0392B'/%3E%3Ccircle cx='75' cy='15' r='7' fill='none' stroke='%23D4A843' stroke-width='1.5'/%3E%3Cpath d='M110,8 C110,4 115,3 115,8 C115,3 120,4 120,8 C120,13 115,17 115,17Z' fill='none' stroke='%23C0392B' stroke-width='1.3'/%3E%3Ccircle cx='100' cy='95' r='3' fill='%23D4A843'/%3E%3Ccircle cx='100' cy='88' r='3' fill='none' stroke='%23C0392B' stroke-width='1'/%3E%3Ccircle cx='107' cy='95' r='3' fill='none' stroke='%23C0392B' stroke-width='1'/%3E%3Ccircle cx='93' cy='95' r='3' fill='none' stroke='%23C0392B' stroke-width='1'/%3E%3Cpath d='M155,20 L156.5,24 L161,24 L157.5,27 L159,31 L155,28 L151,31 L152.5,27 L149,24 L153.5,24Z' fill='none' stroke='%23D4A843' stroke-width='0.9'/%3E%3Cpath d='M140,105 L136,112 L144,112 Z' fill='none' stroke='%23D4A843' stroke-width='1.2'/%3E%3Cline x1='140' y1='112' x2='140' y2='120' stroke='%23D4A843' stroke-width='1.2'/%3E%3Cline x1='136' y1='120' x2='144' y2='120' stroke='%23D4A843' stroke-width='1.2'/%3E%3Ctext x='60' y='185' font-family='Georgia,serif' font-size='9' font-weight='700' fill='%23C0392B'%3EMo%3C/text%3E%3Ctext x='76' y='185' font-family='Georgia,serif' font-size='9' font-weight='700' fill='%23D4A843'%3Eyo%3C/text%3E%3Cpath d='M185,175 C185,173 188,172 188,175 C188,172 191,173 191,175 C191,178 188,181 188,181Z' fill='%23C0392B'/%3E%3Cpath d='M50,140 Q55,135 60,140 Q65,145 70,140 Q75,135 80,140' fill='none' stroke='%23D4A843' stroke-width='1.2'/%3E%3C/svg%3E");
     background-repeat: repeat;
@@ -2375,28 +2377,28 @@ const getIcon = (id: string, gold = "#D4A843") => {
 //    que les gens les découvrent sans avoir à déplier. Déplié : liste statique, l'animation
 //    s'arrête. ──
 function PremiumBenefitsBlock({ gold, showAll, onToggleShowAll }: { gold: string; showAll: boolean; onToggleShowAll: () => void }) {
-  const rowHeight = 46;
-  const viewportRows = 3.3;
+  const rowHeight = 48;
+  const viewportRows = 5.6;
   const durationSec = Math.round(avantages.length * 2.1);
-  const Row = ({ a }: { a: any }) => (
-    <div style={{ display: "flex", alignItems: "center", gap: 11, padding: "7px 0", height: rowHeight, borderBottom: "1px solid #f0ede6" }}>
-      <div style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(212,168,67,0.14)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+  const renderRow = (a: any, key: number) => (
+    <div key={key} style={{ display: "flex", alignItems: "center", gap: 12, padding: "8px 0", height: rowHeight, borderBottom: "1px solid #f0ede6" }}>
+      <div style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(212,168,67,0.14)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
         {getIcon(a.icon, gold)}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontWeight: 700, fontSize: "0.78rem", color: "#1a1a2e" }}>{a.titre}</div>
-        <div style={{ fontSize: "0.66rem", color: "#9a9a9a" }}>{a.desc}</div>
+        <div style={{ fontWeight: 700, fontSize: "0.8rem", color: "#1a1a2e" }}>{a.titre}</div>
+        <div style={{ fontSize: "0.68rem", color: "#9a9a9a" }}>{a.desc}</div>
       </div>
     </div>
   );
   return (
-    <div style={{ background: G.blanc, borderRadius: 18, padding: "3px 14px", boxShadow: "0 2px 10px rgba(0,0,0,0.04)", marginBottom: 14 }}>
+    <div style={{ background: G.blanc, borderRadius: 18, padding: "4px 16px", boxShadow: "0 2px 10px rgba(0,0,0,0.04)", marginBottom: 18 }}>
       {showAll ? (
-        avantages.map((a, i) => <Row key={i} a={a} />)
+        avantages.map((a, i) => renderRow(a, i))
       ) : (
         <div style={{ height: rowHeight * viewportRows, overflow: "hidden", position: "relative" }}>
           <div className="premium-adv-track" style={{ animationDuration: `${durationSec}s` }}>
-            {avantages.concat(avantages).map((a, i) => <Row key={i} a={a} />)}
+            {avantages.concat(avantages).map((a, i) => renderRow(a, i))}
           </div>
         </div>
       )}
@@ -2410,6 +2412,10 @@ function PremiumBenefitsBlock({ gold, showAll, onToggleShowAll }: { gold: string
 
 function PremiumModal({ onClose, reason, userId, token, userEmail, giftFor, promo }: { onClose: () => void; reason: string; userId: string; token: string; userEmail?: string; giftFor?: { id: string; name: string } | null; promo?: { price: number; expiresAt: string } | null }) {
   const [step, setStep] = useState<"offer" | "mtn" | "airtel" | "b1" | "b2" | "b3" | "b4">(promo && PREMIUM_SCREEN_VARIANT === "b" ? "b2" : (PREMIUM_SCREEN_VARIANT === "b" ? "b1" : "offer"));
+  // État local pour le retour visuel du lien de paiement copié — déclaré ici (avant le retour
+  // anticipé de l'écran "offer" plus bas) car "toast" n'est déclaré que plus loin dans ce
+  // composant et n'est donc pas disponible dans cet écran-là.
+  const [myLinkCopied, setMyLinkCopied] = useState(false);
   // ── Congo ou diaspora ? Déterminé depuis la ville du profil ("Diaspora Europe", "Diaspora
   //    Amérique", etc. sont déjà des options existantes dans le formulaire de profil). Tant que
   //    ce n'est pas encore chargé (null), on affiche par défaut les moyens Congo (public majoritaire). ──
@@ -2639,6 +2645,18 @@ function PremiumModal({ onClose, reason, userId, token, userEmail, giftFor, prom
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6" /></svg>
               </div>
             </>
+          )}
+          {!giftFor && (
+            <div onClick={async () => { const ok = await copyMyPaymentLink(token, userId); if (ok) { setMyLinkCopied(true); setTimeout(() => setMyLinkCopied(false), 3000); } }} style={{ textAlign: "center", padding: "10px 0 20px", cursor: "pointer" }}>
+              {myLinkCopied ? (
+                <span style={{ fontSize: "0.78rem", color: G.vert, fontWeight: 700 }}>✓ Lien copié ! Envoie-le à la personne qui va payer pour toi.</span>
+              ) : (
+                <>
+                  <span style={{ fontSize: "0.78rem", color: "#a8a8a8" }}>Tu préfères que quelqu'un paie à ta place ? </span>
+                  <span style={{ fontSize: "0.78rem", color: gold, fontWeight: 700, textDecoration: "underline" }}>Copie ton lien</span>
+                </>
+              )}
+            </div>
           )}
           </div>
         </div>
@@ -2964,6 +2982,18 @@ function PremiumModal({ onClose, reason, userId, token, userEmail, giftFor, prom
               PayPal{!PAY_PAYPAL_ENABLED && <span style={{ fontSize: "0.62rem", fontWeight: 700 }}> (indisponible)</span>}
             </button>
           </>
+        )}
+        {!giftFor && (
+          <div onClick={async () => { const ok = await copyMyPaymentLink(token, userId); if (ok) { setMyLinkCopied(true); setTimeout(() => setMyLinkCopied(false), 3000); } }} style={{ textAlign: "center", marginBottom: 14, cursor: "pointer" }}>
+            {myLinkCopied ? (
+              <span style={{ fontSize: "0.78rem", color: G.vert, fontWeight: 700 }}>✓ Lien copié ! Envoie-le à la personne qui va payer pour toi.</span>
+            ) : (
+              <>
+                <span style={{ fontSize: "0.78rem", color: "#a8a8a8" }}>Tu préfères que quelqu'un paie à ta place ? </span>
+                <span style={{ fontSize: "0.78rem", color: gold, fontWeight: 700, textDecoration: "underline" }}>Copie ton lien</span>
+              </>
+            )}
+          </div>
         )}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7, color: "#a8a8a8", fontSize: "0.78rem" }}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a8a8a8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
@@ -4603,6 +4633,12 @@ function BanScreen({ until, onExpire, onBack, name, email, reason, allowPayment,
       Nous contacter sur WhatsApp
     </a>
   );
+  const ContactMailBtn = () => (
+    <a href={`mailto:${CONTACT_EMAIL}`} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", boxSizing: "border-box", background: G.creme, color: G.brun, border: `1.5px solid ${G.gris}`, borderRadius: 14, padding: "13px", fontSize: "0.9rem", fontWeight: 800, cursor: "pointer", textDecoration: "none", marginBottom: 10 }}>
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={G.brun} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+      Nous contacter par mail
+    </a>
+  );
   const PayUnlockBtn = () => (
     <button onClick={onPay} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", boxSizing: "border-box", background: `linear-gradient(135deg,${G.or},#B8862E)`, color: "#fff", border: "none", borderRadius: 14, padding: "13px", fontSize: "0.9rem", fontWeight: 800, cursor: "pointer", marginBottom: 10 }}>
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
@@ -4658,10 +4694,11 @@ function BanScreen({ until, onExpire, onBack, name, email, reason, allowPayment,
           )
         ) : (
           <>
-            <p style={{ fontSize: "0.9rem", color: "#666", lineHeight: 1.6, marginBottom: 20 }}>Ton compte a été suspendu suite à une violation des conditions d'utilisation de Moyo Dating. Pour toute réclamation, contacte-nous à {CONTACT_EMAIL} ou via le bouton ci-dessous.</p>
+            <p style={{ fontSize: "0.9rem", color: "#666", lineHeight: 1.6, marginBottom: 20 }}>{BAN_SCREEN_TEXT}</p>
             <PaymentStatusBadge />
             {allowPayment && onPay && <PayUnlockBtn />}
             <ContactSupportBtn />
+            <ContactMailBtn />
             {onBack && <button onClick={onBack} style={{ width: "100%", background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 14, padding: "13px", fontSize: "0.9rem", fontWeight: 700, cursor: "pointer" }}>Retour à l'accueil</button>}
           </>
         )}
@@ -6312,7 +6349,31 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
           <div style={{ background: "#f8f8f8", borderRadius: 14, padding: "16px", textAlign: "center", margin: "12px 16px 16px" }}>
             <div style={{ fontWeight: 700, fontSize: "0.9rem", color: G.brun, marginBottom: 4 }}>Un problème ou une question ?</div>
             <p style={{ fontSize: "0.78rem", color: "#888", marginBottom: 14, lineHeight: 1.5 }}>Notre équipe est disponible pour vous aider.</p>
-            <button onClick={() => { setShowGuide(false); setShowBot(true); }} style={{ display: "inline-block", background: G.rouge, color: "#fff", borderRadius: 50, padding: "10px 24px", fontSize: "0.85rem", fontWeight: 700, border: "none", cursor: "pointer" }}>Contacter notre équipe</button>
+            <button onClick={() => { setShowGuide(false); setShowBot(true); }} style={{ width: "100%", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: G.rouge, color: "#fff", borderRadius: 50, padding: "12px 24px", fontSize: "0.85rem", fontWeight: 700, border: "none", cursor: "pointer", marginBottom: 10 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
+              Contacter notre équipe
+            </button>
+            <button onClick={() => {
+              const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+              const link = isIos ? (STORE_LINK_IOS || STORE_LINK_ANDROID) : (STORE_LINK_ANDROID || STORE_LINK_IOS);
+              if (link) { window.open(link, "_blank", "noopener,noreferrer"); return; }
+              const prompt = (window as any).__moyoInstallPrompt;
+              if (prompt) prompt.prompt();
+            }} style={{ width: "100%", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: "#fff", color: G.rouge, borderRadius: 50, padding: "12px 24px", fontSize: "0.85rem", fontWeight: 700, border: `1.5px solid ${G.rouge}`, cursor: "pointer", marginBottom: 10 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Télécharger l'application
+            </button>
+            <button onClick={() => {
+              const link = STORE_LINK_ANDROID || STORE_LINK_IOS || "https://dating.moyo-congo.com";
+              if (navigator.share) {
+                navigator.share({ title: "Moyo Dating", text: "Télécharge Moyo Dating :", url: link });
+              } else {
+                navigator.clipboard.writeText(link);
+              }
+            }} style={{ width: "100%", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: "#fff", color: G.rouge, borderRadius: 50, padding: "12px 24px", fontSize: "0.85rem", fontWeight: 700, border: `1.5px solid ${G.rouge}`, cursor: "pointer" }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+              Partager l'application
+            </button>
           </div>
         </div>
         </div>
@@ -16137,6 +16198,19 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
           </div>
         )}
 
+        {(!isWideProfile || activeSection === "main") && (
+          <div onClick={async () => { const ok = await copyMyPaymentLink(auth.token, auth.userId); setToast(ok ? { msg: "Lien copié ! Envoie-le à la personne qui va payer pour toi.", type: "success" } : { msg: "Erreur lors de la génération du lien.", type: "error" }); }} style={{ marginTop: 12, background: G.blanc, borderRadius: 18, boxShadow: "0 2px 10px rgba(0,0,0,0.06)", padding: "15px 18px", display: "flex", alignItems: "center", gap: 14, cursor: "pointer" }}>
+            <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(212,168,67,0.14)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke={G.or} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2" /><line x1="1" y1="10" x2="23" y2="10" /></svg>
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: 700, fontSize: "0.95rem", color: G.brun }}>Faire payer par quelqu'un d'autre</div>
+              <div style={{ fontSize: "0.8rem", color: "#888", marginTop: 2 }}>Copie ton lien de paiement à envoyer à un proche</div>
+            </div>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><polyline points="9 18 15 12 9 6" /></svg>
+          </div>
+        )}
+
         {promoAvailable && (
           <div onClick={onOpenSuperPromo} style={{ marginTop: 12, background: G.creme, border: `1.5px solid ${G.rouge}`, borderRadius: 16, padding: "14px 16px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12 }}>
             <div style={{ width: 40, height: 40, borderRadius: "50%", background: "rgba(192,57,43,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -16864,6 +16938,28 @@ export function logAdminAction(token: string, adminId: string, adminName: string
 //    Gérer → "Copier le lien de paiement". Aucune connexion requise — c'est tout l'intérêt du
 //    lien : la personne bannie ou bloquée peut payer sans avoir à se reconnecter d'abord.
 //    Congo uniquement (MTN/Airtel + référence de transaction), pour rester simple et fiable. ──
+// ── Génère un lien de paiement unique pour SON PROPRE compte (contrairement à celui généré par
+//    un admin depuis Gérer, qui vise le compte de quelqu'un d'autre) — pour l'envoyer à une
+//    personne de confiance qui paierait à sa place. Marche en insertion directe (RLS), pas
+//    besoin de fonction serveur puisque la personne est déjà connectée sur son propre compte. ──
+async function copyMyPaymentLink(myToken: string, myUserId: string): Promise<boolean> {
+  try {
+    const linkToken = (crypto as any).randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const expiresAt = new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString();
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/payment_links`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${myToken}`, "Prefer": "return=minimal" },
+      body: JSON.stringify({ user_id: myUserId, token: linkToken, created_by: myUserId, expires_at: expiresAt }),
+    });
+    if (!r.ok) throw new Error();
+    const link = `${window.location.origin}/?paylink=${linkToken}`;
+    await navigator.clipboard.writeText(link);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function PayLinkScreen({ token, onDone }: { token: string; onDone: () => void }) {
   const gold = "#D4A843";
   const [state, setState] = useState<"loading" | "invalid" | "choose" | "pay" | "sent">("loading");
@@ -17027,6 +17123,18 @@ export default function App() {
     try { return new URLSearchParams(window.location.search).get("paylink"); } catch { return null; }
   });
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem("moyo_dark") === "1");
+  // ── Styles globaux qui doivent survivre toute la session (contrairement à <style>{GLOBAL_CSS}</style>
+  //    qui vit dans Landing et disparaît du document dès la connexion, une fois cette page démontée —
+  //    c'est justement ce qui empêchait le défilement automatique des avantages Premium de fonctionner
+  //    une fois connecté : la règle CSS existait, mais seulement tant que Landing restait affichée). ──
+  useEffect(() => {
+    if (!document.getElementById("moyo-persistent-anim")) {
+      const s = document.createElement("style");
+      s.id = "moyo-persistent-anim";
+      s.textContent = "@keyframes premiumAdvScroll{0%{transform:translateY(0)}100%{transform:translateY(-50%)}}.premium-adv-track{animation:premiumAdvScroll linear infinite}.premium-adv-track:hover,.premium-adv-track:active{animation-play-state:paused}";
+      document.head.appendChild(s);
+    }
+  }, []);
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", darkMode ? "dark" : "light");
     if (!document.getElementById("moyo-theme-vars")) {
@@ -18388,31 +18496,32 @@ export default function App() {
       const gold = G.or;
       return (
         <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 19000, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
-          <div onClick={e => e.stopPropagation()} className="moyo-sheet-in" style={{ background: "#FCFBF8", borderRadius: 0, width: "100%", maxWidth: 460, height: "100%", maxHeight: "100vh", overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y", boxShadow: "0 30px 80px rgba(0,0,0,0.4)", position: "relative", padding: "calc(env(safe-area-inset-top) + 18px) 20px 22px" }}>
+          <div onClick={e => e.stopPropagation()} className="moyo-sheet-in" style={{ background: "#FCFBF8", borderRadius: 0, width: "100%", maxWidth: 460, height: "100%", maxHeight: "100vh", overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y", boxShadow: "0 30px 80px rgba(0,0,0,0.4)", position: "relative", display: "flex", flexDirection: "column", justifyContent: "center", padding: "calc(env(safe-area-inset-top) + 18px) 22px calc(env(safe-area-inset-bottom) + 26px)" }}>
             <div onClick={() => setPremiumNudgeOpen(false)} style={{ position: "absolute", top: "calc(env(safe-area-inset-top) + 16px)", right: 16, cursor: "pointer", background: "#eceae5", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2 }}>
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#777" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
             </div>
-            <div style={{ display: "flex", justifyContent: "center", marginBottom: 8, position: "relative" }}>
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: 14, position: "relative" }}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill={gold} style={{ position: "absolute", left: "28%", top: 4, opacity: 0.7 }}><polygon points="12 2 14 10 22 12 14 14 12 22 10 14 2 12 10 10" /></svg>
               <svg width="11" height="11" viewBox="0 0 24 24" fill={gold} style={{ position: "absolute", right: "28%", top: 10, opacity: 0.6 }}><polygon points="12 2 14 10 22 12 14 14 12 22 10 14 2 12 10 10" /></svg>
-              <div style={{ width: 50, height: 50, borderRadius: "50%", background: "rgba(212,168,67,0.16)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <svg width="27" height="27" viewBox="0 0 24 24" fill={gold} stroke="none"><path d="M2 18h20l-2.5-9-4.5 4-3-7-3 7-4.5-4z" /></svg>
+              <div style={{ width: 54, height: 54, borderRadius: "50%", background: "rgba(212,168,67,0.16)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <svg width="29" height="29" viewBox="0 0 24 24" fill={gold} stroke="none"><path d="M2 18h20l-2.5-9-4.5 4-3-7-3 7-4.5-4z" /></svg>
               </div>
             </div>
-            <div style={{ textAlign: "center", fontSize: "1.1rem", fontWeight: 800, color: "#1a1a2e", lineHeight: 1.18, marginBottom: 6, padding: "0 6px" }}>Passe Premium</div>
-            <div style={{ textAlign: "center", fontSize: "0.84rem", color: "#8a8a8a", lineHeight: 1.4, marginBottom: 10, padding: "0 10px" }}>{premiumNudgeMessage}</div>
-            <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
-              <div style={{ flex: 1, background: "#FBF6EA", borderRadius: 14, padding: "10px 12px", display: "flex", alignItems: "center", gap: 9 }}>
+            <div style={{ textAlign: "center", fontSize: "1.2rem", fontWeight: 800, color: "#1a1a2e", lineHeight: 1.2, marginBottom: 9, padding: "0 6px" }}>Passe Premium</div>
+            <div style={{ textAlign: "center", fontSize: "0.87rem", color: "#8a8a8a", lineHeight: 1.5, marginBottom: 20, padding: "0 8px" }}>{premiumNudgeMessage}</div>
+            <div style={{ display: "flex", gap: 10, marginBottom: 18 }}>
+              <div style={{ flex: 1, background: "#FBF6EA", borderRadius: 14, padding: "12px 12px", display: "flex", alignItems: "center", gap: 9 }}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill={gold} stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg>
-                <div style={{ lineHeight: 1.25 }}><span style={{ fontWeight: 800, color: "#3a2e10" }}>{PREMIUM_STAT_COUPLES}</span> <span style={{ fontSize: "0.74rem", color: "#7a6a3a" }}>couples formés cette semaine</span></div>
+                <div style={{ lineHeight: 1.3 }}><span style={{ fontWeight: 800, color: "#3a2e10" }}>{PREMIUM_STAT_COUPLES}</span> <span style={{ fontSize: "0.76rem", color: "#7a6a3a" }}>couples formés cette semaine</span></div>
               </div>
-              <div style={{ flex: 1, background: "#FBF6EA", borderRadius: 14, padding: "10px 12px", display: "flex", alignItems: "center", gap: 9 }}>
+              <div style={{ flex: 1, background: "#FBF6EA", borderRadius: 14, padding: "12px 12px", display: "flex", alignItems: "center", gap: 9 }}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill={gold} stroke="none"><path d="M2 18h20l-2.5-9-4.5 4-3-7-3 7-4.5-4z" /></svg>
-                <div style={{ lineHeight: 1.25 }}><span style={{ fontWeight: 800, color: "#3a2e10" }}>{PREMIUM_STAT_MEMBERS}</span> <span style={{ fontSize: "0.74rem", color: "#7a6a3a" }}>membres Premium actifs</span></div>
+                <div style={{ lineHeight: 1.3 }}><span style={{ fontWeight: 800, color: "#3a2e10" }}>{PREMIUM_STAT_MEMBERS}</span> <span style={{ fontSize: "0.76rem", color: "#7a6a3a" }}>membres Premium actifs</span></div>
               </div>
             </div>
             <PremiumBenefitsBlock gold={gold} showAll={nudgeShowAllAdv} onToggleShowAll={() => setNudgeShowAllAdv(s => !s)} />
-            <Btn variant="primary" style={{ width: "100%", marginBottom: 10 }} onClick={() => { setPremiumNudgeOpen(false); showPremium(premiumNudgeMessage); }}>Je passe Premium →</Btn>
+            <div style={{ height: 8 }} />
+            <Btn variant="primary" style={{ width: "100%", marginBottom: 12 }} onClick={() => { setPremiumNudgeOpen(false); showPremium(premiumNudgeMessage); }}>Je passe Premium →</Btn>
             <button onClick={() => setPremiumNudgeOpen(false)} style={{ width: "100%", background: "none", border: "none", color: "#999", fontSize: "0.85rem", fontWeight: 600, cursor: "pointer", padding: "8px 12px" }}>Je garde les restrictions</button>
           </div>
         </div>
