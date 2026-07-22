@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback, memo } from "react";
 import type { Auth, Match, Message, PaymentRequest, Profile, StatusPost, ToastState } from "./App";
 import {
-  APPOINTMENT_PHYSICAL_PRICE, APPT_HOUR_MAX, APPT_HOUR_MIN, AUTO_MOD_CONTACT_REPLY, Avatar, BLOCK_SAME_GENDER, Badge, Btn, CONTACT_ADDRESS, CONTACT_EMAIL, CONTACT_WHATSAPP, ConfirmModal, DISCOVER_DEFAULT_MODE, DateTimePicker, EUR_TO_FCFA, EXPENSE_CATEGORIES, EXPENSE_CAT_COLORS, FREE_LIMITS, G, LANDING_MEMBERS, LANDING_SLOGAN, LANDING_STAT_CITIES, LANDING_STAT_COUPLES, LANDING_STAT_MEMBERS, LANDING_TITLE_END, LANDING_TITLE_HIGHLIGHT, LANDING_TITLE_START, LIFETIME_PREMIUM_UNTIL, Messages, PAY_AIRTEL_ENABLED, PAY_AIRTEL_NUMBER, PAY_AIRTEL_RESPONSABLE, PAY_CB_ENABLED, PAY_MTN_ENABLED, PAY_MTN_NUMBER, PAY_MTN_RESPONSABLE, PAY_WERO_ENABLED, PAY_WERO_NUMBER, PAY_PAYPAL_ENABLED, PAY_PAYPAL_NUMBER, PLAN_2MONTH_ENABLED, PLAN_MONTH_ENABLED, PLAN_WEEK_ENABLED, POLL_ADMIN_BADGE_MS, POLL_BADGES_MS, POLL_BROADCAST_MS, POLL_STATS_MS, POLL_SUPPORT_MS, PREMIUM_30_DAYS_MS, PREMIUM_DAYS_2MONTH, PREMIUM_DAYS_WEEK, PREMIUM_PRICE_2MONTH_FCFA, PREMIUM_PRICE_EUR, PREMIUM_PRICE_FCFA, PREMIUM_PRICE_WEEK_FCFA, PREMIUM_STAT_COUPLES, PREMIUM_STAT_MEMBERS, PremiumBadge, REFERRAL_BONUS_2MONTH, REFERRAL_BONUS_MONTH, REFERRAL_BONUS_WEEK, AFFILIATE_COMMISSION_WEEK, AFFILIATE_COMMISSION_MONTH, AFFILIATE_COMMISSION_2MONTH, AFFILIATE_PAYABLE_DELAY_DAYS, PRIVACY_NOTICE_STEP1_TEXT, PRIVACY_NOTICE_STEP2_TEXT, SOCIAL_FACEBOOK, SOCIAL_INSTAGRAM, SOCIAL_TIKTOK, SOCIAL_YOUTUBE, STORE_LINK_ANDROID, STORE_LINK_IOS, SUPABASE_KEY, SUPABASE_URL, SUPER_ADMIN_ID, SUPPORT_PREFIX_REPLY, SUPPORT_PREFIX_USER, SUPPORT_TEAM_ID, SUPPORT_TEAM_NAME, SUPPORT_TEAM_PHOTO, Toast, VerifiedBadge, apptStatusInfo, buildContactBannedRegex, buildCustomBannedRegex, setExemptedBuiltinWords, setExemptedContactWords, cleanSupportReason, dedupeMatchesByCouple, fmtApptDT, fmtDate, formatMoney, isSupportReason, logAdminAction, mmLevel, mmScore, paymentCurrency, resolveStatusImageUrl, sb, sendMatchWelcomeMessage,
-  setAPPOINTMENT_PHYSICAL_PRICE, setAUTO_MOD_CONTACT_REPLY, setBLOCK_SAME_GENDER, setCONTACT_ADDRESS, setCONTACT_EMAIL, setCONTACT_WHATSAPP, setDISCOVER_DEFAULT_MODE, setEUR_TO_FCFA, setLANDING_MEMBERS, setLANDING_SLOGAN, setLANDING_STAT_CITIES, setLANDING_STAT_COUPLES, setLANDING_STAT_MEMBERS, setLANDING_TITLE_END, setLANDING_TITLE_HIGHLIGHT, setLANDING_TITLE_START, setPAY_AIRTEL_ENABLED, setPAY_AIRTEL_NUMBER, setPAY_AIRTEL_RESPONSABLE, setPAY_CB_ENABLED, setPAY_MTN_ENABLED, setPAY_MTN_NUMBER, setPAY_MTN_RESPONSABLE, setPAY_WERO_ENABLED, setPAY_WERO_NUMBER, setPAY_PAYPAL_ENABLED, setPAY_PAYPAL_NUMBER, setPLAN_2MONTH_ENABLED, setPLAN_MONTH_ENABLED, setPLAN_WEEK_ENABLED, setPOLL_ADMIN_BADGE_MS, setPOLL_BADGES_MS, setPOLL_BROADCAST_MS, setPOLL_STATS_MS, setPOLL_SUPPORT_MS, setPREMIUM_30_DAYS_MS, setPREMIUM_DAYS_2MONTH, setPREMIUM_DAYS_WEEK, setPREMIUM_PRICE_2MONTH_FCFA, setPREMIUM_PRICE_EUR, setPREMIUM_PRICE_FCFA, setPREMIUM_PRICE_WEEK_FCFA, setPREMIUM_STAT_COUPLES, setPREMIUM_STAT_MEMBERS, setPREMIUM_BOOST_ENABLED, setPREMIUM_SCREEN_VARIANT, setFEATURE_SHOW_LIKES_VIEWS_FREE, setPRIVACY_NOTICE_ENABLED, setSOCIAL_FACEBOOK, setSOCIAL_INSTAGRAM, setSOCIAL_TIKTOK, setSOCIAL_YOUTUBE, setSTORE_LINK_ANDROID, setSTORE_LINK_IOS, setSUPPORT_TEAM_PHOTO, setAFFILIATE_COMMISSION_WEEK, setAFFILIATE_COMMISSION_MONTH, setAFFILIATE_COMMISSION_2MONTH, setAFFILIATE_PAYABLE_DELAY_DAYS, setPRIVACY_NOTICE_STEP1_TEXT, setPRIVACY_NOTICE_STEP2_TEXT,
+  APPOINTMENT_PHYSICAL_PRICE, APPT_HOUR_MAX, APPT_HOUR_MIN, AUTO_MOD_CONTACT_REPLY, Avatar, BLOCK_SAME_GENDER, Badge, Btn, CONTACT_ADDRESS, CONTACT_EMAIL, CONTACT_WHATSAPP, ConfirmModal, DISCOVER_DEFAULT_MODE, DateTimePicker, EUR_TO_FCFA, EXPENSE_CATEGORIES, EXPENSE_CAT_COLORS, FREE_LIMITS, G, LANDING_MEMBERS, LANDING_SLOGAN, LANDING_STAT_CITIES, LANDING_STAT_COUPLES, LANDING_STAT_MEMBERS, LANDING_TITLE_END, LANDING_TITLE_HIGHLIGHT, LANDING_TITLE_START, LIFETIME_PREMIUM_UNTIL, Messages, PAY_AIRTEL_ENABLED, PAY_AIRTEL_NUMBER, PAY_AIRTEL_RESPONSABLE, PAY_CB_ENABLED, PAY_MTN_ENABLED, PAY_MTN_NUMBER, PAY_MTN_RESPONSABLE, PAY_WERO_ENABLED, PAY_WERO_NUMBER, PAY_PAYPAL_ENABLED, PAY_PAYPAL_NUMBER, PLAN_2MONTH_ENABLED, PLAN_MONTH_ENABLED, PLAN_WEEK_ENABLED, POLL_ADMIN_BADGE_MS, POLL_BADGES_MS, POLL_BROADCAST_MS, POLL_STATS_MS, POLL_SUPPORT_MS, PREMIUM_30_DAYS_MS, PREMIUM_DAYS_2MONTH, PREMIUM_DAYS_WEEK, PREMIUM_PRICE_2MONTH_FCFA, PREMIUM_PRICE_EUR, PREMIUM_PRICE_FCFA, PREMIUM_PRICE_WEEK_FCFA, PREMIUM_STAT_COUPLES, PREMIUM_STAT_MEMBERS, PremiumBadge, REFERRAL_BONUS_2MONTH, REFERRAL_BONUS_MONTH, REFERRAL_BONUS_WEEK, AFFILIATE_COMMISSION_WEEK, AFFILIATE_COMMISSION_MONTH, AFFILIATE_COMMISSION_2MONTH, AFFILIATE_PAYABLE_DELAY_DAYS, PRIVACY_NOTICE_STEP1_TEXT, PRIVACY_NOTICE_STEP2_TEXT, BAN_SCREEN_TEXT, SOCIAL_FACEBOOK, SOCIAL_INSTAGRAM, SOCIAL_TIKTOK, SOCIAL_YOUTUBE, STORE_LINK_ANDROID, STORE_LINK_IOS, SUPABASE_KEY, SUPABASE_URL, SUPER_ADMIN_ID, SUPPORT_PREFIX_REPLY, SUPPORT_PREFIX_USER, SUPPORT_TEAM_ID, SUPPORT_TEAM_NAME, SUPPORT_TEAM_PHOTO, Toast, VerifiedBadge, apptStatusInfo, buildContactBannedRegex, buildCustomBannedRegex, setExemptedBuiltinWords, setExemptedContactWords, cleanSupportReason, dedupeMatchesByCouple, fmtApptDT, fmtDate, formatMoney, isSupportReason, logAdminAction, mmLevel, mmScore, paymentCurrency, resolveStatusImageUrl, sb, sendMatchWelcomeMessage,
+  setAPPOINTMENT_PHYSICAL_PRICE, setAUTO_MOD_CONTACT_REPLY, setBLOCK_SAME_GENDER, setCONTACT_ADDRESS, setCONTACT_EMAIL, setCONTACT_WHATSAPP, setDISCOVER_DEFAULT_MODE, setEUR_TO_FCFA, setLANDING_MEMBERS, setLANDING_SLOGAN, setLANDING_STAT_CITIES, setLANDING_STAT_COUPLES, setLANDING_STAT_MEMBERS, setLANDING_TITLE_END, setLANDING_TITLE_HIGHLIGHT, setLANDING_TITLE_START, setPAY_AIRTEL_ENABLED, setPAY_AIRTEL_NUMBER, setPAY_AIRTEL_RESPONSABLE, setPAY_CB_ENABLED, setPAY_MTN_ENABLED, setPAY_MTN_NUMBER, setPAY_MTN_RESPONSABLE, setPAY_WERO_ENABLED, setPAY_WERO_NUMBER, setPAY_PAYPAL_ENABLED, setPAY_PAYPAL_NUMBER, setPLAN_2MONTH_ENABLED, setPLAN_MONTH_ENABLED, setPLAN_WEEK_ENABLED, setPOLL_ADMIN_BADGE_MS, setPOLL_BADGES_MS, setPOLL_BROADCAST_MS, setPOLL_STATS_MS, setPOLL_SUPPORT_MS, setPREMIUM_30_DAYS_MS, setPREMIUM_DAYS_2MONTH, setPREMIUM_DAYS_WEEK, setPREMIUM_PRICE_2MONTH_FCFA, setPREMIUM_PRICE_EUR, setPREMIUM_PRICE_FCFA, setPREMIUM_PRICE_WEEK_FCFA, setPREMIUM_STAT_COUPLES, setPREMIUM_STAT_MEMBERS, setPREMIUM_BOOST_ENABLED, setPREMIUM_SCREEN_VARIANT, setFEATURE_SHOW_LIKES_VIEWS_FREE, setPRIVACY_NOTICE_ENABLED, setSOCIAL_FACEBOOK, setSOCIAL_INSTAGRAM, setSOCIAL_TIKTOK, setSOCIAL_YOUTUBE, setSTORE_LINK_ANDROID, setSTORE_LINK_IOS, setSUPPORT_TEAM_PHOTO, setAFFILIATE_COMMISSION_WEEK, setAFFILIATE_COMMISSION_MONTH, setAFFILIATE_COMMISSION_2MONTH, setAFFILIATE_PAYABLE_DELAY_DAYS, setPRIVACY_NOTICE_STEP1_TEXT, setPRIVACY_NOTICE_STEP2_TEXT, setBAN_SCREEN_TEXT,
 } from "./App";
 
 async function saveSetting(key: string, value: string, token: string): Promise<boolean> {
@@ -1057,6 +1057,9 @@ export function AdminDesktopPage() {
             {configTab === "general" && <OffCanvasSection title="Notice de confidentialité">
               <PrivacyNoticeConfig auth={auth!} />
             </OffCanvasSection>}
+            {configTab === "general" && <OffCanvasSection title="Écran de blocage (compte banni)">
+              <BanScreenTextConfig auth={auth!} />
+            </OffCanvasSection>}
             {configTab === "general" && <OffCanvasSection title="Mise en avant Premium">
               <PremiumBoostConfig auth={auth!} />
             </OffCanvasSection>}
@@ -1927,6 +1930,57 @@ function RelationalNudgeConfig({ auth }: { auth: Auth }) {
   );
 }
 
+// Texte affiché sur l'écran de blocage (bannissement définitif) — modifiable depuis Configuration.
+function BanScreenTextConfig({ auth }: { auth: Auth }) {
+  const [value, setValue] = React.useState(BAN_SCREEN_TEXT);
+  const [editing, setEditing] = React.useState(false);
+  const [saving, setSaving] = React.useState(false);
+  const H = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` };
+
+  React.useEffect(() => {
+    fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.ban_screen_text&select=value`, { headers: H })
+      .then(r => r.json()).then((data: { value: string }[]) => {
+        if (Array.isArray(data) && data[0]?.value) setValue(data[0].value);
+      }).catch(() => {});
+  }, [auth.token]);
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, {
+        method: "POST",
+        headers: { ...H, "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=minimal" },
+        body: JSON.stringify({ key: "ban_screen_text", value }),
+      });
+      setBAN_SCREEN_TEXT(value);
+      setEditing(false);
+    } catch {}
+    setSaving(false);
+  };
+
+  return (
+    <div style={{ border: `1.5px solid ${G.gris}`, borderRadius: 12, padding: 12 }}>
+      <div style={{ fontSize: "0.72rem", color: "#888", marginBottom: editing ? 8 : 0, lineHeight: 1.5 }}>
+        Texte affiché sur l'écran de blocage d'un compte banni définitivement, au-dessus des boutons (Payer / WhatsApp / Mail).
+      </div>
+      {editing ? (
+        <>
+          <textarea value={value} onChange={e => setValue(e.target.value)} rows={4} style={{ width: "100%", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 8, padding: "8px 10px", fontSize: "0.8rem", fontFamily: "inherit", resize: "vertical", marginBottom: 8 }} />
+          <div style={{ display: "flex", gap: 8 }}>
+            <button disabled={saving} onClick={save} style={{ background: G.rouge, color: "#fff", border: "none", borderRadius: 8, padding: "7px 14px", fontSize: "0.76rem", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>{saving ? "..." : "Enregistrer"}</button>
+            <button onClick={() => { setEditing(false); setValue(BAN_SCREEN_TEXT); }} style={{ background: "none", border: `1.5px solid ${G.gris}`, borderRadius: 8, padding: "7px 14px", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer", color: "#666" }}>Annuler</button>
+          </div>
+        </>
+      ) : (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginTop: 8 }}>
+          <div style={{ fontSize: "0.76rem", color: "#888", whiteSpace: "pre-wrap", flex: 1 }}>{value}</div>
+          <button onClick={() => setEditing(true)} style={{ background: "none", border: "none", color: G.rouge, fontSize: "0.74rem", fontWeight: 700, cursor: "pointer", flexShrink: 0 }}>Modifier</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function PrivacyNoticeConfig({ auth }: { auth: Auth }) {
   const [on, setOn] = React.useState(true);
   const [loading, setLoading] = React.useState(true);
@@ -2611,6 +2665,9 @@ export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () =
       </OffCanvasSection>
       <OffCanvasSection title="Notice de confidentialité">
         <PrivacyNoticeConfig auth={auth} />
+      </OffCanvasSection>
+      <OffCanvasSection title="Écran de blocage (compte banni)">
+        <BanScreenTextConfig auth={auth} />
       </OffCanvasSection>
       <OffCanvasSection title="Mise en avant Premium">
         <PremiumBoostConfig auth={auth} />
@@ -5657,7 +5714,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
     "Utilisation de mots/propos interdits",
     "Propos insultants ou irrespectueux",
     "Harcèlement envers un autre membre",
-    "Partage de coordonnées (téléphone, email, réseaux)",
+    "Partage ou demande de coordonnées (téléphone, email, réseaux) avec un compte gratuit",
     "Photo de profil inappropriée",
     "Suspicion de faux profil",
     "Suspicion d'arnaque",
