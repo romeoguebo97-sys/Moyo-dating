@@ -2423,7 +2423,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail, giftFor, prom
   // État local pour le retour visuel du lien de paiement copié — déclaré ici (avant le retour
   // anticipé de l'écran "offer" plus bas) car "toast" n'est déclaré que plus loin dans ce
   // composant et n'est donc pas disponible dans cet écran-là.
-  const [myLinkCopied, setMyLinkCopied] = useState(false);
+  const [myLinkCopied, setMyLinkCopied] = useState<"shared" | "copied" | null>(null);
   // ── Congo ou diaspora ? Déterminé depuis la ville du profil ("Diaspora Europe", "Diaspora
   //    Amérique", etc. sont déjà des options existantes dans le formulaire de profil). Tant que
   //    ce n'est pas encore chargé (null), on affiche par défaut les moyens Congo (public majoritaire). ──
@@ -2655,13 +2655,13 @@ function PremiumModal({ onClose, reason, userId, token, userEmail, giftFor, prom
             </>
           )}
           {!giftFor && PAY_LINK_ENABLED && (
-            <div onClick={async () => { const ok = await copyMyPaymentLink(token, userId); if (ok) { setMyLinkCopied(true); setTimeout(() => setMyLinkCopied(false), 3000); } }} style={{ textAlign: "center", padding: "10px 0 20px", cursor: "pointer" }}>
+            <div className="moyo-tap" onClick={async () => { const r = await copyMyPaymentLink(token, userId, userEmail); if (r === "shared" || r === "copied") { setMyLinkCopied(r); setTimeout(() => setMyLinkCopied(null), 3000); } }} style={{ textAlign: "center", padding: "10px 0 20px", cursor: "pointer" }}>
               {myLinkCopied ? (
-                <span style={{ fontSize: "0.78rem", color: G.vert, fontWeight: 700 }}>✓ Lien copié ! Envoie-le à la personne qui va payer pour toi.</span>
+                <span style={{ fontSize: "0.78rem", color: G.vert, fontWeight: 700 }}>✓ {myLinkCopied === "shared" ? "Lien envoyé ! Il n'a plus qu'à payer pour toi." : "Lien copié ! Envoie-le à la personne qui va payer pour toi."}</span>
               ) : (
                 <>
                   <span style={{ fontSize: "0.78rem", color: "#a8a8a8" }}>Tu préfères que quelqu'un paie à ta place ? </span>
-                  <span style={{ fontSize: "0.78rem", color: gold, fontWeight: 700, textDecoration: "underline" }}>Copie ton lien</span>
+                  <span style={{ fontSize: "0.78rem", color: gold, fontWeight: 700, textDecoration: "underline" }}>Partager ton lien</span>
                 </>
               )}
             </div>
@@ -2992,13 +2992,13 @@ function PremiumModal({ onClose, reason, userId, token, userEmail, giftFor, prom
           </>
         )}
         {!giftFor && PAY_LINK_ENABLED && (
-          <div onClick={async () => { const ok = await copyMyPaymentLink(token, userId); if (ok) { setMyLinkCopied(true); setTimeout(() => setMyLinkCopied(false), 3000); } }} style={{ textAlign: "center", marginBottom: 14, cursor: "pointer" }}>
+          <div className="moyo-tap" onClick={async () => { const r = await copyMyPaymentLink(token, userId, userEmail); if (r === "shared" || r === "copied") { setMyLinkCopied(r); setTimeout(() => setMyLinkCopied(null), 3000); } }} style={{ textAlign: "center", marginBottom: 14, cursor: "pointer" }}>
             {myLinkCopied ? (
-              <span style={{ fontSize: "0.78rem", color: G.vert, fontWeight: 700 }}>✓ Lien copié ! Envoie-le à la personne qui va payer pour toi.</span>
+              <span style={{ fontSize: "0.78rem", color: G.vert, fontWeight: 700 }}>✓ {myLinkCopied === "shared" ? "Lien envoyé ! Il n'a plus qu'à payer pour toi." : "Lien copié ! Envoie-le à la personne qui va payer pour toi."}</span>
             ) : (
               <>
                 <span style={{ fontSize: "0.78rem", color: "#a8a8a8" }}>Tu préfères que quelqu'un paie à ta place ? </span>
-                <span style={{ fontSize: "0.78rem", color: gold, fontWeight: 700, textDecoration: "underline" }}>Copie ton lien</span>
+                <span style={{ fontSize: "0.78rem", color: gold, fontWeight: 700, textDecoration: "underline" }}>Partager ton lien</span>
               </>
             )}
           </div>
@@ -16176,13 +16176,18 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
         })()}
 
         {PAY_LINK_ENABLED && (!isWideProfile || activeSection === "main") && (
-          <div onClick={async () => { const ok = await copyMyPaymentLink(auth.token, auth.userId); setToast(ok ? { msg: "Lien copié ! Envoie-le à la personne qui va payer pour toi.", type: "success" } : { msg: "Erreur lors de la génération du lien.", type: "error" }); }} style={{ marginTop: 12, background: G.blanc, borderRadius: 18, boxShadow: "0 2px 10px rgba(0,0,0,0.06)", padding: "15px 18px", display: "flex", alignItems: "center", gap: 14, cursor: "pointer" }}>
+          <div className="moyo-tap" onClick={async () => {
+            const r = await copyMyPaymentLink(auth.token, auth.userId, profile?.name || auth.name);
+            if (r === "shared") setToast({ msg: "Lien envoyé ! Il n'a plus qu'à payer pour toi.", type: "success" });
+            else if (r === "copied") setToast({ msg: "Lien copié ! Envoie-le à la personne qui va payer pour toi.", type: "success" });
+            else if (r === "failed") setToast({ msg: "Erreur lors de la génération du lien.", type: "error" });
+          }} style={{ marginTop: 12, background: G.blanc, borderRadius: 18, boxShadow: "0 2px 10px rgba(0,0,0,0.06)", padding: "15px 18px", display: "flex", alignItems: "center", gap: 14, cursor: "pointer" }}>
             <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(212,168,67,0.14)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke={G.or} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2" /><line x1="1" y1="10" x2="23" y2="10" /></svg>
+              <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke={G.or} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line x1="15.41" y1="6.51" x2="8.59" y2="10.49" /></svg>
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontWeight: 700, fontSize: "0.95rem", color: G.brun }}>Faire payer par quelqu'un d'autre</div>
-              <div style={{ fontSize: "0.8rem", color: "#888", marginTop: 2 }}>Copie ton lien de paiement à envoyer à un proche</div>
+              <div style={{ fontSize: "0.8rem", color: "#888", marginTop: 2 }}>Partage ton lien de paiement à un proche</div>
             </div>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><polyline points="9 18 15 12 9 6" /></svg>
           </div>
@@ -16204,7 +16209,7 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
                 </div>
               </div>
             ) : (
-              <div onClick={() => { if (!profile?.phone) { setPhoneCardDraft(""); setEditingPhoneCard(true); } }} style={{ padding: "15px 18px", display: "flex", alignItems: "center", gap: 14, cursor: profile?.phone ? "default" : "pointer" }}>
+              <div className="moyo-tap" onClick={() => { if (!profile?.phone) { setPhoneCardDraft(""); setEditingPhoneCard(true); } }} style={{ padding: "15px 18px", display: "flex", alignItems: "center", gap: 14, cursor: profile?.phone ? "default" : "pointer" }}>
                 <div style={{ width: 44, height: 44, borderRadius: "50%", background: profile?.phone ? "rgba(37,211,102,0.12)" : "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                   <svg width="22" height="22" viewBox="0 0 24 24" fill={profile?.phone ? "#25D366" : G.rouge}><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24z"/></svg>
                 </div>
@@ -16220,7 +16225,7 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
               </div>
             )}
             {profile?.phone && !editingPhoneCard && (
-              <div onClick={async () => {
+              <div className="moyo-tap" onClick={async () => {
                 const newShared = !profile.share_phone_with_matches;
                 await sb.update(auth.token, "profiles", auth.userId, { share_phone_with_matches: newShared });
                 setProfile(p => p ? { ...p, share_phone_with_matches: newShared } : null);
@@ -16236,20 +16241,6 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
             )}
           </div>
         )}
-
-        {(!isWideProfile || activeSection === "main") && (
-          <div onClick={async () => { const ok = await copyMyPaymentLink(auth.token, auth.userId); setToast(ok ? { msg: "Lien copié ! Envoie-le à la personne qui va payer pour toi.", type: "success" } : { msg: "Erreur lors de la génération du lien.", type: "error" }); }} style={{ marginTop: 12, background: G.blanc, borderRadius: 18, boxShadow: "0 2px 10px rgba(0,0,0,0.06)", padding: "15px 18px", display: "flex", alignItems: "center", gap: 14, cursor: "pointer" }}>
-            <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(212,168,67,0.14)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke={G.or} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2" /><line x1="1" y1="10" x2="23" y2="10" /></svg>
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontWeight: 700, fontSize: "0.95rem", color: G.brun }}>Faire payer par quelqu'un d'autre</div>
-              <div style={{ fontSize: "0.8rem", color: "#888", marginTop: 2 }}>Copie ton lien de paiement à envoyer à un proche</div>
-            </div>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><polyline points="9 18 15 12 9 6" /></svg>
-          </div>
-        )}
-
 
         {promoAvailable && (
           <div onClick={onOpenSuperPromo} style={{ marginTop: 12, background: G.creme, border: `1.5px solid ${G.rouge}`, borderRadius: 16, padding: "14px 16px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12 }}>
@@ -17002,19 +16993,29 @@ export function logAdminAction(token: string, adminId: string, adminName: string
 //    un admin depuis Gérer, qui vise le compte de quelqu'un d'autre) — pour l'envoyer à une
 //    personne de confiance qui paierait à sa place. Marche en insertion directe (RLS), pas
 //    besoin de fonction serveur puisque la personne est déjà connectée sur son propre compte.
-//    IMPORTANT : le presse-papier est rempli AVANT l'appel réseau, pas après — sur Safari/iOS,
-//    attendre une réponse serveur avant d'écrire dans le presse-papier fait perdre le "geste
-//    utilisateur" nécessaire, et navigator.clipboard.writeText() échoue silencieusement. ──
-async function copyMyPaymentLink(myToken: string, myUserId: string): Promise<boolean> {
-  if (!PAY_LINK_ENABLED) return false;
+//    IMPORTANT : le partage/presse-papier est déclenché AVANT l'appel réseau, pas après — sur
+//    Safari/iOS, attendre une réponse serveur avant d'ouvrir le partage natif ou d'écrire dans
+//    le presse-papier fait perdre le "geste utilisateur" nécessaire, et ces deux API échouent
+//    silencieusement dans ce cas. ──
+async function copyMyPaymentLink(myToken: string, myUserId: string, myName?: string): Promise<"shared" | "copied" | "cancelled" | "failed"> {
+  if (!PAY_LINK_ENABLED) return "failed";
   const linkToken = (crypto as any).randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const link = `${window.location.origin}/?paylink=${linkToken}`;
-  let clipboardOk = true;
-  try {
-    await navigator.clipboard.writeText(link);
-  } catch {
-    clipboardOk = false;
+  const shareText = `Salut ! Peux-tu payer mon abonnement Moyo Dating Premium à ma place ? C'est ${myName ? `pour ${myName}, ` : ""}rapide et sécurisé, tout se passe ici :`;
+  let method: "shared" | "copied" | "cancelled" | "failed" = "failed";
+
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: "Moyo Dating — Aide-moi à payer", text: shareText, url: link });
+      method = "shared";
+    } catch (e: any) {
+      if (e?.name === "AbortError") return "cancelled"; // annulé volontairement, pas un échec
+      try { await navigator.clipboard.writeText(link); method = "copied"; } catch { method = "failed"; }
+    }
+  } else {
+    try { await navigator.clipboard.writeText(link); method = "copied"; } catch { method = "failed"; }
   }
+
   try {
     const expiresAt = new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString();
     const r = await fetch(`${SUPABASE_URL}/rest/v1/payment_links`, {
@@ -17022,11 +17023,11 @@ async function copyMyPaymentLink(myToken: string, myUserId: string): Promise<boo
       headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${myToken}`, "Prefer": "return=minimal" },
       body: JSON.stringify({ user_id: myUserId, token: linkToken, created_by: myUserId, expires_at: expiresAt }),
     });
-    if (!r.ok) return false;
+    if (!r.ok) return "failed";
   } catch {
-    return false;
+    return "failed";
   }
-  return clipboardOk;
+  return method;
 }
 
 function PayLinkScreen({ token, onDone }: { token: string; onDone: () => void }) {
@@ -17265,7 +17266,7 @@ export default function App() {
     if (!document.getElementById("moyo-persistent-anim")) {
       const s = document.createElement("style");
       s.id = "moyo-persistent-anim";
-      s.textContent = "@keyframes premiumAdvScroll{0%{transform:translateY(0)}100%{transform:translateY(-50%)}}.premium-adv-track{animation:premiumAdvScroll linear infinite}.premium-adv-track:hover,.premium-adv-track:active{animation-play-state:paused}";
+      s.textContent = "@keyframes premiumAdvScroll{0%{transform:translateY(0)}100%{transform:translateY(-50%)}}.premium-adv-track{animation:premiumAdvScroll linear infinite}.premium-adv-track:hover,.premium-adv-track:active{animation-play-state:paused}.moyo-tap{transition:transform 0.12s ease, box-shadow 0.12s ease;-webkit-tap-highlight-color:transparent}.moyo-tap:active{transform:scale(0.97);box-shadow:0 1px 4px rgba(0,0,0,0.08) !important}";
       document.head.appendChild(s);
     }
   }, []);
