@@ -1687,6 +1687,12 @@ const GLOBAL_CSS = `
   @keyframes fadeUp{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
   @keyframes fadeIn{from{opacity:0}to{opacity:1}}
   @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+  /* Défilement automatique des avantages Premium (écran de paiement + écran d'incitation) —
+     contenu dupliqué une fois, on translate de -50% pour boucler sans à-coup. Mis en pause sur
+     survol/tap pour ne pas gêner la lecture si quelqu'un s'y attarde. */
+  @keyframes premiumAdvScroll{0%{transform:translateY(0)}100%{transform:translateY(-50%)}}
+  .premium-adv-track{animation:premiumAdvScroll linear infinite}
+  .premium-adv-track:hover,.premium-adv-track:active{animation-play-state:paused}
   .msg-bg {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' opacity='0.055'%3E%3Ctext x='10' y='20' font-family='Georgia,serif' font-size='11' font-weight='700' fill='%23C0392B'%3EMo%3C/text%3E%3Ctext x='31' y='20' font-family='Georgia,serif' font-size='11' font-weight='700' fill='%23D4A843'%3Eyo%3C/text%3E%3Ccircle cx='15' cy='52' r='5' fill='none' stroke='%23C0392B' stroke-width='1.2'/%3E%3Cpath d='M10,57 Q15,70 20,57' fill='none' stroke='%23C0392B' stroke-width='1.2'/%3E%3Ccircle cx='28' cy='52' r='5' fill='none' stroke='%23D4A843' stroke-width='1.2'/%3E%3Cpath d='M23,57 Q28,70 33,57' fill='none' stroke='%23D4A843' stroke-width='1.2'/%3E%3Cpath d='M19,49 C19,47 22,46 22,49 C22,46 25,47 25,49 C25,52 22,55 22,55Z' fill='%23C0392B'/%3E%3Ccircle cx='75' cy='15' r='7' fill='none' stroke='%23D4A843' stroke-width='1.5'/%3E%3Cpath d='M110,8 C110,4 115,3 115,8 C115,3 120,4 120,8 C120,13 115,17 115,17Z' fill='none' stroke='%23C0392B' stroke-width='1.3'/%3E%3Ccircle cx='100' cy='95' r='3' fill='%23D4A843'/%3E%3Ccircle cx='100' cy='88' r='3' fill='none' stroke='%23C0392B' stroke-width='1'/%3E%3Ccircle cx='107' cy='95' r='3' fill='none' stroke='%23C0392B' stroke-width='1'/%3E%3Ccircle cx='93' cy='95' r='3' fill='none' stroke='%23C0392B' stroke-width='1'/%3E%3Cpath d='M155,20 L156.5,24 L161,24 L157.5,27 L159,31 L155,28 L151,31 L152.5,27 L149,24 L153.5,24Z' fill='none' stroke='%23D4A843' stroke-width='0.9'/%3E%3Cpath d='M140,105 L136,112 L144,112 Z' fill='none' stroke='%23D4A843' stroke-width='1.2'/%3E%3Cline x1='140' y1='112' x2='140' y2='120' stroke='%23D4A843' stroke-width='1.2'/%3E%3Cline x1='136' y1='120' x2='144' y2='120' stroke='%23D4A843' stroke-width='1.2'/%3E%3Ctext x='60' y='185' font-family='Georgia,serif' font-size='9' font-weight='700' fill='%23C0392B'%3EMo%3C/text%3E%3Ctext x='76' y='185' font-family='Georgia,serif' font-size='9' font-weight='700' fill='%23D4A843'%3Eyo%3C/text%3E%3Cpath d='M185,175 C185,173 188,172 188,175 C188,172 191,173 191,175 C191,178 188,181 188,181Z' fill='%23C0392B'/%3E%3Cpath d='M50,140 Q55,135 60,140 Q65,145 70,140 Q75,135 80,140' fill='none' stroke='%23D4A843' stroke-width='1.2'/%3E%3C/svg%3E");
     background-repeat: repeat;
@@ -2318,6 +2324,90 @@ function UploadRingOverlay({ active, size, ringColor, children }: { active: bool
   );
 }
 
+// ── Avantages Premium : source unique, réutilisée par PremiumModal ET par l'écran d'incitation
+//    (nudge) — pour ne jamais avoir deux listes qui divergent avec le temps. ──
+const avantages = [
+  { icon: "match", titre: "Mise en relation personnalisée", desc: "Notre équipe te présente des profils compatibles" },
+  { icon: "msg", titre: "Messages illimités", desc: `Discute sans limite (gratuit = ${FREE_LIMITS.messages}/match)` },
+  { icon: "heart", titre: "Likes illimités", desc: `Like sans limite (gratuit = ${FREE_LIMITS.likes}/jour)` },
+  { icon: "eye", titre: "Voir qui t'a liké", desc: "Découvre tous tes admirateurs secrets" },
+  { icon: "visitors", titre: "Voir qui a visité ton profil", desc: "Accède à la liste complète de tes Vues" },
+  { icon: "photo", titre: "Photos, vidéos et vocaux", desc: "Envoie des photos, vidéos et messages vocaux, avec option vue unique" },
+  { icon: "phone2", titre: "Numéro de tes matchs", desc: "Vois le numéro WhatsApp que tes matchs ont partagé" },
+  { icon: "status", titre: "Publier des statuts", desc: "Partage jusqu'à 2 photos visibles 24h" },
+  { icon: "group", titre: "Accès au Groupe Premium", desc: "Rejoins la discussion commune réservée aux membres Premium" },
+  { icon: "star2", titre: "Profil mis en avant", desc: "Apparais en premier dans Découvrir" },
+  { icon: "check2", titre: "Messages lus", desc: "Vois quand tes messages ont été lus" },
+  { icon: "filter", titre: "Filtres avancés", desc: "Filtre par ville, âge, religion" },
+  { icon: "phone", titre: "Partage tes coordonnées", desc: "Envoie ton numéro ou email librement" },
+  { icon: "gift", titre: "Offrir Premium", desc: "Offre 1 mois de Premium à un match" },
+  { icon: "referral", titre: "Parrainer & gagner", desc: `+${REFERRAL_BONUS_WEEK} à ${REFERRAL_BONUS_2MONTH} jours offerts selon la formule de votre filleul` },
+  { icon: "verified", titre: "Profil vérifié", desc: "Badge de confiance visible sur ton profil" },
+  { icon: "support", titre: "Support prioritaire", desc: "Assistance rapide 7j/7" },
+];
+const getIcon = (id: string, gold = "#D4A843") => {
+  const svgs: Record<string, React.ReactElement> = {
+    photo: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" /></svg>,
+    status: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>,
+    gift: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12" /><rect x="2" y="7" width="20" height="5" /><line x1="12" y1="22" x2="12" y2="7" /><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z" /><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" /></svg>,
+    referral: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>,
+    msg: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>,
+    phone: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.53a16 16 0 0 0 6.06 6.06l1.09-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" /></svg>,
+    phone2: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.53a16 16 0 0 0 6.06 6.06l1.09-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" /><circle cx="18" cy="6" r="4" fill={gold} stroke="none"/></svg>,
+    heart: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg>,
+    eye: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>,
+    star2: <svg width="18" height="18" viewBox="0 0 24 24" fill={gold} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>,
+    check2: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>,
+    filter: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></svg>,
+    visitors: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>,
+    verified: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>,
+    support: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>,
+    match: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>,
+    group: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>,
+    voice: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" /><path d="M19 10v2a7 7 0 0 1-14 0v-2" /><line x1="12" y1="19" x2="12" y2="23" /></svg>,
+  };
+  return svgs[id] || <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2"><polyline points="20 6 9 17 4 12" /></svg>;
+};
+
+// ── Bloc "avantages Premium", partagé entre l'écran de paiement (A) et l'écran d'incitation —
+//    une seule version, donc toujours strictement identique aux deux endroits. Replié : défile
+//    automatiquement en boucle à travers TOUS les avantages (pas juste les 4 mis en avant), pour
+//    que les gens les découvrent sans avoir à déplier. Déplié : liste statique, l'animation
+//    s'arrête. ──
+function PremiumBenefitsBlock({ gold, showAll, onToggleShowAll }: { gold: string; showAll: boolean; onToggleShowAll: () => void }) {
+  const rowHeight = 46;
+  const viewportRows = 3.3;
+  const durationSec = Math.round(avantages.length * 2.1);
+  const Row = ({ a }: { a: any }) => (
+    <div style={{ display: "flex", alignItems: "center", gap: 11, padding: "7px 0", height: rowHeight, borderBottom: "1px solid #f0ede6" }}>
+      <div style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(212,168,67,0.14)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+        {getIcon(a.icon, gold)}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontWeight: 700, fontSize: "0.78rem", color: "#1a1a2e" }}>{a.titre}</div>
+        <div style={{ fontSize: "0.66rem", color: "#9a9a9a" }}>{a.desc}</div>
+      </div>
+    </div>
+  );
+  return (
+    <div style={{ background: G.blanc, borderRadius: 18, padding: "3px 14px", boxShadow: "0 2px 10px rgba(0,0,0,0.04)", marginBottom: 14 }}>
+      {showAll ? (
+        avantages.map((a, i) => <Row key={i} a={a} />)
+      ) : (
+        <div style={{ height: rowHeight * viewportRows, overflow: "hidden", position: "relative" }}>
+          <div className="premium-adv-track" style={{ animationDuration: `${durationSec}s` }}>
+            {avantages.concat(avantages).map((a, i) => <Row key={i} a={a} />)}
+          </div>
+        </div>
+      )}
+      <div onClick={onToggleShowAll} style={{ textAlign: "center", padding: "8px 0 5px", color: gold, fontWeight: 700, fontSize: "0.74rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
+        {showAll ? "Voir moins" : "Voir tous les avantages"}
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: showAll ? "rotate(-90deg)" : "rotate(0)" }}><polyline points="9 18 15 12 9 6" /></svg>
+      </div>
+    </div>
+  );
+}
+
 function PremiumModal({ onClose, reason, userId, token, userEmail, giftFor, promo }: { onClose: () => void; reason: string; userId: string; token: string; userEmail?: string; giftFor?: { id: string; name: string } | null; promo?: { price: number; expiresAt: string } | null }) {
   const [step, setStep] = useState<"offer" | "mtn" | "airtel" | "b1" | "b2" | "b3" | "b4">(promo && PREMIUM_SCREEN_VARIANT === "b" ? "b2" : (PREMIUM_SCREEN_VARIANT === "b" ? "b1" : "offer"));
   // ── Congo ou diaspora ? Déterminé depuis la ville du profil ("Diaspora Europe", "Diaspora
@@ -2406,54 +2496,8 @@ function PremiumModal({ onClose, reason, userId, token, userEmail, giftFor, prom
   const title = giftFor ? `Offrir Premium à ${giftFor.name}` : (reason && reason.trim() ? reason.trim() : "Passez à Premium");
   const fmt = (n: number | null) => n === null ? "…" : n.toLocaleString("fr-FR");
 
-  const highlights = [
-    { t: "Mise en relation personnalisée", d: "Notre équipe vous présente des profils compatibles", svg: <><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></> },
-    { t: "Messages illimités", d: "Discutez sans aucune limite", svg: <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /> },
-    { t: "Voir qui vous aime", d: "Découvrez tous vos admirateurs", svg: <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /> },
-    { t: "Publier des statuts", d: "Partagez vos moments", svg: <><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z" /></> },
-  ];
-
-  const avantages = [
-    { icon: "match", titre: "Mise en relation personnalisée", desc: "Notre équipe te présente des profils compatibles" },
-    { icon: "msg", titre: "Messages illimités", desc: `Discute sans limite (gratuit = ${FREE_LIMITS.messages}/match)` },
-    { icon: "heart", titre: "Likes illimités", desc: `Like sans limite (gratuit = ${FREE_LIMITS.likes}/jour)` },
-    { icon: "eye", titre: "Voir qui t'a liké", desc: "Découvre tous tes admirateurs secrets" },
-    { icon: "visitors", titre: "Voir qui a visité ton profil", desc: "Accède à la liste complète de tes Vues" },
-    { icon: "photo", titre: "Envoi de photos", desc: "Partage des photos dans tes conversations" },
-    { icon: "status", titre: "Publier des statuts", desc: "Partage jusqu'à 2 photos visibles 24h" },
-    { icon: "group", titre: "Accès au Groupe Premium", desc: "Rejoins la discussion commune réservée aux membres Premium" },
-    { icon: "voice", titre: "Messages vocaux", desc: "Envoie et reçois des messages vocaux dans tes conversations" },
-    { icon: "star2", titre: "Profil mis en avant", desc: "Apparais en premier dans Découvrir" },
-    { icon: "check2", titre: "Messages lus", desc: "Vois quand tes messages ont été lus" },
-    { icon: "filter", titre: "Filtres avancés", desc: "Filtre par ville, âge, religion" },
-    { icon: "phone", titre: "Partage tes coordonnées", desc: "Envoie ton numéro ou email librement" },
-    { icon: "gift", titre: "Offrir Premium", desc: "Offre 1 mois de Premium à un match" },
-    { icon: "referral", titre: "Parrainer & gagner", desc: `+${REFERRAL_BONUS_WEEK} à ${REFERRAL_BONUS_2MONTH} jours offerts selon la formule de votre filleul` },
-    { icon: "verified", titre: "Profil vérifié", desc: "Badge de confiance visible sur ton profil" },
-    { icon: "support", titre: "Support prioritaire", desc: "Assistance rapide 7j/7" },
-  ];
-  const getIcon = (id: string) => {
-    const svgs: Record<string, React.ReactElement> = {
-      photo: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" /></svg>,
-      status: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>,
-      gift: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12" /><rect x="2" y="7" width="20" height="5" /><line x1="12" y1="22" x2="12" y2="7" /><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z" /><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" /></svg>,
-      referral: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>,
-      msg: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>,
-      phone: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.53a16 16 0 0 0 6.06 6.06l1.09-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" /></svg>,
-      heart: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg>,
-      eye: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>,
-      star2: <svg width="18" height="18" viewBox="0 0 24 24" fill={gold} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>,
-      check2: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>,
-      filter: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></svg>,
-      visitors: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>,
-      verified: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>,
-      support: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>,
-      match: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>,
-      group: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>,
-      voice: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" /><path d="M19 10v2a7 7 0 0 1-14 0v-2" /><line x1="12" y1="19" x2="12" y2="23" /></svg>,
-    };
-    return svgs[id] || <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2"><polyline points="20 6 9 17 4 12" /></svg>;
-  };
+  // highlights, avantages et getIcon vivent maintenant au niveau module (juste au-dessus de
+  // PremiumModal) — réutilisés tels quels ici ET par l'écran d'incitation Premium.
 
   const mtnLogo = (h = 18) => <svg viewBox="0 0 120 60" width={h * 2} height={h} xmlns="http://www.w3.org/2000/svg"><rect width="120" height="60" fill="#FFCC00" rx="8" /><ellipse cx="60" cy="30" rx="52" ry="24" fill="none" stroke="#1a1a1a" strokeWidth="5" /><text x="60" y="39" textAnchor="middle" fontFamily="Arial Black, sans-serif" fontWeight="900" fontSize="24" fill="#1a1a1a">MTN</text></svg>;
   const airtelLogo = (h = 22) => <img src={`${SUPABASE_URL}/storage/v1/object/public/assets/airtel-logo.png`} alt="Airtel" style={{ height: h, width: "auto", display: "block", borderRadius: 6 }} />;
@@ -2857,23 +2901,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail, giftFor, prom
             <div style={{ lineHeight: 1.25 }}><span style={{ fontWeight: 800, color: "#3a2e10" }}>{manualStats.members.trim() ? manualStats.members : fmt(stats.premium)}</span> <span style={{ fontSize: "0.74rem", color: "#7a6a3a" }}>membres Premium actifs</span></div>
           </div>
         </div>
-        <div style={{ background: G.blanc, borderRadius: 18, padding: "3px 14px", boxShadow: "0 2px 10px rgba(0,0,0,0.04)", marginBottom: 14 }}>
-          {(showAllAdv ? avantages : highlights).map((a: any, i: number) => (
-            <div key={i} style={{ display: "flex", alignItems: "center", gap: 11, padding: "7px 0", borderBottom: i < (showAllAdv ? avantages.length : highlights.length) - 1 ? "1px solid #f0ede6" : "none" }}>
-              <div style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(212,168,67,0.14)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                {showAllAdv ? getIcon(a.icon) : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{a.svg}</svg>}
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 700, fontSize: "0.78rem", color: "#1a1a2e" }}>{showAllAdv ? a.titre : a.t}</div>
-                <div style={{ fontSize: "0.66rem", color: "#9a9a9a" }}>{showAllAdv ? a.desc : a.d}</div>
-              </div>
-            </div>
-          ))}
-          <div onClick={() => setShowAllAdv(s => !s)} style={{ textAlign: "center", padding: "8px 0 5px", color: gold, fontWeight: 700, fontSize: "0.74rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
-            {showAllAdv ? "Voir moins" : "Voir tous les avantages"}
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: showAllAdv ? "rotate(-90deg)" : "rotate(0)" }}><polyline points="9 18 15 12 9 6" /></svg>
-          </div>
-        </div>
+        <PremiumBenefitsBlock gold={gold} showAll={showAllAdv} onToggleShowAll={() => setShowAllAdv(s => !s)} />
         {!isDiaspora && (
           <>
             <div style={{ textAlign: "center", fontSize: "0.66rem", fontWeight: 800, color: "#a8a8a8", letterSpacing: 1, marginBottom: 9 }}>{PREMIUM_PLANS.length > 1 ? "CHOISISSEZ VOTRE FORMULE" : "VOTRE FORMULE PREMIUM"}</div>
@@ -16832,6 +16860,157 @@ export function logAdminAction(token: string, adminId: string, adminName: string
 
 
 
+// ── Écran de paiement ouvert via un lien unique (?paylink=TOKEN), envoyé par un admin depuis
+//    Gérer → "Copier le lien de paiement". Aucune connexion requise — c'est tout l'intérêt du
+//    lien : la personne bannie ou bloquée peut payer sans avoir à se reconnecter d'abord.
+//    Congo uniquement (MTN/Airtel + référence de transaction), pour rester simple et fiable. ──
+function PayLinkScreen({ token, onDone }: { token: string; onDone: () => void }) {
+  const gold = "#D4A843";
+  const [state, setState] = useState<"loading" | "invalid" | "choose" | "pay" | "sent">("loading");
+  const [name, setName] = useState("");
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [planId, setPlanId] = useState(PLAN_MONTH_ENABLED ? "1mois" : (PLAN_WEEK_ENABLED ? "1sem" : "2mois"));
+  const [operator, setOperator] = useState<"MTN" | "Airtel" | null>(null);
+  const [txRef, setTxRef] = useState("");
+  const [sending, setSending] = useState(false);
+  const [err, setErr] = useState("");
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await fetch(`${SUPABASE_URL}/functions/v1/resolve-payment-link`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY },
+          body: JSON.stringify({ token }),
+        });
+        const data = await r.json().catch(() => ({}));
+        if (data?.valid) {
+          setName(data.name || "");
+          setPhotoUrl(data.photo_url || null);
+          setState("choose");
+        } else {
+          setState("invalid");
+        }
+      } catch { setState("invalid"); }
+    })();
+  }, [token]);
+
+  const PLANS = [
+    PLAN_WEEK_ENABLED && { id: "1sem", label: "1 semaine", amount: PREMIUM_PRICE_WEEK_FCFA },
+    PLAN_MONTH_ENABLED && { id: "1mois", label: "1 mois", amount: PREMIUM_PRICE_FCFA },
+    PLAN_2MONTH_ENABLED && { id: "2mois", label: "2 mois", amount: PREMIUM_PRICE_2MONTH_FCFA },
+  ].filter(Boolean) as { id: string; label: string; amount: number }[];
+  const selectedPlan = PLANS.find(p => p.id === planId) || PLANS[0];
+
+  const OP = operator === "MTN"
+    ? { name: "MTN MoMo", main: "#FFCC00", onColor: "#1a1a1a", ussd: `*105*1*1*${PAY_MTN_NUMBER}*${selectedPlan?.amount || 0}#`, placeholder: "Ex : 7753031542", logo: null }
+    : { name: "Airtel Money", main: "#FF0100", onColor: "#fff", ussd: `*128*2*1*1*${PAY_AIRTEL_NUMBER}*${selectedPlan?.amount || 0}#`, placeholder: "Ex de l'ID : PP260523.2232.A52074", logo: null };
+
+  const submit = async () => {
+    if (!operator || !txRef.trim() || !selectedPlan) return;
+    setSending(true);
+    setErr("");
+    try {
+      const r = await fetch(`${SUPABASE_URL}/functions/v1/submit-payment-link`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY },
+        body: JSON.stringify({ token, operator, tx_ref: txRef.trim(), amount: selectedPlan.amount, plan_label: selectedPlan.label }),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (data?.ok) setState("sent");
+      else setErr("Une erreur est survenue. Réessaie, ou contacte-nous sur WhatsApp.");
+    } catch { setErr("Une erreur est survenue. Réessaie, ou contacte-nous sur WhatsApp."); }
+    setSending(false);
+  };
+
+  return (
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, background: "#FCFBF8" }}>
+      <div style={{ width: "100%", maxWidth: 400, textAlign: "center" }}>
+        {state === "loading" && (
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2.5" strokeLinecap="round" style={{ animation: "pulse 1s ease-in-out infinite" }}><circle cx="12" cy="12" r="10" /></svg>
+        )}
+
+        {state === "invalid" && (
+          <>
+            <div style={{ width: 60, height: 60, borderRadius: "50%", background: "rgba(192,57,43,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></svg>
+            </div>
+            <h2 style={{ fontSize: "1.1rem", fontWeight: 800, color: G.brun, marginBottom: 8 }}>Ce lien n'est plus valable</h2>
+            <p style={{ fontSize: "0.85rem", color: "#888", marginBottom: 20 }}>Il a peut-être expiré ou a déjà été utilisé. Contacte-nous pour en recevoir un nouveau.</p>
+            <a href={`https://wa.me/${CONTACT_WHATSAPP.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "#25D366", color: "#fff", borderRadius: 14, padding: "13px 22px", fontWeight: 800, fontSize: "0.9rem", textDecoration: "none" }}>
+              Nous contacter sur WhatsApp
+            </a>
+          </>
+        )}
+
+        {(state === "choose" || state === "pay") && (
+          <div style={{ background: G.blanc, borderRadius: 22, padding: "26px 22px", boxShadow: "0 12px 40px rgba(0,0,0,0.08)" }}>
+            <div style={{ width: 78, height: 78, borderRadius: "50%", overflow: "hidden", background: G.creme, margin: "0 auto 12px", border: `2.5px solid ${gold}` }}>
+              {photoUrl ? <img src={photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : (
+                <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="1.8"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg></div>
+              )}
+            </div>
+            <div style={{ fontWeight: 800, fontSize: "1.05rem", color: G.brun, marginBottom: 2 }}>{name}</div>
+            <div style={{ fontSize: "0.78rem", color: "#999", marginBottom: 20 }}>Paiement Moyo Dating Premium</div>
+
+            {state === "choose" && (
+              <>
+                <div style={{ fontSize: "0.66rem", fontWeight: 800, color: "#a8a8a8", letterSpacing: 1, marginBottom: 9 }}>CHOISISSEZ VOTRE FORMULE</div>
+                <div style={{ display: "flex", gap: 8, marginBottom: 18 }}>
+                  {PLANS.map(pl => {
+                    const sel = pl.id === planId;
+                    return (
+                      <div key={pl.id} onClick={() => setPlanId(pl.id)} style={{ flex: 1, cursor: "pointer", background: sel ? "#FBF1D8" : G.creme, border: `2px solid ${sel ? gold : "#ece9e2"}`, borderRadius: 14, padding: "12px 6px", textAlign: "center" }}>
+                        <div style={{ fontSize: "0.72rem", fontWeight: 700, color: sel ? "#7a5a10" : "#8a8a8a", marginBottom: 4 }}>{pl.label}</div>
+                        <div style={{ fontSize: "0.95rem", fontWeight: 800, color: sel ? "#3a2e10" : "#1a1a2e" }}>{pl.amount.toLocaleString("fr-FR")}</div>
+                        <div style={{ fontSize: "0.58rem", color: sel ? "#7a5a10" : "#9a9a9a" }}>FCFA</div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div style={{ fontSize: "0.66rem", fontWeight: 800, color: "#a8a8a8", letterSpacing: 1, marginBottom: 9 }}>PAYEZ AVEC</div>
+                <button onClick={() => { setOperator("MTN"); setState("pay"); }} disabled={!PAY_MTN_ENABLED} style={{ width: "100%", background: PAY_MTN_ENABLED ? "#FFCC00" : "#dcdcdc", color: G.brun, border: "none", borderRadius: 14, padding: "13px", fontSize: "0.95rem", fontWeight: 800, cursor: PAY_MTN_ENABLED ? "pointer" : "not-allowed", marginBottom: 8 }}>MTN MoMo</button>
+                <button onClick={() => { setOperator("Airtel"); setState("pay"); }} disabled={!PAY_AIRTEL_ENABLED} style={{ width: "100%", background: G.blanc, color: "#FF0100", border: `2px solid ${PAY_AIRTEL_ENABLED ? "#FF0100" : "#dcdcdc"}`, borderRadius: 14, padding: "11px", fontSize: "0.95rem", fontWeight: 800, cursor: PAY_AIRTEL_ENABLED ? "pointer" : "not-allowed" }}>Airtel Money</button>
+              </>
+            )}
+
+            {state === "pay" && operator && (
+              <>
+                <div onClick={() => setState("choose")} style={{ display: "flex", alignItems: "center", gap: 5, color: "#999", fontSize: "0.78rem", fontWeight: 600, cursor: "pointer", marginBottom: 14 }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg> Changer de moyen de paiement
+                </div>
+                <div style={{ background: "#FBF6EA", borderRadius: 14, padding: "14px 16px", marginBottom: 14, textAlign: "left" }}>
+                  <div style={{ fontSize: "0.7rem", color: "#7a6a3a", fontWeight: 700, marginBottom: 6 }}>1. Compose ce code sur ton téléphone</div>
+                  <div style={{ fontSize: "1rem", fontWeight: 800, color: "#3a2e10", fontFamily: "monospace" }}>{OP.ussd}</div>
+                </div>
+                <div style={{ textAlign: "left", marginBottom: 16 }}>
+                  <div style={{ fontSize: "0.7rem", color: "#7a6a3a", fontWeight: 700, marginBottom: 6 }}>2. Entre la référence de transaction reçue par SMS</div>
+                  <input value={txRef} onChange={e => setTxRef(e.target.value)} placeholder={OP.placeholder} style={{ width: "100%", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 12, padding: "12px 14px", fontSize: "0.9rem", outline: "none" }} />
+                </div>
+                {err && <div style={{ color: G.rouge, fontSize: "0.8rem", marginBottom: 12 }}>{err}</div>}
+                <button disabled={!txRef.trim() || sending} onClick={submit} style={{ width: "100%", background: !txRef.trim() ? "#ccc" : OP.main, color: OP.onColor, border: "none", borderRadius: 14, padding: "13px", fontSize: "0.95rem", fontWeight: 800, cursor: !txRef.trim() ? "not-allowed" : "pointer" }}>
+                  {sending ? "Envoi..." : "Envoyer ma preuve de paiement"}
+                </button>
+              </>
+            )}
+          </div>
+        )}
+
+        {state === "sent" && (
+          <div style={{ background: G.blanc, borderRadius: 22, padding: "30px 24px", boxShadow: "0 12px 40px rgba(0,0,0,0.08)" }}>
+            <div style={{ width: 60, height: 60, borderRadius: "50%", background: "rgba(26,92,58,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+            </div>
+            <h2 style={{ fontSize: "1.1rem", fontWeight: 800, color: G.brun, marginBottom: 8 }}>Merci {name} !</h2>
+            <p style={{ fontSize: "0.85rem", color: "#888", lineHeight: 1.6, marginBottom: 22 }}>Ta preuve de paiement a bien été envoyée. Connecte-toi pour continuer — ton compte sera mis à jour dès validation.</p>
+            <button onClick={onDone} style={{ width: "100%", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: "#fff", border: "none", borderRadius: 14, padding: "13px", fontSize: "0.95rem", fontWeight: 800, cursor: "pointer" }}>Me connecter →</button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [page, setPage] = useState(() => {
     // Si l'app s'ouvre depuis un lien de réinitialisation de mot de passe (email), on va
@@ -16841,6 +17020,11 @@ export default function App() {
       if (hash.includes("type=recovery") || hash.includes("error_code=") || hash.includes("error=")) return "reset-password";
     } catch {}
     return "landing";
+  });
+  // Lien de paiement unique (?paylink=TOKEN) envoyé par un admin — écran de paiement direct,
+  // sans connexion requise. Vérifié une seule fois au chargement de la page.
+  const [payLinkToken] = useState(() => {
+    try { return new URLSearchParams(window.location.search).get("paylink"); } catch { return null; }
   });
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem("moyo_dark") === "1");
   useEffect(() => {
@@ -16920,6 +17104,7 @@ export default function App() {
   const [verifyPromptOpen, setVerifyPromptOpen] = useState(false);
   const [verifyPromptMe, setVerifyPromptMe] = useState<{ age?: number; gender?: string }>({});
   const [premiumNudgeOpen, setPremiumNudgeOpen] = useState(false);
+  const [nudgeShowAllAdv, setNudgeShowAllAdv] = useState(false);
   const [premiumNudgeMessage, setPremiumNudgeMessage] = useState("");
   // ── Fenêtre "Super promo" : offre Premium 1 mois à prix réduit, ciblée par segment,
   //    affichée au max une fois par jour. Le prix/l'expiration/le message viennent de
@@ -18003,6 +18188,11 @@ export default function App() {
   if (new URLSearchParams(window.location.search).get("admin") === "1") {
     return <Suspense fallback={<AdminLoadingFallback />}><AdminDesktopPage /></Suspense>;
   }
+  // ── Lien de paiement unique : ?paylink=TOKEN dans l'URL — priorité sur tout le reste, marche
+  //    même sans connexion (c'est justement tout l'intérêt du lien). ──
+  if (payLinkToken) {
+    return <PayLinkScreen token={payLinkToken} onDone={() => { window.history.replaceState({}, "", window.location.pathname); window.location.reload(); }} />;
+  }
   if (page === "landing") return <>{<Landing onNav={setPage} />}{InstallBanner}</>;
   if (page === "about") return <About onBack={() => setPage("landing")} />;
   if (page === "signup") return <SignUp onNav={setPage} />;
@@ -18194,27 +18384,40 @@ export default function App() {
     })()}
 
     {/* ── Fenêtre : incitation à passer Premium (dismissible, "Plus tard") ── */}
-    {premiumNudgeOpen && !phonePromptOpen && !verifyPromptOpen && !superPromoOpen && (
-      <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 19000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-        <div style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 340, textAlign: "center" }}>
-          <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(230,126,34,0.12)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
-            <PremiumBadge size={30} />
-          </div>
-          <h3 style={{ fontSize: "1.1rem", fontWeight: 800, color: "#111", marginBottom: 8 }}>Passe Premium</h3>
-          <p style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.6, marginBottom: 14 }}>{premiumNudgeMessage}</p>
-          <div style={{ textAlign: "left", background: "#FFF9F0", borderRadius: 12, padding: "12px 14px", marginBottom: 18 }}>
-            {["Messages illimités", "Voir qui vous a liké", "Profil mis en avant dans Découvrir", "Photos, vidéos et notes vocales"].map((a, i) => (
-              <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: i < 3 ? 7 : 0 }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={G.or} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><polyline points="20 6 9 17 4 12"/></svg>
-                <span style={{ fontSize: "0.8rem", color: "#444", fontWeight: 500 }}>{a}</span>
+    {premiumNudgeOpen && !phonePromptOpen && !verifyPromptOpen && !superPromoOpen && (() => {
+      const gold = G.or;
+      return (
+        <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 19000, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
+          <div onClick={e => e.stopPropagation()} className="moyo-sheet-in" style={{ background: "#FCFBF8", borderRadius: 0, width: "100%", maxWidth: 460, height: "100%", maxHeight: "100vh", overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y", boxShadow: "0 30px 80px rgba(0,0,0,0.4)", position: "relative", padding: "calc(env(safe-area-inset-top) + 18px) 20px 22px" }}>
+            <div onClick={() => setPremiumNudgeOpen(false)} style={{ position: "absolute", top: "calc(env(safe-area-inset-top) + 16px)", right: 16, cursor: "pointer", background: "#eceae5", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2 }}>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#777" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+            </div>
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: 8, position: "relative" }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill={gold} style={{ position: "absolute", left: "28%", top: 4, opacity: 0.7 }}><polygon points="12 2 14 10 22 12 14 14 12 22 10 14 2 12 10 10" /></svg>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill={gold} style={{ position: "absolute", right: "28%", top: 10, opacity: 0.6 }}><polygon points="12 2 14 10 22 12 14 14 12 22 10 14 2 12 10 10" /></svg>
+              <div style={{ width: 50, height: 50, borderRadius: "50%", background: "rgba(212,168,67,0.16)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <svg width="27" height="27" viewBox="0 0 24 24" fill={gold} stroke="none"><path d="M2 18h20l-2.5-9-4.5 4-3-7-3 7-4.5-4z" /></svg>
               </div>
-            ))}
+            </div>
+            <div style={{ textAlign: "center", fontSize: "1.1rem", fontWeight: 800, color: "#1a1a2e", lineHeight: 1.18, marginBottom: 6, padding: "0 6px" }}>Passe Premium</div>
+            <div style={{ textAlign: "center", fontSize: "0.84rem", color: "#8a8a8a", lineHeight: 1.4, marginBottom: 10, padding: "0 10px" }}>{premiumNudgeMessage}</div>
+            <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
+              <div style={{ flex: 1, background: "#FBF6EA", borderRadius: 14, padding: "10px 12px", display: "flex", alignItems: "center", gap: 9 }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill={gold} stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg>
+                <div style={{ lineHeight: 1.25 }}><span style={{ fontWeight: 800, color: "#3a2e10" }}>{PREMIUM_STAT_COUPLES}</span> <span style={{ fontSize: "0.74rem", color: "#7a6a3a" }}>couples formés cette semaine</span></div>
+              </div>
+              <div style={{ flex: 1, background: "#FBF6EA", borderRadius: 14, padding: "10px 12px", display: "flex", alignItems: "center", gap: 9 }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill={gold} stroke="none"><path d="M2 18h20l-2.5-9-4.5 4-3-7-3 7-4.5-4z" /></svg>
+                <div style={{ lineHeight: 1.25 }}><span style={{ fontWeight: 800, color: "#3a2e10" }}>{PREMIUM_STAT_MEMBERS}</span> <span style={{ fontSize: "0.74rem", color: "#7a6a3a" }}>membres Premium actifs</span></div>
+              </div>
+            </div>
+            <PremiumBenefitsBlock gold={gold} showAll={nudgeShowAllAdv} onToggleShowAll={() => setNudgeShowAllAdv(s => !s)} />
+            <Btn variant="primary" style={{ width: "100%", marginBottom: 10 }} onClick={() => { setPremiumNudgeOpen(false); showPremium(premiumNudgeMessage); }}>Je passe Premium →</Btn>
+            <button onClick={() => setPremiumNudgeOpen(false)} style={{ width: "100%", background: "none", border: "none", color: "#999", fontSize: "0.85rem", fontWeight: 600, cursor: "pointer", padding: "8px 12px" }}>Je garde les restrictions</button>
           </div>
-          <Btn variant="primary" style={{ width: "100%", marginBottom: 10 }} onClick={() => { setPremiumNudgeOpen(false); showPremium(premiumNudgeMessage); }}>Je passe Premium →</Btn>
-          <button onClick={() => setPremiumNudgeOpen(false)} style={{ background: "none", border: "none", color: "#999", fontSize: "0.8rem", fontWeight: 600, cursor: "pointer", padding: "6px 12px" }}>Je garde les restrictions</button>
         </div>
-      </div>
-    )}
+      );
+    })()}
 
     {/* ── SONDAGE : invitation ── */}
     {activeSurvey && !showSurveyInvite && !pendingWarning && !pendingBroadcast && !pendingProposal && !phonePromptOpen && !verifyPromptOpen && !premiumNudgeOpen && (

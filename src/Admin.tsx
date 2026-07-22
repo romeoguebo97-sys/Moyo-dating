@@ -3225,7 +3225,7 @@ function MsgModal({ user, msgText, setMsgText, msgHistory, msgHistoryLoading, ms
   );
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" }}>
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 10003, display: "flex", alignItems: "center", justifyContent: "center" }}>
       <div style={{ background: G.blanc, width: "100%", height: "100%", overflow: "hidden", display: "flex", flexDirection: isWide ? "row" : "column" }}>
         {/* Colonne gauche / onglets mobile */}
         <div style={{ width: isWide ? "50%" : "100%", borderRight: isWide ? `1px solid ${G.gris}` : "none", display: "flex", flexDirection: "column", background: G.blanc, height: isWide ? "100%" : "auto", flex: isWide ? "none" : "1 1 auto", overflow: "hidden" }}>
@@ -8607,7 +8607,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
       )}
       {/* Modal Mail */}
       {mailModal && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 10003, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <div style={{ background: G.blanc, width: "100%", height: "100%", overflow: "hidden", display: "flex", flexDirection: window.innerWidth >= 768 ? "row" : "column" }}>
 
             {/* ── COLONNE GAUCHE : historique + liste emails ── */}
@@ -8877,7 +8877,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
         const u = pwResetModal;
         const close = () => { setPwResetModal(null); setPwResetValue(""); setPwResetResult(null); };
         return (
-          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }} onClick={close}>
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", zIndex: 10003, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }} onClick={close}>
             <div style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 340, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }} onClick={e => e.stopPropagation()}>
               <div style={{ background: "linear-gradient(135deg,#8e44ad,#6c3483)", padding: "22px 20px 16px", textAlign: "center" }}>
                 <div style={{ width: 50, height: 50, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px" }}>
@@ -8925,7 +8925,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
       })()}
 
       {pinModal && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", zIndex: 10003, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
           <div style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 320, maxHeight: "85vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}>
             <div style={{ background: "linear-gradient(135deg,#8e44ad,#6c3483)", padding: "22px 20px 16px", textAlign: "center" }}>
               <div style={{ width: 50, height: 50, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px" }}>
@@ -9043,7 +9043,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
         const todayISO = new Date().toISOString().slice(0, 10);
         const presetDate = (days: number) => new Date(Date.now() + days * 86400000).toISOString().slice(0, 10);
         return (
-          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 3000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={close}>
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 10003, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={close}>
             <div style={{ background: G.blanc, borderRadius: 20, padding: 24, maxWidth: 420, width: "100%", maxHeight: "90vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
               <h3 style={{ margin: "0 0 4px", fontSize: "1.05rem", color: G.brun }}>Gérer le Premium de {u.name}</h3>
               <p style={{ margin: "0 0 18px", fontSize: "0.78rem", color: "#888" }}>{u.is_premium ? "Cet utilisateur est actuellement Premium." : "Choisissez comment activer le Premium pour cet utilisateur."}</p>
@@ -9182,7 +9182,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
         const doBan = (updates: Partial<AdminProfile>, msg: string) => { close(); adminAction(u.id, { ...updates, last_notice_acknowledged: false, last_notice_at: new Date().toISOString() }, msg); };
         const hours = Math.max(1, parseInt(banHours) || 0);
         return (
-          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10001, display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }} onClick={close}>
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10003, display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }} onClick={close}>
             <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 420, boxShadow: "0 24px 64px rgba(0,0,0,0.3)", overflow: "hidden", maxHeight: "90vh", overflowY: "auto" }}>
               <div style={{ padding: "18px 20px", borderBottom: `1px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <div style={{ fontWeight: 900, fontSize: "1.05rem", color: G.brun }}>Bannir {u.name}</div>
@@ -9260,123 +9260,165 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
         const targetIsSuperAdmin = (u as any).admin_level === "superadmin";
         const cannotModerate = isSelf || (targetIsSuperAdmin && !iAmSuperAdmin);
         const close = () => setManageUserModal(null);
-        const TabBtn = ({ id, label }: { id: "statuts" | "moderation"; label: string }) => (
-          <button onClick={() => setManageTab(id)} style={{ flex: 1, padding: "10px 0", border: "none", borderBottom: `2.5px solid ${manageTab === id ? G.rouge : "transparent"}`, background: "transparent", color: manageTab === id ? G.rouge : "#888", fontWeight: 700, fontSize: "0.85rem", cursor: "pointer" }}>{label}</button>
+        const NavItem = ({ id, label, Icon }: { id: "statuts" | "moderation"; label: string; Icon: () => React.ReactElement }) => {
+          const active = manageTab === id;
+          return (
+            <div onClick={() => setManageTab(id)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderRadius: 10, cursor: "pointer", background: active ? "rgba(192,57,43,0.08)" : "transparent", color: active ? G.rouge : "#666", fontWeight: 700, fontSize: "0.85rem", marginBottom: 4 }}>
+              <Icon /> {label}
+            </div>
+          );
+        };
+        // Ligne d'action : badge coloré + description + chevron. Même logique qu'avant, juste
+        // une présentation en liste plutôt qu'en petits boutons compacts.
+        const Row = ({ label, color, desc, onClick, disabled }: { label: string; color: string; desc: string; onClick: () => void; disabled?: boolean }) => (
+          <div onClick={disabled ? undefined : onClick} style={{ display: "flex", alignItems: "center", gap: 16, padding: "13px 16px", background: G.creme, borderRadius: 12, marginBottom: 9, cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.5 : 1 }}>
+            <div style={{ background: `${color}20`, color, fontWeight: 700, fontSize: "0.8rem", padding: "6px 13px", borderRadius: 50, flexShrink: 0, minWidth: 118, textAlign: "center", whiteSpace: "nowrap" }}>{label}</div>
+            <div style={{ flex: 1, fontSize: "0.8rem", color: "#666", minWidth: 0 }}>{desc}</div>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
         );
         return (
           <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10002, display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }} onClick={close}>
-            <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 680, maxHeight: "85vh", display: "flex", flexDirection: "column", boxShadow: "0 24px 64px rgba(0,0,0,0.3)", overflow: "hidden" }}>
+            <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 760, maxHeight: "85vh", display: "flex", flexDirection: "column", boxShadow: "0 24px 64px rgba(0,0,0,0.3)", overflow: "hidden" }}>
               <div style={{ padding: "18px 20px", borderBottom: `1px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
-                <div style={{ fontWeight: 900, fontSize: "1.05rem", color: G.brun }}>Gérer {u.name}</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 9, fontWeight: 900, fontSize: "1.05rem", color: G.brun }}>
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                  Gérer {u.name}
+                </div>
                 <button onClick={close} style={{ border: "none", background: G.creme, borderRadius: "50%", width: 30, height: 30, cursor: "pointer", color: "#666" }}>✕</button>
               </div>
-              <div style={{ display: "flex", borderBottom: `1px solid ${G.gris}`, flexShrink: 0 }}>
-                <TabBtn id="statuts" label="Statuts" />
-                <TabBtn id="moderation" label="Modération" />
-              </div>
-              <div style={{ padding: 20, overflowY: "auto" }}>
-                {manageTab === "statuts" && (
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                    {!u.is_premium ? (
-                      <ActionBtn label="+ Premium" color="#D4A843" disabled={isLoading}
-                        onClick={() => setPremiumGrantModal(u)} />
-                    ) : isLifetimePremium(u) ? (
-                      <ActionBtn label="- À vie" color="#8B6914" disabled={isLoading}
-                        onClick={() => setPremiumGrantModal(u)} />
-                    ) : (
-                      <ActionBtn label="- Premium" color="#B8860B" disabled={isLoading}
-                        onClick={() => setPremiumGrantModal(u)} />
-                    )}
-                    <ActionBtn label="★ À vie" color="#8B6914" disabled={isLoading || isLifetimePremium(u)}
-                      onClick={() => confirm(`Donner le Premium À VIE à ${u.name} ? Cette action est permanente.`, () => adminAction(u.id, { is_premium: true, premium_until: LIFETIME_PREMIUM_UNTIL, premium_is_gift: true }, `${u.name} a maintenant le Premium à vie. ♾️`))} />
-                    {(auth.userId === SUPER_ADMIN_ID || (auth as any)?.adminLevel === "superadmin") && !isSelf && (() => {
-                      const isSuperAdmin = (u as any).admin_level === "superadmin";
-                      if (isSuperAdmin) {
-                        return (
-                          <ActionBtn label="- Super Admin" color="#888" disabled={isLoading}
-                            onClick={() => confirm(`Retirer le statut Super Admin de ${u.name} ?`, async () => {
-                              await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${u.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ admin_level: "admin" }) });
-                              showToast(`${u.name} est maintenant Admin simple.`, "success");
+              <div style={{ display: "flex", flex: 1, minHeight: 0 }}>
+                {/* Navigation latérale */}
+                <div style={{ width: 190, flexShrink: 0, borderRight: `1px solid ${G.gris}`, padding: 14 }}>
+                  <NavItem id="statuts" label="Statuts" Icon={() => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>} />
+                  <NavItem id="moderation" label="Modération" Icon={() => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>} />
+                </div>
+                {/* Contenu */}
+                <div style={{ flex: 1, minWidth: 0, padding: 20, overflowY: "auto" }}>
+                  {manageTab === "statuts" && (
+                    <>
+                      <div style={{ fontWeight: 800, fontSize: "0.95rem", color: G.brun, marginBottom: 4 }}>Gestion des statuts</div>
+                      <div style={{ fontSize: "0.76rem", color: "#999", marginBottom: 16 }}>Attribuez des statuts spéciaux à ce membre pour lui accorder des privilèges et des accès spécifiques.</div>
+
+                      {!u.is_premium ? (
+                        <Row label="+ Premium" color="#D4A843" desc="Accorder le statut Premium à ce membre." disabled={isLoading}
+                          onClick={() => setPremiumGrantModal(u)} />
+                      ) : isLifetimePremium(u) ? (
+                        <Row label="- À vie" color="#8B6914" desc="Retirer l'accès à vie de ce membre." disabled={isLoading}
+                          onClick={() => setPremiumGrantModal(u)} />
+                      ) : (
+                        <Row label="- Premium" color="#B8860B" desc="Retirer le statut Premium de ce membre." disabled={isLoading}
+                          onClick={() => setPremiumGrantModal(u)} />
+                      )}
+                      <Row label="★ À vie" color="#8B6914" desc="Attribuer un accès Premium à vie à ce membre." disabled={isLoading || isLifetimePremium(u)}
+                        onClick={() => confirm(`Donner le Premium À VIE à ${u.name} ? Cette action est permanente.`, () => adminAction(u.id, { is_premium: true, premium_until: LIFETIME_PREMIUM_UNTIL, premium_is_gift: true }, `${u.name} a maintenant le Premium à vie. ♾️`))} />
+                      {(auth.userId === SUPER_ADMIN_ID || (auth as any)?.adminLevel === "superadmin") && !isSelf && (() => {
+                        const isSuperAdmin = (u as any).admin_level === "superadmin";
+                        if (isSuperAdmin) {
+                          return (
+                            <Row label="- Super Admin" color="#888" desc="Retirer le statut Super Admin de ce membre." disabled={isLoading}
+                              onClick={() => confirm(`Retirer le statut Super Admin de ${u.name} ?`, async () => {
+                                await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${u.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ admin_level: "admin" }) });
+                                showToast(`${u.name} est maintenant Admin simple.`, "success");
+                                loadUsers();
+                              })} />
+                          );
+                        }
+                        return <>
+                          {!u.is_admin
+                            ? <Row label="+ Admin" color={G.rouge} desc="Donner les droits d'administrateur à ce membre." disabled={isLoading}
+                                onClick={() => { setPinModalInput(""); setPinModal({ user: u, mode: "set" }); }} />
+                            : <Row label="- Admin" color="#c0392b" desc="Retirer les droits d'administrateur de ce membre." disabled={isLoading}
+                                onClick={() => confirm(`Retirer les droits admin de ${u.name} ?`, () => adminAction(u.id, { is_admin: false, admin_pin: null }, `Droits admin retirés pour ${u.name}.`))} />
+                          }
+                          {u.is_admin && (
+                            <Row label="🔑 PIN" color="#8e44ad" desc="Réinitialiser le code PIN administrateur de ce membre." disabled={isLoading}
+                              onClick={() => { setPinModalInput(""); setPinModal({ user: u, mode: "reset" }); }} />
+                          )}
+                          <Row label="🔑 Mot de passe" color="#8e44ad" desc="Réinitialiser ou modifier le mot de passe de ce membre." disabled={isLoading}
+                            onClick={() => { setPwResetValue(genTempPassword()); setPwResetResult(null); setPwResetModal(u); }} />
+                          <Row label="+ Super Admin" color="#8B008B" desc="Attribuer les droits Super Admin à ce membre." disabled={isLoading}
+                            onClick={() => confirm(`Nommer ${u.name} Super Admin ? Il aura accès à tout, y compris les paiements.`, async () => {
+                              await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${u.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ admin_level: "superadmin", is_admin: true }) });
+                              showToast(`${u.name} est maintenant Super Admin.`, "success");
                               loadUsers();
                             })} />
-                        );
-                      }
-                      return <>
-                        {!u.is_admin
-                          ? <ActionBtn label="+ Admin" color={G.rouge} disabled={isLoading}
-                              onClick={() => { setPinModalInput(""); setPinModal({ user: u, mode: "set" }); }} />
-                          : <ActionBtn label="- Admin" color="#c0392b" disabled={isLoading}
-                              onClick={() => confirm(`Retirer les droits admin de ${u.name} ?`, () => adminAction(u.id, { is_admin: false, admin_pin: null }, `Droits admin retirés pour ${u.name}.`))} />
-                        }
-                        {u.is_admin && (
-                          <ActionBtn label="🔑 PIN" color="#8e44ad" disabled={isLoading}
-                            onClick={() => { setPinModalInput(""); setPinModal({ user: u, mode: "reset" }); }} />
-                        )}
-                        <ActionBtn label="🔑 Mot de passe" color="#8e44ad" disabled={isLoading}
-                          onClick={() => { setPwResetValue(genTempPassword()); setPwResetResult(null); setPwResetModal(u); }} />
-                        <ActionBtn label="+ Super Admin" color="#8B008B" disabled={isLoading}
-                          onClick={() => confirm(`Nommer ${u.name} Super Admin ? Il aura accès à tout, y compris les paiements.`, async () => {
-                            await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${u.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ admin_level: "superadmin", is_admin: true }) });
-                            showToast(`${u.name} est maintenant Super Admin.`, "success");
-                            loadUsers();
-                          })} />
-                      </>;
-                    })()}
-                    {!u.is_verified ? (
-                      <ActionBtn label="+ Vérifier" color={G.vert} disabled={isLoading}
-                        onClick={() => confirm(`Vérifier le profil de ${u.name} ?`, () => adminAction(u.id, { is_verified: true }, `Profil de ${u.name} vérifié.`))} />
-                    ) : (
-                      <ActionBtn label="- Vérifier" color="#555" disabled={isLoading}
-                        onClick={() => confirm(`Retirer la vérification de ${u.name} ?`, () => adminAction(u.id, { is_verified: false }, `Vérification retirée pour ${u.name}.`))} />
-                    )}
-                  </div>
-                )}
-                {manageTab === "moderation" && (
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                    <ActionBtn label="Proposer" color="#e67e22" disabled={isLoading} onClick={() => openProposeFromCard(u)} />
-                    <ActionBtn label="Avertir" color="#f39c12" disabled={isLoading || cannotModerate}
-                      onClick={() => { if (isSelf) { showToast("Vous ne pouvez pas vous avertir vous-même.", "error"); return; } if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } setWarnModal({ user: u }); setWarnReason(WARN_REASONS[0]); setWarnCustom(""); setExistingWarnings([]); loadExistingWarnings(u.id); }} />
-                    {!isCurrentlyBanned(u) ? (
-                      <ActionBtn label="Bannir" color="#e74c3c" disabled={isLoading || cannotModerate}
+                        </>;
+                      })()}
+                      {!u.is_verified ? (
+                        <Row label="✓ Vérifier" color={G.vert} desc="Vérifier manuellement le compte de ce membre." disabled={isLoading}
+                          onClick={() => confirm(`Vérifier le profil de ${u.name} ?`, () => adminAction(u.id, { is_verified: true }, `Profil de ${u.name} vérifié.`))} />
+                      ) : (
+                        <Row label="- Vérifier" color="#555" desc="Retirer la vérification de ce membre." disabled={isLoading}
+                          onClick={() => confirm(`Retirer la vérification de ${u.name} ?`, () => adminAction(u.id, { is_verified: false }, `Vérification retirée pour ${u.name}.`))} />
+                      )}
+                    </>
+                  )}
+                  {manageTab === "moderation" && (
+                    <>
+                      <div style={{ fontWeight: 800, fontSize: "0.95rem", color: G.brun, marginBottom: 4 }}>Modération</div>
+                      <div style={{ fontSize: "0.76rem", color: "#999", marginBottom: 16 }}>Actions de modération disponibles pour ce membre.</div>
+
+                      <Row label="Proposer" color="#e67e22" desc="Proposer un couple compatible pour ce membre." disabled={isLoading} onClick={() => openProposeFromCard(u)} />
+                      <Row label="Avertir" color="#f39c12" desc="Envoyer un avertissement (1/3, 2/3 ou 3/3) à ce membre." disabled={isLoading || cannotModerate}
+                        onClick={() => { if (isSelf) { showToast("Vous ne pouvez pas vous avertir vous-même.", "error"); return; } if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } setWarnModal({ user: u }); setWarnReason(WARN_REASONS[0]); setWarnCustom(""); setExistingWarnings([]); loadExistingWarnings(u.id); }} />
+                      {!isCurrentlyBanned(u) ? (
+                        <Row label="Bannir" color="#e74c3c" desc="Bannir ce membre (définitif, éjection immédiate ou temporaire)." disabled={isLoading || cannotModerate}
+                          onClick={() => {
+                            if (isSelf) { showToast("Vous ne pouvez pas vous bannir vous-même.", "error"); return; }
+                            if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; }
+                            setBanModal(u); setBanHours("24"); setBanReason(""); setBanAllowPayment(false);
+                          }} />
+                      ) : (
+                        <Row label="Débannir" color={G.vert} desc="Lever le bannissement de ce membre." disabled={isLoading || cannotModerate}
+                          onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } confirm(`Débannir ${u.name} ?`, () => adminAction(u.id, { is_banned: false, is_visible: true, ban_until: null }, `${u.name} a été débanni(e).`)); }} />
+                      )}
+                      <Row label="Supprimer" color="#c0392b" desc="Supprimer définitivement le compte de ce membre (irréversible)." disabled={isLoading || cannotModerate}
                         onClick={() => {
-                          if (isSelf) { showToast("Vous ne pouvez pas vous bannir vous-même.", "error"); return; }
+                          if (isSelf) { showToast("Vous ne pouvez pas supprimer votre propre compte.", "error"); return; }
                           if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; }
-                          setBanModal(u); setBanHours("24"); setBanReason(""); setBanAllowPayment(false);
+                          confirm(`⚠️ Supprimer définitivement le compte de ${u.name} ? Cette action est irréversible.`, () => deleteAccount(u));
                         }} />
-                    ) : (
-                      <ActionBtn label="Débannir" color={G.vert} disabled={isLoading || cannotModerate}
-                        onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } confirm(`Débannir ${u.name} ?`, () => adminAction(u.id, { is_banned: false, is_visible: true, ban_until: null }, `${u.name} a été débanni(e).`)); }} />
-                    )}
-                    <ActionBtn label="Supprimer" color="#c0392b" disabled={isLoading || cannotModerate}
-                      onClick={() => {
-                        if (isSelf) { showToast("Vous ne pouvez pas supprimer votre propre compte.", "error"); return; }
-                        if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; }
-                        confirm(`⚠️ Supprimer définitivement le compte de ${u.name} ? Cette action est irréversible.`, () => deleteAccount(u));
-                      }} />
-                    <ActionBtn label="Message" color="#2980b9" disabled={isLoading || cannotModerate}
-                      onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } setMsgModal({ user: u }); setMsgText(""); setMsgHistory([]); loadMsgHistory(u.id); }} />
-                    <ActionBtn label="Mail" color="#8e44ad" disabled={isLoading || cannotModerate}
-                      onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } setMailModal({ user: u }); setMailHistory([]); setMailTab("modeles"); loadMailHistory(u.id); }} />
-                    <ActionBtn label={photoReplaceTargetId === u.id ? "…" : "Photo"} color="#16a085" disabled={isLoading || cannotModerate || photoReplaceTargetId === u.id}
-                      onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } triggerPhotoReplace(u); }} />
-                    {!u.is_premium && (
-                      <ActionBtn label="Inciter au Premium" color="#E67E22" disabled={isLoading}
+                      <Row label="Message" color="#2980b9" desc="Envoyer un message direct à ce membre." disabled={isLoading || cannotModerate}
+                        onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } setMsgModal({ user: u }); setMsgText(""); setMsgHistory([]); loadMsgHistory(u.id); }} />
+                      <Row label="Mail" color="#8e44ad" desc="Envoyer un email à ce membre." disabled={isLoading || cannotModerate}
+                        onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } setMailModal({ user: u }); setMailHistory([]); setMailTab("modeles"); loadMailHistory(u.id); }} />
+                      <Row label={photoReplaceTargetId === u.id ? "…" : "Photo"} color="#16a085" desc="Remplacer la photo de profil de ce membre (recadrage inclus)." disabled={isLoading || cannotModerate || photoReplaceTargetId === u.id}
+                        onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } triggerPhotoReplace(u); }} />
+                      {!u.is_premium && (
+                        <Row label="Inciter au Premium" color="#E67E22" desc="Afficher à ce membre un écran l'invitant à passer Premium (visible en direct s'il est en ligne)." disabled={isLoading}
+                          onClick={async () => {
+                            try {
+                              await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ user_id: u.id, admin_id: auth.userId, reason: "[PREMIUM_NUDGE] Passe Premium pour profiter de tous les avantages !", warning_number: 0, acknowledged: false }) });
+                              showToast(`Incitation Premium envoyée à ${u.name}.`, "success");
+                            } catch { showToast("Erreur lors de l'envoi.", "error"); }
+                          }} />
+                      )}
+                      {/* Lien de paiement unique — pour les gens bannis ou qui n'arrivent pas à
+                          payer depuis l'app et demandent le lien directement. Ouvre un écran de
+                          paiement (photo/nom affichés) sans connexion, MTN/Airtel uniquement. */}
+                      <Row label="🔗 Lien de paiement" color="#16a085" desc="Copier un lien unique vers l'écran de paiement de ce membre (aucune connexion requise, valable 7 jours)." disabled={isLoading}
                         onClick={async () => {
                           try {
-                            await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ user_id: u.id, admin_id: auth.userId, reason: "[PREMIUM_NUDGE] Passe Premium pour profiter de tous les avantages !", warning_number: 0, acknowledged: false }) });
-                            showToast(`Incitation Premium envoyée à ${u.name}.`, "success");
-                          } catch { showToast("Erreur lors de l'envoi.", "error"); }
+                            const token = (crypto as any).randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+                            const expiresAt = new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString();
+                            const r = await fetch(`${SUPABASE_URL}/rest/v1/payment_links`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ user_id: u.id, token, created_by: auth.userId, expires_at: expiresAt }) });
+                            if (!r.ok) throw new Error();
+                            const link = `${window.location.origin}/?paylink=${token}`;
+                            await navigator.clipboard.writeText(link);
+                            showToast("Lien de paiement copié (valable 7 jours).", "success");
+                          } catch { showToast("Erreur lors de la génération du lien.", "error"); }
                         }} />
-                    )}
-                  </div>
-                )}
+                    </>
+                  )}
+                </div>
               </div>
             </div>
           </div>
         );
       })()}
       {warnModal && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 10003, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
           <div style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 360, maxHeight: "85vh", boxShadow: "0 24px 64px rgba(44,26,14,0.22)", overflowY: "auto", display: "flex", flexDirection: "column" }}>
             {/* Header */}
             <div style={{ background: "linear-gradient(135deg, #fff9ec, #fff3cc)", padding: "22px 20px 16px", textAlign: "center", borderBottom: `1px solid rgba(243,156,18,0.2)` }}>
@@ -14510,7 +14552,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
 
       {/* ── MODAL PROPOSER UN MATCH ── */}
       {showProposeMatch && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 10003, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
           <div style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 500, maxHeight: "90vh", display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
             <div style={{ background: "linear-gradient(135deg,#e67e22,#d35400)", padding: "18px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
               <div>
