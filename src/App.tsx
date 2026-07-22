@@ -297,6 +297,11 @@ export let PLAN_2MONTH_ENABLED = true;
 export let DISCOVER_DEFAULT_MODE: "card" | "list" | "full" = "card";
 // Notice de confidentialité affichée à la première connexion après inscription (activable/désactivable par l'admin)
 export let PRIVACY_NOTICE_ENABLED = true;
+// Textes des 2 étapes de la notice — modifiables depuis Configuration (texte libre, un seul bloc par étape).
+export let PRIVACY_NOTICE_STEP1_TEXT = "Sur Moyo, tu pourrais tomber sur des personnes que tu connais déjà : un voisin, une collègue, ou même un membre de ta famille. C'est fréquent, et ce n'est pas grave !\n\nMerci de garder tes échanges et rencontres confidentiels, par respect pour toi-même et pour les autres membres.\n\nMoyo met tout en œuvre pour ta sécurité, mais n'est pas responsable des interactions entre membres en dehors de l'application.";
+export let PRIVACY_NOTICE_STEP2_TEXT = "Tu es sur un compte gratuit. Le partage ou la demande de numéro de téléphone est réservé aux membres Premium — merci de respecter cette règle, pour la sécurité de tous.";
+export function setPRIVACY_NOTICE_STEP1_TEXT(v: any) { PRIVACY_NOTICE_STEP1_TEXT = v; }
+export function setPRIVACY_NOTICE_STEP2_TEXT(v: any) { PRIVACY_NOTICE_STEP2_TEXT = v; }
 // Mise en avant des profils Premium/Vérifiés dans le fil Découvrir (activable/désactivable par l'admin)
 export let PREMIUM_BOOST_ENABLED = true;
 // Prix le plus bas parmi les formules actuellement ACTIVES (ignore les formules désactivées)
@@ -483,7 +488,7 @@ export function dedupeMatchesByCouple<T extends { user1?: string; user2?: string
 }
 
 // Charger les settings dynamiques depuis Supabase au démarrage
-fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_messages_free_femme,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,pay_wero_enabled,pay_paypal_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,feature_show_likes_views_free,feature_group_premium,feature_group_photos,feature_moderation_insults,feature_moderation_contact,premium_screen_variant,custom_banned_words,contact_banned_words,disabled_builtin_words,disabled_builtin_contact_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,pay_wero_number,pay_paypal_number,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,store_link_android,store_link_ios,plan_week_enabled,plan_month_enabled,plan_2month_enabled,discover_default_mode,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,auto_warn_ban_contact_enabled,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price,privacy_notice_enabled,premium_boost_enabled,assistant_photo_url,broadcast_enabled,modal_match_title,modal_match_subtitle,referral_bonus_week_days,referral_bonus_month_days,referral_bonus_2month_days,affiliate_commission_week_fcfa,affiliate_commission_month_fcfa,affiliate_commission_2month_fcfa,affiliate_payable_delay_days)&select=key,value`, {
+fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_messages_free_femme,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,pay_wero_enabled,pay_paypal_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,feature_show_likes_views_free,feature_group_premium,feature_group_photos,feature_moderation_insults,feature_moderation_contact,premium_screen_variant,custom_banned_words,contact_banned_words,disabled_builtin_words,disabled_builtin_contact_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,pay_wero_number,pay_paypal_number,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,store_link_android,store_link_ios,plan_week_enabled,plan_month_enabled,plan_2month_enabled,discover_default_mode,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,auto_warn_ban_contact_enabled,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price,privacy_notice_enabled,premium_boost_enabled,assistant_photo_url,broadcast_enabled,modal_match_title,modal_match_subtitle,referral_bonus_week_days,referral_bonus_month_days,referral_bonus_2month_days,affiliate_commission_week_fcfa,affiliate_commission_month_fcfa,affiliate_commission_2month_fcfa,affiliate_payable_delay_days,privacy_notice_step1_text,privacy_notice_step2_text)&select=key,value`, {
   headers: { "apikey": SUPABASE_KEY },
 }).then(r => r.json()).then((data: { key: string; value: string }[]) => {
   if (!Array.isArray(data)) return;
@@ -536,6 +541,8 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
   if (map["plan_2month_enabled"] !== undefined) PLAN_2MONTH_ENABLED = map["plan_2month_enabled"] !== "false";
   if (map["discover_default_mode"] === "card" || map["discover_default_mode"] === "list" || map["discover_default_mode"] === "full") DISCOVER_DEFAULT_MODE = map["discover_default_mode"];
   if (map["privacy_notice_enabled"] !== undefined) PRIVACY_NOTICE_ENABLED = map["privacy_notice_enabled"] !== "false";
+  if (map["privacy_notice_step1_text"]) setPRIVACY_NOTICE_STEP1_TEXT(map["privacy_notice_step1_text"]);
+  if (map["privacy_notice_step2_text"]) setPRIVACY_NOTICE_STEP2_TEXT(map["privacy_notice_step2_text"]);
   if (map["premium_boost_enabled"] !== undefined) PREMIUM_BOOST_ENABLED = map["premium_boost_enabled"] !== "false";
   if (map["assistant_photo_url"] !== undefined) SUPPORT_TEAM_PHOTO = map["assistant_photo_url"];
   if (map["landing_members_count"]) LANDING_MEMBERS = map["landing_members_count"];
@@ -4410,32 +4417,36 @@ function About({ onBack }: { onBack: () => void }) {
 // Notice de confidentialité affichée une seule fois, à la première connexion après inscription.
 // Le texte s'adapte légèrement selon le genre de la personne.
 function PrivacyNoticeModal({ gender, onClose }: { gender?: string; onClose: () => void }) {
-  const isFemme = gender === "Femme";
-  // Accord pour la personne qui lit (elle-même) : "reste discret" / "reste discrète"
-  const eSelf = isFemme ? "e" : "";
-  // Accord pour les personnes qu'elle pourrait croiser : Moyo ne montre que le genre OPPOSÉ,
-  // donc une femme croisera des hommes ("un voisin"), un homme croisera des femmes ("une voisine").
-  const eOther = isFemme ? "" : "e";
+  const [step, setStep] = useState<1 | 2>(1);
+  const hasStep2 = !!PRIVACY_NOTICE_STEP2_TEXT.trim();
   return (
     <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
       <div className="moyo-card-in" style={{ background: G.blanc, maxHeight: "85vh", overflowY: "auto", borderRadius: 22, width: "100%", maxWidth: 360, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}>
         <div style={{ background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, padding: "24px 20px 18px", textAlign: "center" }}>
           <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            {step === 1 ? (
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            ) : (
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            )}
           </div>
-          <div style={{ color: "#fff", fontWeight: 800, fontSize: "1.08rem" }}>Ta confidentialité, notre priorité</div>
+          <div style={{ color: "#fff", fontWeight: 800, fontSize: "1.08rem" }}>{step === 1 ? "Ta confidentialité, notre priorité" : "Bon à savoir"}</div>
+          {hasStep2 && <div style={{ color: "rgba(255,255,255,0.75)", fontSize: "0.72rem", marginTop: 6, fontWeight: 600 }}>Étape {step} sur 2</div>}
         </div>
         <div style={{ padding: "22px 22px 24px" }}>
-          <p style={{ fontSize: "0.87rem", color: "#444", lineHeight: 1.65, marginBottom: 14 }}>
-            Sur Moyo, tu pourrais tomber sur des personnes que tu connais déjà : un{eOther} voisin{eOther}, un{eOther} collègue, ou même un membre de ta famille. C'est fréquent, et ce n'est pas grave !
-          </p>
-          <p style={{ fontSize: "0.87rem", color: "#444", lineHeight: 1.65, marginBottom: 14 }}>
-            Merci de rester discret{eSelf} et de garder tes échanges et rencontres confidentiels, par respect pour toi-même et pour les autres membres.
-          </p>
-          <p style={{ fontSize: "0.78rem", color: "#999", lineHeight: 1.6, marginBottom: 20 }}>
-            Moyo met tout en œuvre pour ta sécurité, mais n'est pas responsable des interactions entre membres en dehors de l'application.
-          </p>
-          <Btn variant="primary" onClick={onClose} style={{ width: "100%" }}>J'ai compris</Btn>
+          {step === 1 ? (
+            <>
+              {PRIVACY_NOTICE_STEP1_TEXT.split("\n\n").map((para, i) => (
+                <p key={i} style={{ fontSize: i === PRIVACY_NOTICE_STEP1_TEXT.split("\n\n").length - 1 ? "0.78rem" : "0.87rem", color: i === PRIVACY_NOTICE_STEP1_TEXT.split("\n\n").length - 1 ? "#999" : "#444", lineHeight: 1.65, marginBottom: 14 }}>{para}</p>
+              ))}
+              <Btn variant="primary" onClick={() => hasStep2 ? setStep(2) : onClose()} style={{ width: "100%" }}>{hasStep2 ? "Suivant" : "J'ai compris"}</Btn>
+            </>
+          ) : (
+            <>
+              <p style={{ fontSize: "0.87rem", color: "#444", lineHeight: 1.65, marginBottom: 20 }}>{PRIVACY_NOTICE_STEP2_TEXT}</p>
+              <Btn variant="primary" onClick={onClose} style={{ width: "100%" }}>J'ai compris</Btn>
+            </>
+          )}
         </div>
       </div>
     </div>

@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback, memo } from "react";
 import type { Auth, Match, Message, PaymentRequest, Profile, StatusPost, ToastState } from "./App";
 import {
-  APPOINTMENT_PHYSICAL_PRICE, APPT_HOUR_MAX, APPT_HOUR_MIN, AUTO_MOD_CONTACT_REPLY, Avatar, BLOCK_SAME_GENDER, Badge, Btn, CONTACT_ADDRESS, CONTACT_EMAIL, CONTACT_WHATSAPP, ConfirmModal, DISCOVER_DEFAULT_MODE, DateTimePicker, EUR_TO_FCFA, EXPENSE_CATEGORIES, EXPENSE_CAT_COLORS, FREE_LIMITS, G, LANDING_MEMBERS, LANDING_SLOGAN, LANDING_STAT_CITIES, LANDING_STAT_COUPLES, LANDING_STAT_MEMBERS, LANDING_TITLE_END, LANDING_TITLE_HIGHLIGHT, LANDING_TITLE_START, LIFETIME_PREMIUM_UNTIL, Messages, PAY_AIRTEL_ENABLED, PAY_AIRTEL_NUMBER, PAY_AIRTEL_RESPONSABLE, PAY_CB_ENABLED, PAY_MTN_ENABLED, PAY_MTN_NUMBER, PAY_MTN_RESPONSABLE, PAY_WERO_ENABLED, PAY_WERO_NUMBER, PAY_PAYPAL_ENABLED, PAY_PAYPAL_NUMBER, PLAN_2MONTH_ENABLED, PLAN_MONTH_ENABLED, PLAN_WEEK_ENABLED, POLL_ADMIN_BADGE_MS, POLL_BADGES_MS, POLL_BROADCAST_MS, POLL_STATS_MS, POLL_SUPPORT_MS, PREMIUM_30_DAYS_MS, PREMIUM_DAYS_2MONTH, PREMIUM_DAYS_WEEK, PREMIUM_PRICE_2MONTH_FCFA, PREMIUM_PRICE_EUR, PREMIUM_PRICE_FCFA, PREMIUM_PRICE_WEEK_FCFA, PREMIUM_STAT_COUPLES, PREMIUM_STAT_MEMBERS, PremiumBadge, REFERRAL_BONUS_2MONTH, REFERRAL_BONUS_MONTH, REFERRAL_BONUS_WEEK, AFFILIATE_COMMISSION_WEEK, AFFILIATE_COMMISSION_MONTH, AFFILIATE_COMMISSION_2MONTH, AFFILIATE_PAYABLE_DELAY_DAYS, SOCIAL_FACEBOOK, SOCIAL_INSTAGRAM, SOCIAL_TIKTOK, SOCIAL_YOUTUBE, STORE_LINK_ANDROID, STORE_LINK_IOS, SUPABASE_KEY, SUPABASE_URL, SUPER_ADMIN_ID, SUPPORT_PREFIX_REPLY, SUPPORT_PREFIX_USER, SUPPORT_TEAM_ID, SUPPORT_TEAM_NAME, SUPPORT_TEAM_PHOTO, Toast, VerifiedBadge, apptStatusInfo, buildContactBannedRegex, buildCustomBannedRegex, setExemptedBuiltinWords, setExemptedContactWords, cleanSupportReason, dedupeMatchesByCouple, fmtApptDT, fmtDate, formatMoney, isSupportReason, logAdminAction, mmLevel, mmScore, paymentCurrency, resolveStatusImageUrl, sb, sendMatchWelcomeMessage,
-  setAPPOINTMENT_PHYSICAL_PRICE, setAUTO_MOD_CONTACT_REPLY, setBLOCK_SAME_GENDER, setCONTACT_ADDRESS, setCONTACT_EMAIL, setCONTACT_WHATSAPP, setDISCOVER_DEFAULT_MODE, setEUR_TO_FCFA, setLANDING_MEMBERS, setLANDING_SLOGAN, setLANDING_STAT_CITIES, setLANDING_STAT_COUPLES, setLANDING_STAT_MEMBERS, setLANDING_TITLE_END, setLANDING_TITLE_HIGHLIGHT, setLANDING_TITLE_START, setPAY_AIRTEL_ENABLED, setPAY_AIRTEL_NUMBER, setPAY_AIRTEL_RESPONSABLE, setPAY_CB_ENABLED, setPAY_MTN_ENABLED, setPAY_MTN_NUMBER, setPAY_MTN_RESPONSABLE, setPAY_WERO_ENABLED, setPAY_WERO_NUMBER, setPAY_PAYPAL_ENABLED, setPAY_PAYPAL_NUMBER, setPLAN_2MONTH_ENABLED, setPLAN_MONTH_ENABLED, setPLAN_WEEK_ENABLED, setPOLL_ADMIN_BADGE_MS, setPOLL_BADGES_MS, setPOLL_BROADCAST_MS, setPOLL_STATS_MS, setPOLL_SUPPORT_MS, setPREMIUM_30_DAYS_MS, setPREMIUM_DAYS_2MONTH, setPREMIUM_DAYS_WEEK, setPREMIUM_PRICE_2MONTH_FCFA, setPREMIUM_PRICE_EUR, setPREMIUM_PRICE_FCFA, setPREMIUM_PRICE_WEEK_FCFA, setPREMIUM_STAT_COUPLES, setPREMIUM_STAT_MEMBERS, setPREMIUM_BOOST_ENABLED, setPREMIUM_SCREEN_VARIANT, setFEATURE_SHOW_LIKES_VIEWS_FREE, setPRIVACY_NOTICE_ENABLED, setSOCIAL_FACEBOOK, setSOCIAL_INSTAGRAM, setSOCIAL_TIKTOK, setSOCIAL_YOUTUBE, setSTORE_LINK_ANDROID, setSTORE_LINK_IOS, setSUPPORT_TEAM_PHOTO, setAFFILIATE_COMMISSION_WEEK, setAFFILIATE_COMMISSION_MONTH, setAFFILIATE_COMMISSION_2MONTH, setAFFILIATE_PAYABLE_DELAY_DAYS,
+  APPOINTMENT_PHYSICAL_PRICE, APPT_HOUR_MAX, APPT_HOUR_MIN, AUTO_MOD_CONTACT_REPLY, Avatar, BLOCK_SAME_GENDER, Badge, Btn, CONTACT_ADDRESS, CONTACT_EMAIL, CONTACT_WHATSAPP, ConfirmModal, DISCOVER_DEFAULT_MODE, DateTimePicker, EUR_TO_FCFA, EXPENSE_CATEGORIES, EXPENSE_CAT_COLORS, FREE_LIMITS, G, LANDING_MEMBERS, LANDING_SLOGAN, LANDING_STAT_CITIES, LANDING_STAT_COUPLES, LANDING_STAT_MEMBERS, LANDING_TITLE_END, LANDING_TITLE_HIGHLIGHT, LANDING_TITLE_START, LIFETIME_PREMIUM_UNTIL, Messages, PAY_AIRTEL_ENABLED, PAY_AIRTEL_NUMBER, PAY_AIRTEL_RESPONSABLE, PAY_CB_ENABLED, PAY_MTN_ENABLED, PAY_MTN_NUMBER, PAY_MTN_RESPONSABLE, PAY_WERO_ENABLED, PAY_WERO_NUMBER, PAY_PAYPAL_ENABLED, PAY_PAYPAL_NUMBER, PLAN_2MONTH_ENABLED, PLAN_MONTH_ENABLED, PLAN_WEEK_ENABLED, POLL_ADMIN_BADGE_MS, POLL_BADGES_MS, POLL_BROADCAST_MS, POLL_STATS_MS, POLL_SUPPORT_MS, PREMIUM_30_DAYS_MS, PREMIUM_DAYS_2MONTH, PREMIUM_DAYS_WEEK, PREMIUM_PRICE_2MONTH_FCFA, PREMIUM_PRICE_EUR, PREMIUM_PRICE_FCFA, PREMIUM_PRICE_WEEK_FCFA, PREMIUM_STAT_COUPLES, PREMIUM_STAT_MEMBERS, PremiumBadge, REFERRAL_BONUS_2MONTH, REFERRAL_BONUS_MONTH, REFERRAL_BONUS_WEEK, AFFILIATE_COMMISSION_WEEK, AFFILIATE_COMMISSION_MONTH, AFFILIATE_COMMISSION_2MONTH, AFFILIATE_PAYABLE_DELAY_DAYS, PRIVACY_NOTICE_STEP1_TEXT, PRIVACY_NOTICE_STEP2_TEXT, SOCIAL_FACEBOOK, SOCIAL_INSTAGRAM, SOCIAL_TIKTOK, SOCIAL_YOUTUBE, STORE_LINK_ANDROID, STORE_LINK_IOS, SUPABASE_KEY, SUPABASE_URL, SUPER_ADMIN_ID, SUPPORT_PREFIX_REPLY, SUPPORT_PREFIX_USER, SUPPORT_TEAM_ID, SUPPORT_TEAM_NAME, SUPPORT_TEAM_PHOTO, Toast, VerifiedBadge, apptStatusInfo, buildContactBannedRegex, buildCustomBannedRegex, setExemptedBuiltinWords, setExemptedContactWords, cleanSupportReason, dedupeMatchesByCouple, fmtApptDT, fmtDate, formatMoney, isSupportReason, logAdminAction, mmLevel, mmScore, paymentCurrency, resolveStatusImageUrl, sb, sendMatchWelcomeMessage,
+  setAPPOINTMENT_PHYSICAL_PRICE, setAUTO_MOD_CONTACT_REPLY, setBLOCK_SAME_GENDER, setCONTACT_ADDRESS, setCONTACT_EMAIL, setCONTACT_WHATSAPP, setDISCOVER_DEFAULT_MODE, setEUR_TO_FCFA, setLANDING_MEMBERS, setLANDING_SLOGAN, setLANDING_STAT_CITIES, setLANDING_STAT_COUPLES, setLANDING_STAT_MEMBERS, setLANDING_TITLE_END, setLANDING_TITLE_HIGHLIGHT, setLANDING_TITLE_START, setPAY_AIRTEL_ENABLED, setPAY_AIRTEL_NUMBER, setPAY_AIRTEL_RESPONSABLE, setPAY_CB_ENABLED, setPAY_MTN_ENABLED, setPAY_MTN_NUMBER, setPAY_MTN_RESPONSABLE, setPAY_WERO_ENABLED, setPAY_WERO_NUMBER, setPAY_PAYPAL_ENABLED, setPAY_PAYPAL_NUMBER, setPLAN_2MONTH_ENABLED, setPLAN_MONTH_ENABLED, setPLAN_WEEK_ENABLED, setPOLL_ADMIN_BADGE_MS, setPOLL_BADGES_MS, setPOLL_BROADCAST_MS, setPOLL_STATS_MS, setPOLL_SUPPORT_MS, setPREMIUM_30_DAYS_MS, setPREMIUM_DAYS_2MONTH, setPREMIUM_DAYS_WEEK, setPREMIUM_PRICE_2MONTH_FCFA, setPREMIUM_PRICE_EUR, setPREMIUM_PRICE_FCFA, setPREMIUM_PRICE_WEEK_FCFA, setPREMIUM_STAT_COUPLES, setPREMIUM_STAT_MEMBERS, setPREMIUM_BOOST_ENABLED, setPREMIUM_SCREEN_VARIANT, setFEATURE_SHOW_LIKES_VIEWS_FREE, setPRIVACY_NOTICE_ENABLED, setSOCIAL_FACEBOOK, setSOCIAL_INSTAGRAM, setSOCIAL_TIKTOK, setSOCIAL_YOUTUBE, setSTORE_LINK_ANDROID, setSTORE_LINK_IOS, setSUPPORT_TEAM_PHOTO, setAFFILIATE_COMMISSION_WEEK, setAFFILIATE_COMMISSION_MONTH, setAFFILIATE_COMMISSION_2MONTH, setAFFILIATE_PAYABLE_DELAY_DAYS, setPRIVACY_NOTICE_STEP1_TEXT, setPRIVACY_NOTICE_STEP2_TEXT,
 } from "./App";
 
 async function saveSetting(key: string, value: string, token: string): Promise<boolean> {
@@ -698,6 +698,9 @@ export function AdminDesktopPage() {
         @media (min-width: 1200px) {
           .adm-wrap [data-admlist] { grid-template-columns: repeat(3,1fr) !important; }
         }
+        @media (min-width: 1600px) {
+          .adm-wrap [data-admlist] { grid-template-columns: repeat(4,1fr) !important; }
+        }
       `}</style>
 
       {/* Topbar desktop */}
@@ -848,6 +851,7 @@ export function AdminDesktopPage() {
                 <span style={{ fontSize: "0.82rem", fontWeight: 600, color: "#333" }}>Propositions spontanées</span>
                 <SwitchBtn on={autoShortcuts.spontaneous_auto_propose_enabled} onToggle={() => toggleAutoShortcut("spontaneous_auto_propose_enabled")} />
               </div>
+              <RelationalNudgeConfig auth={auth} />
             </OffCanvasSection>}
 
             {configTab === "auto" && <OffCanvasSection title="Modération">
@@ -1886,15 +1890,61 @@ function DiscoverModeConfig({ auth }: { auth: Auth }) {
 }
 
 // Activer/désactiver la notice de confidentialité affichée aux nouveaux membres à leur première connexion.
-function PrivacyNoticeConfig({ auth }: { auth: Auth }) {
-  const [on, setOn] = React.useState(true);
+// Interrupteur "Inviter à remplir le profil relationnel" — même réglage (relational_nudge) que
+// celui déjà présent dans Matchmaking intelligent, dupliqué ici pour l'avoir aussi dans
+// Configuration → Automatisations, comme demandé.
+function RelationalNudgeConfig({ auth }: { auth: Auth }) {
+  const [on, setOn] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
+  const [busy, setBusy] = React.useState(false);
   const H = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` };
 
   React.useEffect(() => {
-    fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.privacy_notice_enabled&select=value`, { headers: H })
+    fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.relational_nudge&select=value`, { headers: H })
       .then(r => r.json()).then((data: { value: string }[]) => {
-        if (Array.isArray(data) && data[0]?.value !== undefined) setOn(data[0].value !== "false");
+        if (Array.isArray(data) && data[0]?.value !== undefined) setOn(data[0].value === "true");
+      }).catch(() => {}).finally(() => setLoading(false));
+  }, [auth.token]);
+
+  const toggle = async () => {
+    const next = !on;
+    setBusy(true);
+    setOn(next);
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, { method: "POST", headers: { ...H, "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ key: "relational_nudge", value: next ? "true" : "false" }) });
+    } catch { setOn(!next); }
+    setBusy(false);
+  };
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 4px" }}>
+      <div>
+        <span style={{ fontSize: "0.82rem", fontWeight: 600, color: "#333" }}>Inviter à remplir le profil relationnel</span>
+        <div style={{ fontSize: "0.68rem", color: "#999", marginTop: 2 }}>Les membres sans profil relationnel verront un message les incitant à le remplir. Même réglage que dans Matchmaking intelligent.</div>
+      </div>
+      <SwitchBtn on={loading ? false : on} onToggle={busy || loading ? () => {} : toggle} />
+    </div>
+  );
+}
+
+function PrivacyNoticeConfig({ auth }: { auth: Auth }) {
+  const [on, setOn] = React.useState(true);
+  const [loading, setLoading] = React.useState(true);
+  const [step1, setStep1] = React.useState(PRIVACY_NOTICE_STEP1_TEXT);
+  const [step2, setStep2] = React.useState(PRIVACY_NOTICE_STEP2_TEXT);
+  const [editingStep, setEditingStep] = React.useState<1 | 2 | null>(null);
+  const [savingStep, setSavingStep] = React.useState(false);
+  const H = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` };
+
+  React.useEffect(() => {
+    fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(privacy_notice_enabled,privacy_notice_step1_text,privacy_notice_step2_text)&select=key,value`, { headers: H })
+      .then(r => r.json()).then((data: { key: string; value: string }[]) => {
+        if (!Array.isArray(data)) return;
+        const map: Record<string, string> = {};
+        data.forEach(d => { map[d.key] = d.value; });
+        if (map["privacy_notice_enabled"] !== undefined) setOn(map["privacy_notice_enabled"] !== "false");
+        if (map["privacy_notice_step1_text"]) setStep1(map["privacy_notice_step1_text"]);
+        if (map["privacy_notice_step2_text"]) setStep2(map["privacy_notice_step2_text"]);
       }).catch(() => {}).finally(() => setLoading(false));
   }, [auth.token]);
 
@@ -1915,21 +1965,59 @@ function PrivacyNoticeConfig({ auth }: { auth: Auth }) {
     }
   };
 
+  const saveStep = async (step: 1 | 2) => {
+    setSavingStep(true);
+    const key = step === 1 ? "privacy_notice_step1_text" : "privacy_notice_step2_text";
+    const value = step === 1 ? step1 : step2;
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, {
+        method: "POST",
+        headers: { ...H, "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=minimal" },
+        body: JSON.stringify({ key, value }),
+      });
+      if (step === 1) setPRIVACY_NOTICE_STEP1_TEXT(value); else setPRIVACY_NOTICE_STEP2_TEXT(value);
+      setEditingStep(null);
+    } catch {}
+    setSavingStep(false);
+  };
+
   return (
     <div>
       <div style={{ fontSize: "0.72rem", color: "#888", marginBottom: 10, lineHeight: 1.5 }}>
-        Affiche un petit rappel de confidentialité (adapté au genre) à chaque nouveau membre, tant qu'il ne l'a pas fermé.
+        Affiche un rappel de confidentialité à chaque nouveau membre (2 étapes : confidentialité, puis règles du compte gratuit), tant qu'il ne l'a pas fermé. Le même interrupteur gère les deux étapes ensemble.
       </div>
       {loading ? (
         <div style={{ textAlign: "center", padding: 16, color: "#aaa", fontSize: "0.8rem" }}>Chargement…</div>
       ) : (
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: G.creme, borderRadius: 12 }}>
-          <div>
-            <div style={{ fontSize: "0.83rem", fontWeight: 600, color: on ? G.brun : "#aaa" }}>Notice de confidentialité</div>
-            <div style={{ fontSize: "0.68rem", color: "#999" }}>{on ? "Activée" : "Désactivée"}</div>
+        <>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: G.creme, borderRadius: 12, marginBottom: 10 }}>
+            <div>
+              <div style={{ fontSize: "0.83rem", fontWeight: 600, color: on ? G.brun : "#aaa" }}>Notice de confidentialité (2 étapes)</div>
+              <div style={{ fontSize: "0.68rem", color: "#999" }}>{on ? "Activée" : "Désactivée"}</div>
+            </div>
+            <SwitchBtn on={on} onToggle={toggle} />
           </div>
-          <SwitchBtn on={on} onToggle={toggle} />
-        </div>
+
+          {([[1, "Étape 1 — Confidentialité", step1, setStep1], [2, "Étape 2 — Compte gratuit", step2, setStep2]] as [1 | 2, string, string, (v: string) => void][]).map(([n, label, value, setValue]) => (
+            <div key={n} style={{ marginBottom: 10, border: `1.5px solid ${G.gris}`, borderRadius: 12, padding: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: editingStep === n ? 8 : 0 }}>
+                <span style={{ fontSize: "0.8rem", fontWeight: 700, color: G.brun }}>{label}</span>
+                {editingStep !== n && <button onClick={() => setEditingStep(n)} style={{ background: "none", border: "none", color: G.rouge, fontSize: "0.74rem", fontWeight: 700, cursor: "pointer" }}>Modifier</button>}
+              </div>
+              {editingStep === n ? (
+                <>
+                  <textarea value={value} onChange={e => setValue(e.target.value)} rows={4} style={{ width: "100%", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 8, padding: "8px 10px", fontSize: "0.8rem", fontFamily: "inherit", resize: "vertical", marginBottom: 8 }} />
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button disabled={savingStep} onClick={() => saveStep(n)} style={{ background: G.rouge, color: "#fff", border: "none", borderRadius: 8, padding: "7px 14px", fontSize: "0.76rem", fontWeight: 700, cursor: savingStep ? "not-allowed" : "pointer" }}>{savingStep ? "..." : "Enregistrer"}</button>
+                    <button onClick={() => { setEditingStep(null); setStep1(PRIVACY_NOTICE_STEP1_TEXT); setStep2(PRIVACY_NOTICE_STEP2_TEXT); }} style={{ background: "none", border: `1.5px solid ${G.gris}`, borderRadius: 8, padding: "7px 14px", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer", color: "#666" }}>Annuler</button>
+                  </div>
+                </>
+              ) : (
+                <div style={{ fontSize: "0.76rem", color: "#888", whiteSpace: "pre-wrap" }}>{value}</div>
+              )}
+            </div>
+          ))}
+        </>
       )}
     </div>
   );
@@ -2442,6 +2530,9 @@ export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () =
           <EditableRow key={key} label={label} value={value} type="number" open={editingConfig === key} onOpen={() => { setEditingConfig(editingConfig === key ? null : key); setEditingConfigValue(value); }} editValue={editingConfigValue} onEdit={setEditingConfigValue} onSave={async () => { await upsertSetting(key, editingConfigValue); setAppConfig(c => ({ ...c, [ck]: editingConfigValue })); setter(editingConfigValue); setEditingConfig(null); }} />
         ))}
         <div style={{ fontSize: "0.72rem", color: "#999", padding: "4px 4px 0", lineHeight: 1.5 }}>La gestion des affiliés eux-mêmes (ajout, historique, paiements) se fait depuis Marketing → Programme affiliés.</div>
+      </OffCanvasSection>
+      <OffCanvasSection title="Automatisations">
+        <RelationalNudgeConfig auth={auth} />
       </OffCanvasSection>
       <OffCanvasSection title="Fonctionnalités">
         {([["feature_statuses","featureStatuses" as keyof typeof appConfig,"Statuts (Stories)"],["feature_gift_premium","featureGiftPremium" as keyof typeof appConfig,"Cadeau Premium"],["feature_assistant","featureAssistant" as keyof typeof appConfig,"Assistant IA"],["feature_group_premium","featureGroupPremium" as keyof typeof appConfig,"Groupe Premium"],["feature_group_photos","featureGroupPhotos" as keyof typeof appConfig,"Photos dans le Groupe"],["feature_moderation_insults","featureModerationInsults" as keyof typeof appConfig,"Modération auto (insultes, menaces, arnaques, sexuel)"],["feature_moderation_contact","featureModerationContact" as keyof typeof appConfig,"Blocage partage de contact (comptes gratuits)"],["maintenance_mode","maintenanceMode" as keyof typeof appConfig,"Mode maintenance"]] as [string, keyof typeof appConfig, string][]).map(([key,ck,label]) => (
@@ -6977,6 +7068,61 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
 
   // ── Users ──
   const [users, setUsers] = useState<AdminProfile[]>([]);
+  // ── Remplacement manuel de la photo de profil (ex: numéro de téléphone visible dessus) —
+  //    l'admin envoie un fichier déjà retouché depuis son ordinateur, qui remplace directement
+  //    le fichier existant (même chemin, écrasé) puis on force le rafraîchissement du cache en
+  //    mettant à jour photo_url avec un nouveau paramètre de version. ──
+  const [photoReplaceTargetId, setPhotoReplaceTargetId] = useState<string | null>(null);
+  const photoReplaceForUserRef = useRef<AdminProfile | null>(null);
+  const photoReplaceInputRef = useRef<HTMLInputElement>(null);
+  const [photoReplaceCropSrc, setPhotoReplaceCropSrc] = useState<string | null>(null);
+  const triggerPhotoReplace = (u: AdminProfile) => {
+    photoReplaceForUserRef.current = u;
+    photoReplaceInputRef.current?.click();
+  };
+  const onPhotoReplaceFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !photoReplaceForUserRef.current) return;
+    if (!file.type.startsWith("image/")) { showToast("Merci de choisir une image.", "error"); return; }
+    setPhotoReplaceCropSrc(URL.createObjectURL(file));
+  };
+  const handlePhotoReplaceCropConfirm = async (blob: Blob) => {
+    const src = photoReplaceCropSrc;
+    setPhotoReplaceCropSrc(null);
+    if (src) URL.revokeObjectURL(src);
+    const u = photoReplaceForUserRef.current;
+    if (!u || !auth) return;
+    setPhotoReplaceTargetId(u.id);
+    try {
+      const path = `${u.id}/avatar.jpg`;
+      const r = await fetch(`${SUPABASE_URL}/storage/v1/object/avatars/${path}`, {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${auth.token}`, "Content-Type": "image/jpeg", "x-upsert": "true" },
+        body: blob,
+      });
+      if (r.ok) {
+        const newUrl = `${SUPABASE_URL}/storage/v1/object/public/avatars/${path}?v=${Date.now()}`;
+        await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${u.id}`, {
+          method: "PATCH",
+          headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
+          body: JSON.stringify({ photo_url: newUrl }),
+        });
+        logAdminAction(auth.token, auth.userId, auth.name, "Photo de profil remplacée manuellement par l'admin", u.id);
+        setUsers(list => list.map(x => x.id === u.id ? { ...x, photo_url: newUrl } : x));
+        showToast("Photo remplacée avec succès.", "success");
+      } else {
+        showToast("Échec de l'envoi de la photo.", "error");
+      }
+    } catch { showToast("Erreur lors du remplacement de la photo.", "error"); }
+    setPhotoReplaceTargetId(null);
+    photoReplaceForUserRef.current = null;
+  };
+  const handlePhotoReplaceCropCancel = () => {
+    if (photoReplaceCropSrc) URL.revokeObjectURL(photoReplaceCropSrc);
+    setPhotoReplaceCropSrc(null);
+    photoReplaceForUserRef.current = null;
+  };
   // ── Likes reçus ET likes envoyés, en attente de retour (pas encore devenus un match), par
   //    utilisateur — calculé pour la page actuellement affichée uniquement. ──
   const [pendingLikesCount, setPendingLikesCount] = useState<Record<string, number>>({});
@@ -9260,6 +9406,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     <ActionBtn label="Supp." color="#c0392b" disabled={isLoading || cannotModerate} onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } confirm(`⚠️ Supprimer définitivement ${u.name} ?`, () => deleteAccount(u)); }} />
                     <ActionBtn label="Message" color="#2980b9" disabled={isLoading || cannotModerate} onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } setReportProfilePreview(null); setMsgModal({ user: u }); setMsgText(""); setMsgHistory([]); loadMsgHistory(u.id); }} />
                     <ActionBtn label="Mail" color="#8e44ad" disabled={isLoading || cannotModerate} onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } setReportProfilePreview(null); setMailModal({ user: u }); setMailHistory([]); setMailTab("modeles"); loadMailHistory(u.id); }} />
+                    <ActionBtn label={photoReplaceTargetId === u.id ? "…" : "Photo"} color="#16a085" disabled={isLoading || cannotModerate || photoReplaceTargetId === u.id} onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } triggerPhotoReplace(u); }} />
                   </div>
                 );
               })()}
@@ -9394,6 +9541,11 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
           ))}
         </div>
       </div>
+
+      <input ref={photoReplaceInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={onPhotoReplaceFile} />
+      {photoReplaceCropSrc && (
+        <CropModal src={photoReplaceCropSrc} onConfirm={handlePhotoReplaceCropConfirm} onCancel={handlePhotoReplaceCropCancel} />
+      )}
 
       {/* ═══════════════════════════════════════════ ONGLET STATS */}
       {activeTab === "stats" && (
@@ -9897,6 +10049,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                           <ActionBtn label="Supp." color="#c0392b" disabled={isLoading || cannotModerate} onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } confirm(`⚠️ Supprimer définitivement ${u.name} ?`, () => deleteAccount(u)); }} />
                           <ActionBtn label="Message" color="#2980b9" disabled={isLoading || cannotModerate} onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } setMsgModal({ user: u }); setMsgText(""); setMsgHistory([]); loadMsgHistory(u.id); }} />
                           <ActionBtn label="Mail" color="#8e44ad" disabled={isLoading || cannotModerate} onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } setMailModal({ user: u }); setMailHistory([]); setMailTab("modeles"); loadMailHistory(u.id); }} />
+                          <ActionBtn label={photoReplaceTargetId === u.id ? "…" : "Photo"} color="#16a085" disabled={isLoading || cannotModerate || photoReplaceTargetId === u.id} onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } triggerPhotoReplace(u); }} />
                         </div>
                         {/* Likes reçus en attente de retour (pas encore devenus un match) */}
                         {!!pendingLikesCount[u.id] && (
@@ -10092,6 +10245,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                           onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } setMsgModal({ user: u }); setMsgText(""); setMsgHistory([]); loadMsgHistory(u.id); }} />
                         <ActionBtn label="Mail" color="#8e44ad" disabled={isLoading || cannotModerate}
                           onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } setMailModal({ user: u }); setMailHistory([]); setMailTab("modeles"); loadMailHistory(u.id); }} />
+                        <ActionBtn label={photoReplaceTargetId === u.id ? "…" : "Photo"} color="#16a085" disabled={isLoading || cannotModerate || photoReplaceTargetId === u.id}
+                          onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } triggerPhotoReplace(u); }} />
                       </div>
                     </div>
                   </div>
@@ -10153,7 +10308,11 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   <div style={{ fontSize: "0.78rem", color: "#888" }}>Envoyez une annonce visible à tous les utilisateurs sélectionnés.</div>
                 </div>
               </div>
-              <div style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "rgba(39,174,96,0.1)", color: "#1e8449", borderRadius: 50, padding: "6px 13px", fontSize: "0.76rem", fontWeight: 800 }}><span style={{ width: 8, height: 8, borderRadius: "50%", background: "#27ae60" }} />{broadcastList.length} diffusion{broadcastList.length > 1 ? "s" : ""} active{broadcastList.length > 1 ? "s" : ""}</div>
+              {autoShortcuts.broadcast_enabled ? (
+                <div style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "rgba(39,174,96,0.1)", color: "#1e8449", borderRadius: 50, padding: "6px 13px", fontSize: "0.76rem", fontWeight: 800 }}><span style={{ width: 8, height: 8, borderRadius: "50%", background: "#27ae60" }} />{broadcastList.length} diffusion{broadcastList.length > 1 ? "s" : ""} active{broadcastList.length > 1 ? "s" : ""}</div>
+              ) : (
+                <div style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "rgba(153,153,153,0.12)", color: "#888", borderRadius: 50, padding: "6px 13px", fontSize: "0.76rem", fontWeight: 800 }}><span style={{ width: 8, height: 8, borderRadius: "50%", background: "#999" }} />Diffusion générale désactivée</div>
+              )}
             </div>
 
             <div style={{ display: "flex", flexWrap: "wrap", gap: 22 }}>
@@ -10255,6 +10414,12 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
           {/* ── Diffusions actives ── */}
           <div style={{ background: G.blanc, borderRadius: 18, padding: 18, marginTop: 16, boxShadow: "0 2px 10px rgba(0,0,0,0.05)" }}>
             <div style={{ fontWeight: 900, fontSize: "1.05rem", color: G.brun, marginBottom: 12 }}>Diffusions actives ({broadcastList.length})</div>
+            {!autoShortcuts.broadcast_enabled && broadcastList.length > 0 && (
+              <div style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(230,126,34,0.1)", border: "1px solid rgba(230,126,34,0.25)", borderRadius: 12, padding: "11px 14px", marginBottom: 14, fontSize: "0.78rem", color: "#a65a1a", fontWeight: 600 }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#E67E22" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                L'interrupteur "Diffusion générale" est désactivé dans Configuration → Automatisations : les messages ci-dessous existent toujours mais ne sont visibles par personne pour l'instant.
+              </div>
+            )}
             {broadcastList.length === 0 ? (
               <div style={{ fontSize: "0.82rem", color: "#aaa", textAlign: "center", padding: "30px 0" }}>Aucune diffusion active.</div>
             ) : (
@@ -10277,7 +10442,11 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                           <div style={{ display: "inline-block", fontSize: "0.64rem", fontWeight: 700, color: pl === "premium" ? "#B8860B" : pl === "gratuit" ? "#1e8449" : "#888", background: pl === "premium" ? "rgba(212,168,67,0.15)" : pl === "gratuit" ? "rgba(39,174,96,0.12)" : G.creme, borderRadius: 50, padding: "1px 8px", marginTop: 2 }}>{planLbl}</div>
                         </div>
                         <div style={{ display: "flex", alignItems: "center", gap: 5, color: G.rouge, fontWeight: 700, fontSize: "0.74rem", whiteSpace: "nowrap" }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Expire {expiresInLabel(b.expires_at)}</div>
-                        <div style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(39,174,96,0.1)", color: "#1e8449", borderRadius: 50, padding: "3px 10px", fontSize: "0.7rem", fontWeight: 700 }}><span style={{ width: 6, height: 6, borderRadius: "50%", background: "#27ae60" }} />En ligne</div>
+                        {autoShortcuts.broadcast_enabled ? (
+                          <div style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(39,174,96,0.1)", color: "#1e8449", borderRadius: 50, padding: "3px 10px", fontSize: "0.7rem", fontWeight: 700 }}><span style={{ width: 6, height: 6, borderRadius: "50%", background: "#27ae60" }} />En ligne</div>
+                        ) : (
+                          <div style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(153,153,153,0.12)", color: "#888", borderRadius: 50, padding: "3px 10px", fontSize: "0.7rem", fontWeight: 700 }}><span style={{ width: 6, height: 6, borderRadius: "50%", background: "#999" }} />Désactivée</div>
+                        )}
                         <button onClick={() => setBroadcastPreview(b.message)} style={{ display: "flex", alignItems: "center", gap: 5, background: G.blanc, border: `1px solid ${G.gris}`, borderRadius: 9, padding: "7px 12px", fontSize: "0.74rem", fontWeight: 700, color: G.brun, cursor: "pointer" }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>Voir</button>
                         <button onClick={() => deleteBroadcast(b.id)} disabled={broadcastDeleting === b.id} style={{ flexShrink: 0, border: `1px solid rgba(231,76,60,0.3)`, background: "rgba(231,76,60,0.08)", color: "#e74c3c", borderRadius: 9, padding: "8px 10px", cursor: "pointer" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
                       </div>
@@ -10521,7 +10690,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 }
               </div>
             ) : (
-              <div data-admlist={effectiveFilter === "messaging" ? undefined : ""} style={{ maxWidth: 720, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
+              <div data-admlist={effectiveFilter === "messaging" ? undefined : ""} style={{ maxWidth: effectiveFilter === "messaging" ? 720 : 1600, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
               {effectiveFilter === "auto" ? (() => {
                 if (autoLogLoading) return <p style={{ textAlign: "center", color: "#aaa", fontSize: "0.85rem", padding: 30 }}>Chargement…</p>;
                 if (autoLogReports.length === 0) return <p style={{ textAlign: "center", color: "#bbb", fontSize: "0.85rem", padding: 30 }}>Aucune activité automatique enregistrée pour l'instant.</p>;
@@ -12422,7 +12591,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
 
       {/* ═══════════════════════════════════════════ ONGLET BUDGET (Recettes / Dépenses / Résultat net) */}
       {activeTab === "appointments" && (
-        <div style={{ padding: "0 4px" }}>
+        <div style={{ padding: "16px" }}>
           <AdminAppointments auth={auth!} showToast={showToast} />
         </div>
       )}
