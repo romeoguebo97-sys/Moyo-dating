@@ -25,6 +25,9 @@
   .topbar {
     width: 100%;
     padding: 14px 0 4px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
   }
 
   .back-btn {
@@ -42,6 +45,26 @@
   }
   .back-btn:active { transform: scale(0.92); }
   .back-btn svg { width: 16px; height: 16px; }
+
+  .share-topbtn {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    height: 38px;
+    padding: 0 16px;
+    border-radius: 100px;
+    border: 1.5px solid #C0392B;
+    background: #fff;
+    color: #C0392B;
+    font-weight: 800;
+    font-size: 0.8rem;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 0.12s ease, background 0.12s ease;
+  }
+  .share-topbtn:active { transform: scale(0.94); background: rgba(192, 57, 43, 0.08); }
+  .share-topbtn svg { width: 15px; height: 15px; flex: none; }
+  .share-topbtn.copied { border-color: #1A5C3A; color: #1A5C3A; }
 
   .content { text-align: center; }
 
@@ -371,6 +394,10 @@
       <a class="back-btn" href="/" aria-label="Retour à l'accueil">
         <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
       </a>
+      <button class="share-topbtn" id="share-btn" type="button">
+        <span id="share-icon" style="display:flex;align-items:center;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></span>
+        <span id="share-label">Partager</span>
+      </button>
     </div>
 
     <div class="content">
@@ -571,6 +598,43 @@
       stepsIos.style.display = "";
       stepsAndroid.style.display = "none";
       stepsCount.textContent = "3 étapes simples";
+    });
+
+    // ── Bouton Partager : partage natif là où il existe (mobile, la grande majorité des cas),
+    //    repli sur copie du lien dans le presse-papier partout ailleurs (ordinateur notamment) —
+    //    disponible sur tous les appareils, sans exception. ──
+    var shareBtn = document.getElementById("share-btn");
+    var shareIcon = document.getElementById("share-icon");
+    var shareLabel = document.getElementById("share-label");
+    var svgShare = shareIcon.innerHTML;
+    var svgCheckShare = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+    var shareData = {
+      title: "Moyo Dating",
+      text: "Télécharge Moyo Dating, l'app de rencontre des Congolais :",
+      url: window.location.href
+    };
+    function showCopiedFeedback() {
+      shareBtn.classList.add("copied");
+      shareIcon.innerHTML = svgCheckShare;
+      shareLabel.textContent = "Lien copié !";
+      setTimeout(function () {
+        shareBtn.classList.remove("copied");
+        shareIcon.innerHTML = svgShare;
+        shareLabel.textContent = "Partager";
+      }, 2200);
+    }
+    shareBtn.addEventListener("click", function () {
+      if (navigator.share) {
+        navigator.share(shareData).catch(function () {});
+        return;
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(shareData.url).then(showCopiedFeedback).catch(function () {
+          window.prompt("Copiez ce lien :", shareData.url);
+        });
+      } else {
+        window.prompt("Copiez ce lien :", shareData.url);
+      }
     });
   </script>
 </body>
