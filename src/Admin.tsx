@@ -6491,6 +6491,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
     const [inactivePendingLikes, setInactivePendingLikes] = useState<Record<string, number>>({});
     const [inactiveSentPendingLikes, setInactiveSentPendingLikes] = useState<Record<string, number>>({});
     const [inactiveRemindingId, setInactiveRemindingId] = useState<string | null>(null);
+    const [inactiveError, setInactiveError] = useState<string | null>(null);
     const loadInactiveDaysSetting = async () => {
       if (!auth) return;
       try {
@@ -6510,6 +6511,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
     const loadInactiveUsers = async (days?: string) => {
       if (!auth) return;
       setInactiveLoading(true);
+      setInactiveError(null);
       try {
         const threshold = new Date(Date.now() - (parseInt(days || inactiveDays) || 7) * 24 * 3600 * 1000).toISOString();
         // Exclut aussi ceux relancés il y a moins de 7 jours — pour ne jamais spammer la même
@@ -6519,6 +6521,16 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
           headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
         });
         const data = await r.json().catch(() => []);
+        if (!r.ok) {
+          // Ne jamais afficher silencieusement "0 membre" quand la requête a réellement échoué
+          // (ex: colonne last_reminder_sent_at absente en base) — sinon ça ressemble à tort à
+          // "personne n'est inactif" alors que c'est juste une requête cassée.
+          const msg = (data as any)?.message || (data as any)?.hint || `Erreur ${r.status}`;
+          setInactiveError(msg.includes("last_reminder_sent_at") ? "La colonne last_reminder_sent_at n'existe pas encore en base — lance le SQL fourni (ALTER TABLE profiles ADD COLUMN...)." : msg);
+          setInactiveUsers([]);
+          setInactiveLoading(false);
+          return;
+        }
         const list: AdminProfile[] = Array.isArray(data) ? data.filter((u: any) => u.phone && u.phone.trim()) : [];
         setInactiveUsers(list);
         // Cœurs "en attente" (même calcul que dans Utilisateurs), sur cette liste précise.
@@ -6543,7 +6555,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
         } else {
           setInactivePendingLikes({}); setInactiveSentPendingLikes({});
         }
-      } catch {}
+      } catch (e: any) { setInactiveError(e?.message || "Erreur réseau lors du chargement."); }
       setInactiveLoading(false);
     };
     useEffect(() => { if (mktTab === "inactive") { loadInactiveDaysSetting().then(() => loadInactiveUsers()); } /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [mktTab]);
@@ -9639,11 +9651,18 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                             const token = (crypto as any).randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
                             const expiresAt = new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString();
                             const r = await fetch(`${SUPABASE_URL}/rest/v1/payment_links`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ user_id: u.id, token, created_by: auth.userId, expires_at: expiresAt }) });
-                            if (!r.ok) throw new Error();
+                            if (!r.ok) {
+                              // Ne jamais afficher un message générique qui masque la vraie cause —
+                              // sinon impossible de savoir si c'est un souci RLS, une colonne
+                              // manquante, ou autre chose.
+                              const errBody = await r.json().catch(() => null);
+                              const msg = errBody?.message || errBody?.hint || `Erreur ${r.status}`;
+                              throw new Error(msg);
+                            }
                             const link = `${window.location.origin}/?paylink=${token}`;
                             await navigator.clipboard.writeText(link);
                             showToast("Lien de paiement copié (valable 7 jours).", "success");
-                          } catch { showToast("Erreur lors de la génération du lien.", "error"); }
+                          } catch (e: any) { showToast(`Erreur lors de la génération du lien : ${e?.message || "inconnue"}`, "error"); }
                         }} />
                     </>
                   )}
@@ -11993,6 +12012,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 </div>
                 {inactiveLoading ? (
                   <div style={{ textAlign: "center", padding: "40px 20px", color: "#aaa" }}>Chargement...</div>
+                ) : inactiveError ? (
+                  <div style={{ textAlign: "center", padding: "30px 20px", color: G.rouge, fontSize: "0.85rem", fontWeight: 600, background: "#FFF5F4", borderRadius: 12, border: "1px solid #F5C4B3" }}>⚠️ {inactiveError}</div>
                 ) : inactiveUsers.length === 0 ? (
                   <div style={{ textAlign: "center", padding: "40px 20px", color: "#aaa", fontSize: "0.88rem" }}>Aucun membre inactif avec un numéro renseigné pour l'instant.</div>
                 ) : (
