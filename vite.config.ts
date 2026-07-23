@@ -6,10 +6,12 @@ export default defineConfig({
   // Empêche l'étape esbuild (celle qui convertit le code au format ES2015 avant même que Terser
   // n'intervienne) de transformer emojis/accents en séquences \u{...} — sans ça, le réglage
   // ascii_only de Terser plus bas n'a plus rien à corriger, le texte est déjà converti avant
-  // qu'il ne le voie. C'est ce qui manquait à la première correction.
+  // qu'il ne le voie.
+  // "as any" : la définition de type de cette version de Vite ne connaît pas encore "charset"
+  // même si esbuild le supporte bien réellement — sans ce contournement, tsc refuse de compiler.
   esbuild: {
     charset: 'utf8',
-  },
+  } as any,
   build: {
     minify: 'terser',
     terserOptions: {
