@@ -63,7 +63,7 @@ function DateTimeModal({ title, initialISO, confirmLabel, onConfirm, onClose }: 
   };
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10010, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 380, padding: "22px 20px", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 560, padding: "22px 20px", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
         <div style={{ fontWeight: 800, fontSize: "1rem", color: G.brun, marginBottom: 16 }}>{title}</div>
         <DateTimePicker date={date} hour={hour} minute={minute} onChange={(d, h, m) => { setDate(d); setHour(h); setMinute(m); setErr(""); }} />
         {err && <div style={{ color: "#c0392b", fontSize: "0.78rem", marginTop: 10, fontWeight: 600 }}>{err}</div>}
@@ -200,7 +200,7 @@ function AdminAppointments({ auth, showToast }: { auth: any; showToast: (m: stri
         onClose={() => setScheduling(null)}
       />}
       {cancelTarget && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10020, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={() => setCancelTarget(null)}>
-        <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 400, padding: "22px 20px", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
+        <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 580, padding: "22px 20px", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
           <div style={{ fontWeight: 800, fontSize: "1rem", color: G.brun, marginBottom: 6 }}>Annuler le rendez-vous</div>
           <div style={{ fontSize: "0.8rem", color: "#666", marginBottom: 12 }}>Motif d'annulation (visible par l'utilisateur, facultatif) :</div>
           <textarea value={cancelReason} onChange={e => setCancelReason(e.target.value)} placeholder="Ex. créneau indisponible, à reprogrammer…" autoFocus style={{ width: "100%", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.85rem", fontFamily: "inherit", minHeight: 70, resize: "vertical", background: G.blanc, color: G.brun }} />
@@ -211,7 +211,7 @@ function AdminAppointments({ auth, showToast }: { auth: any; showToast: (m: stri
         </div>
       </div>}
       {noteTarget && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10020, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={() => setNoteTarget(null)}>
-        <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 400, padding: "22px 20px", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
+        <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 580, padding: "22px 20px", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
           <div style={{ fontWeight: 800, fontSize: "1rem", color: G.brun, marginBottom: 12 }}>Note interne</div>
           <textarea value={noteText} onChange={e => setNoteText(e.target.value)} placeholder="Note visible uniquement par l'équipe…" autoFocus style={{ width: "100%", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.85rem", fontFamily: "inherit", minHeight: 70, resize: "vertical", background: G.blanc, color: G.brun }} />
           <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
@@ -221,7 +221,7 @@ function AdminAppointments({ auth, showToast }: { auth: any; showToast: (m: stri
         </div>
       </div>}
       {delTarget && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10020, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={() => !busy && setDelTarget(null)}>
-        <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 380, padding: "22px 20px", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
+        <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 560, padding: "22px 20px", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
           <div style={{ fontWeight: 800, fontSize: "1rem", color: G.brun, marginBottom: 8 }}>Supprimer ce rendez-vous ?</div>
           <div style={{ fontSize: "0.84rem", color: "#666", lineHeight: 1.5, marginBottom: 18 }}>Le rendez-vous de {delTarget.user?.name || "cet utilisateur"} sera définitivement supprimé. Cette action est irréversible.</div>
           <div style={{ display: "flex", gap: 10 }}>
@@ -1221,7 +1221,7 @@ export function AdminDesktopPage() {
       {/* ── MODAL GESTION ADMINS ── */}
       {adminActionModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-          <div style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 380, maxHeight: "85vh", overflowY: "auto", boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}>
+          <div style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 560, maxHeight: "85vh", overflowY: "auto", boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}>
             <div style={{ fontWeight: 800, fontSize: "1.1rem", color: G.brun, marginBottom: 6 }}>{adminActionModal.label}</div>
             <div style={{ fontSize: "0.83rem", color: "#888", marginBottom: 18, lineHeight: 1.5 }}>Entrez l'adresse email de l'utilisateur à qui vous souhaitez attribuer ce rôle.</div>
             <input
@@ -2407,7 +2407,7 @@ export function CropModal({ src, onConfirm, onCancel }: { src: string; onConfirm
 
   return (
     <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 9000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-      <div className="moyo-card-in" style={{ background: G.blanc, maxHeight: "85vh", overflowY: "auto", borderRadius: 24, padding: "24px 20px", width: "100%", maxWidth: 340, textAlign: "center" }}>
+      <div className="moyo-card-in" style={{ background: G.blanc, maxHeight: "85vh", overflowY: "auto", borderRadius: 24, padding: "24px 20px", width: "100%", maxWidth: 520, textAlign: "center" }}>
         <div style={{ fontWeight: 700, fontSize: "1rem", marginBottom: 6, color: "#111" }}>Cadrer ta photo</div>
         <div style={{ fontSize: "0.78rem", color: "#888", marginBottom: 16 }}>Glisse pour repositionner · Pince pour zoomer</div>
         <div ref={canvasContainerRef} data-zoomable="true" style={{ position: "relative", width: SIZE, height: SIZE, margin: "0 auto 16px", borderRadius: 16, overflow: "hidden", background: "#e0e0e0", cursor: dragging ? "grabbing" : "grab", touchAction: "none", userSelect: "none" }}
@@ -2880,8 +2880,8 @@ function RelationalProfilesCard({ auth }: { auth: Auth }) {
         if (arr(search.values).length) srows.push(["Valeurs recherchées", arr(search.values).join(", ")]);
         if (arr(search.interests).length) srows.push(["Intérêts recherchés", arr(search.interests).join(", ")]);
         return (
-          <div onClick={() => setView(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10005, display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }}>
-            <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 18, width: "100%", maxWidth: 440, maxHeight: "85vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
+          <div onClick={() => setView(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10005, display: "flex", alignItems: "center", justifyContent: "center", padding: "calc(env(safe-area-inset-top) + 18px) 18px calc(env(safe-area-inset-bottom) + 18px)" }}>
+            <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 18, width: "100%", maxWidth: 620, maxHeight: "85vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
               <div style={{ background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, padding: "18px 20px", display: "flex", alignItems: "center", gap: 12 }}>
                 <Avatar url={view.photo_url} gender={view.gender} size={46} premium={view.is_premium} />
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -3011,7 +3011,7 @@ function PaymentCard({ p, isPending, isApproved, isRejected, onActivate, onRejec
       )}
       {confirmDelete && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-          <div style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 340, maxHeight: "85vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}>
+          <div style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 520, maxHeight: "85vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}>
             <div style={{ background: "linear-gradient(135deg,#fdecea,#fbd0cc)", padding: "22px 20px 16px", textAlign: "center", borderBottom: "1px solid rgba(231,76,60,0.15)" }}>
               <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(231,76,60,0.12)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px" }}>
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
@@ -3221,7 +3221,7 @@ export function AdminPinGate({ auth, onBack, onBadgeCount, autoShortcuts: autoSh
   if (pinVerified) return <Admin auth={auth} onBack={() => { setPinVerified(false); onBack(); }} onBadgeCount={onBadgeCount} autoShortcuts={autoShortcuts} onToggleAutoShortcut={onToggleAutoShortcut} onSetAutoShortcut={onSetAutoShortcut} />;
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-      <div style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 320, maxHeight: "85vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}>
+      <div style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 500, maxHeight: "85vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}>
         <div style={{ background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, padding: "24px 20px 18px", textAlign: "center" }}>
           <div style={{ width: 54, height: 54, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
@@ -8432,7 +8432,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
       {/* Modal confirmation */}
       {confirmModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 10010, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-          <div style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 320, maxHeight: "85vh", overflowY: "auto", textAlign: "center", boxShadow: "0 20px 60px rgba(44,26,14,0.2)" }}>
+          <div style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 500, maxHeight: "85vh", overflowY: "auto", textAlign: "center", boxShadow: "0 20px 60px rgba(44,26,14,0.2)" }}>
             <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(192,57,43,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
               <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.5" strokeLinecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             </div>
@@ -8448,7 +8448,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
       {/* Modal Nouveau message (Assistant Moyo Dating → écrire en premier à un membre) */}
       {newMsgOpen && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 10010, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-          <div style={{ background: G.blanc, borderRadius: 20, padding: "24px 22px", width: "100%", maxWidth: 380, maxHeight: "85vh", overflowY: "auto", boxShadow: "0 20px 60px rgba(44,26,14,0.2)" }}>
+          <div style={{ background: G.blanc, borderRadius: 20, padding: "24px 22px", width: "100%", maxWidth: 560, maxHeight: "85vh", overflowY: "auto", boxShadow: "0 20px 60px rgba(44,26,14,0.2)" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
               <div style={{ fontWeight: 800, fontSize: "1rem", color: G.brun }}>Nouveau message</div>
               <button onClick={closeNewMsg} style={{ border: "none", background: G.creme, borderRadius: "50%", width: 30, height: 30, cursor: "pointer", color: "#666" }}>✕</button>
@@ -8506,7 +8506,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
       {/* Modal Ajouter / Modifier une dépense */}
       {expenseForm && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 12000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={() => !expenseSaving && setExpenseForm(null)}>
-          <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 460, maxHeight: "90vh", overflowY: "auto", padding: 22, boxShadow: "0 20px 60px rgba(0,0,0,0.25)" }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 640, maxHeight: "90vh", overflowY: "auto", padding: 22, boxShadow: "0 20px 60px rgba(0,0,0,0.25)" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
               <h3 style={{ fontSize: "1.05rem", fontWeight: 800, color: G.brun, margin: 0 }}>{expenseForm.id ? "Modifier la dépense" : "Ajouter une dépense"}</h3>
               <button onClick={() => !expenseSaving && setExpenseForm(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "#aaa", fontSize: "1.4rem", lineHeight: 1 }}>×</button>
@@ -8585,7 +8585,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
       {/* Modal réponse assistance (support) */}
       {supportReply && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 12000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-          <div style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 420, maxHeight: "85vh", overflowY: "auto", padding: 20, boxShadow: "0 20px 60px rgba(0,0,0,0.25)" }}>
+          <div style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 600, maxHeight: "85vh", overflowY: "auto", padding: 20, boxShadow: "0 20px 60px rgba(0,0,0,0.25)" }}>
             <h3 style={{ fontSize: "1rem", fontWeight: 800, color: G.brun, marginBottom: 8 }}>Répondre via {SUPPORT_TEAM_NAME}</h3>
             <p style={{ fontSize: "0.78rem", color: "#666", lineHeight: 1.5, marginBottom: 12 }}>La réponse apparaîtra directement dans la messagerie de l’utilisateur comme une conversation avec l’assistance Moyo Dating.</p>
             <div style={{ background: "rgba(26,92,58,0.06)", border: "1px solid rgba(26,92,58,0.15)", borderRadius: 12, padding: 10, fontSize: "0.78rem", color: "#444", lineHeight: 1.5, marginBottom: 12 }}>{cleanSupportReason(supportReply.report.reason)}</div>
@@ -8600,7 +8600,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
 
       {viewPaymentProfile && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 9999, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={() => setViewPaymentProfile(null)}>
-          <div style={{ background: G.blanc, borderRadius: "24px 24px 0 0", width: "100%", maxWidth: 500, maxHeight: "90vh", overflowY: "auto", paddingBottom: "env(safe-area-inset-bottom)" }} onClick={e => e.stopPropagation()}>
+          <div style={{ background: G.blanc, borderRadius: "24px 24px 0 0", width: "100%", maxWidth: 680, maxHeight: "90vh", overflowY: "auto", paddingBottom: "env(safe-area-inset-bottom)" }} onClick={e => e.stopPropagation()}>
             <div style={{ height: 240, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", position: "relative", overflow: "hidden", borderRadius: "24px 24px 0 0" }}>
               {viewPaymentProfile.photo_url ? <img src={viewPaymentProfile.photo_url} alt={viewPaymentProfile.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>}
               <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 60%)" }} />
@@ -8631,7 +8631,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
       )}
       {premiumEventConfirm && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 10001, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-          <div style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 360, maxHeight: "85vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}>
+          <div style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 540, maxHeight: "85vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}>
             {/* Header */}
             <div style={{ background: premiumEventActive ? "linear-gradient(135deg,#e74c3c,#c0392b)" : `linear-gradient(135deg,${G.or},#b8860b)`, padding: "22px 20px 18px", textAlign: "center" }}>
               <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px" }}>
@@ -8672,7 +8672,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
       )}
       {broadcastModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-          <div style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 360, maxHeight: "85vh", boxShadow: "0 24px 64px rgba(44,26,14,0.22)", overflowY: "auto" }}>
+          <div style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 540, maxHeight: "85vh", boxShadow: "0 24px 64px rgba(44,26,14,0.22)", overflowY: "auto" }}>
             <div style={{ background: "linear-gradient(135deg,#fef3e2,#fde8c0)", padding: "22px 20px 16px", textAlign: "center", borderBottom: "1px solid rgba(230,126,34,0.15)" }}>
               <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(230,126,34,0.12)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px" }}>
                 <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#e67e22" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3z"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
@@ -8763,7 +8763,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
       {/* ── Modale de résultat de diffusion (vrai succès / vraie erreur) ── */}
       {broadcastPreview !== null && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 10002, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={() => setBroadcastPreview(null)}>
-          <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 380, boxShadow: "0 24px 64px rgba(44,26,14,0.25)", overflow: "hidden" }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 560, boxShadow: "0 24px 64px rgba(44,26,14,0.25)", overflow: "hidden" }}>
             <div style={{ background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, padding: "20px", color: "#fff", display: "flex", alignItems: "center", gap: 10 }}>
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3z"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
               <div style={{ fontWeight: 800, fontSize: "0.95rem" }}>Aperçu de la diffusion</div>
@@ -8778,7 +8778,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
       )}
       {broadcastResult && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 10002, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={() => setBroadcastResult(null)}>
-          <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 360, boxShadow: "0 24px 64px rgba(44,26,14,0.25)", overflow: "hidden" }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 540, boxShadow: "0 24px 64px rgba(44,26,14,0.25)", overflow: "hidden" }}>
             <div style={{ background: broadcastResult.ok ? "linear-gradient(135deg,#e6f4ec,#cdeadb)" : "linear-gradient(135deg,#fdecea,#f9d5d0)", padding: "26px 22px 18px", textAlign: "center" }}>
               <div style={{ width: 58, height: 58, borderRadius: "50%", background: broadcastResult.ok ? "rgba(26,92,58,0.15)" : "rgba(192,57,43,0.15)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
                 {broadcastResult.ok
@@ -8999,8 +8999,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
         </div>
       )}
       {pendingLikesDetail && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10002, display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }} onClick={() => setPendingLikesDetail(null)}>
-          <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 420, maxHeight: "85vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10002, display: "flex", alignItems: "center", justifyContent: "center", padding: "calc(env(safe-area-inset-top) + 18px) 18px calc(env(safe-area-inset-bottom) + 18px)" }} onClick={() => setPendingLikesDetail(null)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 600, maxHeight: "85vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
             <div style={{ padding: "16px 20px", borderBottom: `1px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, background: G.blanc, zIndex: 1 }}>
               <div>
                 <div style={{ fontWeight: 900, fontSize: "1.02rem", color: G.brun }}>{pendingLikesDetail.userName}</div>
@@ -9032,8 +9032,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
       )}
       {/* ── Modal liste Premium ── */}
       {showPremiumList && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-          <div style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 480, maxHeight: "80vh", display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: "calc(env(safe-area-inset-top) + 16px) 16px calc(env(safe-area-inset-bottom) + 16px)" }}>
+          <div style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 660, maxHeight: "80vh", display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}>
             {/* Header */}
             <div style={{ background: "linear-gradient(135deg,#D4A843,#b8922a)", padding: "18px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
               <div>
@@ -9072,8 +9072,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
       {userListModal && (() => {
         const meta = userListMeta(userListModal);
         return (
-          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-            <div style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 480, maxHeight: "80vh", display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}>
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: "calc(env(safe-area-inset-top) + 16px) 16px calc(env(safe-area-inset-bottom) + 16px)" }}>
+            <div style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 660, maxHeight: "80vh", display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}>
               {/* Header */}
               <div style={{ background: meta.gradient, padding: "18px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
                 <div>
@@ -9119,7 +9119,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
         const close = () => { setPwResetModal(null); setPwResetValue(""); setPwResetResult(null); };
         return (
           <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", zIndex: 10003, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }} onClick={close}>
-            <div style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 340, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }} onClick={e => e.stopPropagation()}>
+            <div style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 520, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }} onClick={e => e.stopPropagation()}>
               <div style={{ background: "linear-gradient(135deg,#8e44ad,#6c3483)", padding: "22px 20px 16px", textAlign: "center" }}>
                 <div style={{ width: 50, height: 50, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px" }}>
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
@@ -9167,7 +9167,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
 
       {pinModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", zIndex: 10003, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-          <div style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 320, maxHeight: "85vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}>
+          <div style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 500, maxHeight: "85vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}>
             <div style={{ background: "linear-gradient(135deg,#8e44ad,#6c3483)", padding: "22px 20px 16px", textAlign: "center" }}>
               <div style={{ width: 50, height: 50, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px" }}>
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
@@ -9201,8 +9201,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
       )}
 
       {renameCatModal && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10002, display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }} onClick={() => { setRenameCatModal(null); setRenameCatName(""); }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 360, boxShadow: "0 24px 64px rgba(0,0,0,0.3)", overflow: "hidden" }}>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10002, display: "flex", alignItems: "center", justifyContent: "center", padding: "calc(env(safe-area-inset-top) + 18px) 18px calc(env(safe-area-inset-bottom) + 18px)" }} onClick={() => { setRenameCatModal(null); setRenameCatName(""); }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 540, boxShadow: "0 24px 64px rgba(0,0,0,0.3)", overflow: "hidden" }}>
             <div style={{ padding: "16px 20px", borderBottom: `1px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <div style={{ fontWeight: 900, fontSize: "1.02rem", color: G.brun }}>Renommer la catégorie</div>
               <button onClick={() => { setRenameCatModal(null); setRenameCatName(""); }} style={{ border: "none", background: G.creme, borderRadius: "50%", width: 30, height: 30, cursor: "pointer", color: "#666" }}>✕</button>
@@ -9227,8 +9227,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
         />
       )}
       {newCatModal && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10002, display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }} onClick={() => { setNewCatModal(false); setNewCatName(""); }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 360, boxShadow: "0 24px 64px rgba(0,0,0,0.3)", overflow: "hidden" }}>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10002, display: "flex", alignItems: "center", justifyContent: "center", padding: "calc(env(safe-area-inset-top) + 18px) 18px calc(env(safe-area-inset-bottom) + 18px)" }} onClick={() => { setNewCatModal(false); setNewCatName(""); }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 540, boxShadow: "0 24px 64px rgba(0,0,0,0.3)", overflow: "hidden" }}>
             <div style={{ padding: "16px 20px", borderBottom: `1px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <div style={{ fontWeight: 900, fontSize: "1.02rem", color: G.brun }}>Créer une catégorie</div>
               <button onClick={() => { setNewCatModal(false); setNewCatName(""); }} style={{ border: "none", background: G.creme, borderRadius: "50%", width: 30, height: 30, cursor: "pointer", color: "#666" }}>✕</button>
@@ -9244,8 +9244,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
         </div>
       )}
       {templateModal && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10002, display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }} onClick={() => setTemplateModal(null)}>
-          <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 460, boxShadow: "0 24px 64px rgba(0,0,0,0.3)", overflow: "hidden" }}>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10002, display: "flex", alignItems: "center", justifyContent: "center", padding: "calc(env(safe-area-inset-top) + 18px) 18px calc(env(safe-area-inset-bottom) + 18px)" }} onClick={() => setTemplateModal(null)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 640, boxShadow: "0 24px 64px rgba(0,0,0,0.3)", overflow: "hidden" }}>
             <div style={{ padding: "16px 20px", borderBottom: `1px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <div style={{ fontWeight: 900, fontSize: "1.02rem", color: G.brun }}>{templateModal.id ? "Modifier le modèle" : "Créer un modèle"}</div>
               <button onClick={() => setTemplateModal(null)} style={{ border: "none", background: G.creme, borderRadius: "50%", width: 30, height: 30, cursor: "pointer", color: "#666" }}>✕</button>
@@ -9284,7 +9284,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
         const todayISO = new Date().toISOString().slice(0, 10);
         const presetDate = (days: number) => new Date(Date.now() + days * 86400000).toISOString().slice(0, 10);
         return (
-          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 10003, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={close}>
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 10003, display: "flex", alignItems: "center", justifyContent: "center", padding: "calc(env(safe-area-inset-top) + 16px) 16px calc(env(safe-area-inset-bottom) + 16px)" }} onClick={close}>
             <div style={{ background: G.blanc, borderRadius: 20, padding: 24, maxWidth: 420, width: "100%", maxHeight: "90vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
               <h3 style={{ margin: "0 0 4px", fontSize: "1.05rem", color: G.brun }}>Gérer le Premium de {u.name}</h3>
               <p style={{ margin: "0 0 18px", fontSize: "0.78rem", color: "#888" }}>{u.is_premium ? "Cet utilisateur est actuellement Premium." : "Choisissez comment activer le Premium pour cet utilisateur."}</p>
@@ -9423,8 +9423,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
         const doBan = (updates: Partial<AdminProfile>, msg: string) => { close(); adminAction(u.id, { ...updates, last_notice_acknowledged: false, last_notice_at: new Date().toISOString() }, msg); };
         const hours = Math.max(1, parseInt(banHours) || 0);
         return (
-          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10003, display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }} onClick={close}>
-            <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 420, boxShadow: "0 24px 64px rgba(0,0,0,0.3)", overflow: "hidden", maxHeight: "90vh", overflowY: "auto" }}>
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10003, display: "flex", alignItems: "center", justifyContent: "center", padding: "calc(env(safe-area-inset-top) + 18px) 18px calc(env(safe-area-inset-bottom) + 18px)" }} onClick={close}>
+            <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 600, boxShadow: "0 24px 64px rgba(0,0,0,0.3)", overflow: "hidden", maxHeight: "90vh", overflowY: "auto" }}>
               <div style={{ padding: "18px 20px", borderBottom: `1px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <div style={{ fontWeight: 900, fontSize: "1.05rem", color: G.brun }}>Bannir {u.name}</div>
                 <button onClick={close} style={{ border: "none", background: G.creme, borderRadius: "50%", width: 30, height: 30, cursor: "pointer", color: "#666" }}>✕</button>
@@ -9519,7 +9519,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
           </div>
         );
         return (
-          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10002, display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }} onClick={close}>
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10002, display: "flex", alignItems: "center", justifyContent: "center", padding: "calc(env(safe-area-inset-top) + 18px) 18px calc(env(safe-area-inset-bottom) + 18px)" }} onClick={close}>
             <style>{`
               @media (max-width: 640px) {
                 .mng-body { flex-direction: column !important; }
@@ -9530,7 +9530,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 .mng-row-desc { flex-basis: 100%; order: 3; }
               }
             `}</style>
-            <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 760, maxHeight: "85vh", display: "flex", flexDirection: "column", boxShadow: "0 24px 64px rgba(0,0,0,0.3)", overflow: "hidden" }}>
+            <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 860, maxHeight: "85vh", display: "flex", flexDirection: "column", boxShadow: "0 24px 64px rgba(0,0,0,0.3)", overflow: "hidden" }}>
               <div style={{ padding: "18px 20px", borderBottom: `1px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 9, fontWeight: 900, fontSize: "1.05rem", color: G.brun }}>
                   <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -9647,11 +9647,19 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                       )}
                       {/* Lien de paiement unique — pour les gens bannis ou qui n'arrivent pas à
                           payer depuis l'app et demandent le lien directement. Ouvre un écran de
-                          paiement (photo/nom affichés) sans connexion, MTN/Airtel uniquement. */}
+                          paiement (photo/nom affichés) sans connexion, MTN/Airtel uniquement.
+                          IMPORTANT : le presse-papier est rempli AVANT l'appel réseau, pas après —
+                          sur Safari/iOS, attendre une réponse serveur avant d'écrire dans le
+                          presse-papier fait perdre le "geste utilisateur" nécessaire, et
+                          navigator.clipboard.writeText() échoue silencieusement dans ce cas
+                          (constaté : marchait sur ordinateur, échouait sur téléphone). ── */}
                       <Row label="🔗 Lien de paiement" color="#16a085" desc="Copier un lien unique vers l'écran de paiement de ce membre (aucune connexion requise, valable 7 jours)." disabled={isLoading}
                         onClick={async () => {
+                          const token = (crypto as any).randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+                          const link = `${window.location.origin}/?paylink=${token}`;
+                          let clipboardOk = true;
+                          try { await navigator.clipboard.writeText(link); } catch { clipboardOk = false; }
                           try {
-                            const token = (crypto as any).randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
                             const expiresAt = new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString();
                             const r = await fetch(`${SUPABASE_URL}/rest/v1/payment_links`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ user_id: u.id, token, created_by: auth.userId, expires_at: expiresAt }) });
                             if (!r.ok) {
@@ -9662,9 +9670,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                               const msg = errBody?.message || errBody?.hint || `Erreur ${r.status}`;
                               throw new Error(msg);
                             }
-                            const link = `${window.location.origin}/?paylink=${token}`;
-                            await navigator.clipboard.writeText(link);
-                            showToast("Lien de paiement copié (valable 7 jours).", "success");
+                            showToast(clipboardOk ? "Lien de paiement copié (valable 7 jours)." : "Lien créé mais non copié — copie-le manuellement : " + link, clipboardOk ? "success" : "error");
                           } catch (e: any) { showToast(`Erreur lors de la génération du lien : ${e?.message || "inconnue"}`, "error"); }
                         }} />
                     </>
@@ -9677,7 +9683,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
       })()}
       {warnModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 10003, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-          <div style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 360, maxHeight: "85vh", boxShadow: "0 24px 64px rgba(44,26,14,0.22)", overflowY: "auto", display: "flex", flexDirection: "column" }}>
+          <div style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 540, maxHeight: "85vh", boxShadow: "0 24px 64px rgba(44,26,14,0.22)", overflowY: "auto", display: "flex", flexDirection: "column" }}>
             {/* Header */}
             <div style={{ background: "linear-gradient(135deg, #fff9ec, #fff3cc)", padding: "22px 20px 16px", textAlign: "center", borderBottom: `1px solid rgba(243,156,18,0.2)` }}>
               <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(243,156,18,0.15)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px" }}>
@@ -9764,7 +9770,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
         >
           <div
             onClick={e => e.stopPropagation()}
-            style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 360, boxShadow: "0 24px 64px rgba(44,26,14,0.22)", overflow: "hidden", animation: "fadeUp 0.25s ease" }}
+            style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 540, boxShadow: "0 24px 64px rgba(44,26,14,0.22)", overflow: "hidden", animation: "fadeUp 0.25s ease" }}
           >
             {/* Header */}
             <div style={{ background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, padding: "22px 20px 18px", textAlign: "center", position: "relative" }}>
@@ -10225,8 +10231,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
         <div style={{ padding: "16px" }}>
           {/* Modale profil complet admin */}
           {adminViewedProfile && (
-            <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={() => setAdminViewedProfile(null)}>
-              <div style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 420, maxHeight: "85vh", overflowY: "auto", boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }} onClick={e => e.stopPropagation()}>
+            <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: "calc(env(safe-area-inset-top) + 16px) 16px calc(env(safe-area-inset-bottom) + 16px)" }} onClick={() => setAdminViewedProfile(null)}>
+              <div style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 600, maxHeight: "85vh", overflowY: "auto", boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }} onClick={e => e.stopPropagation()}>
                 {/* Photo */}
                 <div style={{ position: "relative", height: 260, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", borderRadius: "20px 20px 0 0", overflow: "hidden" }}>
                   {adminViewedProfile.photo_url
@@ -12634,8 +12640,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   />
                 )}
                 {promoDetail && (
-                  <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10002, display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }} onClick={() => setPromoDetail(null)}>
-                    <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 460, maxHeight: "85vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
+                  <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10002, display: "flex", alignItems: "center", justifyContent: "center", padding: "calc(env(safe-area-inset-top) + 18px) 18px calc(env(safe-area-inset-bottom) + 18px)" }} onClick={() => setPromoDetail(null)}>
+                    <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 640, maxHeight: "85vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
                       <div style={{ padding: "16px 20px", borderBottom: `1px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, background: G.blanc, zIndex: 1 }}>
                         <div>
                           <div style={{ fontWeight: 900, fontSize: "1.02rem", color: G.brun }}>{promoDetail.rec.targetLabel}</div>
@@ -12715,8 +12721,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
             />
           )}
           {featureDetail && (
-            <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10002, display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }} onClick={() => setFeatureDetail(null)}>
-              <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 460, maxHeight: "85vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
+            <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10002, display: "flex", alignItems: "center", justifyContent: "center", padding: "calc(env(safe-area-inset-top) + 18px) 18px calc(env(safe-area-inset-bottom) + 18px)" }} onClick={() => setFeatureDetail(null)}>
+              <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 640, maxHeight: "85vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
                 <div style={{ padding: "16px 20px", borderBottom: `1px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, background: G.blanc, zIndex: 1 }}>
                   <div>
                     <div style={{ fontWeight: 900, fontSize: "1.02rem", color: G.brun }}>{featureDetail.status.profile?.name || "Profil"}{featureDetail.status.profile?.age ? `, ${featureDetail.status.profile.age} ans` : ""}</div>
@@ -12958,8 +12964,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
 
       {/* ── Éditeur de sondage ── */}
       {surveyEditor && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10005, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={() => setSurveyEditor(null)}>
-          <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 18, width: "100%", maxWidth: 540, maxHeight: "92vh", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10005, display: "flex", alignItems: "center", justifyContent: "center", padding: "calc(env(safe-area-inset-top) + 16px) 16px calc(env(safe-area-inset-bottom) + 16px)" }} onClick={() => setSurveyEditor(null)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 18, width: "100%", maxWidth: 680, maxHeight: "92vh", overflow: "hidden", display: "flex", flexDirection: "column" }}>
             <div style={{ background: "#2980b9", padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
               <div style={{ color: "#fff", fontWeight: 800, fontSize: "0.98rem" }}>{surveyEditor.id ? "Modifier le sondage" : "Nouveau sondage"}</div>
               <button onClick={() => setSurveyEditor(null)} style={{ background: "rgba(255,255,255,0.2)", border: "none", borderRadius: "50%", width: 30, height: 30, cursor: "pointer", color: "#fff" }}>✕</button>
@@ -13020,8 +13026,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
 
       {/* ── Résultats du sondage ── */}
       {surveyResults && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10005, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={() => setSurveyResults(null)}>
-          <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 18, width: "100%", maxWidth: 540, maxHeight: "92vh", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10005, display: "flex", alignItems: "center", justifyContent: "center", padding: "calc(env(safe-area-inset-top) + 16px) 16px calc(env(safe-area-inset-bottom) + 16px)" }} onClick={() => setSurveyResults(null)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 18, width: "100%", maxWidth: 680, maxHeight: "92vh", overflow: "hidden", display: "flex", flexDirection: "column" }}>
             <div style={{ background: "#2980b9", padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
               <div style={{ color: "#fff", minWidth: 0 }}><div style={{ fontWeight: 800, fontSize: "0.95rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{surveyResults.survey.title}</div><div style={{ fontSize: "0.74rem", opacity: 0.9 }}>{surveyResults.responses.length} réponse{surveyResults.responses.length > 1 ? "s" : ""}</div></div>
               <button onClick={() => setSurveyResults(null)} style={{ background: "rgba(255,255,255,0.2)", border: "none", borderRadius: "50%", width: 30, height: 30, cursor: "pointer", color: "#fff", flexShrink: 0 }}>✕</button>
@@ -14136,8 +14142,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
 
               {/* Modal profil rapide */}
               {mmView && (
-                <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 10002, display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }} onClick={() => setMmView(null)}>
-                  <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 340, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
+                <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 10002, display: "flex", alignItems: "center", justifyContent: "center", padding: "calc(env(safe-area-inset-top) + 18px) 18px calc(env(safe-area-inset-bottom) + 18px)" }} onClick={() => setMmView(null)}>
+                  <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 520, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
                     <div style={{ padding: 18, display: "flex", gap: 12, alignItems: "center", borderBottom: `1px solid ${G.gris}` }}>
                       <Avatar url={mmView.photo_url} gender={mmView.gender} size={56} />
                       <div><div style={{ display: "flex", alignItems: "center", gap: 5, fontWeight: 800, color: G.brun }}>{mmView.name}{mmView.is_verified && <VerifiedBadge size={14} />}</div><div style={{ fontSize: "0.78rem", color: "#888" }}>{mmView.gender} · {mmView.age} ans · {mmView.city}</div></div>
@@ -14275,7 +14281,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 {(proposalsStatusFilter || proposalsOriginFilter) && <div onClick={() => { setProposalsStatusFilter(null); setProposalsOriginFilter(null); setProposalsPage(0); loadProposals(0, null, null); }} style={{ fontSize: "0.68rem", color: "#999", fontWeight: 600, cursor: "pointer", padding: "4px 9px", textDecoration: "underline" }}>Tout afficher</div>}
               </div>
               <div style={{ marginBottom: 14 }}>
-                <input value={proposalsSearchName} onChange={e => setProposalsSearchName(e.target.value)} placeholder="Rechercher une personne (prénom, page actuelle)…" style={{ width: "100%", maxWidth: 340, boxSizing: "border-box", padding: "9px 13px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", outline: "none" }} />
+                <input value={proposalsSearchName} onChange={e => setProposalsSearchName(e.target.value)} placeholder="Rechercher une personne (prénom, page actuelle)…" style={{ width: "100%", maxWidth: 520, boxSizing: "border-box", padding: "9px 13px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", outline: "none" }} />
                 {proposalsSearchName.trim() && (() => {
                   const q = proposalsSearchName.trim().toLowerCase();
                   const n = proposals.filter(p => (p.profile1?.name || "").toLowerCase().includes(q) || (p.profile2?.name || "").toLowerCase().includes(q)).length;
@@ -14484,7 +14490,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 {mmFollowStatusFilter && <div onClick={() => setMmFollowStatusFilter(null)} style={{ fontSize: "0.68rem", color: "#999", fontWeight: 600, cursor: "pointer", padding: "4px 9px", textDecoration: "underline" }}>Tout afficher</div>}
               </div>
               <div style={{ marginBottom: 14 }}>
-                <input value={mmFollowSearchName} onChange={e => setMmFollowSearchName(e.target.value)} placeholder="Rechercher une personne (prénom)…" style={{ width: "100%", maxWidth: 340, boxSizing: "border-box", padding: "9px 13px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", outline: "none" }} />
+                <input value={mmFollowSearchName} onChange={e => setMmFollowSearchName(e.target.value)} placeholder="Rechercher une personne (prénom)…" style={{ width: "100%", maxWidth: 520, boxSizing: "border-box", padding: "9px 13px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", outline: "none" }} />
                 {mmFollowSearchName.trim() && (() => {
                   const q = mmFollowSearchName.trim().toLowerCase();
                   const base = mmFollowStatusFilter ? mmFollow.filter(p => propFilterCategory(p) === mmFollowStatusFilter) : mmFollow;
@@ -14822,8 +14828,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
 
       {/* ── MODAL CRÉER UN MATCH DIRECT ── */}
       {showCreateMatch && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-          <div style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 500, maxHeight: "85vh", display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: "calc(env(safe-area-inset-top) + 16px) 16px calc(env(safe-area-inset-bottom) + 16px)" }}>
+          <div style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 680, maxHeight: "85vh", display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
             <div style={{ background: "linear-gradient(135deg,#8e44ad,#6c3483)", padding: "18px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
               <div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 800, fontSize: "1rem", color: "#fff" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>{" "}Créer un match direct</div>
@@ -14914,8 +14920,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
 
       {/* ── MODAL PROPOSER UN MATCH ── */}
       {showProposeMatch && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 10003, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-          <div style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 500, maxHeight: "90vh", display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 10003, display: "flex", alignItems: "center", justifyContent: "center", padding: "calc(env(safe-area-inset-top) + 16px) 16px calc(env(safe-area-inset-bottom) + 16px)" }}>
+          <div style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 680, maxHeight: "90vh", display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
             <div style={{ background: "linear-gradient(135deg,#e67e22,#d35400)", padding: "18px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
               <div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 800, fontSize: "1rem", color: "#fff" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>{" "}Proposer un match</div>

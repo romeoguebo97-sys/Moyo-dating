@@ -13827,6 +13827,40 @@ type GroupMessage = { id?: string; sender_id: string; content: string; created_a
 type GroupMemberRow = { user_id: string; role: "admin" | "moderator" | "member"; status: "pending" | "approved" | "rejected"; removed_at?: string | null };
 
 function GroupChat({ auth, onBack, onShowPremium, onOpenPrivateChat }: { auth: Auth; onBack: () => void; onShowPremium: (r: string) => void; onOpenPrivateChat: (partnerId: string) => void }) {
+  // ── Ancré directement (pas via document.querySelector, qui pourrait par erreur cibler le
+  //    conteneur de la messagerie privée si elle reste montée en dessous de cette fenêtre). ──
+  const groupContainerRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const container = groupContainerRef.current;
+    const ua = navigator.userAgent || "";
+    const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === "MacIntel" && (navigator as any).maxTouchPoints > 1);
+    const handleKeyboard = () => {
+      const vv = (window as any).visualViewport;
+      if (!vv || !container) return;
+      if (isIOS) {
+        container.style.height = vv.height + 'px';
+        container.style.top = vv.offsetTop + 'px';
+        container.style.bottom = 'auto';
+      } else {
+        container.style.top = '0';
+        container.style.bottom = 'auto';
+        container.style.height = vv.height + 'px';
+      }
+    };
+    const vv = (window as any).visualViewport;
+    if (vv) {
+      vv.addEventListener('resize', handleKeyboard);
+      vv.addEventListener('scroll', handleKeyboard);
+      handleKeyboard();
+    }
+    return () => {
+      if (vv) {
+        vv.removeEventListener('resize', handleKeyboard);
+        vv.removeEventListener('scroll', handleKeyboard);
+      }
+      if (container) { container.style.height = ''; container.style.top = '0'; container.style.bottom = '0'; }
+    };
+  }, []);
   const [msgs, setMsgs] = useState<GroupMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [text, setText] = useState("");
@@ -14262,7 +14296,7 @@ function GroupChat({ auth, onBack, onShowPremium, onOpenPrivateChat }: { auth: A
   }
 
   return (
-    <div data-chat-container style={{ display: "flex", flexDirection: "column", background: "#F0F1F5" }}>
+    <div ref={groupContainerRef} data-chat-container style={{ display: "flex", flexDirection: "column", background: "#F0F1F5", position: "fixed", top: 0, left: 0, right: 0, bottom: 0 }}>
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
       {moderationAlert && <ModerationModal type={moderationAlert} onClose={() => setModerationAlert(null)} />}
       {/* En-tête */}
@@ -16219,7 +16253,7 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
             message contradictoire ("privé" écrit en dur alors que le réglage peut le rendre
             visible aux matchs Premium). */}
         {(!isWideProfile || activeSection === "main") && (
-          <div style={{ background: G.blanc, borderRadius: 18, border: profile?.phone ? "1.5px solid rgba(37,211,102,0.3)" : "1.5px dashed rgba(192,57,43,0.35)", boxShadow: "0 2px 10px rgba(0,0,0,0.06)", overflow: "hidden" }}>
+          <div style={{ background: G.blanc, borderRadius: 18, border: profile?.phone ? "1.5px solid rgba(37,211,102,0.3)" : "1.5px solid rgba(192,57,43,0.35)", boxShadow: "0 2px 10px rgba(0,0,0,0.06)", overflow: "hidden" }}>
             {editingPhoneCard ? (
               <div style={{ padding: "15px 18px" }}>
                 <div style={{ fontWeight: 700, fontSize: "0.95rem", color: G.brun, marginBottom: 10 }}>Mon numéro WhatsApp</div>
@@ -16287,49 +16321,49 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
         {(!isWideProfile || ["main"].includes(activeSection)) && (
           auth.isPremium
             ? <FeatureRequestButton auth={auth} />
-            : <div onClick={() => onShowPremium("Passez Premium pour faire découvrir votre profil dans les Statuts Moyo Dating !")} style={{ background: "linear-gradient(135deg,#E67E22 0%,#D35400 100%)", borderRadius: 18, padding: "18px 20px", cursor: "pointer", boxShadow: "0 8px 28px rgba(230,126,34,0.2)", display: "flex", alignItems: "center", gap: 14, border: "1px solid rgba(255,255,255,0.1)", opacity: 0.75 }}>
-                <div style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/></svg>
+            : <div onClick={() => onShowPremium("Passez Premium pour faire découvrir votre profil dans les Statuts Moyo Dating !")} style={{ background: G.blanc, borderRadius: 18, padding: "18px 20px", cursor: "pointer", boxShadow: "0 2px 10px rgba(0,0,0,0.06)", display: "flex", alignItems: "center", gap: 14, border: "1.5px solid rgba(212,168,67,0.3)" }}>
+                <div style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(212,168,67,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={G.or} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/></svg>
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 800, fontSize: "1rem", color: "#fff", marginBottom: 3 }}>Passer sur les Statuts Moyo</div>
-                  <div style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.85)", lineHeight: 1.4, display: "flex", alignItems: "center", gap: 6 }}>
+                  <div style={{ fontWeight: 800, fontSize: "1rem", color: G.brun, marginBottom: 3 }}>Passer sur les Statuts Moyo</div>
+                  <div style={{ fontSize: "0.78rem", color: "#8a7248", lineHeight: 1.4, display: "flex", alignItems: "center", gap: 6 }}>
                     <svg width="12" height="12" viewBox="0 0 24 24" fill={G.or} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                     <span>Réservé aux membres Premium</span>
                   </div>
                 </div>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
               </div>
         )}
 
-        {/* ── Bouton Retouche photo professionnelle (Premium uniquement) ── */}
+        {/* ── Bouton Améliorer ma photo de profil (Premium uniquement) ── */}
         {FEATURE_PHOTO_RETOUCH && (!isWideProfile || ["main"].includes(activeSection)) && (
           auth.isPremium
             ? <div onClick={() => {
-                const msg = `Bonjour, je souhaite faire retoucher ma photo de profil Moyo Dating.\n\nMon compte : ${auth.name}\nMon email : ${auth.email || "—"}\n\nJe vous envoie la photo juste après ce message.`;
+                const msg = `Bonjour, je souhaite améliorer ma photo de profil Moyo Dating.\n\nMon compte : ${auth.name}\nMon email : ${auth.email || "—"}\n\nJe vous envoie la photo juste après ce message.`;
                 window.open(`https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent(msg)}`, "_blank");
               }} style={{ background: G.blanc, borderRadius: 18, padding: "18px 20px", cursor: "pointer", boxShadow: "0 2px 10px rgba(0,0,0,0.06)", display: "flex", alignItems: "center", gap: 14, border: "1.5px solid rgba(212,168,67,0.3)" }}>
                 <div style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(212,168,67,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={G.or} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 800, fontSize: "1rem", color: G.brun, marginBottom: 3 }}>Retouche photo professionnelle</div>
+                  <div style={{ fontWeight: 800, fontSize: "1rem", color: G.brun, marginBottom: 3 }}>Améliorer ma photo de profil</div>
                   <div style={{ fontSize: "0.78rem", color: "#888", lineHeight: 1.4 }}>Envoie ta photo, notre équipe la rend plus attirante</div>
                 </div>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.or} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
               </div>
-            : <div onClick={() => onShowPremium("Passez Premium pour faire retoucher votre photo de profil par notre équipe !")} style={{ background: "linear-gradient(135deg,#E67E22 0%,#D35400 100%)", borderRadius: 18, padding: "18px 20px", cursor: "pointer", boxShadow: "0 8px 28px rgba(230,126,34,0.2)", display: "flex", alignItems: "center", gap: 14, border: "1px solid rgba(255,255,255,0.1)", opacity: 0.75 }}>
-                <div style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            : <div onClick={() => onShowPremium("Passez Premium pour améliorer votre photo de profil avec notre équipe !")} style={{ background: G.blanc, borderRadius: 18, padding: "18px 20px", cursor: "pointer", boxShadow: "0 2px 10px rgba(0,0,0,0.06)", display: "flex", alignItems: "center", gap: 14, border: "1.5px solid rgba(212,168,67,0.3)" }}>
+                <div style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(212,168,67,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={G.or} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 800, fontSize: "1rem", color: "#fff", marginBottom: 3 }}>Retouche photo professionnelle</div>
-                  <div style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.85)", lineHeight: 1.4, display: "flex", alignItems: "center", gap: 6 }}>
+                  <div style={{ fontWeight: 800, fontSize: "1rem", color: G.brun, marginBottom: 3 }}>Améliorer ma photo de profil</div>
+                  <div style={{ fontSize: "0.78rem", color: "#8a7248", lineHeight: 1.4, display: "flex", alignItems: "center", gap: 6 }}>
                     <svg width="12" height="12" viewBox="0 0 24 24" fill={G.or} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                     <span>Réservé aux membres Premium</span>
                   </div>
                 </div>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
               </div>
         )}
 
