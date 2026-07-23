@@ -3,7 +3,6 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-
   build: {
     minify: 'terser',
     terserOptions: {
@@ -15,6 +14,10 @@ export default defineConfig({
       mangle: true,
       format: {
         comments: false,
+        // Empêche Terser de transformer emojis/accents en séquences \u{...} — sans ça,
+        // certains moteurs JavaScript (notamment sur téléphone, dans WhatsApp) affichent
+        // ces caractères comme des "�" au lieu du bon symbole.
+        ascii_only: false,
       },
     },
     rollupOptions: {
@@ -33,7 +36,6 @@ export default defineConfig({
     sourcemap: false,
     target: 'es2015',
   },
-
   optimizeDeps: {
     include: ['react', 'react-dom'],
   },
