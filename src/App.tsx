@@ -8545,13 +8545,15 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
   const [viewMode, setViewMode] = useState<"card" | "list">("card");
   const [menuMatchId, setMenuMatchId] = useState<string | null>(null);
   const [viewFullProfile, setViewFullProfile] = useState<Profile | null>(null);
-  // Bloque le défilement de la page tant que le menu contextuel (3 traits) est ouvert — pas
-  // seulement l'assombrissement visuel du fond, le scroll lui-même ne doit plus bouger.
+  // Bloque le défilement tant que le menu contextuel (3 traits) est ouvert. document.body.style.overflow
+  // ne suffit pas ici : le vrai défilement se fait sur un conteneur interne à l'app (pas document.body),
+  // donc ça ne l'affectait pas. On bloque directement le geste tactile au niveau du navigateur — même
+  // technique déjà utilisée pour l'obturateur de la caméra, la seule fiable sur mobile dans ce cas.
   useEffect(() => {
     if (!menuMatchId) return;
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = prevOverflow; };
+    const block = (e: TouchEvent) => { e.preventDefault(); };
+    document.addEventListener("touchmove", block, { passive: false });
+    return () => { document.removeEventListener("touchmove", block); };
   }, [menuMatchId]);
   const [confirmUnmatch, setConfirmUnmatch] = useState<Match | null>(null);
   const [confirmBlockMatch, setConfirmBlockMatch] = useState<Match | null>(null);

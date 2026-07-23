@@ -6484,8 +6484,13 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
     const [inactiveDays, setInactiveDays] = useState("7");
     const [inactiveDaysEditing, setInactiveDaysEditing] = useState(false);
     const [inactiveDaysDraft, setInactiveDaysDraft] = useState("7");
-    const [inactiveUsers, setInactiveUsers] = useState<{ id: string; name: string; phone: string; last_seen: string | null }[]>([]);
+    const [inactiveUsers, setInactiveUsers] = useState<AdminProfile[]>([]);
     const [inactiveLoading, setInactiveLoading] = useState(false);
+    // Cœurs "en attente" (reçus/envoyés) — état séparé de celui de l'onglet Utilisateurs pour
+    // ne jamais mélanger les deux listes en changeant d'onglet.
+    const [inactivePendingLikes, setInactivePendingLikes] = useState<Record<string, number>>({});
+    const [inactiveSentPendingLikes, setInactiveSentPendingLikes] = useState<Record<string, number>>({});
+    const [inactiveRemindingId, setInactiveRemindingId] = useState<string | null>(null);
     const loadInactiveDaysSetting = async () => {
       if (!auth) return;
       try {
@@ -6507,11 +6512,37 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
       setInactiveLoading(true);
       try {
         const threshold = new Date(Date.now() - (parseInt(days || inactiveDays) || 7) * 24 * 3600 * 1000).toISOString();
-        const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?last_seen=lt.${threshold}&phone=not.is.null&is_banned=eq.false&account_deleted=eq.false&select=id,name,phone,last_seen&order=last_seen.asc&limit=300`, {
+        // Exclut aussi ceux relancés il y a moins de 7 jours — pour ne jamais spammer la même
+        // personne tous les jours, tout en la faisant réapparaître si elle reste inactive.
+        const cooldown = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?last_seen=lt.${threshold}&phone=not.is.null&is_banned=eq.false&account_deleted=eq.false&or=(last_reminder_sent_at.is.null,last_reminder_sent_at.lt.${cooldown})&select=id,name,age,city,gender,photo_url,phone,email,is_premium,is_admin,is_verified,is_banned,admin_level,warning_count,last_seen,created_at&order=last_seen.asc&limit=300`, {
           headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
         });
         const data = await r.json().catch(() => []);
-        setInactiveUsers(Array.isArray(data) ? data.filter((u: any) => u.phone && u.phone.trim()) : []);
+        const list: AdminProfile[] = Array.isArray(data) ? data.filter((u: any) => u.phone && u.phone.trim()) : [];
+        setInactiveUsers(list);
+        // Cœurs "en attente" (même calcul que dans Utilisateurs), sur cette liste précise.
+        if (list.length > 0) {
+          const ids = list.map(u => u.id);
+          const H = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` };
+          const [likesRaw, matchesRaw] = await Promise.all([
+            fetch(`${SUPABASE_URL}/rest/v1/likes?or=(to_user.in.(${ids.join(",")}),from_user.in.(${ids.join(",")}))&select=from_user,to_user&limit=5000`, { headers: H }).then(r2 => r2.json()).catch(() => []),
+            fetch(`${SUPABASE_URL}/rest/v1/matches?or=(user1.in.(${ids.join(",")}),user2.in.(${ids.join(",")}))&select=user1,user2&limit=5000`, { headers: H }).then(r2 => r2.json()).catch(() => []),
+          ]);
+          const matchedPairs = new Set((Array.isArray(matchesRaw) ? matchesRaw : []).map((m: any) => [m.user1, m.user2].sort().join("_")));
+          const counts: Record<string, number> = {}; const sentCounts: Record<string, number> = {};
+          (Array.isArray(likesRaw) ? likesRaw : []).forEach((l: any) => {
+            if (!l.to_user || !l.from_user) return;
+            const pairKey = [l.from_user, l.to_user].sort().join("_");
+            if (matchedPairs.has(pairKey)) return;
+            counts[l.to_user] = (counts[l.to_user] || 0) + 1;
+            sentCounts[l.from_user] = (sentCounts[l.from_user] || 0) + 1;
+          });
+          setInactivePendingLikes(counts);
+          setInactiveSentPendingLikes(sentCounts);
+        } else {
+          setInactivePendingLikes({}); setInactiveSentPendingLikes({});
+        }
       } catch {}
       setInactiveLoading(false);
     };
@@ -6521,6 +6552,54 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
       const days = Math.floor((Date.now() - new Date(lastSeen).getTime()) / 86400000);
       return `il y a ${days} jour${days > 1 ? "s" : ""}`;
     };
+    // ── 3 modèles de message, pour ne pas envoyer toujours la même formule — l'agent en
+    //    sélectionne un avant sa session de relance, tous les envois utilisent celui-ci jusqu'à
+    //    ce qu'il en change. Textes modifiables depuis cet écran (variables : {nom} {matchs} {email}). ──
+    const DEFAULT_INACTIVE_TEMPLATES = [
+      "{nom}, vous êtes la star de Moyo Dating ! 🤩\n\n💌 Vous avez {matchs} match(s) en attente sur Moyo, ainsi que plusieurs autres propositions ! 🤯🤯🤯🤯\n\nConnectez-vous dès maintenant pour découvrir qui s'intéresse à vous et ne laissez pas passer une belle rencontre. ❤️\n\nVotre adresse e-mail : {email}\nMot de passe : inchangé. En cas d'oubli, nous pouvons le réinitialiser.\n\n👉 dating.moyo-congo.com",
+      "Bonjour {nom} 👋\n\nÇa fait un moment qu'on ne vous a pas vu(e) sur Moyo Dating ! Pourtant, {matchs} personne(s) s'intéressent déjà à vous et attendent une réponse. 💌\n\nNe les faites pas attendre trop longtemps...\n\nVotre adresse e-mail : {email}\nMot de passe : inchangé. En cas d'oubli, nous pouvons le réinitialiser.\n\n👉 dating.moyo-congo.com",
+      "{nom}, quelqu'un pense à vous en ce moment sur Moyo Dating ! ❤️\n\nVous avez {matchs} match(s) et proposition(s) en attente — ne les laissez pas filer ! ⏳\n\nReconnectez-vous dès maintenant :\n\nVotre adresse e-mail : {email}\nMot de passe : inchangé. En cas d'oubli, nous pouvons le réinitialiser.\n\n👉 dating.moyo-congo.com",
+    ];
+    const [inactiveTemplates, setInactiveTemplates] = useState<string[]>(DEFAULT_INACTIVE_TEMPLATES);
+    const [inactiveTemplateIndex, setInactiveTemplateIndex] = useState(0);
+    const [inactiveTemplateEditing, setInactiveTemplateEditing] = useState<number | null>(null);
+    const [inactiveTemplateDraft, setInactiveTemplateDraft] = useState("");
+    const loadInactiveTemplates = async () => {
+      if (!auth) return;
+      try {
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(inactive_reminder_template_1,inactive_reminder_template_2,inactive_reminder_template_3)&select=key,value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+        const data = await r.json().catch(() => []);
+        if (Array.isArray(data) && data.length > 0) {
+          const map: Record<string, string> = {};
+          data.forEach((d: any) => { map[d.key] = d.value; });
+          setInactiveTemplates([
+            map["inactive_reminder_template_1"] || DEFAULT_INACTIVE_TEMPLATES[0],
+            map["inactive_reminder_template_2"] || DEFAULT_INACTIVE_TEMPLATES[1],
+            map["inactive_reminder_template_3"] || DEFAULT_INACTIVE_TEMPLATES[2],
+          ]);
+        }
+      } catch {}
+    };
+    const saveInactiveTemplate = async (index: number) => {
+      if (!auth) return;
+      const value = inactiveTemplateDraft;
+      await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ key: `inactive_reminder_template_${index + 1}`, value }) });
+      setInactiveTemplates(list => list.map((t, i) => i === index ? value : t));
+      setInactiveTemplateEditing(null);
+    };
+    // Ouvre WhatsApp avec le modèle sélectionné (vraies infos de la personne), marque la relance
+    // en base (pour ne pas la reproposer avant le délai de repos) et la retire de la liste.
+    const sendInactiveReminder = (u: AdminProfile) => {
+      const pending = inactivePendingLikes[u.id] || 0;
+      const msg = (inactiveTemplates[inactiveTemplateIndex] || DEFAULT_INACTIVE_TEMPLATES[0])
+        .replace(/\{nom\}/g, u.name)
+        .replace(/\{matchs\}/g, String(pending))
+        .replace(/\{email\}/g, u.email || "—");
+      window.open(`https://wa.me/${(u.phone || "").replace(/\D/g, "")}?text=${encodeURIComponent(msg)}`, "_blank");
+      setInactiveUsers(list => list.filter(x => x.id !== u.id));
+      fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${u.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ last_reminder_sent_at: new Date().toISOString() }) }).catch(() => {});
+    };
+    useEffect(() => { if (mktTab === "inactive") loadInactiveTemplates(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [mktTab]);
 
     // ── Programme affiliés : liste des affiliés + historique de leurs commissions ──
     const [affiliatesList, setAffiliatesList] = useState<{ id: string; user_id: string; name: string; phone?: string; status: string; created_at: string }[]>([]);
@@ -11873,6 +11952,40 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 </div>
               </div>
 
+              <div style={{ background: G.blanc, borderRadius: 18, padding: 18, boxShadow: "0 2px 10px rgba(0,0,0,0.05)", marginBottom: 16 }}>
+                <div style={{ fontSize: "0.9rem", fontWeight: 800, color: G.brun, marginBottom: 4 }}>Modèle de message</div>
+                <div style={{ fontSize: "0.76rem", color: "#999", marginBottom: 12 }}>Choisis celui à utiliser pour cette session de relance — pour varier plutôt que d'envoyer toujours le même message.</div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 10 }}>
+                  {inactiveTemplates.map((tpl, i) => (
+                    <div key={i} onClick={() => inactiveTemplateEditing === null && setInactiveTemplateIndex(i)} style={{ border: `2px solid ${inactiveTemplateIndex === i ? G.rouge : G.gris}`, background: inactiveTemplateIndex === i ? "rgba(192,57,43,0.05)" : G.creme, borderRadius: 12, padding: 12, cursor: inactiveTemplateEditing === null ? "pointer" : "default" }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <div style={{ width: 16, height: 16, borderRadius: "50%", border: `2px solid ${inactiveTemplateIndex === i ? G.rouge : "#bbb"}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                            {inactiveTemplateIndex === i && <div style={{ width: 8, height: 8, borderRadius: "50%", background: G.rouge }} />}
+                          </div>
+                          <span style={{ fontSize: "0.8rem", fontWeight: 700, color: G.brun }}>Modèle {i + 1}</span>
+                        </div>
+                        {inactiveTemplateEditing !== i && (
+                          <button onClick={(e) => { e.stopPropagation(); setInactiveTemplateEditing(i); setInactiveTemplateDraft(tpl); }} style={{ background: "none", border: "none", color: G.rouge, fontSize: "0.7rem", fontWeight: 700, cursor: "pointer" }}>Modifier</button>
+                        )}
+                      </div>
+                      {inactiveTemplateEditing === i ? (
+                        <div onClick={e => e.stopPropagation()}>
+                          <textarea value={inactiveTemplateDraft} onChange={e => setInactiveTemplateDraft(e.target.value)} rows={6} style={{ width: "100%", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 8, padding: "8px 10px", fontSize: "0.76rem", fontFamily: "inherit", resize: "vertical", marginBottom: 8 }} />
+                          <div style={{ fontSize: "0.66rem", color: "#999", marginBottom: 8 }}>Variables disponibles : <code>{"{nom}"}</code> <code>{"{matchs}"}</code> <code>{"{email}"}</code></div>
+                          <div style={{ display: "flex", gap: 8 }}>
+                            <button onClick={() => saveInactiveTemplate(i)} style={{ background: G.rouge, color: "#fff", border: "none", borderRadius: 8, padding: "6px 12px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}>Enregistrer</button>
+                            <button onClick={() => setInactiveTemplateEditing(null)} style={{ background: "none", border: `1.5px solid ${G.gris}`, borderRadius: 8, padding: "6px 12px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer", color: "#666" }}>Annuler</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div style={{ fontSize: "0.72rem", color: "#888", whiteSpace: "pre-wrap", maxHeight: 90, overflow: "hidden", lineHeight: 1.4 }}>{tpl}</div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               <div style={{ background: G.blanc, borderRadius: 18, padding: 18, boxShadow: "0 2px 10px rgba(0,0,0,0.05)" }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
                   <div style={{ fontSize: "0.9rem", fontWeight: 800, color: G.brun }}>{inactiveUsers.length} membre{inactiveUsers.length > 1 ? "s" : ""} à relancer</div>
@@ -11886,14 +11999,33 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                     {inactiveUsers.map(u => (
                       <div key={u.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "12px 14px", background: G.creme, borderRadius: 12, flexWrap: "wrap" }}>
-                        <div>
-                          <div style={{ fontSize: "0.85rem", fontWeight: 700, color: G.brun }}>{u.name}</div>
-                          <div style={{ fontSize: "0.72rem", color: "#888" }}>{inactiveDaysAgo(u.last_seen)} · {u.phone}</div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+                          <div onClick={() => { setManageUserModal(u); setManageTab("statuts"); }} style={{ width: 42, height: 42, borderRadius: "50%", overflow: "hidden", background: G.gris, flexShrink: 0, cursor: "pointer" }}>
+                            {u.photo_url ? <img src={u.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#aaa" }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>}
+                          </div>
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ fontSize: "0.85rem", fontWeight: 700, color: G.brun, cursor: "pointer" }} onClick={() => { setManageUserModal(u); setManageTab("statuts"); }}>{u.name}</div>
+                            <div style={{ fontSize: "0.72rem", color: "#888" }}>{inactiveDaysAgo(u.last_seen)} · {u.phone}</div>
+                          </div>
                         </div>
-                        <a href={`https://wa.me/${u.phone.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer" style={{ background: "#25D366", color: "#fff", border: "none", borderRadius: 50, padding: "8px 16px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer", textDecoration: "none", display: "flex", alignItems: "center", gap: 6 }}>
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="#fff"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24z"/></svg>
-                          WhatsApp
-                        </a>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          {!!inactivePendingLikes[u.id] && (
+                            <div title="Likes reçus en attente d'un retour" style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(233,30,140,0.08)", color: "#e91e8c", borderRadius: 50, padding: "3px 9px", fontSize: "0.66rem", fontWeight: 800, flexShrink: 0 }}>
+                              <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                              {inactivePendingLikes[u.id]}
+                            </div>
+                          )}
+                          {!!inactiveSentPendingLikes[u.id] && (
+                            <div title="Likes envoyés en attente d'un retour" style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(41,128,185,0.08)", color: "#2980b9", borderRadius: 50, padding: "3px 9px", fontSize: "0.66rem", fontWeight: 800, flexShrink: 0 }}>
+                              <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                              {inactiveSentPendingLikes[u.id]}
+                            </div>
+                          )}
+                          <button onClick={() => sendInactiveReminder(u)} style={{ background: "#25D366", color: "#fff", border: "none", borderRadius: 50, padding: "8px 16px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="#fff"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24z"/></svg>
+                            WhatsApp
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
