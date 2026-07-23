@@ -3,6 +3,13 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
+  // Empêche l'étape esbuild (celle qui convertit le code au format ES2015 avant même que Terser
+  // n'intervienne) de transformer emojis/accents en séquences \u{...} — sans ça, le réglage
+  // ascii_only de Terser plus bas n'a plus rien à corriger, le texte est déjà converti avant
+  // qu'il ne le voie. C'est ce qui manquait à la première correction.
+  esbuild: {
+    charset: 'utf8',
+  },
   build: {
     minify: 'terser',
     terserOptions: {
@@ -14,9 +21,7 @@ export default defineConfig({
       mangle: true,
       format: {
         comments: false,
-        // Empêche Terser de transformer emojis/accents en séquences \u{...} — sans ça,
-        // certains moteurs JavaScript (notamment sur téléphone, dans WhatsApp) affichent
-        // ces caractères comme des "�" au lieu du bon symbole.
+        // Empêche aussi Terser d'échapper ces caractères de son côté.
         ascii_only: false,
       },
     },
