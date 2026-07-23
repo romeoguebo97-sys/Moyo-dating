@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Test emoji WhatsApp</title>
+<style>
+  body { font-family: -apple-system, sans-serif; padding: 24px; max-width: 480px; margin: 0 auto; }
+  input { width: 100%; box-sizing: border-box; padding: 14px; border: 1.5px solid #ddd; border-radius: 10px; font-size: 1rem; margin-bottom: 20px; }
+  button { display: block; width: 100%; background: #25D366; color: #fff; border: none; padding: 16px; border-radius: 12px; text-align: center; font-weight: 700; margin-bottom: 14px; font-size: 0.95rem; cursor: pointer; }
+  button.alt { background: #555; }
+  h3 { font-size: 0.95rem; color: #333; }
+</style>
+</head>
+<body>
+  <h3>1. Tape ton numéro WhatsApp complet (avec l'indicatif, sans le +, ex : 242065132012) :</h3>
+  <input type="tel" id="phone" placeholder="242065132012">
+  <h3>2. Teste chaque lien un par un :</h3>
+  <button onclick="go('Test 1 : ❤️ coeur simple')">Test 1 : ❤️ (cœur simple)</button>
+  <button onclick="go('Test 2 : 🤩 visage recent')">Test 2 : 🤩 (visage récent)</button>
+  <button class="alt" onclick="go('Test 3 : texte seul sans emoji du tout')">Test 3 : texte seul, sans emoji</button>
+  <script>
+    function go(text) {
+      const phone = document.getElementById('phone').value.replace(/\D/g, '');
+      if (!phone) { alert('Tape ton numéro d\'abord.'); return; }
+      window.location.href = `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
+    }
+  </script>
+</body>
+</html>
