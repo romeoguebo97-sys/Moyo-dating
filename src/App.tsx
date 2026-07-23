@@ -411,6 +411,7 @@ let PREMIUM_SCREEN_VARIANT: "a" | "b" = "a";
 export function setPREMIUM_SCREEN_VARIANT(v: any) { PREMIUM_SCREEN_VARIANT = v === "b" ? "b" : "a"; }
 let FEATURE_GROUP_PREMIUM = true;
 let FEATURE_GROUP_PHOTOS = true;
+let FEATURE_PHOTO_RETOUCH = true;
 // Modération automatique : insultes/menaces/arnaques/contenu sexuel (moderateMessage).
 let FEATURE_MODERATION_INSULTS = true;
 // Blocage automatique du partage de numéro/réseaux pour les comptes gratuits (hasContactInfo).
@@ -498,7 +499,7 @@ export function dedupeMatchesByCouple<T extends { user1?: string; user2?: string
 }
 
 // Charger les settings dynamiques depuis Supabase au démarrage
-fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_messages_free_femme,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,pay_wero_enabled,pay_paypal_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,feature_show_likes_views_free,feature_group_premium,feature_group_photos,feature_moderation_insults,feature_moderation_contact,premium_screen_variant,custom_banned_words,contact_banned_words,disabled_builtin_words,disabled_builtin_contact_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,pay_wero_number,pay_paypal_number,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,social_linkedin,store_link_android,store_link_ios,plan_week_enabled,plan_month_enabled,plan_2month_enabled,discover_default_mode,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,auto_warn_ban_contact_enabled,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price,privacy_notice_enabled,premium_boost_enabled,assistant_photo_url,broadcast_enabled,modal_match_title,modal_match_subtitle,referral_bonus_week_days,referral_bonus_month_days,referral_bonus_2month_days,affiliate_commission_week_fcfa,affiliate_commission_month_fcfa,affiliate_commission_2month_fcfa,affiliate_payable_delay_days,privacy_notice_step1_text,privacy_notice_step2_text,ban_screen_text,pay_link_enabled)&select=key,value`, {
+fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_messages_free_femme,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,pay_wero_enabled,pay_paypal_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,feature_show_likes_views_free,feature_group_premium,feature_group_photos,feature_photo_retouch,feature_moderation_insults,feature_moderation_contact,premium_screen_variant,custom_banned_words,contact_banned_words,disabled_builtin_words,disabled_builtin_contact_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,pay_wero_number,pay_paypal_number,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,social_linkedin,store_link_android,store_link_ios,plan_week_enabled,plan_month_enabled,plan_2month_enabled,discover_default_mode,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,auto_warn_ban_contact_enabled,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price,privacy_notice_enabled,premium_boost_enabled,assistant_photo_url,broadcast_enabled,modal_match_title,modal_match_subtitle,referral_bonus_week_days,referral_bonus_month_days,referral_bonus_2month_days,affiliate_commission_week_fcfa,affiliate_commission_month_fcfa,affiliate_commission_2month_fcfa,affiliate_payable_delay_days,privacy_notice_step1_text,privacy_notice_step2_text,ban_screen_text,pay_link_enabled)&select=key,value`, {
   headers: { "apikey": SUPABASE_KEY },
 }).then(r => r.json()).then((data: { key: string; value: string }[]) => {
   if (!Array.isArray(data)) return;
@@ -513,6 +514,7 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
   if (map["feature_statuses"] !== undefined) FEATURE_STATUSES = map["feature_statuses"] !== "false";
   if (map["feature_gift_premium"] !== undefined) FEATURE_GIFT_PREMIUM = map["feature_gift_premium"] !== "false";
   if (map["feature_group_premium"] !== undefined) FEATURE_GROUP_PREMIUM = map["feature_group_premium"] !== "false";
+  if (map["feature_photo_retouch"] !== undefined) FEATURE_PHOTO_RETOUCH = map["feature_photo_retouch"] !== "false";
   if (map["feature_group_photos"] !== undefined) FEATURE_GROUP_PHOTOS = map["feature_group_photos"] !== "false";
   if (map["feature_moderation_insults"] !== undefined) FEATURE_MODERATION_INSULTS = map["feature_moderation_insults"] !== "false";
   if (map["feature_moderation_contact"] !== undefined) FEATURE_MODERATION_CONTACT = map["feature_moderation_contact"] !== "false";
@@ -8538,7 +8540,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMes
   );
 }
 
-function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchStart, onUnmatchEnd, jumpToProposals }: { auth: Auth; onShowPremium: (r: string) => void; onNotifCount: (n: number) => void; onGoMessages?: (partnerId?: string) => void; onUnmatchStart?: () => void; onUnmatchEnd?: () => void; jumpToProposals?: number }) {
+function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchStart, onUnmatchEnd, jumpToProposals, onGoRelRequest, onGoDiscover }: { auth: Auth; onShowPremium: (r: string) => void; onNotifCount: (n: number) => void; onGoMessages?: (partnerId?: string) => void; onUnmatchStart?: () => void; onUnmatchEnd?: () => void; jumpToProposals?: number; onGoRelRequest?: () => void; onGoDiscover?: () => void }) {
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
@@ -8818,7 +8820,8 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
       <div style={{ textAlign: "center", padding: "40px 20px", color: G.brunLight }}>
         <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
         <p style={{ fontWeight: 700, marginBottom: 4 }}>Aucune demande pour l'instant</p>
-        <p style={{ fontSize: "0.82rem", color: "#999" }}>Faites une demande depuis votre profil avec « Demander une mise en relation personnalisée ».</p>
+        <p style={{ fontSize: "0.82rem", color: "#999", marginBottom: 16 }}>Faites une demande depuis votre profil avec « Demander une mise en relation personnalisée ».</p>
+        <button onClick={onGoRelRequest} className="moyo-tactile" style={{ background: G.rouge, color: "#fff", border: "none", borderRadius: 50, padding: "13px 28px", fontSize: "0.88rem", fontWeight: 800, cursor: "pointer", boxShadow: "0 3px 12px rgba(192,57,43,0.3)" }}>Demander une mise en relation personnalisée</button>
       </div>
     ) : (
       <div>
@@ -8883,7 +8886,7 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
     ))}
 
     {matchSubTab === "matches" && (loading ? <div style={{ textAlign: "center", padding: 40 }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{animation:"pulse 1s ease-in-out infinite"}}><circle cx="12" cy="12" r="10"/></svg></div>
-    : matches.length === 0 ? <div style={{ textAlign: "center", padding: "40px 20px", color: G.brunLight }}><div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div><p>Continue à liker des profils pour avoir des matchs !</p></div>
+    : matches.length === 0 ? <div style={{ textAlign: "center", padding: "40px 20px", color: G.brunLight }}><div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div><p style={{ marginBottom: 16 }}>Continue à liker des profils pour avoir des matchs !</p><button onClick={onGoDiscover} className="moyo-tactile" style={{ background: G.rouge, color: "#fff", border: "none", borderRadius: 50, padding: "13px 28px", fontSize: "0.88rem", fontWeight: 800, cursor: "pointer", boxShadow: "0 3px 12px rgba(192,57,43,0.3)" }}>Envoyer des likes</button></div>
     : viewMode === "list" ? (
       <div>
         {matches.map(m => (
@@ -9012,7 +9015,8 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
       <div style={{ textAlign: "center", padding: "40px 20px", color: G.brunLight }}>
         <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(124,58,237,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
         <p style={{ fontWeight: 700, marginBottom: 4 }}>Aucune proposition pour l'instant</p>
-        <p style={{ fontSize: "0.82rem", color: "#999" }}>Moyo Dating vous présentera ici les profils sélectionnés pour vous.</p>
+        <p style={{ fontSize: "0.82rem", color: "#999", marginBottom: 16 }}>Moyo Dating vous présentera ici les profils sélectionnés pour vous après votre demande de mise en relation personnalisée.</p>
+        <button onClick={onGoRelRequest} className="moyo-tactile" style={{ background: G.rouge, color: "#fff", border: "none", borderRadius: 50, padding: "13px 28px", fontSize: "0.88rem", fontWeight: 800, cursor: "pointer", boxShadow: "0 3px 12px rgba(192,57,43,0.3)" }}>Demander une mise en relation personnalisée</button>
       </div>
     ) : (
       <div>
@@ -14216,7 +14220,7 @@ function GroupChat({ auth, onBack, onShowPremium, onOpenPrivateChat }: { auth: A
 
   // ── Écran-cadre commun aux états "pas encore dans le chat" (en-tête + centre) ──
   const StatusScreen = ({ icon, title, text, action }: { icon: React.ReactNode; title: string; text: string; action?: React.ReactNode }) => (
-    <div style={{ display: "flex", flexDirection: "column", height: "100dvh", background: "#F0F1F5" }}>
+    <div data-chat-container style={{ display: "flex", flexDirection: "column", background: "#F0F1F5" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "calc(env(safe-area-inset-top) + 12px) 16px 12px", background: G.blanc, borderBottom: `1px solid ${G.gris}`, flexShrink: 0 }}>
         <div onClick={onBack} style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(44,26,14,0.06)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={G.brun} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
@@ -14258,7 +14262,7 @@ function GroupChat({ auth, onBack, onShowPremium, onOpenPrivateChat }: { auth: A
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100dvh", background: "#F0F1F5" }}>
+    <div data-chat-container style={{ display: "flex", flexDirection: "column", background: "#F0F1F5" }}>
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
       {moderationAlert && <ModerationModal type={moderationAlert} onClose={() => setModerationAlert(null)} />}
       {/* En-tête */}
@@ -15111,6 +15115,15 @@ function MatchRequestButton({ auth, onShowPremium }: { auth: Auth; onShowPremium
             note: rp.note || "",
           }));
         }
+        // ── Raccourci depuis l'onglet Matchs → Mes demandes : agit exactement comme si la
+        //    personne avait tapé sur ce bouton elle-même, mêmes règles (profil relationnel déjà
+        //    créé → ouvre le suivi de la demande ; sinon → ouvre l'écran de présentation). ──
+        try {
+          if (sessionStorage.getItem("moyo_open_rel_button") === "1") {
+            sessionStorage.removeItem("moyo_open_rel_button");
+            if (rp && typeof rp === "object") setShowModal(true); else setShowRelPrompt(true);
+          }
+        } catch {}
       } catch {}
     })();
   }, []);
@@ -16280,6 +16293,37 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 800, fontSize: "1rem", color: "#fff", marginBottom: 3 }}>Passer sur les Statuts Moyo</div>
+                  <div style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.85)", lineHeight: 1.4, display: "flex", alignItems: "center", gap: 6 }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill={G.or} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                    <span>Réservé aux membres Premium</span>
+                  </div>
+                </div>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              </div>
+        )}
+
+        {/* ── Bouton Retouche photo professionnelle (Premium uniquement) ── */}
+        {FEATURE_PHOTO_RETOUCH && (!isWideProfile || ["main"].includes(activeSection)) && (
+          auth.isPremium
+            ? <div onClick={() => {
+                const msg = `Bonjour, je souhaite faire retoucher ma photo de profil Moyo Dating.\n\nMon compte : ${auth.name}\nMon email : ${auth.email || "—"}\n\nJe vous envoie la photo juste après ce message.`;
+                window.open(`https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent(msg)}`, "_blank");
+              }} style={{ background: G.blanc, borderRadius: 18, padding: "18px 20px", cursor: "pointer", boxShadow: "0 2px 10px rgba(0,0,0,0.06)", display: "flex", alignItems: "center", gap: 14, border: "1.5px solid rgba(212,168,67,0.3)" }}>
+                <div style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(212,168,67,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={G.or} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 800, fontSize: "1rem", color: G.brun, marginBottom: 3 }}>Retouche photo professionnelle</div>
+                  <div style={{ fontSize: "0.78rem", color: "#888", lineHeight: 1.4 }}>Envoie ta photo, notre équipe la rend plus attirante</div>
+                </div>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.or} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+              </div>
+            : <div onClick={() => onShowPremium("Passez Premium pour faire retoucher votre photo de profil par notre équipe !")} style={{ background: "linear-gradient(135deg,#E67E22 0%,#D35400 100%)", borderRadius: 18, padding: "18px 20px", cursor: "pointer", boxShadow: "0 8px 28px rgba(230,126,34,0.2)", display: "flex", alignItems: "center", gap: 14, border: "1px solid rgba(255,255,255,0.1)", opacity: 0.75 }}>
+                <div style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 800, fontSize: "1rem", color: "#fff", marginBottom: 3 }}>Retouche photo professionnelle</div>
                   <div style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.85)", lineHeight: 1.4, display: "flex", alignItems: "center", gap: 6 }}>
                     <svg width="12" height="12" viewBox="0 0 24 24" fill={G.or} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                     <span>Réservé aux membres Premium</span>
@@ -18471,7 +18515,7 @@ export default function App() {
       {tab === "discover" && <Discover auth={auth} onShowPremium={showPremium} isWide={window.innerWidth >= 768} onGoMessages={(pid) => { setOpenConvPartnerId(pid || null); setTab("messages"); }} onMatch={setMatchPop} />}
       {tab === "likes" && <LikesPage auth={auth} onShowPremium={showPremium} mode="likes" onBadgeUpdate={() => refreshBadgesRef.current?.()} onGoMessages={(pid) => { setOpenConvPartnerId(pid || null); setTab("messages"); }} onGoDiscover={() => setTab("discover")} onMatch={setMatchPop} />}
       {tab === "visitors" && <LikesPage auth={auth} onShowPremium={showPremium} mode="visitors" onBadgeUpdate={() => refreshBadgesRef.current?.()} onMatch={setMatchPop} />}
-      {tab === "matches" && <Matches auth={auth} onShowPremium={showPremium} onNotifCount={setNotifCount} jumpToProposals={propJump} onGoMessages={(pid) => { setOpenConvPartnerId(pid || null); setTab("messages"); }} onUnmatchStart={() => { isUnmatchingRef.current = true; }} onUnmatchEnd={() => { setTimeout(() => { isUnmatchingRef.current = false; }, 2000); }} />}
+      {tab === "matches" && <Matches auth={auth} onShowPremium={showPremium} onNotifCount={setNotifCount} jumpToProposals={propJump} onGoMessages={(pid) => { setOpenConvPartnerId(pid || null); setTab("messages"); }} onUnmatchStart={() => { isUnmatchingRef.current = true; }} onUnmatchEnd={() => { setTimeout(() => { isUnmatchingRef.current = false; }, 2000); }} onGoDiscover={() => setTab("discover")} onGoRelRequest={() => { try { sessionStorage.setItem("moyo_open_rel_button", "1"); } catch {} setTab("profile"); }} />}
       {tab === "messages" && <Messages auth={auth} onUnreadCount={setUnreadCount} onShowPremium={showPremium} onShowGiftPremium={showGiftPremium} initialPartnerId={openConvPartnerId} onConvOpen={setInConv} onStatusStackChange={setStatusStackData} onGoDiscover={() => setTab("discover")} onMatch={setMatchPop} />}
       {tab === "profile" && <Profile auth={auth} onLogout={handleLogout} onShowPremium={showPremium} darkMode={darkMode} onToggleDark={() => { const v = !darkMode; setDarkMode(v); localStorage.setItem("moyo_dark", v ? "1" : "0"); }} onOpenAdmin={auth.isAdmin ? () => openAdminPanel(() => setTab("admin")) : undefined} adminBadgeCount={adminBadgeCount} assistantEnabled={assistantEnabled} onToggleAssistant={toggleAssistant} promoAvailable={promoAvailable} onOpenSuperPromo={() => { if (!promoAvailable) return; setActivePromo({ price: promoAvailable.price, expiresAt: promoAvailable.expiresAt }); showPremium("Super promo Premium"); }} />}
       {tab === "admin" && <Suspense fallback={<AdminLoadingFallback />}><AdminPinGate auth={auth} onBack={() => setTab("discover")} onBadgeCount={setAdminBadgeCount} /></Suspense>}
