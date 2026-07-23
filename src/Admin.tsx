@@ -3330,7 +3330,7 @@ function MsgModal({ user, msgText, setMsgText, msgHistory, msgHistoryLoading, ms
         {/* Colonne gauche / onglets mobile */}
         <div style={{ width: isWide ? "50%" : "100%", borderRight: isWide ? `1px solid ${G.gris}` : "none", display: "flex", flexDirection: "column", background: G.blanc, height: isWide ? "100%" : "auto", flex: isWide ? "none" : "1 1 auto", overflow: "hidden" }}>
           {/* Header */}
-          <div style={{ background: "linear-gradient(135deg,#eaf4fb,#d0eaf8)", padding: isWide ? "20px 20px 0" : "0 20px 0", borderBottom: "1px solid rgba(41,128,185,0.15)", flexShrink: 0 }}>
+          <div style={{ background: "linear-gradient(135deg,#eaf4fb,#d0eaf8)", padding: isWide ? "20px 20px 0" : "calc(env(safe-area-inset-top) + 14px) 20px 0", borderBottom: "1px solid rgba(41,128,185,0.15)", flexShrink: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
               <button onClick={onClose} style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(41,128,185,0.12)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2980b9" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
@@ -3975,6 +3975,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
   };
   const [proposals, setProposals] = useState<MatchProposal[]>([]);
   const [mmFollow, setMmFollow] = useState<any[]>([]);
+  const [mmFollowShowArchived, setMmFollowShowArchived] = useState(false);
   const [mmFollowLoading, setMmFollowLoading] = useState(false);
   const [mmAdminNames, setMmAdminNames] = useState<Record<string, string>>({});
   const [proposalsLoading, setProposalsLoading] = useState(false);
@@ -4914,6 +4915,30 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
   };
 
   // ── Suivi des couples issus du MATCHMAKING (origin = "matchmaking") ──
+  useEffect(() => { if (matchSubTab === "mmfollow") loadMmFollow(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [mmFollowShowArchived]);
+  const toggleMmFollowSelect = (id: string) => {
+    setMmFollowSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+  const bulkArchiveMmFollow = async (archive: boolean) => {
+    if (mmFollowSelected.size === 0 || !auth) return;
+    setMmFollowBulkLoading(true);
+    try {
+      const ids = [...mmFollowSelected];
+      await Promise.all(ids.map(id => fetch(`${SUPABASE_URL}/rest/v1/match_proposals?id=eq.${id}`, {
+        method: "PATCH",
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
+        body: JSON.stringify({ archived: archive }),
+      })));
+      showToast(`${ids.length} couple${ids.length > 1 ? "s" : ""} ${archive ? "archivé(s)" : "réactivé(s)"}.`, "success");
+      setMmFollowSelected(new Set());
+      loadMmFollow();
+    } catch { showToast("Erreur lors de l'action groupée.", "error"); }
+    setMmFollowBulkLoading(false);
+  };
   const loadMmFollow = async () => {
     setMmFollowLoading(true);
     try {
@@ -4923,7 +4948,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
         headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
         body: JSON.stringify({ status: "expired" })
       });
-      const r = await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?origin=eq.matchmaking&or=(archived.is.null,archived.eq.false)&order=created_at.desc&limit=200`, {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?origin=eq.matchmaking&${mmFollowShowArchived ? "archived=eq.true" : "or=(archived.is.null,archived.eq.false)"}&order=created_at.desc&limit=200`, {
         headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
       });
       const data = await r.json().catch(() => null);
@@ -6040,6 +6065,8 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
   const [mmFollowViewMode, setMmFollowViewMode] = useState<"list" | "grid">("list");
   const [mmFollowStatusFilter, setMmFollowStatusFilter] = useState<"pending" | "pending_response" | "accepted" | "refused" | "expired" | null>(null);
   const [mmFollowSearchName, setMmFollowSearchName] = useState("");
+  const [mmFollowSelected, setMmFollowSelected] = useState<Set<string>>(new Set());
+  const [mmFollowBulkLoading, setMmFollowBulkLoading] = useState(false);
   const [archivedViewMode, setArchivedViewMode] = useState<"list" | "grid">("list");
   const [proposalsViewMode, setProposalsViewMode] = useState<"list" | "grid">("list");
   const [proposalsStatusFilter, setProposalsStatusFilter] = useState<"pending" | "pending_response" | "accepted" | "refused" | "expired" | null>(null);
@@ -6571,9 +6598,9 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
     //    sélectionne un avant sa session de relance, tous les envois utilisent celui-ci jusqu'à
     //    ce qu'il en change. Textes modifiables depuis cet écran (variables : {nom} {matchs} {email}). ──
     const DEFAULT_INACTIVE_TEMPLATES = [
-      "{nom}, vous êtes la star de Moyo Dating ! 🤩\n\n💌 Vous avez {matchs} match(s) en attente sur Moyo, ainsi que plusieurs autres propositions ! 🤯🤯🤯🤯\n\nConnectez-vous dès maintenant pour découvrir qui s'intéresse à vous et ne laissez pas passer une belle rencontre. ❤️\n\nVotre adresse e-mail : {email}\nMot de passe : inchangé. En cas d'oubli, nous pouvons le réinitialiser.\n\n👉 dating.moyo-congo.com",
-      "Bonjour {nom} 👋\n\nÇa fait un moment qu'on ne vous a pas vu(e) sur Moyo Dating ! Pourtant, {matchs} personne(s) s'intéressent déjà à vous et attendent une réponse. 💌\n\nNe les faites pas attendre trop longtemps...\n\nVotre adresse e-mail : {email}\nMot de passe : inchangé. En cas d'oubli, nous pouvons le réinitialiser.\n\n👉 dating.moyo-congo.com",
-      "{nom}, quelqu'un pense à vous en ce moment sur Moyo Dating ! ❤️\n\nVous avez {matchs} match(s) et proposition(s) en attente — ne les laissez pas filer ! ⏳\n\nReconnectez-vous dès maintenant :\n\nVotre adresse e-mail : {email}\nMot de passe : inchangé. En cas d'oubli, nous pouvons le réinitialiser.\n\n👉 dating.moyo-congo.com",
+      "{nom}, vous êtes la star de Moyo Dating !\n\nVous avez {matchs} match(s) en attente sur Moyo, ainsi que plusieurs autres propositions !\n\nConnectez-vous dès maintenant pour découvrir qui s'intéresse à vous et ne laissez pas passer une belle rencontre.\n\nVotre adresse e-mail : {email}\nMot de passe : inchangé. En cas d'oubli, nous pouvons le réinitialiser.\n\ndating.moyo-congo.com",
+      "Bonjour {nom}\n\nÇa fait un moment qu'on ne vous a pas vu(e) sur Moyo Dating ! Pourtant, {matchs} personne(s) s'intéressent déjà à vous et attendent une réponse.\n\nNe les faites pas attendre trop longtemps...\n\nVotre adresse e-mail : {email}\nMot de passe : inchangé. En cas d'oubli, nous pouvons le réinitialiser.\n\ndating.moyo-congo.com",
+      "{nom}, quelqu'un pense à vous en ce moment sur Moyo Dating !\n\nVous avez {matchs} match(s) et proposition(s) en attente — ne les laissez pas filer !\n\nReconnectez-vous dès maintenant :\n\nVotre adresse e-mail : {email}\nMot de passe : inchangé. En cas d'oubli, nous pouvons le réinitialiser.\n\ndating.moyo-congo.com",
     ];
     const [inactiveTemplates, setInactiveTemplates] = useState<string[]>(DEFAULT_INACTIVE_TEMPLATES);
     const [inactiveTemplateIndex, setInactiveTemplateIndex] = useState(0);
@@ -6614,7 +6641,55 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
       setInactiveUsers(list => list.filter(x => x.id !== u.id));
       fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${u.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ last_reminder_sent_at: new Date().toISOString() }) }).catch(() => {});
     };
-    useEffect(() => { if (mktTab === "inactive") loadInactiveTemplates(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [mktTab]);
+    // ── SMS : même principe que WhatsApp, mais modèles courts (sous 160 caractères, sans emoji —
+    //    un SMS trop long est facturé en plusieurs SMS, et on a appris avec WhatsApp que les
+    //    emojis posent des soucis d'affichage). Le lien sms: n'ouvre l'appli SMS que sur téléphone
+    //    ou Mac (Continuity) — sur Windows avec un outil de type "Mobile connecté"/Phone Link, ce
+    //    lien ne peut pas rediriger vers le téléphone connecté, c'est une limite de Windows, pas
+    //    quelque chose qu'on peut corriger depuis le site. ──
+    const DEFAULT_INACTIVE_SMS_TEMPLATES = [
+      "{nom}, {matchs} match(s) vous attendent sur Moyo Dating ! Connecte-toi : {email} (mdp inchangé). dating.moyo-congo.com",
+      "Bonjour {nom}, ça fait un moment ! {matchs} personne(s) s'intéressent à toi sur Moyo. Email : {email}. dating.moyo-congo.com",
+      "{nom}, ne laisse pas filer tes {matchs} match(s) sur Moyo Dating ! Connexion : {email} (mdp inchangé). dating.moyo-congo.com",
+    ];
+    const [inactiveSmsTemplates, setInactiveSmsTemplates] = useState<string[]>(DEFAULT_INACTIVE_SMS_TEMPLATES);
+    const [inactiveSmsTemplateIndex, setInactiveSmsTemplateIndex] = useState(0);
+    const [inactiveSmsTemplateEditing, setInactiveSmsTemplateEditing] = useState<number | null>(null);
+    const [inactiveSmsTemplateDraft, setInactiveSmsTemplateDraft] = useState("");
+    const loadInactiveSmsTemplates = async () => {
+      if (!auth) return;
+      try {
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(inactive_sms_template_1,inactive_sms_template_2,inactive_sms_template_3)&select=key,value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+        const data = await r.json().catch(() => []);
+        if (Array.isArray(data) && data.length > 0) {
+          const map: Record<string, string> = {};
+          data.forEach((d: any) => { map[d.key] = d.value; });
+          setInactiveSmsTemplates([
+            map["inactive_sms_template_1"] || DEFAULT_INACTIVE_SMS_TEMPLATES[0],
+            map["inactive_sms_template_2"] || DEFAULT_INACTIVE_SMS_TEMPLATES[1],
+            map["inactive_sms_template_3"] || DEFAULT_INACTIVE_SMS_TEMPLATES[2],
+          ]);
+        }
+      } catch {}
+    };
+    const saveInactiveSmsTemplate = async (index: number) => {
+      if (!auth) return;
+      const value = inactiveSmsTemplateDraft;
+      await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ key: `inactive_sms_template_${index + 1}`, value }) });
+      setInactiveSmsTemplates(list => list.map((t, i) => i === index ? value : t));
+      setInactiveSmsTemplateEditing(null);
+    };
+    const sendInactiveSms = (u: AdminProfile) => {
+      const pending = inactivePendingLikes[u.id] || 0;
+      const msg = (inactiveSmsTemplates[inactiveSmsTemplateIndex] || DEFAULT_INACTIVE_SMS_TEMPLATES[0])
+        .replace(/\{nom\}/g, u.name)
+        .replace(/\{matchs\}/g, String(pending))
+        .replace(/\{email\}/g, u.email || "—");
+      window.open(`sms:${(u.phone || "").replace(/\D/g, "")}?body=${encodeURIComponent(msg)}`, "_blank");
+      setInactiveUsers(list => list.filter(x => x.id !== u.id));
+      fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${u.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ last_reminder_sent_at: new Date().toISOString() }) }).catch(() => {});
+    };
+    useEffect(() => { if (mktTab === "inactive") { loadInactiveTemplates(); loadInactiveSmsTemplates(); } /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [mktTab]);
 
     // ── Programme affiliés : liste des affiliés + historique de leurs commissions ──
     const [affiliatesList, setAffiliatesList] = useState<{ id: string; user_id: string; name: string; phone?: string; status: string; created_at: string }[]>([]);
@@ -8854,7 +8929,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
             {/* ── COLONNE GAUCHE : historique + liste emails ── */}
             <div style={{ width: window.innerWidth >= 768 ? "50%" : "100%", borderRight: window.innerWidth >= 768 ? `1px solid ${G.gris}` : "none", display: "flex", flexDirection: "column", maxHeight: window.innerWidth >= 768 ? "none" : "55vh", overflow: "hidden" }}>
               {/* Header */}
-              <div style={{ background: "linear-gradient(135deg,#f3e8ff,#e8d5f5)", padding: "20px 20px 14px", borderBottom: "1px solid rgba(142,68,173,0.15)", flexShrink: 0 }}>
+              <div style={{ background: "linear-gradient(135deg,#f3e8ff,#e8d5f5)", padding: window.innerWidth >= 768 ? "20px 20px 14px" : "calc(env(safe-area-inset-top) + 14px) 20px 14px", borderBottom: "1px solid rgba(142,68,173,0.15)", flexShrink: 0 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   <button onClick={() => { setMailModal(null); setMailHistory([]); }} style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(142,68,173,0.12)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
@@ -12014,6 +12089,43 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 </div>
               </div>
 
+              <div style={{ background: G.blanc, borderRadius: 18, padding: 18, boxShadow: "0 2px 10px rgba(0,0,0,0.05)", marginBottom: 16 }}>
+                <div style={{ fontSize: "0.9rem", fontWeight: 800, color: G.brun, marginBottom: 4 }}>Modèle de SMS</div>
+                <div style={{ fontSize: "0.76rem", color: "#999", marginBottom: 12 }}>Messages courts (sous 160 caractères, sans emoji) — un SMS trop long coûte plus cher à l'envoi. Le bouton SMS n'ouvre l'appli SMS que sur téléphone ou Mac, pas sur Windows avec un outil de type "Mobile connecté"/Phone Link (limite de Windows).</div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 10 }}>
+                  {inactiveSmsTemplates.map((tpl, i) => (
+                    <div key={i} onClick={() => inactiveSmsTemplateEditing === null && setInactiveSmsTemplateIndex(i)} style={{ border: `2px solid ${inactiveSmsTemplateIndex === i ? "#2980b9" : G.gris}`, background: inactiveSmsTemplateIndex === i ? "rgba(41,128,185,0.05)" : G.creme, borderRadius: 12, padding: 12, cursor: inactiveSmsTemplateEditing === null ? "pointer" : "default" }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <div style={{ width: 16, height: 16, borderRadius: "50%", border: `2px solid ${inactiveSmsTemplateIndex === i ? "#2980b9" : "#bbb"}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                            {inactiveSmsTemplateIndex === i && <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#2980b9" }} />}
+                          </div>
+                          <span style={{ fontSize: "0.8rem", fontWeight: 700, color: G.brun }}>Modèle {i + 1}</span>
+                        </div>
+                        {inactiveSmsTemplateEditing !== i && (
+                          <button onClick={(e) => { e.stopPropagation(); setInactiveSmsTemplateEditing(i); setInactiveSmsTemplateDraft(tpl); }} style={{ background: "none", border: "none", color: "#2980b9", fontSize: "0.7rem", fontWeight: 700, cursor: "pointer" }}>Modifier</button>
+                        )}
+                      </div>
+                      {inactiveSmsTemplateEditing === i ? (
+                        <div onClick={e => e.stopPropagation()}>
+                          <textarea value={inactiveSmsTemplateDraft} onChange={e => setInactiveSmsTemplateDraft(e.target.value)} rows={4} style={{ width: "100%", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 8, padding: "8px 10px", fontSize: "0.76rem", fontFamily: "inherit", resize: "vertical", marginBottom: 6 }} />
+                          <div style={{ fontSize: "0.66rem", color: inactiveSmsTemplateDraft.length > 160 ? G.rouge : "#999", marginBottom: 8, fontWeight: inactiveSmsTemplateDraft.length > 160 ? 700 : 400 }}>
+                            {inactiveSmsTemplateDraft.length} caractère{inactiveSmsTemplateDraft.length > 1 ? "s" : ""} (modèle seul, sans les variables remplies) {inactiveSmsTemplateDraft.length > 160 ? "— trop long, sera facturé en plusieurs SMS" : ""}
+                          </div>
+                          <div style={{ fontSize: "0.66rem", color: "#999", marginBottom: 8 }}>Variables disponibles : <code>{"{nom}"}</code> <code>{"{matchs}"}</code> <code>{"{email}"}</code></div>
+                          <div style={{ display: "flex", gap: 8 }}>
+                            <button onClick={() => saveInactiveSmsTemplate(i)} style={{ background: "#2980b9", color: "#fff", border: "none", borderRadius: 8, padding: "6px 12px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}>Enregistrer</button>
+                            <button onClick={() => setInactiveSmsTemplateEditing(null)} style={{ background: "none", border: `1.5px solid ${G.gris}`, borderRadius: 8, padding: "6px 12px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer", color: "#666" }}>Annuler</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div style={{ fontSize: "0.72rem", color: "#888", whiteSpace: "pre-wrap", maxHeight: 90, overflow: "hidden", lineHeight: 1.4 }}>{tpl}</div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               <div style={{ background: G.blanc, borderRadius: 18, padding: 18, boxShadow: "0 2px 10px rgba(0,0,0,0.05)" }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
                   <div style={{ fontSize: "0.9rem", fontWeight: 800, color: G.brun }}>{inactiveUsers.length} membre{inactiveUsers.length > 1 ? "s" : ""} à relancer</div>
@@ -12054,6 +12166,10 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                           <button onClick={() => sendInactiveReminder(u)} style={{ background: "#25D366", color: "#fff", border: "none", borderRadius: 50, padding: "8px 16px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="#fff"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24z"/></svg>
                             WhatsApp
+                          </button>
+                          <button onClick={() => sendInactiveSms(u)} title='Ouvre l&apos;appli SMS — marche sur téléphone/Mac, pas sur Windows + Mobile connecté' style={{ background: "#2980b9", color: "#fff", border: "none", borderRadius: 50, padding: "8px 16px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                            SMS
                           </button>
                         </div>
                       </div>
@@ -14479,6 +14595,9 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   </div>
                 </div>
                 <button onClick={loadMmFollow} style={{ background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "8px 12px", cursor: "pointer", display: "flex", alignItems: "center", color: "#555" }}><IcoRefresh /></button>
+                <button onClick={() => { setMmFollowSelected(new Set()); setMmFollowShowArchived(v => !v); }} style={{ background: mmFollowShowArchived ? "#16a34a" : G.creme, color: mmFollowShowArchived ? "#fff" : "#555", border: `1.5px solid ${mmFollowShowArchived ? "#16a34a" : G.gris}`, borderRadius: 50, padding: "8px 16px", cursor: "pointer", fontSize: "0.78rem", fontWeight: 700 }}>
+                  {mmFollowShowArchived ? "↩ Voir les actifs" : "📦 Voir les archivés"}
+                </button>
               </div>
               <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
                 {([["pending", "En attente", "#f39c12"], ["pending_response", "Un seul a répondu", "#2980b9"], ["accepted", "Les deux ont accepté", "#27ae60"], ["refused", "Refusée", "#e74c3c"], ["expired", "Expirée", "#888"]] as [typeof mmFollowStatusFilter, string, string][]).map(([key, label, color]) => (
@@ -14509,7 +14628,42 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 const nq = mmFollowSearchName.trim().toLowerCase();
                 const visibleMmFollow = nq ? statusFiltered.filter(p => (p.profile1?.name || "").toLowerCase().includes(nq) || (p.profile2?.name || "").toLowerCase().includes(nq)) : statusFiltered;
                 if (visibleMmFollow.length === 0) return <div style={{ textAlign: "center", padding: "40px 20px", color: "#aaa", fontSize: "0.88rem" }}>Aucun couple dans cette catégorie</div>;
+                const allVisibleIds = visibleMmFollow.map(p => p.id);
+                const allSelected = allVisibleIds.length > 0 && allVisibleIds.every(id => mmFollowSelected.has(id));
                 return (
+                <>
+                  <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 10, flexWrap: "wrap" }}>
+                    <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.78rem", color: "#555", fontWeight: 600, cursor: "pointer" }}>
+                      <input type="checkbox" checked={allSelected} onChange={() => setMmFollowSelected(allSelected ? new Set() : new Set(allVisibleIds))} style={{ width: 16, height: 16, cursor: "pointer" }} />
+                      Tout sélectionner ({visibleMmFollow.length})
+                    </label>
+                    {mmFollowSelected.size > 0 && (
+                      <>
+                        <span style={{ fontSize: "0.76rem", color: "#888" }}>{mmFollowSelected.size} sélectionné{mmFollowSelected.size > 1 ? "s" : ""}</span>
+                        {!mmFollowShowArchived && (() => {
+                          const selectedExpiredIds = visibleMmFollow.filter(p => mmFollowSelected.has(p.id) && p.status === "expired").map(p => p.id);
+                          if (selectedExpiredIds.length === 0) return null;
+                          return (
+                            <button disabled={mmFollowBulkLoading} onClick={async () => {
+                              setMmFollowBulkLoading(true);
+                              try {
+                                await Promise.all(selectedExpiredIds.map(id => extendMm(id, 30)));
+                                setMmFollowSelected(new Set());
+                              } finally { setMmFollowBulkLoading(false); }
+                            }} style={{ background: "#2980b9", color: "#fff", border: "none", borderRadius: 50, padding: "7px 16px", fontSize: "0.76rem", fontWeight: 700, cursor: mmFollowBulkLoading ? "not-allowed" : "pointer", opacity: mmFollowBulkLoading ? 0.6 : 1 }}>
+                              ⏳ Tout réactiver ({selectedExpiredIds.length}, +30j)
+                            </button>
+                          );
+                        })()}
+                        {mmFollowShowArchived ? (
+                          <button disabled={mmFollowBulkLoading} onClick={() => bulkArchiveMmFollow(false)} style={{ background: "#16a34a", color: "#fff", border: "none", borderRadius: 50, padding: "7px 16px", fontSize: "0.76rem", fontWeight: 700, cursor: mmFollowBulkLoading ? "not-allowed" : "pointer", opacity: mmFollowBulkLoading ? 0.6 : 1 }}>↩ Tout désarchiver</button>
+                        ) : (
+                          <button disabled={mmFollowBulkLoading} onClick={() => bulkArchiveMmFollow(true)} style={{ background: "#E67E22", color: "#fff", border: "none", borderRadius: 50, padding: "7px 16px", fontSize: "0.76rem", fontWeight: 700, cursor: mmFollowBulkLoading ? "not-allowed" : "pointer", opacity: mmFollowBulkLoading ? 0.6 : 1 }}>📦 Tout archiver</button>
+                        )}
+                        <button onClick={() => setMmFollowSelected(new Set())} style={{ background: "none", border: "none", color: "#999", fontSize: "0.74rem", fontWeight: 600, cursor: "pointer", textDecoration: "underline" }}>Annuler la sélection</button>
+                      </>
+                    )}
+                  </div>
                 <div style={mmFollowViewMode === "grid" ? { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 10 } : { display: "flex", flexDirection: "column", gap: 10 }}>
                   {visibleMmFollow.map(p => {
                     const oneAnswered = p.user1_response === "accepted" || p.user2_response === "accepted";
@@ -14527,7 +14681,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     const leftRespondedAt = p1IsWoman ? p.user1_responded_at : p.user2_responded_at;
                     const rightRespondedAt = p1IsWoman ? p.user2_responded_at : p.user1_responded_at;
                     return (
-                      <div key={p.id} style={{ background: G.blanc, borderRadius: 16, padding: "12px 14px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", border: `1.5px solid ${statusInfo.bg}` }}>
+                      <div key={p.id} style={{ background: G.blanc, borderRadius: 16, padding: "12px 14px 12px 40px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", border: `1.5px solid ${statusInfo.bg}`, position: "relative" }}>
+                        <input type="checkbox" checked={mmFollowSelected.has(p.id)} onChange={() => toggleMmFollowSelect(p.id)} style={{ position: "absolute", top: 14, left: 12, width: 17, height: 17, cursor: "pointer" }} />
                         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}>
                             <div style={{ width: 40, height: 40, borderRadius: "50%", background: G.creme, flexShrink: 0, overflow: "hidden", border: `2px solid ${leftResponse === "accepted" ? "#27ae60" : leftResponse === "refused" ? "#e74c3c" : G.gris}` }}>{leftProfile?.photo_url && <img src={leftProfile.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}</div>
@@ -14567,19 +14722,27 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                           </span>}
                           {p.status === "pending" && <button onClick={() => handleCancelProposal(p.id)} style={{ background: "rgba(231,76,60,0.08)", border: "1.5px solid rgba(231,76,60,0.2)", borderRadius: 50, padding: "4px 12px", fontSize: "0.66rem", fontWeight: 700, color: "#e74c3c", cursor: "pointer" }}>Annuler</button>}
                           {(p.status === "refused" || p.status === "expired") && <button onClick={() => { setMatchSubTab("matchmaking"); loadMatchmaking(); }} style={{ background: "rgba(124,58,237,0.1)", border: "1.5px solid rgba(124,58,237,0.25)", borderRadius: 50, padding: "4px 12px", fontSize: "0.66rem", fontWeight: 700, color: "#6d28d9", cursor: "pointer" }}>Reproposer un autre profil</button>}
-                          {(p.status === "refused" || p.status === "expired" || p.status === "accepted") && <button onClick={async () => {
+                          {!mmFollowShowArchived && (p.status === "refused" || p.status === "expired" || p.status === "accepted") && <button onClick={async () => {
                             try {
                               await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?id=eq.${p.id}`, { method: "PATCH", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" }, body: JSON.stringify({ archived: true }) });
                               setMmFollow(prev => prev.filter(x => x.id !== p.id));
                               showToast("✅ Archivé", "success");
                             } catch { showToast("Erreur", "error"); }
                           }} style={{ background: "rgba(85,85,85,0.08)", border: "1.5px solid rgba(85,85,85,0.2)", borderRadius: 50, padding: "4px 12px", fontSize: "0.66rem", fontWeight: 700, color: "#555", cursor: "pointer" }}>Archiver</button>}
+                          {mmFollowShowArchived && <button onClick={async () => {
+                            try {
+                              await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?id=eq.${p.id}`, { method: "PATCH", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" }, body: JSON.stringify({ archived: false }) });
+                              setMmFollow(prev => prev.filter(x => x.id !== p.id));
+                              showToast("✅ Réactivé", "success");
+                            } catch { showToast("Erreur", "error"); }
+                          }} style={{ background: "rgba(22,163,74,0.08)", border: "1.5px solid rgba(22,163,74,0.25)", borderRadius: 50, padding: "4px 12px", fontSize: "0.66rem", fontWeight: 700, color: "#16a34a", cursor: "pointer" }}>↩ Réactiver</button>}
                         </div>
                         <textarea defaultValue={p.admin_note || ""} onBlur={(e) => { if ((e.target.value || "") !== (p.admin_note || "")) saveMmNote(p.id, e.target.value); }} placeholder="Note interne sur ce couple (visible uniquement par l'équipe)…" style={{ width: "100%", marginTop: 10, boxSizing: "border-box", border: `1px solid ${G.gris}`, borderRadius: 10, padding: "8px 10px", fontSize: "0.72rem", fontFamily: "inherit", resize: "vertical", minHeight: 34, color: "#555", background: G.creme }} />
                       </div>
                     );
                   })}
                 </div>
+                </>
                 );
               })()}
             </div>

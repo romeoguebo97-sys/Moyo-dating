@@ -13827,24 +13827,30 @@ type GroupMessage = { id?: string; sender_id: string; content: string; created_a
 type GroupMemberRow = { user_id: string; role: "admin" | "moderator" | "member"; status: "pending" | "approved" | "rejected"; removed_at?: string | null };
 
 function GroupChat({ auth, onBack, onShowPremium, onOpenPrivateChat }: { auth: Auth; onBack: () => void; onShowPremium: (r: string) => void; onOpenPrivateChat: (partnerId: string) => void }) {
-  // ── Ancré directement (pas via document.querySelector, qui pourrait par erreur cibler le
-  //    conteneur de la messagerie privée si elle reste montée en dessous de cette fenêtre). ──
-  const groupContainerRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const container = groupContainerRef.current;
+  // ── Gestion clavier iOS/Android, identique dans son principe à la messagerie privée (recalcule
+  //    la position réelle de l'écran à chaque ouverture/fermeture du clavier). Contrairement à ma
+  //    première tentative (useEffect + useRef, qui s'exécutait une seule fois AU TOUT PREMIER
+  //    rendu — hors GroupChat affiche d'abord un écran "Chargement…" avant le vrai conteneur de
+  //    discussion, donc la ref était encore vide et le mécanisme ne s'activait jamais) : ici, une
+  //    ref-callback, appelée par React à chaque fois que l'élément est réellement monté dans la
+  //    page, peu importe à quel moment ça arrive. ──
+  const vvCleanupRef = useRef<(() => void) | null>(null);
+  const groupContainerRefCallback = useCallback((node: HTMLDivElement | null) => {
+    if (vvCleanupRef.current) { vvCleanupRef.current(); vvCleanupRef.current = null; }
+    if (!node) return;
     const ua = navigator.userAgent || "";
     const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === "MacIntel" && (navigator as any).maxTouchPoints > 1);
     const handleKeyboard = () => {
       const vv = (window as any).visualViewport;
-      if (!vv || !container) return;
+      if (!vv) return;
       if (isIOS) {
-        container.style.height = vv.height + 'px';
-        container.style.top = vv.offsetTop + 'px';
-        container.style.bottom = 'auto';
+        node.style.height = vv.height + 'px';
+        node.style.top = vv.offsetTop + 'px';
+        node.style.bottom = 'auto';
       } else {
-        container.style.top = '0';
-        container.style.bottom = 'auto';
-        container.style.height = vv.height + 'px';
+        node.style.top = '0';
+        node.style.bottom = 'auto';
+        node.style.height = vv.height + 'px';
       }
     };
     const vv = (window as any).visualViewport;
@@ -13853,12 +13859,9 @@ function GroupChat({ auth, onBack, onShowPremium, onOpenPrivateChat }: { auth: A
       vv.addEventListener('scroll', handleKeyboard);
       handleKeyboard();
     }
-    return () => {
-      if (vv) {
-        vv.removeEventListener('resize', handleKeyboard);
-        vv.removeEventListener('scroll', handleKeyboard);
-      }
-      if (container) { container.style.height = ''; container.style.top = '0'; container.style.bottom = '0'; }
+    vvCleanupRef.current = () => {
+      if (vv) { vv.removeEventListener('resize', handleKeyboard); vv.removeEventListener('scroll', handleKeyboard); }
+      node.style.height = ''; node.style.top = '0'; node.style.bottom = '0';
     };
   }, []);
   const [msgs, setMsgs] = useState<GroupMessage[]>([]);
@@ -14296,7 +14299,7 @@ function GroupChat({ auth, onBack, onShowPremium, onOpenPrivateChat }: { auth: A
   }
 
   return (
-    <div ref={groupContainerRef} data-chat-container style={{ display: "flex", flexDirection: "column", background: "#F0F1F5", position: "fixed", top: 0, left: 0, right: 0, bottom: 0 }}>
+    <div ref={groupContainerRefCallback} data-chat-container style={{ display: "flex", flexDirection: "column", background: "#F0F1F5", position: "fixed", top: 0, left: 0, right: 0, bottom: 0 }}>
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
       {moderationAlert && <ModerationModal type={moderationAlert} onClose={() => setModerationAlert(null)} />}
       {/* En-tête */}
