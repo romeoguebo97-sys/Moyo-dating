@@ -4988,6 +4988,16 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
         const errMsg = (matchData as any)?.message || (matchData as any)?.hint || (matchData as any)?.code || `HTTP ${r.status}`;
         throw new Error(errMsg);
       }
+      // ── Crée aussi le like des deux côtés (upsert : sans effet si l'un des deux avait déjà
+      //    liké l'autre avant). Sans ça, un match créé depuis l'admin laisse les deux comptes
+      //    dans un état incohérent — le cœur "liker" reste inactif sur leurs profils respectifs,
+      //    ce qui permettait à l'un des deux de reliker l'autre alors qu'ils sont déjà matchés,
+      //    créant un like fantôme invisible nulle part dans l'app. ──
+      const likeHeaders = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=minimal" };
+      await Promise.all([
+        fetch(`${SUPABASE_URL}/rest/v1/likes`, { method: "POST", headers: likeHeaders, body: JSON.stringify({ from_user: createSelected1.id, to_user: createSelected2.id }) }),
+        fetch(`${SUPABASE_URL}/rest/v1/likes`, { method: "POST", headers: likeHeaders, body: JSON.stringify({ from_user: createSelected2.id, to_user: createSelected1.id }) }),
+      ]);
       await sendMatchWelcomeMessage(auth.token, matchId, createSelected1.name, createSelected2.name);
       showToast(`✅ Match créé entre ${createSelected1.name} et ${createSelected2.name} !`, "success");
       logAdminAction(auth.token, auth.userId, auth.name, `Match créé manuellement entre ${createSelected1.name} et ${createSelected2.name}`, createSelected1.id);
@@ -6261,7 +6271,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
       default: return base;
     }
   };
-  const [mktTab, setMktTab] = useState<"statuts" | "features" | "event" | "promo" | "phoneprompt" | "premiumnudge" | "referrals" | "affiliates">("statuts");
+  const [mktTab, setMktTab] = useState<"statuts" | "features" | "event" | "promo" | "phoneprompt" | "premiumnudge" | "referrals" | "affiliates" | "inactive">("statuts");
   // ── SUPER PROMO (formule 1 mois à prix réduit, ciblée, affichée côté membre max 1x/jour) ──
   const PROMO_LABEL = "Super promo (1 mois)"; // doit rester identique au label envoyé par PremiumModal (subscription_selected)
   // promoActive n'est plus un state local : on lit désormais autoShortcuts.promo_active,
@@ -6468,6 +6478,49 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
       setReferralCreditsLoading(false);
     };
     useEffect(() => { if (mktTab === "referrals") loadReferralCredits(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [mktTab]);
+
+    // ── Relance inactifs : membres sans connexion depuis plus de X jours (réglable), avec un
+    //    numéro renseigné — pour les recontacter manuellement sur WhatsApp. ──
+    const [inactiveDays, setInactiveDays] = useState("7");
+    const [inactiveDaysEditing, setInactiveDaysEditing] = useState(false);
+    const [inactiveDaysDraft, setInactiveDaysDraft] = useState("7");
+    const [inactiveUsers, setInactiveUsers] = useState<{ id: string; name: string; phone: string; last_seen: string | null }[]>([]);
+    const [inactiveLoading, setInactiveLoading] = useState(false);
+    const loadInactiveDaysSetting = async () => {
+      if (!auth) return;
+      try {
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.inactive_reminder_days&select=value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+        const data = await r.json().catch(() => []);
+        if (Array.isArray(data) && data[0]?.value) { setInactiveDays(data[0].value); setInactiveDaysDraft(data[0].value); }
+      } catch {}
+    };
+    const saveInactiveDaysSetting = async () => {
+      if (!auth) return;
+      const v = inactiveDaysDraft.trim() || "7";
+      await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ key: "inactive_reminder_days", value: v }) });
+      setInactiveDays(v);
+      setInactiveDaysEditing(false);
+      loadInactiveUsers(v);
+    };
+    const loadInactiveUsers = async (days?: string) => {
+      if (!auth) return;
+      setInactiveLoading(true);
+      try {
+        const threshold = new Date(Date.now() - (parseInt(days || inactiveDays) || 7) * 24 * 3600 * 1000).toISOString();
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?last_seen=lt.${threshold}&phone=not.is.null&is_banned=eq.false&account_deleted=eq.false&select=id,name,phone,last_seen&order=last_seen.asc&limit=300`, {
+          headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+        });
+        const data = await r.json().catch(() => []);
+        setInactiveUsers(Array.isArray(data) ? data.filter((u: any) => u.phone && u.phone.trim()) : []);
+      } catch {}
+      setInactiveLoading(false);
+    };
+    useEffect(() => { if (mktTab === "inactive") { loadInactiveDaysSetting().then(() => loadInactiveUsers()); } /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [mktTab]);
+    const inactiveDaysAgo = (lastSeen: string | null) => {
+      if (!lastSeen) return "jamais connecté(e)";
+      const days = Math.floor((Date.now() - new Date(lastSeen).getTime()) / 86400000);
+      return `il y a ${days} jour${days > 1 ? "s" : ""}`;
+    };
 
     // ── Programme affiliés : liste des affiliés + historique de leurs commissions ──
     const [affiliatesList, setAffiliatesList] = useState<{ id: string; user_id: string; name: string; phone?: string; status: string; created_at: string }[]>([]);
@@ -7310,7 +7363,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
   }, [userSearch, userSearchEmail, activeTab]);
   const [usersLoading, setUsersLoading] = useState(false);
   const [userPage, setUserPage] = useState(0);
-  const USER_PAGE_SIZE_GRID = 20;
+  const USER_PAGE_SIZE_GRID = 50;
   const USER_PAGE_SIZE_LIST = 500;
   const USER_PAGE_SIZE = usersViewMode === "list" ? USER_PAGE_SIZE_LIST : USER_PAGE_SIZE_GRID;
 
@@ -11541,13 +11594,13 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
       {activeTab === "marketing" && (
         <div style={{ padding: "16px" }}>
           <div style={{ display: "flex", gap: 10, marginBottom: 16, overflowX: "auto", paddingBottom: 2 }}>
-            {([["statuts", "Statuts Moyo Dating", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>], ["features", "Mises en avant", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>], ["event", "Campagnes Premium", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>], ["promo", "Promotion", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/><line x1="9" y1="9" x2="9" y2="9"/></svg>], ["phoneprompt", "Profil incomplet", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>], ["premiumnudge", "Inciter au Premium", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>], ["referrals", "Suivi parrainage", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>], ["affiliates", "Programme affiliés", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.42 4.58a5.4 5.4 0 0 0-7.65 0l-.77.78-.77-.78a5.4 5.4 0 0 0-7.65 7.65l8.42 8.42 8.42-8.42a5.4 5.4 0 0 0 0-7.65z"/></svg>]] as [("statuts" | "features" | "event" | "promo" | "phoneprompt" | "premiumnudge" | "referrals" | "affiliates"), string, React.ReactElement][]).map(([k, lbl, ico]) => (
+            {([["statuts", "Statuts Moyo Dating", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>], ["features", "Mises en avant", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>], ["event", "Campagnes Premium", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>], ["promo", "Promotion", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/><line x1="9" y1="9" x2="9" y2="9"/></svg>], ["phoneprompt", "Profil incomplet", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>], ["premiumnudge", "Inciter au Premium", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>], ["referrals", "Suivi parrainage", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>], ["affiliates", "Programme affiliés", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.42 4.58a5.4 5.4 0 0 0-7.65 0l-.77.78-.77-.78a5.4 5.4 0 0 0-7.65 7.65l8.42 8.42 8.42-8.42a5.4 5.4 0 0 0 0-7.65z"/></svg>], ["inactive", "Relance inactifs", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>]] as [("statuts" | "features" | "event" | "promo" | "phoneprompt" | "premiumnudge" | "referrals" | "affiliates" | "inactive"), string, React.ReactElement][]).map(([k, lbl, ico]) => (
               <button key={k} onClick={() => setMktTab(k)} style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 7, padding: "9px 18px", borderRadius: 999, cursor: "pointer", fontSize: "0.82rem", fontWeight: 800, background: mktTab === k ? "#E67E22" : "#fff", color: mktTab === k ? "#fff" : "#555", border: mktTab === k ? "none" : `1.5px solid ${G.gris}`, boxShadow: mktTab === k ? "0 4px 12px rgba(230,126,34,0.25)" : "none" }}>{ico}{lbl}{k === "features" && featurePendingCount > 0 && <span style={{ background: mktTab === k ? "#fff" : "#E67E22", color: mktTab === k ? "#E67E22" : "#fff", borderRadius: 50, fontSize: "0.6rem", fontWeight: 800, padding: "1px 6px", lineHeight: 1.5 }}>{featurePendingCount > 99 ? "99+" : featurePendingCount}</span>}</button>
             ))}
           </div>
 
           {/* ── Cartes KPI (contextuelles selon le sous-onglet, masquées sur Événement Premium) ── */}
-          {mktTab !== "event" && mktTab !== "promo" && mktTab !== "phoneprompt" && mktTab !== "premiumnudge" && mktTab !== "referrals" && mktTab !== "affiliates" && (
+          {mktTab !== "event" && mktTab !== "promo" && mktTab !== "phoneprompt" && mktTab !== "premiumnudge" && mktTab !== "referrals" && mktTab !== "affiliates" && mktTab !== "inactive" && (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: 12, marginBottom: 16 }}>
             {(mktTab === "statuts" ? [
               { ic: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>, bg: "rgba(192,57,43,0.12)", label: "Statuts actifs", value: officialStatuses.length, sub: "En ligne actuellement", subColor: G.rouge },
@@ -11799,6 +11852,55 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               </div>
             );
           })()}
+
+          {mktTab === "inactive" && (
+            <div>
+              <div style={{ background: G.blanc, borderRadius: 18, padding: 18, boxShadow: "0 2px 10px rgba(0,0,0,0.05)", marginBottom: 16 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                  <div>
+                    <div style={{ fontSize: "0.9rem", fontWeight: 800, color: G.brun }}>Membres inactifs depuis plus de {inactiveDays} jour{parseInt(inactiveDays) > 1 ? "s" : ""}</div>
+                    <div style={{ fontSize: "0.76rem", color: "#999", marginTop: 2 }}>Uniquement ceux avec un numéro renseigné — sinon impossible à recontacter.</div>
+                  </div>
+                  {inactiveDaysEditing ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <input type="number" min={1} value={inactiveDaysDraft} onChange={e => setInactiveDaysDraft(e.target.value)} style={{ width: 70, border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "8px 10px", fontSize: "0.85rem", outline: "none" }} />
+                      <button onClick={saveInactiveDaysSetting} style={{ background: G.rouge, color: "#fff", border: "none", borderRadius: 8, padding: "8px 14px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer" }}>Enregistrer</button>
+                      <button onClick={() => { setInactiveDaysEditing(false); setInactiveDaysDraft(inactiveDays); }} style={{ background: "none", border: `1.5px solid ${G.gris}`, borderRadius: 8, padding: "8px 14px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer", color: "#666" }}>Annuler</button>
+                    </div>
+                  ) : (
+                    <button onClick={() => setInactiveDaysEditing(true)} style={{ background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "8px 16px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer", color: "#555" }}>Modifier le seuil</button>
+                  )}
+                </div>
+              </div>
+
+              <div style={{ background: G.blanc, borderRadius: 18, padding: 18, boxShadow: "0 2px 10px rgba(0,0,0,0.05)" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+                  <div style={{ fontSize: "0.9rem", fontWeight: 800, color: G.brun }}>{inactiveUsers.length} membre{inactiveUsers.length > 1 ? "s" : ""} à relancer</div>
+                  <button onClick={() => loadInactiveUsers()} style={{ background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "8px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: "#555", fontSize: "0.78rem", fontWeight: 700 }}><IcoRefresh /> Actualiser</button>
+                </div>
+                {inactiveLoading ? (
+                  <div style={{ textAlign: "center", padding: "40px 20px", color: "#aaa" }}>Chargement...</div>
+                ) : inactiveUsers.length === 0 ? (
+                  <div style={{ textAlign: "center", padding: "40px 20px", color: "#aaa", fontSize: "0.88rem" }}>Aucun membre inactif avec un numéro renseigné pour l'instant.</div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {inactiveUsers.map(u => (
+                      <div key={u.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "12px 14px", background: G.creme, borderRadius: 12, flexWrap: "wrap" }}>
+                        <div>
+                          <div style={{ fontSize: "0.85rem", fontWeight: 700, color: G.brun }}>{u.name}</div>
+                          <div style={{ fontSize: "0.72rem", color: "#888" }}>{inactiveDaysAgo(u.last_seen)} · {u.phone}</div>
+                        </div>
+                        <a href={`https://wa.me/${u.phone.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer" style={{ background: "#25D366", color: "#fff", border: "none", borderRadius: 50, padding: "8px 16px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer", textDecoration: "none", display: "flex", alignItems: "center", gap: 6 }}>
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="#fff"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24z"/></svg>
+                          WhatsApp
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {mktTab === "phoneprompt" && (
             <div style={{ background: G.blanc, borderRadius: 18, padding: 20, boxShadow: "0 2px 10px rgba(0,0,0,0.05)", maxWidth: 640 }}>

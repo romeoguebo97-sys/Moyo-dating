@@ -8463,56 +8463,21 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMes
         </>
       )}
 
-      {/* ── Modal profil ── */}
+      {/* ── Vue plein écran du profil (même écran que Matchs/Conversation) — l'action proposée en
+          bas s'adapte à la situation exactement comme avant : match → message, déjà liké →
+          retirer le like, sinon → liker. ── */}
       {selectedProfile && (
-        <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 600,
-          display: "flex", alignItems: "flex-end", justifyContent: "center" }}
-          onClick={() => setSelectedProfile(null)}>
-          <div className="moyo-sheet-in" style={{ background: G.blanc, borderRadius: "22px 22px 0 0", width: "100%",
-            maxWidth: 500, maxHeight: "88vh", overflowY: "auto", paddingBottom: "env(safe-area-inset-bottom)" }}
-            onClick={e => e.stopPropagation()}>
-            <div style={{ height: 270, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", overflow: "hidden", position: "relative" }}>
-              {selectedProfile.photo_url
-                ? <img src={selectedProfile.photo_url ?? undefined} alt={selectedProfile.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" />
-                : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>}
-              <div onClick={() => setSelectedProfile(null)}
-                style={{ position: "absolute", top: 14, right: 14, background: "rgba(0,0,0,0.4)",
-                  borderRadius: "50%", width: 34, height: 34, display: "flex",
-                  alignItems: "center", justifyContent: "center", cursor: "pointer",
-                  color: "#fff", fontWeight: 700, fontSize: "1rem" }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-              </div>
-              <div style={{ position: "absolute", bottom: 14, left: 16 }}>
-                <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "#fff", textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>
-                  {selectedProfile.name}, {selectedProfile.age} ans
-                  {selectedProfile.is_premium && <span style={{ display: "inline-flex", verticalAlign: "middle", marginLeft: 3 }}><PremiumBadge size={11} /></span>}
-                  {selectedProfile.is_verified && <VerifiedBadge size={14} />}
-                </div>
-                <div style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.85)" }}>{selectedProfile.city}</div>
-              </div>
-            </div>
-            <div style={{ padding: "18px 20px 32px" }}>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
-                <span style={{ background: selectedProfile.gender === "Femme" ? "rgba(233,30,140,0.08)" : "rgba(26,110,245,0.08)", color: selectedProfile.gender === "Femme" ? "#e91e8c" : "#1a6ef5", borderRadius: 50, padding: "4px 12px", fontSize: "0.78rem", fontWeight: 600 }}>{selectedProfile.gender}</span>
-                {selectedProfile.religion && <span style={{ background: "rgba(212,168,67,0.1)", border: "1px solid rgba(212,168,67,0.3)", color: "#555", borderRadius: 50, padding: "4px 12px", fontSize: "0.78rem" }}>{selectedProfile.religion}</span>}
-              </div>
-              {selectedProfile.bio && <p style={{ fontSize: "0.88rem", color: "#555", lineHeight: 1.6, marginBottom: 20 }}>{selectedProfile.bio}</p>}
-              {(likerMeta[selectedProfile.id]?.isMatch || sentLikesMeta[selectedProfile.id]?.status === "match") ? (
-                <Btn variant="primary" onClick={() => { const pid = selectedProfile.id; setSelectedProfile(null); if (onGoMessages) onGoMessages(pid); }} style={{ width: "100%", fontSize: "1rem", padding: "14px" }}>
-                  Envoyer un message
-                </Btn>
-              ) : sentLikesMeta[selectedProfile.id] ? (
-                <Btn variant="danger" onClick={() => { const p = selectedProfile; setSelectedProfile(null); setConfirmUnlike(p); }} style={{ width: "100%", fontSize: "1rem", padding: "14px" }}>
-                  Retirer mon like
-                </Btn>
-              ) : (
-                <Btn variant="primary" onClick={() => handleLike(selectedProfile)} loading={liking} style={{ width: "100%", fontSize: "1rem", padding: "14px" }}>
-                  Liker {selectedProfile.name}
-                </Btn>
-              )}
-            </div>
-          </div>
-        </div>
+        <FullScreenProfileView
+          profile={selectedProfile}
+          onClose={() => setSelectedProfile(null)}
+          action={
+            (likerMeta[selectedProfile.id]?.isMatch || sentLikesMeta[selectedProfile.id]?.status === "match")
+              ? { label: "Envoyer un message", onClick: () => { const pid = selectedProfile.id; setSelectedProfile(null); if (onGoMessages) onGoMessages(pid); } }
+              : sentLikesMeta[selectedProfile.id]
+              ? { label: "Retirer mon like", variant: "danger", onClick: () => { const p = selectedProfile; setSelectedProfile(null); setConfirmUnlike(p); } }
+              : { label: `Liker ${selectedProfile.name}`, loading: liking, onClick: () => handleLike(selectedProfile) }
+          }
+        />
       )}
 
       {/* ── Modal confirmation dismiss ── */}
@@ -8579,6 +8544,15 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
   const [viewMode, setViewMode] = useState<"card" | "list">("card");
   const [menuMatchId, setMenuMatchId] = useState<string | null>(null);
+  const [viewFullProfile, setViewFullProfile] = useState<Profile | null>(null);
+  // Bloque le défilement de la page tant que le menu contextuel (3 traits) est ouvert — pas
+  // seulement l'assombrissement visuel du fond, le scroll lui-même ne doit plus bouger.
+  useEffect(() => {
+    if (!menuMatchId) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prevOverflow; };
+  }, [menuMatchId]);
   const [confirmUnmatch, setConfirmUnmatch] = useState<Match | null>(null);
   const [confirmBlockMatch, setConfirmBlockMatch] = useState<Match | null>(null);
   const [confirmDeleteRequest, setConfirmDeleteRequest] = useState<any | null>(null);
@@ -8688,6 +8662,14 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
           const mr = await fetch(`${SUPABASE_URL}/rest/v1/matches`, { method: "POST", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=representation" }, body: JSON.stringify({ user1: prop.user1_id, user2: prop.user2_id }) });
           const md = await mr.json().catch(() => null); const mid = Array.isArray(md) ? md[0]?.id : md?.id;
           if (mid) await sendMatchWelcomeMessage(auth.token, mid, auth.name, pr.other?.name || "");
+          // Crée aussi le like des deux côtés (upsert) — sans ça, un match issu d'une proposition
+          // laisse le cœur "liker" inactif sur les deux profils, ce qui permet de reliker
+          // quelqu'un avec qui on est déjà matché et crée un like fantôme invisible.
+          const likeHeaders = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=minimal" };
+          await Promise.all([
+            fetch(`${SUPABASE_URL}/rest/v1/likes`, { method: "POST", headers: likeHeaders, body: JSON.stringify({ from_user: prop.user1_id, to_user: prop.user2_id }) }),
+            fetch(`${SUPABASE_URL}/rest/v1/likes`, { method: "POST", headers: likeHeaders, body: JSON.stringify({ from_user: prop.user2_id, to_user: prop.user1_id }) }),
+          ]);
         } catch {}
       }
       setProposals(prev => prev.map(x => x.id === pr.id ? { ...x, [field]: "accepted", status: newStatus } : x));
@@ -8918,24 +8900,27 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
                 {[0,1,2].map(i => <div key={i} style={{ width: 18, height: 2, borderRadius: 2, background: "#555" }} />)}
               </div>
               {menuMatchId === m.id && (
-                <div style={{ position: "absolute", right: 0, top: 42, background: G.blanc, borderRadius: 12, boxShadow: "0 8px 28px rgba(0,0,0,0.2)", zIndex: 200, minWidth: 190 }}>
-                  <div onClick={() => { setMenuMatchId(null); setSelectedMatch(m); if (auth.isPremium && m.partner?.id) sb.insert(auth.token, "profile_views", { viewer_id: auth.userId, viewed_id: m.partner.id }).catch(()=>{}); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: G.brun, cursor: "pointer", borderBottom: "1px solid #F5F5F5", display: "flex", alignItems: "center", gap: 10 }}>
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                    Voir le profil
+                <>
+                  <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 199 }} onClick={() => setMenuMatchId(null)} />
+                  <div style={{ position: "absolute", right: 0, top: 42, background: G.blanc, borderRadius: 12, boxShadow: "0 8px 28px rgba(0,0,0,0.2)", zIndex: 200, minWidth: 190 }}>
+                    <div onClick={() => { setMenuMatchId(null); if (m.partner) setViewFullProfile(m.partner); if (auth.isPremium && m.partner?.id) sb.insert(auth.token, "profile_views", { viewer_id: auth.userId, viewed_id: m.partner.id }).catch(()=>{}); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: G.brun, cursor: "pointer", borderBottom: "1px solid #F5F5F5", display: "flex", alignItems: "center", gap: 10 }}>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                      Voir le profil
+                    </div>
+                    <div onClick={() => { setMenuMatchId(null); if (onGoMessages) onGoMessages(m.partner?.id); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: G.vert, cursor: "pointer", borderBottom: "1px solid #F5F5F5", display: "flex", alignItems: "center", gap: 10 }}>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                      Envoyer un message
+                    </div>
+                    <div onClick={() => { setMenuMatchId(null); setConfirmBlockMatch(m); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: G.brun, cursor: "pointer", borderBottom: "1px solid #F5F5F5", display: "flex", alignItems: "center", gap: 10 }}>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                      Bloquer
+                    </div>
+                    <div onClick={() => { setMenuMatchId(null); setConfirmUnmatch(m); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#e74c3c", cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                      Annuler le match
+                    </div>
                   </div>
-                  <div onClick={() => { setMenuMatchId(null); if (onGoMessages) onGoMessages(m.partner?.id); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: G.vert, cursor: "pointer", borderBottom: "1px solid #F5F5F5", display: "flex", alignItems: "center", gap: 10 }}>
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                    Envoyer un message
-                  </div>
-                  <div onClick={() => { setMenuMatchId(null); setConfirmBlockMatch(m); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: G.brun, cursor: "pointer", borderBottom: "1px solid #F5F5F5", display: "flex", alignItems: "center", gap: 10 }}>
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
-                    Bloquer
-                  </div>
-                  <div onClick={() => { setMenuMatchId(null); setConfirmUnmatch(m); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#e74c3c", cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                    Annuler le match
-                  </div>
-                </div>
+                </>
               )}
             </div>
           </div>
@@ -8993,24 +8978,27 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
           const left = rect ? Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - 8) : window.innerWidth - menuWidth - 16;
           const top = rect ? (rect.top > window.innerHeight / 2 ? rect.top - 8 - 176 : rect.bottom + 8) : window.innerHeight / 2;
           return (
-            <div style={{ position: "fixed", left, top, background: G.blanc, borderRadius: 16, boxShadow: "0 8px 32px rgba(0,0,0,0.25)", zIndex: 500, minWidth: menuWidth, transform: "translateY(0)" }}>
-              <div onClick={(e) => { e.stopPropagation(); setMenuMatchId(null); setSelectedMatch(m); if (auth.isPremium && m.partner?.id) sb.insert(auth.token, "profile_views", { viewer_id: auth.userId, viewed_id: m.partner.id }).catch(()=>{}); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: G.brun, cursor: "pointer", borderBottom: "1px solid #F5F5F5", display: "flex", alignItems: "center", gap: 10 }}>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                Voir le profil
+            <>
+              <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 499 }} onClick={() => setMenuMatchId(null)} />
+              <div style={{ position: "fixed", left, top, background: G.blanc, borderRadius: 16, boxShadow: "0 8px 32px rgba(0,0,0,0.25)", zIndex: 500, minWidth: menuWidth, transform: "translateY(0)" }}>
+                <div onClick={(e) => { e.stopPropagation(); setMenuMatchId(null); if (m.partner) setViewFullProfile(m.partner); if (auth.isPremium && m.partner?.id) sb.insert(auth.token, "profile_views", { viewer_id: auth.userId, viewed_id: m.partner.id }).catch(()=>{}); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: G.brun, cursor: "pointer", borderBottom: "1px solid #F5F5F5", display: "flex", alignItems: "center", gap: 10 }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                  Voir le profil
+                </div>
+                <div onClick={(e) => { e.stopPropagation(); setMenuMatchId(null); if (onGoMessages) onGoMessages(m.partner?.id); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: G.vert, cursor: "pointer", borderBottom: "1px solid #F5F5F5", display: "flex", alignItems: "center", gap: 10 }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                  Envoyer un message
+                </div>
+                <div onClick={(e) => { e.stopPropagation(); setMenuMatchId(null); setConfirmBlockMatch(m); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: G.brun, cursor: "pointer", borderBottom: "1px solid #F5F5F5", display: "flex", alignItems: "center", gap: 10 }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                  Bloquer
+                </div>
+                <div onClick={(e) => { e.stopPropagation(); setMenuMatchId(null); setConfirmUnmatch(m); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#e74c3c", cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  Annuler le match
+                </div>
               </div>
-              <div onClick={(e) => { e.stopPropagation(); setMenuMatchId(null); if (onGoMessages) onGoMessages(m.partner?.id); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: G.vert, cursor: "pointer", borderBottom: "1px solid #F5F5F5", display: "flex", alignItems: "center", gap: 10 }}>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                Envoyer un message
-              </div>
-              <div onClick={(e) => { e.stopPropagation(); setMenuMatchId(null); setConfirmBlockMatch(m); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: G.brun, cursor: "pointer", borderBottom: "1px solid #F5F5F5", display: "flex", alignItems: "center", gap: 10 }}>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
-                Bloquer
-              </div>
-              <div onClick={(e) => { e.stopPropagation(); setMenuMatchId(null); setConfirmUnmatch(m); }} style={{ padding: "13px 16px", fontSize: "0.88rem", fontWeight: 600, color: "#e74c3c", cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                Annuler le match
-              </div>
-            </div>
+            </>
           );
         })()}
       </div>
@@ -9157,6 +9145,10 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
         </div>
       </div>
     </div>}
+
+    {viewFullProfile && (
+      <FullScreenProfileView profile={viewFullProfile} onClose={() => setViewFullProfile(null)} action={{ label: "Envoyer un message", onClick: () => { const id = viewFullProfile.id; setViewFullProfile(null); if (onGoMessages) onGoMessages(id); } }} />
+    )}
 
     {/* Modal confirmation annulation match */}
     {confirmUnmatch && (
@@ -9876,6 +9868,53 @@ const VoiceMessage = React.memo(function VoiceMessage({ m, isMine, onOpenOnce, o
 });
 
 type ReportRowLike = { id?: string; reason: string; reporter_id: string; reported_id: string | null; status?: string; created_at?: string };
+
+// ── Vue plein écran d'un profil (photo + infos), partagée entre l'en-tête de conversation (sans
+//    bouton, on y est déjà) et le menu "Voir le profil" de l'onglet Matchs (avec bouton "Envoyer
+//    un message", puisqu'on n'est pas encore dans une conversation à cet endroit). Une seule
+//    version pour ne jamais avoir deux écrans qui divergent avec le temps. ──
+function FullScreenProfileView({ profile, onClose, action }: { profile: Profile | null; onClose: () => void; action?: { label: string; onClick: () => void; variant?: "primary" | "danger"; loading?: boolean } | null }) {
+  if (!profile) return null;
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 500, background: "var(--c-shell-bg)" }}>
+      {profile.photo_url ? (
+        <img src={profile.photo_url} alt={profile.name} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+      ) : (
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.75)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
+        </div>
+      )}
+      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.48) 32%, rgba(0,0,0,0.05) 66%, rgba(0,0,0,0.22) 100%)", pointerEvents: "none" }} />
+      <button onClick={onClose} style={{ position: "absolute", top: "calc(env(safe-area-inset-top) + 16px)", right: 16, width: 44, height: 44, minWidth: 44, minHeight: 44, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.35)", background: "rgba(0,0,0,0.48)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 16px rgba(0,0,0,0.3)", cursor: "pointer", backdropFilter: "blur(8px)", padding: 0 }}>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+      </button>
+      {profile.id !== SUPPORT_TEAM_ID && !profile.hide_online_status && getOnlineStatus(profile.last_seen).label === "En ligne" && (
+        <div style={{ position: "absolute", top: "calc(env(safe-area-inset-top) + 16px)", left: 16, display: "flex", alignItems: "center", gap: 7, background: "rgba(0,0,0,0.48)", border: "1px solid rgba(255,255,255,0.35)", borderRadius: 50, padding: "9px 14px", boxShadow: "0 4px 16px rgba(0,0,0,0.3)", backdropFilter: "blur(8px)", color: "#fff", fontSize: "0.8rem", fontWeight: 700 }}>
+          <span style={{ width: 9, height: 9, borderRadius: "50%", background: "#27ae60", boxShadow: "0 0 0 3px rgba(39,174,96,0.35)", flexShrink: 0 }} />
+          En ligne
+        </div>
+      )}
+      <div style={{ position: "absolute", left: 18, right: 18, bottom: "calc(env(safe-area-inset-bottom, 0px) + 22px)", color: "#fff" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, minWidth: 0 }}>
+          <div style={{ fontSize: "1.85rem", fontWeight: 800, lineHeight: 1.05, textShadow: "0 2px 10px rgba(0,0,0,0.5)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}>{profile.name}{profile.id === SUPPORT_TEAM_ID ? "" : `, ${profile.age} ans`}</div>
+          {profile.is_premium && <PremiumBadge size={20} />}
+          {profile.is_verified && <VerifiedBadge size={20} />}
+        </div>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
+          {profile.gender && <span style={{ background: "rgba(255,255,255,0.18)", color: "#fff", borderRadius: 50, padding: "4px 10px", fontSize: "0.76rem", fontWeight: 700, backdropFilter: "blur(6px)" }}>{profile.gender}</span>}
+          {profile.city && <span style={{ background: "rgba(255,255,255,0.18)", color: "#fff", borderRadius: 50, padding: "4px 10px", fontSize: "0.76rem", fontWeight: 700, backdropFilter: "blur(6px)", maxWidth: 150, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{profile.city}</span>}
+          {profile.religion && <span style={{ background: "rgba(212,168,67,0.28)", color: "#fff", border: "1px solid rgba(212,168,67,0.55)", borderRadius: 50, padding: "4px 10px", fontSize: "0.76rem", fontWeight: 700, backdropFilter: "blur(6px)", maxWidth: 170, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{profile.religion}</span>}
+          {profile.profession && <span style={{ background: "rgba(255,255,255,0.16)", color: "#fff", borderRadius: 50, padding: "4px 10px", fontSize: "0.76rem", fontWeight: 700, backdropFilter: "blur(6px)", maxWidth: 170, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{profile.profession}</span>}
+          {profile.hobbies && <span style={{ background: "rgba(26,92,58,0.38)", color: "#fff", border: "1px solid rgba(255,255,255,0.18)", borderRadius: 50, padding: "4px 10px", fontSize: "0.76rem", fontWeight: 700, backdropFilter: "blur(6px)", maxWidth: 170, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{profile.hobbies}</span>}
+        </div>
+        {profile.bio && <div style={{ fontSize: "0.86rem", lineHeight: 1.45, opacity: 0.92, textShadow: "0 1px 8px rgba(0,0,0,0.5)", overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", marginBottom: action ? 16 : 0 }}>{profile.bio}</div>}
+        {action && (
+          <Btn variant={action.variant || "primary"} onClick={action.onClick} loading={action.loading} style={{ width: "100%", fontSize: "1rem", padding: "14px" }}>{action.label}</Btn>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium, initialPartnerId, onConvOpen, onStatusStackChange, onGoDiscover, onMatch }: { auth: Auth; onUnreadCount: (n: number) => void; onShowPremium: (r: string) => void; onShowGiftPremium?: (partner: { id: string; name: string }) => void; initialPartnerId?: string | null; onConvOpen?: (open: boolean) => void; onStatusStackChange?: (data: { count: number; groups: { userId: string; photo_url?: string; gender?: string }[]; newCount: number } | null) => void; onGoDiscover?: () => void; onMatch?: (p: Profile) => void }) {
   const [convs, setConvs] = useState<Match[]>([]);
@@ -13382,40 +13421,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
       {/* Fiche plein écran du partenaire — même style visuel que le mode plein écran de
           Découvrir, sans bouton liker ni menu, juste une croix pour fermer. */}
       {showPartnerProfile && partnerFullProfile && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 500, background: "var(--c-shell-bg)" }}>
-          {partnerFullProfile.photo_url ? (
-            <img src={partnerFullProfile.photo_url} alt={partnerFullProfile.name} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
-          ) : (
-            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.75)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
-            </div>
-          )}
-          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.48) 32%, rgba(0,0,0,0.05) 66%, rgba(0,0,0,0.22) 100%)", pointerEvents: "none" }} />
-          <button onClick={() => setShowPartnerProfile(false)} style={{ position: "absolute", top: "calc(env(safe-area-inset-top) + 16px)", right: 16, width: 44, height: 44, minWidth: 44, minHeight: 44, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.35)", background: "rgba(0,0,0,0.48)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 16px rgba(0,0,0,0.3)", cursor: "pointer", backdropFilter: "blur(8px)", padding: 0 }}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-          </button>
-          {partnerFullProfile.id !== SUPPORT_TEAM_ID && !partnerFullProfile.hide_online_status && getOnlineStatus(partnerFullProfile.last_seen).label === "En ligne" && (
-            <div style={{ position: "absolute", top: "calc(env(safe-area-inset-top) + 16px)", left: 16, display: "flex", alignItems: "center", gap: 7, background: "rgba(0,0,0,0.48)", border: "1px solid rgba(255,255,255,0.35)", borderRadius: 50, padding: "9px 14px", boxShadow: "0 4px 16px rgba(0,0,0,0.3)", backdropFilter: "blur(8px)", color: "#fff", fontSize: "0.8rem", fontWeight: 700 }}>
-              <span style={{ width: 9, height: 9, borderRadius: "50%", background: "#27ae60", boxShadow: "0 0 0 3px rgba(39,174,96,0.35)", flexShrink: 0 }} />
-              En ligne
-            </div>
-          )}
-          <div style={{ position: "absolute", left: 18, right: 18, bottom: "calc(env(safe-area-inset-bottom, 0px) + 22px)", color: "#fff" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, minWidth: 0 }}>
-              <div style={{ fontSize: "1.85rem", fontWeight: 800, lineHeight: 1.05, textShadow: "0 2px 10px rgba(0,0,0,0.5)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}>{partnerFullProfile.name}{partnerFullProfile.id === SUPPORT_TEAM_ID ? "" : `, ${partnerFullProfile.age} ans`}</div>
-              {partnerFullProfile.is_premium && <PremiumBadge size={20} />}
-              {partnerFullProfile.is_verified && <VerifiedBadge size={20} />}
-            </div>
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
-              {partnerFullProfile.gender && <span style={{ background: "rgba(255,255,255,0.18)", color: "#fff", borderRadius: 50, padding: "4px 10px", fontSize: "0.76rem", fontWeight: 700, backdropFilter: "blur(6px)" }}>{partnerFullProfile.gender}</span>}
-              {partnerFullProfile.city && <span style={{ background: "rgba(255,255,255,0.18)", color: "#fff", borderRadius: 50, padding: "4px 10px", fontSize: "0.76rem", fontWeight: 700, backdropFilter: "blur(6px)", maxWidth: 150, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{partnerFullProfile.city}</span>}
-              {partnerFullProfile.religion && <span style={{ background: "rgba(212,168,67,0.28)", color: "#fff", border: "1px solid rgba(212,168,67,0.55)", borderRadius: 50, padding: "4px 10px", fontSize: "0.76rem", fontWeight: 700, backdropFilter: "blur(6px)", maxWidth: 170, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{partnerFullProfile.religion}</span>}
-              {partnerFullProfile.profession && <span style={{ background: "rgba(255,255,255,0.16)", color: "#fff", borderRadius: 50, padding: "4px 10px", fontSize: "0.76rem", fontWeight: 700, backdropFilter: "blur(6px)", maxWidth: 170, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{partnerFullProfile.profession}</span>}
-              {partnerFullProfile.hobbies && <span style={{ background: "rgba(26,92,58,0.38)", color: "#fff", border: "1px solid rgba(255,255,255,0.18)", borderRadius: 50, padding: "4px 10px", fontSize: "0.76rem", fontWeight: 700, backdropFilter: "blur(6px)", maxWidth: 170, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{partnerFullProfile.hobbies}</span>}
-            </div>
-            {partnerFullProfile.bio && <div style={{ fontSize: "0.86rem", lineHeight: 1.45, opacity: 0.92, textShadow: "0 1px 8px rgba(0,0,0,0.5)", overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical" }}>{partnerFullProfile.bio}</div>}
-          </div>
-        </div>
+        <FullScreenProfileView profile={partnerFullProfile} onClose={() => setShowPartnerProfile(false)} />
       )}
 
       {/* Sous-menu : raison du signalement */}
@@ -17072,8 +17078,8 @@ function PayLinkScreen({ token, onDone }: { token: string; onDone: () => void })
   const selectedPlan = PLANS.find(p => p.id === planId) || PLANS[0];
 
   const OP = operator === "MTN"
-    ? { name: "MTN MoMo", main: "#FFCC00", onColor: "#1a1a1a", ussd: `*105*1*1*${PAY_MTN_NUMBER}*${selectedPlan?.amount || 0}#`, placeholder: "Ex : 7753031542", logo: null }
-    : { name: "Airtel Money", main: "#FF0100", onColor: "#fff", ussd: `*128*2*1*1*${PAY_AIRTEL_NUMBER}*${selectedPlan?.amount || 0}#`, placeholder: "Ex de l'ID : PP260523.2232.A52074", logo: null };
+    ? { name: "MTN MoMo", main: "#FFCC00", onColor: "#1a1a1a", ussd: `*105*1*1*${PAY_MTN_NUMBER}*${selectedPlan?.amount || 0}#`, placeholder: "Ex : 7753031542", responsable: PAY_MTN_RESPONSABLE, logo: null }
+    : { name: "Airtel Money", main: "#FF0100", onColor: "#fff", ussd: `*128*2*1*1*${PAY_AIRTEL_NUMBER}*${selectedPlan?.amount || 0}#`, placeholder: "Ex de l'ID : PP260523.2232.A52074", responsable: PAY_AIRTEL_RESPONSABLE, logo: null };
 
   const fileToBase64 = (file: File): Promise<string> => new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -17163,10 +17169,15 @@ function PayLinkScreen({ token, onDone }: { token: string; onDone: () => void })
                 <div onClick={() => setState("choose")} style={{ display: "flex", alignItems: "center", gap: 5, color: "#999", fontSize: "0.78rem", fontWeight: 600, cursor: "pointer", marginBottom: 14 }}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg> Changer de moyen de paiement
                 </div>
-                <div style={{ background: "#FBF6EA", borderRadius: 14, padding: "14px 16px", marginBottom: 20, textAlign: "left" }}>
+                <div style={{ background: "#FBF6EA", borderRadius: 14, padding: "14px 16px", marginBottom: 14, textAlign: "left" }}>
                   <div style={{ fontSize: "0.7rem", color: "#7a6a3a", fontWeight: 700, marginBottom: 6 }}>Compose ce code sur ton téléphone</div>
                   <div style={{ fontSize: "1rem", fontWeight: 800, color: "#3a2e10", fontFamily: "monospace" }}>{OP.ussd}</div>
                 </div>
+                {OP.responsable && (
+                  <div style={{ fontSize: "0.78rem", color: "#888", lineHeight: 1.5, marginBottom: 18, textAlign: "left" }}>
+                    Ton paiement {OP.name} sera reçu et traité par notre responsable des finances.<br /><span style={{ fontWeight: 700, color: "#444" }}>{OP.responsable}</span>
+                  </div>
+                )}
                 <button onClick={() => setState("proof")} style={{ width: "100%", background: OP.main, color: OP.onColor, border: "none", borderRadius: 14, padding: "13px", fontSize: "0.95rem", fontWeight: 800, cursor: "pointer" }}>J'ai payé →</button>
               </>
             )}
@@ -17266,7 +17277,7 @@ export default function App() {
     if (!document.getElementById("moyo-persistent-anim")) {
       const s = document.createElement("style");
       s.id = "moyo-persistent-anim";
-      s.textContent = "@keyframes premiumAdvScroll{0%{transform:translateY(0)}100%{transform:translateY(-50%)}}.premium-adv-track{animation:premiumAdvScroll linear infinite}.premium-adv-track:hover,.premium-adv-track:active{animation-play-state:paused}.moyo-tap{transition:transform 0.12s ease, box-shadow 0.12s ease;-webkit-tap-highlight-color:transparent}.moyo-tap:active{transform:scale(0.97);box-shadow:0 1px 4px rgba(0,0,0,0.08) !important}";
+      s.textContent = "@keyframes premiumAdvScroll{0%{transform:translateY(0)}100%{transform:translateY(-50%)}}.premium-adv-track{animation:premiumAdvScroll linear infinite}.premium-adv-track:hover,.premium-adv-track:active{animation-play-state:paused}.moyo-tap{transition:transform 0.12s ease, box-shadow 0.12s ease;-webkit-tap-highlight-color:transparent}.moyo-tap:active{transform:scale(0.97);box-shadow:0 1px 4px rgba(0,0,0,0.08) !important}button:not(:disabled),a[style*='cursor: pointer']:not([style*='position: fixed']){transition:transform 0.12s ease;-webkit-tap-highlight-color:transparent}button:not(:disabled):active,a[style*='cursor: pointer']:not([style*='position: fixed']):active{transform:scale(0.97)}div[style*='cursor: pointer']:not([style*='position: fixed']):not([style*='position:fixed']){-webkit-tap-highlight-color:transparent}div[style*='cursor: pointer']:not([style*='position: fixed']):not([style*='position:fixed']):active{transform:scale(0.98)}";
       document.head.appendChild(s);
     }
   }, []);
@@ -18865,6 +18876,13 @@ export default function App() {
                     await sendMatchWelcomeMessage(auth!.token, matchId, auth!.name, pendingProposal.proposerName);
                     logAdminAction(auth!.token, auth!.userId, "Système", `Proposition acceptée : match créé entre ${auth!.name} et ${pendingProposal.proposerName}`, auth!.userId);
                   }
+                  // Crée aussi le like des deux côtés (upsert) — même raison que partout ailleurs :
+                  // éviter un match "muet" où le cœur reste inactif sur les deux profils.
+                  const likeHeaders = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth!.token}`, "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=minimal" };
+                  await Promise.all([
+                    fetch(`${SUPABASE_URL}/rest/v1/likes`, { method: "POST", headers: likeHeaders, body: JSON.stringify({ from_user: prop.user1_id, to_user: prop.user2_id }) }),
+                    fetch(`${SUPABASE_URL}/rest/v1/likes`, { method: "POST", headers: likeHeaders, body: JSON.stringify({ from_user: prop.user2_id, to_user: prop.user1_id }) }),
+                  ]);
                   await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?id=eq.${pendingProposal.id}`, {
                     method: "PATCH",
                     headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth!.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
