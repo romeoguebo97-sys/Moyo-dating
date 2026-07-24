@@ -17244,7 +17244,7 @@ function PayLinkScreen({ token, onDone }: { token: string; onDone: () => void })
               )}
             </div>
             <div style={{ fontWeight: 800, fontSize: "1.05rem", color: G.brun, marginBottom: 2 }}>{name}</div>
-            <div style={{ fontSize: "0.78rem", color: "#999", marginBottom: 20 }}>Paiement Moyo Dating Premium</div>
+            <div style={{ fontSize: "0.78rem", color: "#999", marginBottom: 20 }}>Abonnement Premium</div>
 
             {state === "choose" && (
               <>
