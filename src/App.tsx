@@ -410,6 +410,7 @@ export function setFEATURE_SHOW_LIKES_VIEWS_FREE(v: any) { FEATURE_SHOW_LIKES_VI
 let PREMIUM_SCREEN_VARIANT: "a" | "b" = "a";
 export function setPREMIUM_SCREEN_VARIANT(v: any) { PREMIUM_SCREEN_VARIANT = v === "b" ? "b" : "a"; }
 let FEATURE_GROUP_PREMIUM = true;
+let FEATURE_AMBASSADOR_PROGRAM = true;
 let FEATURE_GROUP_PHOTOS = true;
 let FEATURE_PHOTO_RETOUCH = true;
 // Modération automatique : insultes/menaces/arnaques/contenu sexuel (moderateMessage).
@@ -499,7 +500,7 @@ export function dedupeMatchesByCouple<T extends { user1?: string; user2?: string
 }
 
 // Charger les settings dynamiques depuis Supabase au démarrage
-fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_messages_free_femme,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,pay_wero_enabled,pay_paypal_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,feature_show_likes_views_free,feature_group_premium,feature_group_photos,feature_photo_retouch,feature_moderation_insults,feature_moderation_contact,premium_screen_variant,custom_banned_words,contact_banned_words,disabled_builtin_words,disabled_builtin_contact_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,pay_wero_number,pay_paypal_number,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,social_linkedin,store_link_android,store_link_ios,plan_week_enabled,plan_month_enabled,plan_2month_enabled,discover_default_mode,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,auto_warn_ban_contact_enabled,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price,privacy_notice_enabled,premium_boost_enabled,assistant_photo_url,broadcast_enabled,modal_match_title,modal_match_subtitle,referral_bonus_week_days,referral_bonus_month_days,referral_bonus_2month_days,affiliate_commission_week_fcfa,affiliate_commission_month_fcfa,affiliate_commission_2month_fcfa,affiliate_payable_delay_days,privacy_notice_step1_text,privacy_notice_step2_text,ban_screen_text,pay_link_enabled)&select=key,value`, {
+fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_messages_free_femme,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,pay_wero_enabled,pay_paypal_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,feature_show_likes_views_free,feature_group_premium,feature_group_photos,feature_photo_retouch,feature_moderation_insults,feature_moderation_contact,premium_screen_variant,custom_banned_words,contact_banned_words,disabled_builtin_words,disabled_builtin_contact_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,pay_wero_number,pay_paypal_number,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,social_linkedin,store_link_android,store_link_ios,plan_week_enabled,plan_month_enabled,plan_2month_enabled,discover_default_mode,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,auto_warn_ban_contact_enabled,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price,privacy_notice_enabled,premium_boost_enabled,assistant_photo_url,broadcast_enabled,modal_match_title,modal_match_subtitle,referral_bonus_week_days,referral_bonus_month_days,referral_bonus_2month_days,affiliate_commission_week_fcfa,affiliate_commission_month_fcfa,affiliate_commission_2month_fcfa,affiliate_payable_delay_days,privacy_notice_step1_text,privacy_notice_step2_text,ban_screen_text,pay_link_enabled,feature_ambassador_program)&select=key,value`, {
   headers: { "apikey": SUPABASE_KEY },
 }).then(r => r.json()).then((data: { key: string; value: string }[]) => {
   if (!Array.isArray(data)) return;
@@ -514,6 +515,7 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
   if (map["feature_statuses"] !== undefined) FEATURE_STATUSES = map["feature_statuses"] !== "false";
   if (map["feature_gift_premium"] !== undefined) FEATURE_GIFT_PREMIUM = map["feature_gift_premium"] !== "false";
   if (map["feature_group_premium"] !== undefined) FEATURE_GROUP_PREMIUM = map["feature_group_premium"] !== "false";
+  if (map["feature_ambassador_program"] !== undefined) FEATURE_AMBASSADOR_PROGRAM = map["feature_ambassador_program"] !== "false";
   if (map["feature_photo_retouch"] !== undefined) FEATURE_PHOTO_RETOUCH = map["feature_photo_retouch"] !== "false";
   if (map["feature_group_photos"] !== undefined) FEATURE_GROUP_PHOTOS = map["feature_group_photos"] !== "false";
   if (map["feature_moderation_insults"] !== undefined) FEATURE_MODERATION_INSULTS = map["feature_moderation_insults"] !== "false";
@@ -15115,7 +15117,7 @@ function AmbassadorCard({ auth, status, onRequested }: { auth: Auth; status: "no
     <>
       <div onClick={() => status === "none" && setShowInfo(true)} className="moyo-tap" style={{ background: G.blanc, borderRadius: 18, padding: "15px 18px", cursor: status === "none" ? "pointer" : "default", boxShadow: "0 2px 10px rgba(0,0,0,0.06)", display: "flex", alignItems: "center", gap: 14, border: "1.5px solid rgba(142,68,173,0.2)" }}>
         <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(142,68,173,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.42 4.58a5.4 5.4 0 0 0-7.65 0l-.77.78-.77-.78a5.4 5.4 0 0 0-7.65 7.65l8.42 8.42 8.42-8.42a5.4 5.4 0 0 0 0-7.65z"/></svg>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>
         </div>
         <div style={{ flex: 1 }}>
           <div style={{ fontWeight: 800, fontSize: "1rem", color: G.brun, marginBottom: 3 }}>{status === "pending" ? "Demande Ambassadeur envoyée" : "Devenir Ambassadeur Moyo Dating"}</div>
@@ -15128,8 +15130,8 @@ function AmbassadorCard({ auth, status, onRequested }: { auth: Auth; status: "no
           <div className="moyo-sheet-in" onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: "24px 24px 0 0", width: "100%", maxWidth: 500, padding: "24px 22px 32px" }}>
             <div style={{ fontWeight: 900, fontSize: "1.1rem", color: G.brun, marginBottom: 10 }}>Devenir Ambassadeur Moyo Dating</div>
             <p style={{ fontSize: "0.85rem", color: "#555", lineHeight: 1.6, marginBottom: 10 }}>Contrairement au parrainage classique (jours Premium offerts), l'Ambassadeur touche une <strong>commission en argent</strong> sur chaque abonnement souscrit par ses filleuls.</p>
-            <p style={{ fontSize: "0.85rem", color: "#555", lineHeight: 1.6, marginBottom: 20 }}>Votre demande sera examinée par notre équipe. Si elle est acceptée, un accès Premium vous sera offert (l'Ambassadeur représente Moyo Dating, il ne peut donc pas rester en compte gratuit), et vous pourrez suivre vos gains directement depuis cet écran.</p>
-            <button onClick={sendRequest} disabled={requesting} style={{ width: "100%", background: "#8e44ad", color: "#fff", border: "none", borderRadius: 50, padding: "14px", fontSize: "0.9rem", fontWeight: 800, cursor: requesting ? "not-allowed" : "pointer", marginBottom: 10 }}>{requesting ? "Envoi..." : "Envoyer ma demande"}</button>
+            <p style={{ fontSize: "0.85rem", color: "#555", lineHeight: 1.6, marginBottom: 20 }}>Votre demande sera examinée par notre équipe. Si elle est acceptée, vous obtenez le badge Ambassadeur et vous pourrez suivre vos gains directement depuis cet écran. Aucun Premium n'est offert à l'acceptation : après un mois d'activité, si vos résultats le justifient, notre équipe peut vous offrir le Premium à vie.</p>
+            <button onClick={sendRequest} disabled={requesting} style={{ width: "100%", background: G.rouge, color: "#fff", border: "none", borderRadius: 50, padding: "14px", fontSize: "0.9rem", fontWeight: 800, cursor: requesting ? "not-allowed" : "pointer", marginBottom: 10 }}>{requesting ? "Envoi..." : "Envoyer ma demande"}</button>
             <button onClick={() => setShowInfo(false)} style={{ width: "100%", background: "none", border: "none", color: "#999", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer", padding: "8px" }}>Annuler</button>
           </div>
         </div>
@@ -16262,7 +16264,7 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
         {(!isWideProfile || activeSection === "main") && ambStatus === "ambassador" && (
           <div onClick={() => setShowAmbDashboard(true)} className="moyo-tap" style={{ background: G.blanc, borderRadius: 18, padding: "16px 20px", cursor: "pointer", boxShadow: "0 4px 16px rgba(142,68,173,0.15)", display: "flex", alignItems: "center", gap: 14, border: "1.5px solid rgba(142,68,173,0.25)" }}>
             <div style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(142,68,173,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.42 4.58a5.4 5.4 0 0 0-7.65 0l-.77.78-.77-.78a5.4 5.4 0 0 0-7.65 7.65l8.42 8.42 8.42-8.42a5.4 5.4 0 0 0 0-7.65z"/></svg>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ fontWeight: 800, fontSize: "1rem", color: "#8e44ad", marginBottom: 3 }}>Ambassadeur Moyo Dating</div>
@@ -16277,7 +16279,7 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
             <div className="moyo-sheet-in" onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: "24px 24px 0 0", width: "100%", maxWidth: 500, padding: "24px 22px 32px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: ambStats ? 18 : 10 }}>
                 <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(142,68,173,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.42 4.58a5.4 5.4 0 0 0-7.65 0l-.77.78-.77-.78a5.4 5.4 0 0 0-7.65 7.65l8.42 8.42 8.42-8.42a5.4 5.4 0 0 0 0-7.65z"/></svg>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>
                 </div>
                 <div>
                   <div style={{ fontWeight: 900, fontSize: "1.05rem", color: G.brun }}>Ambassadeur Moyo Dating</div>
@@ -16531,7 +16533,7 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
           </div>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
         </div>}
-        {(!isWideProfile || activeSection === "main") && (ambStatus === "none" || ambStatus === "pending") && <AmbassadorCard auth={auth} status={ambStatus} onRequested={() => setAmbStatus("pending")} />}
+        {(!isWideProfile || activeSection === "main") && FEATURE_AMBASSADOR_PROGRAM && (ambStatus === "none" || ambStatus === "pending") && <AmbassadorCard auth={auth} status={ambStatus} onRequested={() => setAmbStatus("pending")} />}
         {/* Email de connexion + Vérification */}
         {(!isWideProfile || activeSection === "main") && <div style={{ background: G.blanc, borderRadius: 18, border: emailVerified ? "1.5px solid rgba(39,174,96,0.3)" : "1.5px solid rgba(192,57,43,0.2)", boxShadow: "0 2px 10px rgba(0,0,0,0.06)", overflow: "hidden", marginTop: 0 }}>
           <div style={{ padding: "15px 18px", display: "flex", alignItems: "center", gap: 14 }}>

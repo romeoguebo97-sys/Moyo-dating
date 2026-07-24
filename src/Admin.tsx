@@ -550,6 +550,7 @@ export function AdminDesktopPage() {
     affiliateCommissionMonthFcfa: "800",
     affiliateCommission2monthFcfa: "1500",
     affiliatePayableDelayDays: "15",
+    featureAmbassadorProgram: "true",
   });
   const [editingConfig, setEditingConfig] = React.useState<string | null>(null);
   const [editingConfigValue, setEditingConfigValue] = React.useState("");
@@ -589,6 +590,7 @@ export function AdminDesktopPage() {
       "disabled_builtin_contact_words",
       "auto_mod_contact_reply",
       "affiliate_commission_week_fcfa","affiliate_commission_month_fcfa","affiliate_commission_2month_fcfa","affiliate_payable_delay_days",
+      "feature_ambassador_program",
     ];
     fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(${allKeys.join(",")})&select=key,value`, {
       headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` },
@@ -634,6 +636,7 @@ export function AdminDesktopPage() {
         affiliateCommissionMonthFcfa: map["affiliate_commission_month_fcfa"] || c.affiliateCommissionMonthFcfa,
         affiliateCommission2monthFcfa: map["affiliate_commission_2month_fcfa"] || c.affiliateCommission2monthFcfa,
         affiliatePayableDelayDays: map["affiliate_payable_delay_days"] || c.affiliatePayableDelayDays,
+        featureAmbassadorProgram: map["feature_ambassador_program"] || c.featureAmbassadorProgram,
         appointmentsEnabled: map["appointments_enabled"] || c.appointmentsEnabled,
         phoneAppointmentsEnabled: map["phone_appointments_enabled"] || c.phoneAppointmentsEnabled,
         physicalAppointmentsEnabled: map["physical_appointments_enabled"] || c.physicalAppointmentsEnabled,
@@ -1040,6 +1043,7 @@ export function AdminDesktopPage() {
                 ["feature_group_premium", "featureGroupPremium" as keyof typeof appConfig, "Groupe Premium"],
                 ["feature_group_photos", "featureGroupPhotos" as keyof typeof appConfig, "Photos dans le Groupe"],
                 ["feature_photo_retouch", "featurePhotoRetouch" as keyof typeof appConfig, "Retouche photo Premium"],
+                ["feature_ambassador_program", "featureAmbassadorProgram" as keyof typeof appConfig, "Programme Ambassadeur (bouton \"Devenir Ambassadeur\")"],
                 ["feature_moderation_insults", "featureModerationInsults" as keyof typeof appConfig, "Modération auto (insultes, menaces, arnaques, sexuel)"],
                 ["feature_moderation_contact", "featureModerationContact" as keyof typeof appConfig, "Blocage partage de contact (comptes gratuits)"],
               ] as [string, keyof typeof appConfig, string][]).map(([key, ck, label]) => (
@@ -1263,7 +1267,7 @@ export function AdminDesktopPage() {
 
 function AdminNotifPrefs({ auth }: { auth: Auth }) {
   type Admin = { id: string; name: string };
-  type Prefs = { paiements: boolean; signalements: boolean; matchs: boolean; mises_relation: boolean; groupe_demandes: boolean };
+  type Prefs = { paiements: boolean; signalements: boolean; matchs: boolean; mises_relation: boolean; groupe_demandes: boolean; ambassadeurs: boolean };
   const [admins, setAdmins] = React.useState<Admin[]>([]);
   const [prefs, setPrefs] = React.useState<Record<string, Prefs>>({});
   const [loading, setLoading] = React.useState(true);
@@ -1276,11 +1280,11 @@ function AdminNotifPrefs({ auth }: { auth: Auth }) {
       try {
         const [ar, pr] = await Promise.all([
           fetch(`${SUPABASE_URL}/rest/v1/profiles?is_admin=eq.true&select=id,name&order=name.asc`, { headers: H }).then(r => r.json()).catch(() => []),
-          fetch(`${SUPABASE_URL}/rest/v1/admin_notif_prefs?select=admin_id,paiements,signalements,matchs,mises_relation,groupe_demandes`, { headers: H }).then(r => r.json()).catch(() => []),
+          fetch(`${SUPABASE_URL}/rest/v1/admin_notif_prefs?select=admin_id,paiements,signalements,matchs,mises_relation,groupe_demandes,ambassadeurs`, { headers: H }).then(r => r.json()).catch(() => []),
         ]);
         if (Array.isArray(ar)) setAdmins(ar.filter((a: any) => a.id !== SUPPORT_TEAM_ID));
         const map: Record<string, Prefs> = {};
-        if (Array.isArray(pr)) pr.forEach((p: any) => { map[p.admin_id] = { paiements: !!p.paiements, signalements: !!p.signalements, matchs: !!p.matchs, mises_relation: !!p.mises_relation, groupe_demandes: !!p.groupe_demandes }; });
+        if (Array.isArray(pr)) pr.forEach((p: any) => { map[p.admin_id] = { paiements: !!p.paiements, signalements: !!p.signalements, matchs: !!p.matchs, mises_relation: !!p.mises_relation, groupe_demandes: !!p.groupe_demandes, ambassadeurs: !!p.ambassadeurs }; });
         setPrefs(map);
       } catch {}
       setLoading(false);
@@ -1288,7 +1292,7 @@ function AdminNotifPrefs({ auth }: { auth: Auth }) {
   }, [auth.token]);
 
   const toggle = async (adminId: string, key: keyof Prefs) => {
-    const current = prefs[adminId] || { paiements: false, signalements: false, matchs: false, mises_relation: false, groupe_demandes: false };
+    const current = prefs[adminId] || { paiements: false, signalements: false, matchs: false, mises_relation: false, groupe_demandes: false, ambassadeurs: false };
     const updated = { ...current, [key]: !current[key] };
     setPrefs(p => ({ ...p, [adminId]: updated }));
     try {
@@ -1318,11 +1322,11 @@ function AdminNotifPrefs({ auth }: { auth: Auth }) {
       ) : admins.length === 0 ? (
         <div style={{ textAlign: "center", padding: 20, color: "#aaa", fontSize: "0.8rem", fontStyle: "italic" }}>Aucun admin trouvé.</div>
       ) : admins.map(a => {
-        const p = prefs[a.id] || { paiements: false, signalements: false, matchs: false, mises_relation: false, groupe_demandes: false };
+        const p = prefs[a.id] || { paiements: false, signalements: false, matchs: false, mises_relation: false, groupe_demandes: false, ambassadeurs: false };
         return (
           <div key={a.id} style={{ background: G.creme, borderRadius: 12, padding: "12px 14px", marginBottom: 10 }}>
             <div style={{ fontSize: "0.85rem", fontWeight: 800, color: G.brun, marginBottom: 8 }}>{a.name}{a.id === auth.userId ? " (vous)" : ""}</div>
-            {([["signalements", "🚩 Signalements"], ["matchs", "💞 Matchs"], ["mises_relation", "💌 Mises en relation"], ["groupe_demandes", "⭐ Demandes Groupe Premium"], ["paiements", "💳 Paiements"]] as [keyof Prefs, string][]).map(([k, label]) => (
+            {([["signalements", "🚩 Signalements"], ["matchs", "💞 Matchs"], ["mises_relation", "💌 Mises en relation"], ["groupe_demandes", "⭐ Demandes Groupe Premium"], ["ambassadeurs", "🎖 Ambassadeurs"], ["paiements", "💳 Paiements"]] as [keyof Prefs, string][]).map(([k, label]) => (
               <div key={k} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "6px 0" }}>
                 <div style={{ fontSize: "0.82rem", fontWeight: 600, color: "#444" }}>{label}</div>
                 <SwitchBtn on={p[k]} onToggle={() => toggle(a.id, k)} />
@@ -2545,7 +2549,7 @@ function AssistantPhotoConfig({ auth }: { auth: Auth }) {
 export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () => void }) {
   const [rules, setRules] = React.useState({ blockSameGenderLike: true });
   const [modalTexts, setModalTexts] = React.useState({ sameGenderHomme: "Eh frère, reste du bon côté ! 😂", sameGenderFemme: "Eh soeur, reste du bon côté ! 😂", sameGenderSub: "Moyo Dating c'est pour les rencontres hétérosexuelles 😄", signupSuccess: "Ton compte est prêt ! Connecte-toi maintenant.", matchTitle: "C'est un Match !", matchSubtitle: "Toi et {name} vous plaisez mutuellement !", premiumDefault: "Passe Premium pour débloquer toutes les fonctionnalités de Moyo Dating !", likesEpuises: "Tu as utilisé tes {n} likes gratuits aujourd'hui. Passe Premium pour liker sans limite !" });
-  const [appConfig, setAppConfig] = React.useState({ limitLikes: "5", limitMessages: "3", limitMessagesFemme: "100", limitMatchRequests: "2", limitStatusBoosts: "2", limitPhotoSizeMb: "5", matchWelcomeMessage: "Vous avez un nouveau match ! Dites bonjour 👋", premiumPriceFcfa: "3500", premiumPriceEur: "10", eurToFcfaRate: "655.957", premiumDurationDays: "31", premiumPriceWeekFcfa: "1200", premiumPrice2monthFcfa: "5900", premiumDaysWeek: "7", premiumDays2month: "62", likesNotifDelayHours: "24", featureStatuses: "true", featureGiftPremium: "true", featureAssistant: "true", featureGroupPremium: "true", featureGroupPhotos: "true", featurePhotoRetouch: "true", maintenanceMode: "false", maintenanceMessage: "Moyo Dating est en maintenance. Nous revenons très vite ! 🔧", customBannedWords: "", contactBannedWords: "", autoModContactReply: AUTO_MOD_CONTACT_REPLY, featureModerationInsults: "true", featureModerationContact: "true", disabledBuiltinWords: "", disabledBuiltinContactWords: "", affiliateCommissionWeekFcfa: "300", affiliateCommissionMonthFcfa: "800", affiliateCommission2monthFcfa: "1500", affiliatePayableDelayDays: "15" });
+  const [appConfig, setAppConfig] = React.useState({ limitLikes: "5", limitMessages: "3", limitMessagesFemme: "100", limitMatchRequests: "2", limitStatusBoosts: "2", limitPhotoSizeMb: "5", matchWelcomeMessage: "Vous avez un nouveau match ! Dites bonjour 👋", premiumPriceFcfa: "3500", premiumPriceEur: "10", eurToFcfaRate: "655.957", premiumDurationDays: "31", premiumPriceWeekFcfa: "1200", premiumPrice2monthFcfa: "5900", premiumDaysWeek: "7", premiumDays2month: "62", likesNotifDelayHours: "24", featureStatuses: "true", featureGiftPremium: "true", featureAssistant: "true", featureGroupPremium: "true", featureGroupPhotos: "true", featurePhotoRetouch: "true", maintenanceMode: "false", maintenanceMessage: "Moyo Dating est en maintenance. Nous revenons très vite ! 🔧", customBannedWords: "", contactBannedWords: "", autoModContactReply: AUTO_MOD_CONTACT_REPLY, featureModerationInsults: "true", featureModerationContact: "true", disabledBuiltinWords: "", disabledBuiltinContactWords: "", affiliateCommissionWeekFcfa: "300", affiliateCommissionMonthFcfa: "800", affiliateCommission2monthFcfa: "1500", affiliatePayableDelayDays: "15", featureAmbassadorProgram: "true" });
   const [editingModal, setEditingModal] = React.useState<string | null>(null);
   const [editingValue, setEditingValue] = React.useState("");
   const [editingConfig, setEditingConfig] = React.useState<string | null>(null);
@@ -2553,7 +2557,7 @@ export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () =
   const [matchProposalExpiryDaysM, setMatchProposalExpiryDaysM] = React.useState("30");
 
   React.useEffect(() => {
-    const allKeys = ["rule_block_same_gender_like","modal_same_gender_homme","modal_same_gender_femme","modal_same_gender_sub","modal_signup_success","modal_match_title","modal_match_subtitle","modal_premium_default","modal_likes_epuises","limit_likes_free","limit_messages_free","limit_messages_free_femme","limit_match_requests","limit_status_boosts","limit_photo_size_mb","match_welcome_message","match_proposal_expiry_days","premium_price_fcfa","premium_price_week_fcfa","premium_price_2month_fcfa","premium_days_week","premium_days_2month","premium_duration_days","feature_statuses","feature_gift_premium","feature_assistant","feature_group_premium","feature_photo_retouch","feature_moderation_insults","feature_moderation_contact","maintenance_mode","maintenance_message","custom_banned_words","contact_banned_words","disabled_builtin_words","disabled_builtin_contact_words","auto_mod_contact_reply","poll_badges_ms","poll_admin_badge_ms","poll_stats_ms","poll_broadcast_ms","poll_support_ms","affiliate_commission_week_fcfa","affiliate_commission_month_fcfa","affiliate_commission_2month_fcfa","affiliate_payable_delay_days"];
+    const allKeys = ["rule_block_same_gender_like","modal_same_gender_homme","modal_same_gender_femme","modal_same_gender_sub","modal_signup_success","modal_match_title","modal_match_subtitle","modal_premium_default","modal_likes_epuises","limit_likes_free","limit_messages_free","limit_messages_free_femme","limit_match_requests","limit_status_boosts","limit_photo_size_mb","match_welcome_message","match_proposal_expiry_days","premium_price_fcfa","premium_price_week_fcfa","premium_price_2month_fcfa","premium_days_week","premium_days_2month","premium_duration_days","feature_statuses","feature_gift_premium","feature_assistant","feature_group_premium","feature_photo_retouch","feature_moderation_insults","feature_moderation_contact","maintenance_mode","maintenance_message","custom_banned_words","contact_banned_words","disabled_builtin_words","disabled_builtin_contact_words","auto_mod_contact_reply","poll_badges_ms","poll_admin_badge_ms","poll_stats_ms","poll_broadcast_ms","poll_support_ms","affiliate_commission_week_fcfa","affiliate_commission_month_fcfa","affiliate_commission_2month_fcfa","affiliate_payable_delay_days","feature_ambassador_program"];
     fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(${allKeys.join(",")})&select=key,value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } })
       .then(r => r.json()).then(data => {
         if (!Array.isArray(data)) return;
@@ -2563,7 +2567,7 @@ export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () =
         if (map["rule_block_same_gender_like"]) setRules(r => ({ ...r, blockSameGenderLike: map["rule_block_same_gender_like"] === "true" }));
         setModalTexts(t => ({ sameGenderHomme: map["modal_same_gender_homme"] || t.sameGenderHomme, sameGenderFemme: map["modal_same_gender_femme"] || t.sameGenderFemme, sameGenderSub: map["modal_same_gender_sub"] || t.sameGenderSub, signupSuccess: map["modal_signup_success"] || t.signupSuccess, matchTitle: map["modal_match_title"] || t.matchTitle, matchSubtitle: map["modal_match_subtitle"] || t.matchSubtitle, premiumDefault: map["modal_premium_default"] || t.premiumDefault, likesEpuises: map["modal_likes_epuises"] || t.likesEpuises }));
         setAppConfig(c => ({ limitLikes: map["limit_likes_free"] || c.limitLikes, limitMessages: map["limit_messages_free"] || c.limitMessages, limitMessagesFemme: map["limit_messages_free_femme"] || c.limitMessagesFemme, limitMatchRequests: map["limit_match_requests"] || c.limitMatchRequests, limitStatusBoosts: map["limit_status_boosts"] || c.limitStatusBoosts, limitPhotoSizeMb: map["limit_photo_size_mb"] || c.limitPhotoSizeMb, matchWelcomeMessage: map["match_welcome_message"] || c.matchWelcomeMessage, premiumPriceFcfa: map["premium_price_fcfa"] || c.premiumPriceFcfa, premiumPriceWeekFcfa: map["premium_price_week_fcfa"] || c.premiumPriceWeekFcfa, premiumPrice2monthFcfa: map["premium_price_2month_fcfa"] || c.premiumPrice2monthFcfa, premiumDaysWeek: map["premium_days_week"] || c.premiumDaysWeek, premiumDays2month: map["premium_days_2month"] || c.premiumDays2month, premiumPriceEur: map["premium_price_eur"] || c.premiumPriceEur, eurToFcfaRate: map["eur_to_fcfa_rate"] || c.eurToFcfaRate, premiumDurationDays: map["premium_duration_days"] || c.premiumDurationDays, likesNotifDelayHours: map["likes_notification_delay_hours"] || c.likesNotifDelayHours, featureStatuses: map["feature_statuses"] || c.featureStatuses, featureGiftPremium: map["feature_gift_premium"] || c.featureGiftPremium, featureAssistant: map["feature_assistant"] || c.featureAssistant, featureGroupPremium: map["feature_group_premium"] || c.featureGroupPremium,
-        featureGroupPhotos: map["feature_group_photos"] || c.featureGroupPhotos, featurePhotoRetouch: map["feature_photo_retouch"] || c.featurePhotoRetouch, maintenanceMode: map["maintenance_mode"] || c.maintenanceMode, maintenanceMessage: map["maintenance_message"] || c.maintenanceMessage, customBannedWords: map["custom_banned_words"] || c.customBannedWords, contactBannedWords: map["contact_banned_words"] || c.contactBannedWords, autoModContactReply: map["auto_mod_contact_reply"] || c.autoModContactReply, featureModerationInsults: map["feature_moderation_insults"] || c.featureModerationInsults, featureModerationContact: map["feature_moderation_contact"] || c.featureModerationContact, disabledBuiltinWords: map["disabled_builtin_words"] !== undefined ? map["disabled_builtin_words"] : c.disabledBuiltinWords, disabledBuiltinContactWords: map["disabled_builtin_contact_words"] !== undefined ? map["disabled_builtin_contact_words"] : c.disabledBuiltinContactWords, affiliateCommissionWeekFcfa: map["affiliate_commission_week_fcfa"] || c.affiliateCommissionWeekFcfa, affiliateCommissionMonthFcfa: map["affiliate_commission_month_fcfa"] || c.affiliateCommissionMonthFcfa, affiliateCommission2monthFcfa: map["affiliate_commission_2month_fcfa"] || c.affiliateCommission2monthFcfa, affiliatePayableDelayDays: map["affiliate_payable_delay_days"] || c.affiliatePayableDelayDays }));
+        featureGroupPhotos: map["feature_group_photos"] || c.featureGroupPhotos, featurePhotoRetouch: map["feature_photo_retouch"] || c.featurePhotoRetouch, maintenanceMode: map["maintenance_mode"] || c.maintenanceMode, maintenanceMessage: map["maintenance_message"] || c.maintenanceMessage, customBannedWords: map["custom_banned_words"] || c.customBannedWords, contactBannedWords: map["contact_banned_words"] || c.contactBannedWords, autoModContactReply: map["auto_mod_contact_reply"] || c.autoModContactReply, featureModerationInsults: map["feature_moderation_insults"] || c.featureModerationInsults, featureModerationContact: map["feature_moderation_contact"] || c.featureModerationContact, disabledBuiltinWords: map["disabled_builtin_words"] !== undefined ? map["disabled_builtin_words"] : c.disabledBuiltinWords, disabledBuiltinContactWords: map["disabled_builtin_contact_words"] !== undefined ? map["disabled_builtin_contact_words"] : c.disabledBuiltinContactWords, affiliateCommissionWeekFcfa: map["affiliate_commission_week_fcfa"] || c.affiliateCommissionWeekFcfa, affiliateCommissionMonthFcfa: map["affiliate_commission_month_fcfa"] || c.affiliateCommissionMonthFcfa, affiliateCommission2monthFcfa: map["affiliate_commission_2month_fcfa"] || c.affiliateCommission2monthFcfa, affiliatePayableDelayDays: map["affiliate_payable_delay_days"] || c.affiliatePayableDelayDays, featureAmbassadorProgram: map["feature_ambassador_program"] || c.featureAmbassadorProgram }));
         if (map["custom_banned_words"] !== undefined) buildCustomBannedRegex(map["custom_banned_words"]);
         if (map["contact_banned_words"] !== undefined) buildContactBannedRegex(map["contact_banned_words"]);
       }).catch(() => {});
@@ -2631,7 +2635,7 @@ export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () =
         <RelationalNudgeConfig auth={auth} />
       </OffCanvasSection>
       <OffCanvasSection title="Fonctionnalités">
-        {([["feature_statuses","featureStatuses" as keyof typeof appConfig,"Statuts (Stories)"],["feature_gift_premium","featureGiftPremium" as keyof typeof appConfig,"Cadeau Premium"],["feature_assistant","featureAssistant" as keyof typeof appConfig,"Assistant IA"],["feature_group_premium","featureGroupPremium" as keyof typeof appConfig,"Groupe Premium"],["feature_group_photos","featureGroupPhotos" as keyof typeof appConfig,"Photos dans le Groupe"],["feature_photo_retouch","featurePhotoRetouch" as keyof typeof appConfig,"Retouche photo Premium"],["feature_moderation_insults","featureModerationInsults" as keyof typeof appConfig,"Modération auto (insultes, menaces, arnaques, sexuel)"],["feature_moderation_contact","featureModerationContact" as keyof typeof appConfig,"Blocage partage de contact (comptes gratuits)"],["maintenance_mode","maintenanceMode" as keyof typeof appConfig,"Mode maintenance"]] as [string, keyof typeof appConfig, string][]).map(([key,ck,label]) => (
+        {([["feature_statuses","featureStatuses" as keyof typeof appConfig,"Statuts (Stories)"],["feature_gift_premium","featureGiftPremium" as keyof typeof appConfig,"Cadeau Premium"],["feature_assistant","featureAssistant" as keyof typeof appConfig,"Assistant IA"],["feature_group_premium","featureGroupPremium" as keyof typeof appConfig,"Groupe Premium"],["feature_group_photos","featureGroupPhotos" as keyof typeof appConfig,"Photos dans le Groupe"],["feature_photo_retouch","featurePhotoRetouch" as keyof typeof appConfig,"Retouche photo Premium"],["feature_ambassador_program","featureAmbassadorProgram" as keyof typeof appConfig,"Programme Ambassadeur (bouton \"Devenir Ambassadeur\")"],["feature_moderation_insults","featureModerationInsults" as keyof typeof appConfig,"Modération auto (insultes, menaces, arnaques, sexuel)"],["feature_moderation_contact","featureModerationContact" as keyof typeof appConfig,"Blocage partage de contact (comptes gratuits)"],["maintenance_mode","maintenanceMode" as keyof typeof appConfig,"Mode maintenance"]] as [string, keyof typeof appConfig, string][]).map(([key,ck,label]) => (
           <div key={key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: G.creme, borderRadius: 12 }}>
             <div style={{ fontSize: "0.83rem", fontWeight: 600, color: key === "maintenance_mode" ? G.rouge : "#1a1a1a" }}>{label}</div>
             <SwitchBtn on={appConfig[ck] === "true"} onToggle={async () => { const v = appConfig[ck] !== "true" ? "true" : "false"; setAppConfig(c => ({ ...c, [ck]: v })); await patch(key, v); }} />
@@ -6699,8 +6703,10 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
     const [affiliateConversionsLoading, setAffiliateConversionsLoading] = useState(false);
     const [affiliateSearch, setAffiliateSearch] = useState("");
     const [affiliateAddQuery, setAffiliateAddQuery] = useState("");
-    const [affiliateAddResults, setAffiliateAddResults] = useState<{ id: string; name: string; phone?: string }[]>([]);
+    const [affiliateAddResults, setAffiliateAddResults] = useState<{ id: string; name: string; phone?: string; photo_url?: string }[]>([]);
     const [affiliateAddSearching, setAffiliateAddSearching] = useState(false);
+    const [affiliateRemoveModal, setAffiliateRemoveModal] = useState<{ id: string; user_id: string; name: string } | null>(null);
+    const [affiliateRemoveLoading, setAffiliateRemoveLoading] = useState(false);
     const loadAffiliates = async () => {
       if (!auth) return;
       setAffiliatesLoading(true);
@@ -6737,22 +6743,21 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
       setAmbassadorRequestsLoading(false);
     };
     useEffect(() => { if (activeTab === "ambassadors" && ambTab === "requests") loadAmbassadorRequests(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [activeTab, ambTab]);
-    // Modal d'approbation : choix libre de la durée Premium à accorder, même principe que
-    // "Offrir Premium gratuitement" ailleurs dans l'admin.
+    // Modal d'approbation : simple confirmation. Le Premium n'est plus offert automatiquement
+    // à l'approbation (faille : n'importe qui pouvait candidater juste pour avoir du Premium
+    // gratuit). Il est désormais accordé à vie, manuellement, depuis la ligne de l'affilié dans
+    // "Affiliés actifs", une fois que l'admin constate des résultats réels (après ~1 mois).
     const [ambassadorApproveModal, setAmbassadorApproveModal] = useState<{ id: string; user_id: string; name: string; phone?: string } | null>(null);
-    const [ambassadorApproveDate, setAmbassadorApproveDate] = useState("");
     const [ambassadorActionLoading, setAmbassadorActionLoading] = useState(false);
     const approveAmbassadorRequest = async () => {
       const req = ambassadorApproveModal;
-      if (!req || !ambassadorApproveDate || !auth) return;
+      if (!req || !auth) return;
       setAmbassadorActionLoading(true);
       try {
-        const premiumUntil = new Date(`${ambassadorApproveDate}T23:59:59`).toISOString();
-        const dateLabel = new Date(premiumUntil).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" });
-        // 1. Statut Premium + étiquette Ambassadeur sur le profil.
+        // 1. Étiquette Ambassadeur sur le profil (sans Premium offert).
         await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${req.user_id}`, {
           method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" },
-          body: JSON.stringify({ is_premium: true, premium_until: premiumUntil, premium_is_gift: true, is_ambassador: true }),
+          body: JSON.stringify({ is_ambassador: true }),
         });
         // 2. Devient affilié actif : réutilise tel quel le système de commissions déjà existant.
         await fetch(`${SUPABASE_URL}/rest/v1/affiliates`, {
@@ -6764,11 +6769,10 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
           method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" },
           body: JSON.stringify({ status: "approved", reviewed_at: new Date().toISOString(), reviewed_by: auth.userId }),
         });
-        logAdminAction(auth.token, auth.userId, auth.name, `Demande Ambassadeur approuvée pour ${req.name} : Premium offert jusqu'au ${dateLabel}, statut affilié actif.`, req.user_id);
+        logAdminAction(auth.token, auth.userId, auth.name, `Demande Ambassadeur approuvée pour ${req.name} : badge et statut affilié actif (pas de Premium offert à l'approbation).`, req.user_id);
         showToast(`✅ ${req.name} est maintenant Ambassadeur.`, "success");
         setAmbassadorRequests(prev => prev.filter(r => r.id !== req.id));
         setAmbassadorApproveModal(null);
-        setAmbassadorApproveDate("");
       } catch { showToast("Erreur lors de l'approbation.", "error"); }
       setAmbassadorActionLoading(false);
     };
@@ -6794,7 +6798,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
       setAffiliateAddSearching(true);
       const t = setTimeout(async () => {
         try {
-          const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?name=ilike.*${encodeURIComponent(q)}*&select=id,name,phone&limit=8`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+          const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?name=ilike.*${encodeURIComponent(q)}*&select=id,name,phone,photo_url&limit=8`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
           const data = await r.json().catch(() => []);
           setAffiliateAddResults(Array.isArray(data) ? data : []);
         } catch {}
@@ -6814,6 +6818,29 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
       if (!auth) return;
       await fetch(`${SUPABASE_URL}/rest/v1/affiliates?id=eq.${aff.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ status }) });
       setAffiliatesList(list => list.map(a => a.id === aff.id ? { ...a, status } : a));
+    };
+    // ── Fin de contrat Ambassadeur : passe l'affilié à "removed" (l'historique des commissions
+    //    reste rattaché, à purger plus tard séparément), retire le badge is_ambassador, et ne
+    //    retire le Premium que s'il avait été offert par le programme (jamais un Premium payé
+    //    par la personne elle-même). ──
+    const confirmRemoveAffiliate = async () => {
+      const aff = affiliateRemoveModal;
+      if (!aff || !auth) return;
+      setAffiliateRemoveLoading(true);
+      try {
+        await fetch(`${SUPABASE_URL}/rest/v1/affiliates?id=eq.${aff.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ status: "removed" }) });
+        const pr = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${aff.user_id}&select=premium_is_gift`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+        const pd = await pr.json().catch(() => []);
+        const wasGifted = Array.isArray(pd) && pd[0]?.premium_is_gift === true;
+        const patchBody: any = { is_ambassador: false };
+        if (wasGifted) { patchBody.is_premium = false; patchBody.premium_until = null; patchBody.premium_is_gift = false; }
+        await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${aff.user_id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify(patchBody) });
+        logAdminAction(auth.token, auth.userId, auth.name, `Contrat Ambassadeur terminé pour ${aff.name} : badge${wasGifted ? " et Premium offert" : ""} retiré(s), historique des commissions conservé.`, aff.user_id);
+        setAffiliatesList(list => list.map(a => a.id === aff.id ? { ...a, status: "removed" } : a));
+        showToast(`${aff.name} n'est plus Ambassadeur.`, "success");
+        setAffiliateRemoveModal(null);
+      } catch {}
+      setAffiliateRemoveLoading(false);
     };
     const markConversionPaid = async (conv: { id: string; affiliate_name?: string; filleul_name?: string; commission_amount?: number }) => {
       if (!auth) return;
@@ -10069,7 +10096,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
             ["matches", "Matchs", () => <svg width="16" height="16" viewBox="0 0 24 24" fill={activeTab === "matches" ? "#8e44ad" : "none"} stroke={activeTab === "matches" ? "#8e44ad" : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>],
             ["messagerie", "Messagerie", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "messagerie" ? G.rouge : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>],
             ["marketing", "Marketing", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "marketing" ? "#E67E22" : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>],
-            ["ambassadors", "Ambassadeurs", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "ambassadors" ? "#8e44ad" : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.42 4.58a5.4 5.4 0 0 0-7.65 0l-.77.78-.77-.78a5.4 5.4 0 0 0-7.65 7.65l8.42 8.42 8.42-8.42a5.4 5.4 0 0 0 0-7.65z"/></svg>],
+            ["ambassadors", "Ambassadeurs", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "ambassadors" ? "#8e44ad" : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>],
             ["reviews", "Réputation", () => <svg width="16" height="16" viewBox="0 0 24 24" fill={activeTab === "reviews" ? G.or : "#999"} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>],
             ["appointments", "Rendez-vous", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "appointments" ? G.vert : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>],
             ["payments", "Budget", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "payments" ? "#27ae60" : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-2"/><path d="M21 12v-2a2 2 0 0 0-2-2H6"/><circle cx="16" cy="12" r="1"/></svg>],
@@ -12864,7 +12891,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                       </div>
                       <div style={{ display: "flex", gap: 8 }}>
                         <button disabled={ambassadorActionLoading} onClick={() => rejectAmbassadorRequest(r)} style={{ background: "rgba(85,85,85,0.08)", border: "1.5px solid rgba(85,85,85,0.2)", borderRadius: 50, padding: "8px 16px", fontSize: "0.76rem", fontWeight: 700, color: "#555", cursor: ambassadorActionLoading ? "not-allowed" : "pointer" }}>Refuser</button>
-                        <button disabled={ambassadorActionLoading} onClick={() => { setAmbassadorApproveModal({ id: r.id, user_id: r.user_id, name: r.name, phone: r.phone }); setAmbassadorApproveDate(""); }} style={{ background: "#8e44ad", border: "none", borderRadius: 50, padding: "8px 16px", fontSize: "0.76rem", fontWeight: 700, color: "#fff", cursor: ambassadorActionLoading ? "not-allowed" : "pointer" }}>Approuver</button>
+                        <button disabled={ambassadorActionLoading} onClick={() => setAmbassadorApproveModal({ id: r.id, user_id: r.user_id, name: r.name, phone: r.phone })} style={{ background: "#8e44ad", border: "none", borderRadius: 50, padding: "8px 16px", fontSize: "0.76rem", fontWeight: 700, color: "#fff", cursor: ambassadorActionLoading ? "not-allowed" : "pointer" }}>Approuver</button>
                       </div>
                     </div>
                   ))}
@@ -12928,9 +12955,19 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                         ) : affiliateAddResults.map(p => {
                           const already = affiliatesList.some(a => a.user_id === p.id);
                           return (
-                            <div key={p.id} onClick={() => !already && addAffiliate(p)} style={{ padding: "10px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: already ? "default" : "pointer", borderBottom: `1px solid ${G.creme}`, opacity: already ? 0.5 : 1 }}>
-                              <span style={{ fontSize: "0.85rem", color: G.brun }}>{p.name}</span>
-                              <span style={{ fontSize: "0.72rem", color: already ? "#999" : G.rouge, fontWeight: 700 }}>{already ? "Déjà affilié" : "+ Ajouter"}</span>
+                            <div key={p.id} onClick={() => !already && addAffiliate(p)} style={{ padding: "10px 14px", display: "flex", alignItems: "center", gap: 10, justifyContent: "space-between", cursor: already ? "default" : "pointer", borderBottom: `1px solid ${G.creme}`, opacity: already ? 0.5 : 1 }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+                                {p.photo_url ? (
+                                  <img src={p.photo_url} alt="" style={{ width: 32, height: 32, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
+                                ) : (
+                                  <div style={{ width: 32, height: 32, borderRadius: "50%", background: G.creme, flexShrink: 0 }} />
+                                )}
+                                <div style={{ minWidth: 0 }}>
+                                  <div style={{ fontSize: "0.85rem", color: G.brun, fontWeight: 600 }}>{p.name}</div>
+                                  {p.phone && <div style={{ fontSize: "0.7rem", color: "#999" }}>{p.phone}</div>}
+                                </div>
+                              </div>
+                              <span style={{ fontSize: "0.72rem", color: already ? "#999" : G.rouge, fontWeight: 700, flexShrink: 0 }}>{already ? "Déjà affilié" : "+ Ajouter"}</span>
                             </div>
                           );
                         })}
@@ -12958,8 +12995,14 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                               <div style={{ fontSize: "0.72rem", color: "#888" }}>{own.length} conversion{own.length > 1 ? "s" : ""} · {ownPending.toLocaleString()} FCFA en attente</div>
                             </div>
                             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                              <span style={{ fontSize: "0.7rem", fontWeight: 800, color: a.status === "active" ? "#1A5C3A" : "#999" }}>{a.status === "active" ? "● Actif" : "○ En pause"}</span>
-                              <button onClick={() => setAffiliateStatus(a, a.status === "active" ? "paused" : "active")} style={{ background: "#fff", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "5px 12px", fontSize: "0.74rem", fontWeight: 700, cursor: "pointer", color: "#555" }}>{a.status === "active" ? "Mettre en pause" : "Réactiver"}</button>
+                              <span style={{ fontSize: "0.7rem", fontWeight: 800, color: a.status === "active" ? "#1A5C3A" : a.status === "paused" ? "#999" : G.rouge }}>{a.status === "active" ? "● Actif" : a.status === "paused" ? "○ En pause" : "Retiré"}</span>
+                              {a.status !== "removed" && (
+                                <>
+                                  <button onClick={() => setAffiliateStatus(a, a.status === "active" ? "paused" : "active")} style={{ background: "#fff", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "5px 12px", fontSize: "0.74rem", fontWeight: 700, cursor: "pointer", color: "#555" }}>{a.status === "active" ? "Mettre en pause" : "Réactiver"}</button>
+                                  <button onClick={() => confirm(`Offrir le Premium à vie à ${a.name} ? À réserver aux ambassadeurs qui ont fait leurs preuves (résultats après ~1 mois).`, () => adminAction(a.user_id, { is_premium: true, premium_until: LIFETIME_PREMIUM_UNTIL, premium_is_gift: true }, `${a.name} a maintenant le Premium à vie.`))} style={{ background: "#fff", border: "1.5px solid #8B6914", borderRadius: 50, padding: "5px 12px", fontSize: "0.74rem", fontWeight: 700, cursor: "pointer", color: "#8B6914" }}>Offrir Premium à vie</button>
+                                  <button onClick={() => setAffiliateRemoveModal({ id: a.id, user_id: a.user_id, name: a.name })} style={{ background: "rgba(231,76,60,0.08)", border: `1.5px solid rgba(231,76,60,0.25)`, borderRadius: 50, padding: "5px 12px", fontSize: "0.74rem", fontWeight: 700, cursor: "pointer", color: G.rouge }}>Retirer</button>
+                                </>
+                              )}
                             </div>
                           </div>
                         );
@@ -13015,12 +13058,22 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
             <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10003, display: "flex", alignItems: "center", justifyContent: "center", padding: "calc(env(safe-area-inset-top) + 18px) 18px calc(env(safe-area-inset-bottom) + 18px)" }} onClick={() => setAmbassadorApproveModal(null)}>
               <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 420, padding: "24px 22px", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
                 <div style={{ fontWeight: 900, fontSize: "1.05rem", color: G.brun, marginBottom: 6 }}>Approuver {ambassadorApproveModal.name} comme Ambassadeur</div>
-                <p style={{ fontSize: "0.8rem", color: "#888", marginBottom: 16 }}>Choisissez jusqu'à quelle date accorder le Premium (obligatoire pour un ambassadeur). Le statut affilié actif sera activé en même temps, sans date de fin.</p>
-                <label style={{ fontSize: "0.76rem", fontWeight: 700, color: "#666", display: "block", marginBottom: 6 }}>Premium jusqu'au</label>
-                <input type="date" value={ambassadorApproveDate} onChange={e => setAmbassadorApproveDate(e.target.value)} style={{ width: "100%", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.85rem", outline: "none", marginBottom: 18 }} />
+                <p style={{ fontSize: "0.8rem", color: "#888", marginBottom: 18 }}>Cette personne obtient le badge Ambassadeur et devient affiliée active (commissions sur ses filleuls). Aucun Premium n'est offert à cette étape : vous pourrez l'accorder manuellement, à vie, depuis sa ligne dans "Affiliés actifs" une fois que vous constaterez des résultats réels.</p>
                 <div style={{ display: "flex", gap: 10 }}>
                   <button onClick={() => setAmbassadorApproveModal(null)} style={{ flex: 1, background: "none", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 700, color: "#666", cursor: "pointer" }}>Annuler</button>
-                  <button disabled={!ambassadorApproveDate || ambassadorActionLoading} onClick={approveAmbassadorRequest} style={{ flex: 1, background: !ambassadorApproveDate ? "#ddd" : "#8e44ad", border: "none", borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 700, color: "#fff", cursor: !ambassadorApproveDate || ambassadorActionLoading ? "not-allowed" : "pointer" }}>{ambassadorActionLoading ? "..." : "Confirmer"}</button>
+                  <button disabled={ambassadorActionLoading} onClick={approveAmbassadorRequest} style={{ flex: 1, background: "#8e44ad", border: "none", borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 700, color: "#fff", cursor: ambassadorActionLoading ? "not-allowed" : "pointer" }}>{ambassadorActionLoading ? "..." : "Confirmer"}</button>
+                </div>
+              </div>
+            </div>
+          )}
+          {affiliateRemoveModal && (
+            <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10003, display: "flex", alignItems: "center", justifyContent: "center", padding: "calc(env(safe-area-inset-top) + 18px) 18px calc(env(safe-area-inset-bottom) + 18px)" }} onClick={() => !affiliateRemoveLoading && setAffiliateRemoveModal(null)}>
+              <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 420, padding: "24px 22px", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
+                <div style={{ fontWeight: 900, fontSize: "1.05rem", color: G.brun, marginBottom: 6 }}>Terminer le contrat avec {affiliateRemoveModal.name} ?</div>
+                <p style={{ fontSize: "0.8rem", color: "#888", marginBottom: 18 }}>Le badge Ambassadeur et le Premium offert (s'il en a un) lui seront retirés. L'historique de ses commissions reste conservé.</p>
+                <div style={{ display: "flex", gap: 10 }}>
+                  <button disabled={affiliateRemoveLoading} onClick={() => setAffiliateRemoveModal(null)} style={{ flex: 1, background: "none", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 700, color: "#666", cursor: affiliateRemoveLoading ? "not-allowed" : "pointer" }}>Annuler</button>
+                  <button disabled={affiliateRemoveLoading} onClick={confirmRemoveAffiliate} style={{ flex: 1, background: G.rouge, border: "none", borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 700, color: "#fff", cursor: affiliateRemoveLoading ? "not-allowed" : "pointer" }}>{affiliateRemoveLoading ? "..." : "Confirmer le retrait"}</button>
                 </div>
               </div>
             </div>
