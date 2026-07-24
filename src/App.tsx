@@ -634,7 +634,7 @@ export const cleanSupportReason = (reason?: string) => (reason || "").replace(SU
 // ── Budget : catégories de dépenses + couleurs associées (réutilisées dans le tableau et les badges) ──
 export const EXPENSE_CATEGORIES = [
   "Marketing", "Hébergement / Serveurs", "Développement", "Design",
-  "Administration", "Prestataires", "Juridique", "Salaires", "Divers",
+  "Administration", "Prestataires", "Juridique", "Salaires", "Commissions Ambassadeurs", "Divers",
 ] as const;
 export const EXPENSE_CAT_COLORS: Record<string, string> = {
   "Marketing": "#E67E22",
@@ -645,6 +645,7 @@ export const EXPENSE_CAT_COLORS: Record<string, string> = {
   "Prestataires": "#fdcb6e",
   "Juridique": "#8e44ad",
   "Salaires": "#16a085",
+  "Commissions Ambassadeurs": "#8e44ad",
   "Divers": "#95a5a6",
 };
 
@@ -15089,6 +15090,54 @@ function FeatureRequestButton({ auth }: { auth: Auth }) {
     </>
   );
 }
+// ── Carte "Devenir Ambassadeur" dans Profil — ne s'affiche que tant que la personne n'est pas
+//    encore ambassadeur (statut "none" ou "pending"). Une fois ambassadeur, c'est la carte de
+//    raccourci en haut de page (comme le bouton Administration) qui prend le relais. ──
+function AmbassadorCard({ auth, status, onRequested }: { auth: Auth; status: "none" | "pending"; onRequested: () => void }) {
+  const [showInfo, setShowInfo] = useState(false);
+  const [requesting, setRequesting] = useState(false);
+
+  const sendRequest = async () => {
+    setRequesting(true);
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/ambassador_requests`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" },
+        body: JSON.stringify({ user_id: auth.userId, status: "pending" }),
+      });
+      onRequested();
+      setShowInfo(false);
+    } catch {}
+    setRequesting(false);
+  };
+
+  return (
+    <>
+      <div onClick={() => status === "none" && setShowInfo(true)} className="moyo-tap" style={{ background: G.blanc, borderRadius: 18, padding: "15px 18px", cursor: status === "none" ? "pointer" : "default", boxShadow: "0 2px 10px rgba(0,0,0,0.06)", display: "flex", alignItems: "center", gap: 14, border: "1.5px solid rgba(142,68,173,0.2)" }}>
+        <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(142,68,173,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.42 4.58a5.4 5.4 0 0 0-7.65 0l-.77.78-.77-.78a5.4 5.4 0 0 0-7.65 7.65l8.42 8.42 8.42-8.42a5.4 5.4 0 0 0 0-7.65z"/></svg>
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontWeight: 800, fontSize: "1rem", color: G.brun, marginBottom: 3 }}>{status === "pending" ? "Demande Ambassadeur envoyée" : "Devenir Ambassadeur Moyo Dating"}</div>
+          <div style={{ fontSize: "0.78rem", color: "#888", lineHeight: 1.4 }}>{status === "pending" ? "En attente de validation par notre équipe" : "Touchez une commission en argent sur chaque abonnement de vos filleuls"}</div>
+        </div>
+        {status === "none" && <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>}
+      </div>
+      {showInfo && (
+        <div className="moyo-backdrop" onClick={() => setShowInfo(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10001, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+          <div className="moyo-sheet-in" onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: "24px 24px 0 0", width: "100%", maxWidth: 500, padding: "24px 22px 32px" }}>
+            <div style={{ fontWeight: 900, fontSize: "1.1rem", color: G.brun, marginBottom: 10 }}>Devenir Ambassadeur Moyo Dating</div>
+            <p style={{ fontSize: "0.85rem", color: "#555", lineHeight: 1.6, marginBottom: 10 }}>Contrairement au parrainage classique (jours Premium offerts), l'Ambassadeur touche une <strong>commission en argent</strong> sur chaque abonnement souscrit par ses filleuls.</p>
+            <p style={{ fontSize: "0.85rem", color: "#555", lineHeight: 1.6, marginBottom: 20 }}>Votre demande sera examinée par notre équipe. Si elle est acceptée, un accès Premium vous sera offert (l'Ambassadeur représente Moyo Dating, il ne peut donc pas rester en compte gratuit), et vous pourrez suivre vos gains directement depuis cet écran.</p>
+            <button onClick={sendRequest} disabled={requesting} style={{ width: "100%", background: "#8e44ad", color: "#fff", border: "none", borderRadius: 50, padding: "14px", fontSize: "0.9rem", fontWeight: 800, cursor: requesting ? "not-allowed" : "pointer", marginBottom: 10 }}>{requesting ? "Envoi..." : "Envoyer ma demande"}</button>
+            <button onClick={() => setShowInfo(false)} style={{ width: "100%", background: "none", border: "none", color: "#999", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer", padding: "8px" }}>Annuler</button>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 function MatchRequestButton({ auth, onShowPremium }: { auth: Auth; onShowPremium: (msg: string) => void }) {
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ target_gender: "", target_city: "", target_age_min: "", target_age_max: "", message: "" });
@@ -15495,6 +15544,38 @@ function MatchRequestButton({ auth, onShowPremium }: { auth: Auth; onShowPremium
 
 export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpenAdmin, adminBadgeCount, assistantEnabled = true, onToggleAssistant, promoAvailable, onOpenSuperPromo }: { auth: Auth; onLogout: () => void; onShowPremium: (r: string) => void; darkMode?: boolean; onToggleDark?: () => void; onOpenAdmin?: () => void; adminBadgeCount?: number; assistantEnabled?: boolean; onToggleAssistant?: () => void; promoAvailable?: { price: number; expiresAt: string; message: string } | null; onOpenSuperPromo?: () => void }) {
   const [profile, setProfile] = useState<Profile | null>(null);
+  // ── Statut Ambassadeur, remonté ici (plutôt que gardé isolé dans un sous-composant) pour
+  //    piloter à la fois la bannière dorée Premium et la carte de raccourci en haut de page. ──
+  const [ambStatus, setAmbStatus] = useState<"loading" | "none" | "pending" | "ambassador">("loading");
+  const [ambStats, setAmbStats] = useState<{ pending: number; paid: number; count: number } | null>(null);
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${auth.userId}&select=is_ambassador`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+        const d = await r.json().catch(() => []);
+        if (Array.isArray(d) && d[0]?.is_ambassador) {
+          setAmbStatus("ambassador");
+          const ra = await fetch(`${SUPABASE_URL}/rest/v1/affiliates?user_id=eq.${auth.userId}&select=id&limit=1`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+          const da = await ra.json().catch(() => []);
+          const affId = Array.isArray(da) ? da[0]?.id : null;
+          if (affId) {
+            const rc = await fetch(`${SUPABASE_URL}/rest/v1/affiliate_conversions?affiliate_id=eq.${affId}&select=commission_amount,status`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+            const dc = await rc.json().catch(() => []);
+            if (Array.isArray(dc)) {
+              const pending = dc.filter((c: any) => c.status === "pending").reduce((s: number, c: any) => s + (c.commission_amount || 0), 0);
+              const paid = dc.filter((c: any) => c.status === "paid").reduce((s: number, c: any) => s + (c.commission_amount || 0), 0);
+              setAmbStats({ pending, paid, count: dc.length });
+            }
+          }
+          return;
+        }
+        const rr = await fetch(`${SUPABASE_URL}/rest/v1/ambassador_requests?user_id=eq.${auth.userId}&status=eq.pending&select=id&limit=1`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+        const dr = await rr.json().catch(() => []);
+        setAmbStatus(Array.isArray(dr) && dr.length > 0 ? "pending" : "none");
+      } catch { setAmbStatus("none"); }
+    })();
+  }, [auth.userId]);
+  const [showAmbDashboard, setShowAmbDashboard] = useState(false);
   const [notifStatus, setNotifStatus] = useState<"default" | "granted" | "denied" | "unsupported">(() => {
     if (typeof window !== "undefined" && Capacitor.isNativePlatform()) return "default";
     if (typeof window === "undefined" || !("Notification" in window)) return "unsupported";
@@ -16177,6 +16258,54 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
           </div>
         )}
 
+        {/* Bouton Ambassadeur — visible uniquement une fois le statut acquis, même position que le bouton Admin */}
+        {(!isWideProfile || activeSection === "main") && ambStatus === "ambassador" && (
+          <div onClick={() => setShowAmbDashboard(true)} className="moyo-tap" style={{ background: G.blanc, borderRadius: 18, padding: "16px 20px", cursor: "pointer", boxShadow: "0 4px 16px rgba(142,68,173,0.15)", display: "flex", alignItems: "center", gap: 14, border: "1.5px solid rgba(142,68,173,0.25)" }}>
+            <div style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(142,68,173,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.42 4.58a5.4 5.4 0 0 0-7.65 0l-.77.78-.77-.78a5.4 5.4 0 0 0-7.65 7.65l8.42 8.42 8.42-8.42a5.4 5.4 0 0 0 0-7.65z"/></svg>
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 800, fontSize: "1rem", color: "#8e44ad", marginBottom: 3 }}>Ambassadeur Moyo Dating</div>
+              <div style={{ fontSize: "0.78rem", color: "#888", lineHeight: 1.4 }}>{ambStats ? `${(ambStats.paid + ambStats.pending).toLocaleString()} FCFA de gains au total` : "Tableau de bord"}</div>
+            </div>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </div>
+        )}
+
+        {showAmbDashboard && (
+          <div className="moyo-backdrop" onClick={() => setShowAmbDashboard(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10001, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+            <div className="moyo-sheet-in" onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: "24px 24px 0 0", width: "100%", maxWidth: 500, padding: "24px 22px 32px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: ambStats ? 18 : 10 }}>
+                <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(142,68,173,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.42 4.58a5.4 5.4 0 0 0-7.65 0l-.77.78-.77-.78a5.4 5.4 0 0 0-7.65 7.65l8.42 8.42 8.42-8.42a5.4 5.4 0 0 0 0-7.65z"/></svg>
+                </div>
+                <div>
+                  <div style={{ fontWeight: 900, fontSize: "1.05rem", color: G.brun }}>Ambassadeur Moyo Dating</div>
+                  <div style={{ fontSize: "0.78rem", color: "#888" }}>Vos gains en temps réel</div>
+                </div>
+              </div>
+              {ambStats && (
+                <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
+                  <div style={{ flex: 1, background: "rgba(142,68,173,0.06)", borderRadius: 12, padding: "12px", textAlign: "center" }}>
+                    <div style={{ fontSize: "1.2rem", fontWeight: 900, color: "#8e44ad" }}>{ambStats.paid.toLocaleString()} FCFA</div>
+                    <div style={{ fontSize: "0.68rem", color: "#888" }}>Déjà versé</div>
+                  </div>
+                  <div style={{ flex: 1, background: "rgba(230,126,34,0.06)", borderRadius: 12, padding: "12px", textAlign: "center" }}>
+                    <div style={{ fontSize: "1.2rem", fontWeight: 900, color: "#E67E22" }}>{ambStats.pending.toLocaleString()} FCFA</div>
+                    <div style={{ fontSize: "0.68rem", color: "#888" }}>En attente</div>
+                  </div>
+                </div>
+              )}
+              <button onClick={() => {
+                const refLink = `${window.location.origin}?ref=${auth.userId}`;
+                if (navigator.share) navigator.share({ title: "Moyo Dating", text: "Rejoins Moyo Dating avec mon lien :", url: refLink });
+                else navigator.clipboard.writeText(refLink).catch(() => {});
+              }} style={{ width: "100%", background: "#8e44ad", color: "#fff", border: "none", borderRadius: 50, padding: "14px", fontSize: "0.9rem", fontWeight: 800, cursor: "pointer", marginBottom: 10 }}>Partager mon lien</button>
+              <button onClick={() => setShowAmbDashboard(false)} style={{ width: "100%", background: "none", border: "none", color: "#999", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer", padding: "8px" }}>Fermer</button>
+            </div>
+          </div>
+        )}
+
         {/* CTA Premium - rouge si gratuit, doré si actif, rouge si expiré */}
         {(!isWideProfile || ["premium","main"].includes(activeSection)) && (() => {
           const stored = localStorage.getItem(`moyo_premium_until_${auth.userId}`);
@@ -16189,7 +16318,7 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
               <div style={{ display: "flex", alignItems: "center", position: "relative" }}>
                 <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 12 }}>
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="white" stroke="none" style={{ flexShrink: 0 }}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                  <div style={{ fontSize: "1rem", fontWeight: 900, color: "#fff", lineHeight: 1.3 }}>Abonnement<br/>Premium actif</div>
+                  <div style={{ fontSize: "1rem", fontWeight: 900, color: "#fff", lineHeight: 1.3 }}>{ambStatus === "ambassador" ? <>Ambassadeur<br/>Moyo Dating</> : <>Abonnement<br/>Premium actif</>}</div>
                 </div>
                 <div style={{ width: 1, height: 44, background: "rgba(255,255,255,0.3)", marginLeft: 18, marginRight: 18, flexShrink: 0 }} />
                 <div style={{ textAlign: "center", flexShrink: 0 }}>
@@ -16402,6 +16531,7 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
           </div>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
         </div>}
+        {(!isWideProfile || activeSection === "main") && (ambStatus === "none" || ambStatus === "pending") && <AmbassadorCard auth={auth} status={ambStatus} onRequested={() => setAmbStatus("pending")} />}
         {/* Email de connexion + Vérification */}
         {(!isWideProfile || activeSection === "main") && <div style={{ background: G.blanc, borderRadius: 18, border: emailVerified ? "1.5px solid rgba(39,174,96,0.3)" : "1.5px solid rgba(192,57,43,0.2)", boxShadow: "0 2px 10px rgba(0,0,0,0.06)", overflow: "hidden", marginTop: 0 }}>
           <div style={{ padding: "15px 18px", display: "flex", alignItems: "center", gap: 14 }}>

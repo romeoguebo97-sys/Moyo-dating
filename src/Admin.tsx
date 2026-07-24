@@ -3870,6 +3870,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
     admin_pin?: string | null;
     is_admin?: boolean;
     is_verified?: boolean;
+    is_ambassador?: boolean;
     is_banned?: boolean;
     ban_until?: string | null;
     ban_reason?: string | null;
@@ -3890,7 +3891,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
   };
 
   // ── Onglet actif ──
-  const [activeTab, setActiveTab] = useState<"stats" | "users" | "reports" | "reviews" | "payments" | "logs" | "matches" | "messagerie" | "marketing" | "appointments" | "groupe">("stats");
+  const [activeTab, setActiveTab] = useState<"stats" | "users" | "reports" | "reviews" | "payments" | "logs" | "matches" | "messagerie" | "marketing" | "ambassadors" | "appointments" | "groupe">("stats");
   const [reviewsSubTab, setReviewsSubTab] = useState<"avis" | "sondage">("avis");
   // ── SONDAGES ──
   const DEFAULT_SURVEY_QUESTIONS = [
@@ -6301,7 +6302,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
       default: return base;
     }
   };
-  const [mktTab, setMktTab] = useState<"statuts" | "features" | "event" | "promo" | "phoneprompt" | "premiumnudge" | "referrals" | "affiliates" | "inactive">("statuts");
+  const [mktTab, setMktTab] = useState<"statuts" | "features" | "event" | "promo" | "phoneprompt" | "premiumnudge" | "referrals" | "inactive">("statuts");
   // ── SUPER PROMO (formule 1 mois à prix réduit, ciblée, affichée côté membre max 1x/jour) ──
   const PROMO_LABEL = "Super promo (1 mois)"; // doit rester identique au label envoyé par PremiumModal (subscription_selected)
   // promoActive n'est plus un state local : on lit désormais autoShortcuts.promo_active,
@@ -6720,10 +6721,74 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
       } catch {}
       setAffiliateConversionsLoading(false);
     };
-    useEffect(() => { if (mktTab === "affiliates") { loadAffiliates(); loadAffiliateConversions(); } /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [mktTab]);
+    const [ambTab, setAmbTab] = useState<"requests" | "affiliates">("requests");
+    useEffect(() => { if (activeTab === "ambassadors" && ambTab === "affiliates") { loadAffiliates(); loadAffiliateConversions(); } /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [activeTab, ambTab]);
+    // ── Demandes "Devenir Ambassadeur" envoyées depuis le Profil des membres ──
+    const [ambassadorRequests, setAmbassadorRequests] = useState<{ id: string; user_id: string; name: string; photo_url?: string; phone?: string; created_at: string }[]>([]);
+    const [ambassadorRequestsLoading, setAmbassadorRequestsLoading] = useState(false);
+    const loadAmbassadorRequests = async () => {
+      if (!auth) return;
+      setAmbassadorRequestsLoading(true);
+      try {
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/ambassador_requests?status=eq.pending&select=id,user_id,created_at,profiles(name,photo_url,phone)&order=created_at.asc&limit=200`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+        const data = await r.json().catch(() => []);
+        setAmbassadorRequests(Array.isArray(data) ? data.map((d: any) => ({ id: d.id, user_id: d.user_id, created_at: d.created_at, name: d.profiles?.name || "?", photo_url: d.profiles?.photo_url, phone: d.profiles?.phone })) : []);
+      } catch {}
+      setAmbassadorRequestsLoading(false);
+    };
+    useEffect(() => { if (activeTab === "ambassadors" && ambTab === "requests") loadAmbassadorRequests(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [activeTab, ambTab]);
+    // Modal d'approbation : choix libre de la durée Premium à accorder, même principe que
+    // "Offrir Premium gratuitement" ailleurs dans l'admin.
+    const [ambassadorApproveModal, setAmbassadorApproveModal] = useState<{ id: string; user_id: string; name: string; phone?: string } | null>(null);
+    const [ambassadorApproveDate, setAmbassadorApproveDate] = useState("");
+    const [ambassadorActionLoading, setAmbassadorActionLoading] = useState(false);
+    const approveAmbassadorRequest = async () => {
+      const req = ambassadorApproveModal;
+      if (!req || !ambassadorApproveDate || !auth) return;
+      setAmbassadorActionLoading(true);
+      try {
+        const premiumUntil = new Date(`${ambassadorApproveDate}T23:59:59`).toISOString();
+        const dateLabel = new Date(premiumUntil).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" });
+        // 1. Statut Premium + étiquette Ambassadeur sur le profil.
+        await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${req.user_id}`, {
+          method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" },
+          body: JSON.stringify({ is_premium: true, premium_until: premiumUntil, premium_is_gift: true, is_ambassador: true }),
+        });
+        // 2. Devient affilié actif : réutilise tel quel le système de commissions déjà existant.
+        await fetch(`${SUPABASE_URL}/rest/v1/affiliates`, {
+          method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "resolution=merge-duplicates,return=minimal" },
+          body: JSON.stringify({ user_id: req.user_id, name: req.name, phone: req.phone || null, status: "active" }),
+        });
+        // 3. Marque la demande comme traitée.
+        await fetch(`${SUPABASE_URL}/rest/v1/ambassador_requests?id=eq.${req.id}`, {
+          method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" },
+          body: JSON.stringify({ status: "approved", reviewed_at: new Date().toISOString(), reviewed_by: auth.userId }),
+        });
+        logAdminAction(auth.token, auth.userId, auth.name, `Demande Ambassadeur approuvée pour ${req.name} : Premium offert jusqu'au ${dateLabel}, statut affilié actif.`, req.user_id);
+        showToast(`✅ ${req.name} est maintenant Ambassadeur.`, "success");
+        setAmbassadorRequests(prev => prev.filter(r => r.id !== req.id));
+        setAmbassadorApproveModal(null);
+        setAmbassadorApproveDate("");
+      } catch { showToast("Erreur lors de l'approbation.", "error"); }
+      setAmbassadorActionLoading(false);
+    };
+    const rejectAmbassadorRequest = async (req: { id: string; name: string; user_id: string }) => {
+      if (!auth) return;
+      setAmbassadorActionLoading(true);
+      try {
+        await fetch(`${SUPABASE_URL}/rest/v1/ambassador_requests?id=eq.${req.id}`, {
+          method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" },
+          body: JSON.stringify({ status: "rejected", reviewed_at: new Date().toISOString(), reviewed_by: auth.userId }),
+        });
+        logAdminAction(auth.token, auth.userId, auth.name, `Demande Ambassadeur refusée pour ${req.name}.`, req.user_id);
+        showToast(`Demande de ${req.name} refusée.`, "success");
+        setAmbassadorRequests(prev => prev.filter(r => r.id !== req.id));
+      } catch { showToast("Erreur lors du refus.", "error"); }
+      setAmbassadorActionLoading(false);
+    };
     // Recherche débattue de profils pour en désigner un nouvel affilié.
     useEffect(() => {
-      if (!auth || mktTab !== "affiliates") return;
+      if (!auth || !(activeTab === "ambassadors" && ambTab === "affiliates")) return;
       const q = affiliateAddQuery.trim();
       if (!q) { setAffiliateAddResults([]); return; }
       setAffiliateAddSearching(true);
@@ -6750,11 +6815,25 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
       await fetch(`${SUPABASE_URL}/rest/v1/affiliates?id=eq.${aff.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ status }) });
       setAffiliatesList(list => list.map(a => a.id === aff.id ? { ...a, status } : a));
     };
-    const markConversionPaid = async (conv: { id: string }) => {
+    const markConversionPaid = async (conv: { id: string; affiliate_name?: string; filleul_name?: string; commission_amount?: number }) => {
       if (!auth) return;
       const paidAt = new Date().toISOString();
       await fetch(`${SUPABASE_URL}/rest/v1/affiliate_conversions?id=eq.${conv.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ status: "paid", paid_at: paidAt }) });
       setAffiliateConversions(list => list.map(c => c.id === conv.id ? { ...c, status: "paid", paid_at: paidAt } : c));
+      // ── Fait apparaître ce versement comme une vraie dépense dans Budget, pour que le chiffre
+      //    d'affaires réel de la plateforme tienne compte des commissions payées aux ambassadeurs
+      //    (sans ça, Budget resterait aveugle à cette sortie d'argent bien réelle). ──
+      try {
+        await sb.insert(auth.token, "budget_expenses", {
+          date: paidAt.slice(0, 10),
+          category: "Commissions Ambassadeurs",
+          label: `Commission versée à ${conv.affiliate_name || "un ambassadeur"} (filleul : ${conv.filleul_name || "?"})`,
+          amount: conv.commission_amount || 0,
+          currency: "FCFA",
+          fee_type: "ponctuel",
+          entered_by: auth.name,
+        });
+      } catch {}
     };
     useEffect(() => {
       if (!auth) return;
@@ -7765,7 +7844,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
         recent: `last_seen=gte.${recentThreshold}`,
       };
       const filterQs = Array.from(filters).map(f => `&${filterClauses[f]}`).join("");
-      let params = `?select=id,name,age,city,gender,is_premium,is_admin,is_verified,is_banned,created_at,last_seen,premium_until,premium_is_gift,email,admin_level&order=${serverSort}&limit=${pageSize}&offset=${offset}${filterQs}`;
+      let params = `?select=id,name,age,city,gender,is_premium,is_admin,is_verified,is_banned,is_ambassador,created_at,last_seen,premium_until,premium_is_gift,email,admin_level&order=${serverSort}&limit=${pageSize}&offset=${offset}${filterQs}`;
       if (search.trim() || searchEmail.trim()) {
         const nameQ = search.trim() ? `name.ilike.*${encodeURIComponent(search.trim())}*` : null;
         const emailQ = searchEmail.trim() ? `email.ilike.*${encodeURIComponent(searchEmail.trim())}*` : null;
@@ -7773,7 +7852,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
         // (avec un point) n'est valide qu'à l'intérieur de or(...) — utilisée seule, elle est invalide
         // et Supabase l'ignore silencieusement, d'où le filtre qui ne trouvait jamais rien.
         const orFilter = [nameQ, emailQ].filter(Boolean).join(",");
-        params = `?select=id,name,age,city,gender,is_premium,is_admin,is_verified,is_banned,created_at,last_seen,premium_until,premium_is_gift,email,admin_level&or=(${orFilter})&order=${serverSort}&limit=${pageSize}&offset=${offset}${filterQs}`;
+        params = `?select=id,name,age,city,gender,is_premium,is_admin,is_verified,is_banned,is_ambassador,created_at,last_seen,premium_until,premium_is_gift,email,admin_level&or=(${orFilter})&order=${serverSort}&limit=${pageSize}&offset=${offset}${filterQs}`;
       }
       const res = await sb.query<AdminProfile>(auth.token, "profiles", params);
       // Quand une recherche est active, on trie par pertinence (correspondance exacte / "commence par" en premier)
@@ -9990,6 +10069,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
             ["matches", "Matchs", () => <svg width="16" height="16" viewBox="0 0 24 24" fill={activeTab === "matches" ? "#8e44ad" : "none"} stroke={activeTab === "matches" ? "#8e44ad" : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>],
             ["messagerie", "Messagerie", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "messagerie" ? G.rouge : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>],
             ["marketing", "Marketing", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "marketing" ? "#E67E22" : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>],
+            ["ambassadors", "Ambassadeurs", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "ambassadors" ? "#8e44ad" : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.42 4.58a5.4 5.4 0 0 0-7.65 0l-.77.78-.77-.78a5.4 5.4 0 0 0-7.65 7.65l8.42 8.42 8.42-8.42a5.4 5.4 0 0 0 0-7.65z"/></svg>],
             ["reviews", "Réputation", () => <svg width="16" height="16" viewBox="0 0 24 24" fill={activeTab === "reviews" ? G.or : "#999"} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>],
             ["appointments", "Rendez-vous", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "appointments" ? G.vert : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>],
             ["payments", "Budget", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "payments" ? "#27ae60" : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-2"/><path d="M21 12v-2a2 2 0 0 0-2-2H6"/><circle cx="16" cy="12" r="1"/></svg>],
@@ -10542,6 +10622,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                           {isLifetimePremium(u) && <span style={{ background: "linear-gradient(135deg,#8B6914,#D4A843)", color: "#fff", borderRadius: 50, padding: "1px 6px", fontSize: "0.60rem", fontWeight: 700 }}>♾️ À vie</span>}
                           {u.is_premium && !isLifetimePremium(u) && <span style={{ background: "rgba(212,168,67,0.15)", color: "#D4A843", borderRadius: 50, padding: "1px 6px", fontSize: "0.60rem", fontWeight: 700 }}>★ Prem</span>}
                           {u.is_verified && <span style={{ background: "rgba(26,92,58,0.1)", color: G.vert, borderRadius: 50, padding: "1px 6px", fontSize: "0.60rem", fontWeight: 700 }}>✓ Vérifié</span>}
+                          {u.is_ambassador && <span style={{ background: "rgba(142,68,173,0.12)", color: "#8e44ad", borderRadius: 50, padding: "1px 6px", fontSize: "0.60rem", fontWeight: 700 }}>◆ Ambassadeur</span>}
                           {u.is_admin && <span style={{ background: "rgba(231,76,60,0.1)", color: G.rouge, borderRadius: 50, padding: "1px 6px", fontSize: "0.60rem", fontWeight: 700 }}>⚙ Admin</span>}
                           {isCurrentlyBanned(u) && <span style={{ background: "rgba(231,76,60,0.1)", color: "#e74c3c", borderRadius: 50, padding: "1px 6px", fontSize: "0.60rem", fontWeight: 700 }}>⛔ Banni</span>}
                         </div>
@@ -11776,13 +11857,13 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
       {activeTab === "marketing" && (
         <div style={{ padding: "16px" }}>
           <div style={{ display: "flex", gap: 10, marginBottom: 16, overflowX: "auto", paddingBottom: 2 }}>
-            {([["statuts", "Statuts Moyo Dating", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>], ["features", "Mises en avant", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>], ["event", "Campagnes Premium", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>], ["promo", "Promotion", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/><line x1="9" y1="9" x2="9" y2="9"/></svg>], ["phoneprompt", "Profil incomplet", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>], ["premiumnudge", "Inciter au Premium", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>], ["referrals", "Suivi parrainage", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>], ["affiliates", "Programme affiliés", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.42 4.58a5.4 5.4 0 0 0-7.65 0l-.77.78-.77-.78a5.4 5.4 0 0 0-7.65 7.65l8.42 8.42 8.42-8.42a5.4 5.4 0 0 0 0-7.65z"/></svg>], ["inactive", "Relance inactifs", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>]] as [("statuts" | "features" | "event" | "promo" | "phoneprompt" | "premiumnudge" | "referrals" | "affiliates" | "inactive"), string, React.ReactElement][]).map(([k, lbl, ico]) => (
+            {([["statuts", "Statuts Moyo Dating", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>], ["features", "Mises en avant", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>], ["event", "Campagnes Premium", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>], ["promo", "Promotion", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/><line x1="9" y1="9" x2="9" y2="9"/></svg>], ["phoneprompt", "Profil incomplet", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>], ["premiumnudge", "Inciter au Premium", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>], ["referrals", "Suivi parrainage", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>], ["inactive", "Relance inactifs", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>]] as [("statuts" | "features" | "event" | "promo" | "phoneprompt" | "premiumnudge" | "referrals" | "inactive"), string, React.ReactElement][]).map(([k, lbl, ico]) => (
               <button key={k} onClick={() => setMktTab(k)} style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 7, padding: "9px 18px", borderRadius: 999, cursor: "pointer", fontSize: "0.82rem", fontWeight: 800, background: mktTab === k ? "#E67E22" : "#fff", color: mktTab === k ? "#fff" : "#555", border: mktTab === k ? "none" : `1.5px solid ${G.gris}`, boxShadow: mktTab === k ? "0 4px 12px rgba(230,126,34,0.25)" : "none" }}>{ico}{lbl}{k === "features" && featurePendingCount > 0 && <span style={{ background: mktTab === k ? "#fff" : "#E67E22", color: mktTab === k ? "#E67E22" : "#fff", borderRadius: 50, fontSize: "0.6rem", fontWeight: 800, padding: "1px 6px", lineHeight: 1.5 }}>{featurePendingCount > 99 ? "99+" : featurePendingCount}</span>}</button>
             ))}
           </div>
 
           {/* ── Cartes KPI (contextuelles selon le sous-onglet, masquées sur Événement Premium) ── */}
-          {mktTab !== "event" && mktTab !== "promo" && mktTab !== "phoneprompt" && mktTab !== "premiumnudge" && mktTab !== "referrals" && mktTab !== "affiliates" && mktTab !== "inactive" && (
+          {mktTab !== "event" && mktTab !== "promo" && mktTab !== "phoneprompt" && mktTab !== "premiumnudge" && mktTab !== "referrals" && mktTab !== "inactive" && (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: 12, marginBottom: 16 }}>
             {(mktTab === "statuts" ? [
               { ic: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>, bg: "rgba(192,57,43,0.12)", label: "Statuts actifs", value: officialStatuses.length, sub: "En ligne actuellement", subColor: G.rouge },
@@ -11890,144 +11971,6 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                           </div>
                         </div>
                       ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })()}
-
-          {mktTab === "affiliates" && (() => {
-            const q = affiliateSearch.trim().toLowerCase();
-            const filteredConversions = q ? affiliateConversions.filter(c => c.affiliate_name?.toLowerCase().includes(q) || c.filleul_name?.toLowerCase().includes(q)) : affiliateConversions;
-            const pendingTotal = affiliateConversions.filter(c => c.status === "pending").reduce((s, c) => s + (c.commission_amount || 0), 0);
-            const paidTotal = affiliateConversions.filter(c => c.status === "paid").reduce((s, c) => s + (c.commission_amount || 0), 0);
-            const isPayable = (createdAt: string) => (Date.now() - new Date(createdAt).getTime()) / 86400000 >= AFFILIATE_PAYABLE_DELAY_DAYS;
-            return (
-              <div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: 12, marginBottom: 16 }}>
-                  <div style={{ background: G.blanc, borderRadius: 18, padding: "16px 18px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)", display: "flex", alignItems: "center", gap: 14 }}>
-                    <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(142,68,173,0.14)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.42 4.58a5.4 5.4 0 0 0-7.65 0l-.77.78-.77-.78a5.4 5.4 0 0 0-7.65 7.65l8.42 8.42 8.42-8.42a5.4 5.4 0 0 0 0-7.65z"/></svg>
-                    </div>
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ fontSize: "0.78rem", color: "#888", fontWeight: 600 }}>Affiliés actifs</div>
-                      <div style={{ fontSize: "1.7rem", fontWeight: 900, color: G.brun, lineHeight: 1.1 }}>{affiliatesList.filter(a => a.status === "active").length}</div>
-                      <div style={{ fontSize: "0.72rem", color: "#8e44ad", fontWeight: 700, marginTop: 1 }}>{affiliatesList.length} au total</div>
-                    </div>
-                  </div>
-                  <div style={{ background: G.blanc, borderRadius: 18, padding: "16px 18px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)", display: "flex", alignItems: "center", gap: 14 }}>
-                    <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(230,126,34,0.14)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E67E22" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-                    </div>
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ fontSize: "0.78rem", color: "#888", fontWeight: 600 }}>Commissions dues (FCFA)</div>
-                      <div style={{ fontSize: "1.7rem", fontWeight: 900, color: G.brun, lineHeight: 1.1 }}>{pendingTotal.toLocaleString()}</div>
-                      <div style={{ fontSize: "0.72rem", color: "#E67E22", fontWeight: 700, marginTop: 1 }}>Pas encore marquées payées</div>
-                    </div>
-                  </div>
-                  <div style={{ background: G.blanc, borderRadius: 18, padding: "16px 18px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)", display: "flex", alignItems: "center", gap: 14 }}>
-                    <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(26,92,58,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1A5C3A" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
-                    </div>
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ fontSize: "0.78rem", color: "#888", fontWeight: 600 }}>Déjà versé (FCFA)</div>
-                      <div style={{ fontSize: "1.7rem", fontWeight: 900, color: G.brun, lineHeight: 1.1 }}>{paidTotal.toLocaleString()}</div>
-                      <div style={{ fontSize: "0.72rem", color: "#1A5C3A", fontWeight: 700, marginTop: 1 }}>Total historique</div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Ajouter un affilié */}
-                <div style={{ background: G.blanc, borderRadius: 18, padding: 18, boxShadow: "0 2px 10px rgba(0,0,0,0.05)", marginBottom: 16 }}>
-                  <div style={{ fontSize: "0.9rem", fontWeight: 800, color: G.brun, marginBottom: 10 }}>Désigner un nouvel affilié</div>
-                  <div style={{ position: "relative", maxWidth: 420 }}>
-                    <input value={affiliateAddQuery} onChange={e => setAffiliateAddQuery(e.target.value)} placeholder="Rechercher un membre par nom..." style={{ width: "100%", boxSizing: "border-box", padding: "10px 14px", borderRadius: 12, border: `1.5px solid ${G.gris}`, fontSize: "0.85rem" }} />
-                    {affiliateAddQuery.trim() && (
-                      <div style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, right: 0, zIndex: 5, background: G.blanc, borderRadius: 12, boxShadow: "0 8px 24px rgba(0,0,0,0.15)", border: `1px solid ${G.gris}`, maxHeight: 260, overflowY: "auto" }}>
-                        {affiliateAddSearching ? (
-                          <div style={{ padding: 14, fontSize: "0.8rem", color: "#999", textAlign: "center" }}>Recherche...</div>
-                        ) : affiliateAddResults.length === 0 ? (
-                          <div style={{ padding: 14, fontSize: "0.8rem", color: "#999", textAlign: "center" }}>Aucun résultat</div>
-                        ) : affiliateAddResults.map(p => {
-                          const already = affiliatesList.some(a => a.user_id === p.id);
-                          return (
-                            <div key={p.id} onClick={() => !already && addAffiliate(p)} style={{ padding: "10px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: already ? "default" : "pointer", borderBottom: `1px solid ${G.creme}`, opacity: already ? 0.5 : 1 }}>
-                              <span style={{ fontSize: "0.85rem", color: G.brun }}>{p.name}</span>
-                              <span style={{ fontSize: "0.72rem", color: already ? "#999" : G.rouge, fontWeight: 700 }}>{already ? "Déjà affilié" : "+ Ajouter"}</span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Liste des affiliés */}
-                <div style={{ background: G.blanc, borderRadius: 18, padding: 18, boxShadow: "0 2px 10px rgba(0,0,0,0.05)", marginBottom: 16 }}>
-                  <div style={{ fontSize: "0.9rem", fontWeight: 800, color: G.brun, marginBottom: 10 }}>Affiliés</div>
-                  {affiliatesLoading ? (
-                    <div style={{ textAlign: "center", padding: "24px 20px", color: "#aaa" }}>Chargement...</div>
-                  ) : affiliatesList.length === 0 ? (
-                    <div style={{ textAlign: "center", padding: "24px 20px", color: "#aaa", fontSize: "0.85rem" }}>Aucun affilié pour l'instant.</div>
-                  ) : (
-                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                      {affiliatesList.map(a => {
-                        const own = affiliateConversions.filter(c => c.affiliate_id === a.id);
-                        const ownPending = own.filter(c => c.status === "pending").reduce((s, c) => s + c.commission_amount, 0);
-                        return (
-                          <div key={a.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "10px 14px", background: G.creme, borderRadius: 12, flexWrap: "wrap" }}>
-                            <div>
-                              <div style={{ fontSize: "0.85rem", fontWeight: 700, color: G.brun }}>{a.name}{a.phone ? ` · ${a.phone}` : ""}</div>
-                              <div style={{ fontSize: "0.72rem", color: "#888" }}>{own.length} conversion{own.length > 1 ? "s" : ""} · {ownPending.toLocaleString()} FCFA en attente</div>
-                            </div>
-                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                              <span style={{ fontSize: "0.7rem", fontWeight: 800, color: a.status === "active" ? "#1A5C3A" : "#999" }}>{a.status === "active" ? "● Actif" : "○ En pause"}</span>
-                              <button onClick={() => setAffiliateStatus(a, a.status === "active" ? "paused" : "active")} style={{ background: "#fff", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "5px 12px", fontSize: "0.74rem", fontWeight: 700, cursor: "pointer", color: "#555" }}>{a.status === "active" ? "Mettre en pause" : "Réactiver"}</button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-
-                {/* Historique des conversions */}
-                <div style={{ background: G.blanc, borderRadius: 18, padding: 18, boxShadow: "0 2px 10px rgba(0,0,0,0.05)" }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
-                    <div style={{ fontSize: "0.9rem", fontWeight: 800, color: G.brun }}>Historique des commissions</div>
-                    <div style={{ display: "flex", gap: 8 }}>
-                      <input value={affiliateSearch} onChange={e => setAffiliateSearch(e.target.value)} placeholder="Rechercher un affilié ou un filleul..." style={{ padding: "8px 14px", borderRadius: 50, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", minWidth: 220 }} />
-                      <button onClick={loadAffiliateConversions} style={{ background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "8px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: "#555", fontSize: "0.78rem", fontWeight: 700 }}><IcoRefresh /> Actualiser</button>
-                    </div>
-                  </div>
-                  {affiliateConversionsLoading ? (
-                    <div style={{ textAlign: "center", padding: "40px 20px", color: "#aaa" }}>Chargement...</div>
-                  ) : filteredConversions.length === 0 ? (
-                    <div style={{ textAlign: "center", padding: "40px 20px", color: "#aaa", fontSize: "0.88rem" }}>{q ? `Aucun résultat pour « ${affiliateSearch} »` : "Aucune commission enregistrée pour l'instant. Seules les commissions générées à partir de maintenant apparaîtront ici."}</div>
-                  ) : (
-                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                      {filteredConversions.map(c => {
-                        const payable = c.status === "pending" && isPayable(c.created_at);
-                        return (
-                          <div key={c.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "12px 14px", background: G.creme, borderRadius: 12, flexWrap: "wrap" }}>
-                            <div style={{ fontSize: "0.85rem", color: G.brun }}>
-                              <b>{c.affiliate_name || "?"}</b> — filleul <b>{c.filleul_name || "?"}</b> ({c.plan_label})
-                            </div>
-                            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                              <span style={{ background: "rgba(230,126,34,0.14)", color: "#E67E22", fontWeight: 800, fontSize: "0.78rem", borderRadius: 50, padding: "3px 10px" }}>{c.commission_amount.toLocaleString()} FCFA</span>
-                              <span style={{ fontSize: "0.72rem", color: "#999" }}>{new Date(c.created_at).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" })}</span>
-                              {c.status === "paid" ? (
-                                <span style={{ fontSize: "0.72rem", fontWeight: 800, color: "#1A5C3A" }}>✓ Payé</span>
-                              ) : payable ? (
-                                <button onClick={() => markConversionPaid(c)} style={{ background: G.rouge, color: "#fff", border: "none", borderRadius: 50, padding: "6px 14px", fontSize: "0.74rem", fontWeight: 700, cursor: "pointer" }}>Marquer payé</button>
-                              ) : (
-                                <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "#999" }}>En attente ({AFFILIATE_PAYABLE_DELAY_DAYS}j)</span>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
                     </div>
                   )}
                 </div>
@@ -12882,6 +12825,202 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                       <div style={{ background: "rgba(142,68,173,0.06)", borderRadius: 12, padding: "10px 13px", marginTop: 18, fontSize: "0.72rem", color: "#8e44ad", lineHeight: 1.5 }}>Un like ici est un vrai like : il apparaît dans l'onglet Likes de {featureDetail.status.profile?.name || "la personne"} et déclenche un match en cas de like réciproque, exactement comme dans Découvrir.</div>
                     </>
                   )}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════ ONGLET AMBASSADEURS */}
+      {activeTab === "ambassadors" && (
+        <div style={{ padding: "16px" }}>
+          <div style={{ display: "flex", gap: 10, marginBottom: 16, overflowX: "auto", paddingBottom: 2 }}>
+            {([["requests", "Demandes"], ["affiliates", "Affiliés actifs"]] as ["requests" | "affiliates", string][]).map(([k, lbl]) => (
+              <button key={k} onClick={() => setAmbTab(k)} style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 7, padding: "9px 18px", borderRadius: 999, cursor: "pointer", fontSize: "0.82rem", fontWeight: 800, background: ambTab === k ? "#8e44ad" : "#fff", color: ambTab === k ? "#fff" : "#555", border: ambTab === k ? "none" : `1.5px solid ${G.gris}`, boxShadow: ambTab === k ? "0 4px 12px rgba(142,68,173,0.25)" : "none" }}>
+                {lbl}
+                {k === "requests" && ambassadorRequests.length > 0 && <span style={{ background: ambTab === k ? "#fff" : "#8e44ad", color: ambTab === k ? "#8e44ad" : "#fff", borderRadius: 50, fontSize: "0.6rem", fontWeight: 800, padding: "1px 6px", lineHeight: 1.5 }}>{ambassadorRequests.length > 99 ? "99+" : ambassadorRequests.length}</span>}
+              </button>
+            ))}
+          </div>
+
+          {ambTab === "requests" && (
+            <div>
+              <p style={{ fontSize: "0.8rem", color: "#888", marginBottom: 16 }}>Demandes envoyées depuis le bouton « Devenir Ambassadeur Moyo Dating » (Profil). L'approbation accorde à la fois le statut affilié actif (commission en argent sur les abonnements de ses filleuls) et un accès Premium, puisqu'un ambassadeur ne peut pas représenter Moyo en étant lui-même gratuit.</p>
+              {ambassadorRequestsLoading ? (
+                <div style={{ textAlign: "center", padding: 40 }}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2" strokeLinecap="round" style={{ animation: "pulse 0.8s ease-in-out infinite" }}><circle cx="12" cy="12" r="10" /></svg></div>
+              ) : ambassadorRequests.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "40px 20px", color: "#aaa", fontSize: "0.88rem" }}>Aucune demande en attente pour l'instant.</div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {ambassadorRequests.map(r => (
+                    <div key={r.id} style={{ background: G.blanc, borderRadius: 16, padding: "14px 16px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+                      <div style={{ width: 46, height: 46, borderRadius: "50%", overflow: "hidden", background: G.creme, flexShrink: 0 }}>
+                        {r.photo_url && <img src={r.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 160 }}>
+                        <div style={{ fontWeight: 700, fontSize: "0.9rem", color: G.brun }}>{r.name}</div>
+                        <div style={{ fontSize: "0.72rem", color: "#888" }}>{r.phone || "Numéro non renseigné"} · Demandé le {new Date(r.created_at).toLocaleDateString("fr-FR")}</div>
+                      </div>
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button disabled={ambassadorActionLoading} onClick={() => rejectAmbassadorRequest(r)} style={{ background: "rgba(85,85,85,0.08)", border: "1.5px solid rgba(85,85,85,0.2)", borderRadius: 50, padding: "8px 16px", fontSize: "0.76rem", fontWeight: 700, color: "#555", cursor: ambassadorActionLoading ? "not-allowed" : "pointer" }}>Refuser</button>
+                        <button disabled={ambassadorActionLoading} onClick={() => { setAmbassadorApproveModal({ id: r.id, user_id: r.user_id, name: r.name, phone: r.phone }); setAmbassadorApproveDate(""); }} style={{ background: "#8e44ad", border: "none", borderRadius: 50, padding: "8px 16px", fontSize: "0.76rem", fontWeight: 700, color: "#fff", cursor: ambassadorActionLoading ? "not-allowed" : "pointer" }}>Approuver</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {ambTab === "affiliates" && (() => {
+            const q = affiliateSearch.trim().toLowerCase();
+            const filteredConversions = q ? affiliateConversions.filter(c => c.affiliate_name?.toLowerCase().includes(q) || c.filleul_name?.toLowerCase().includes(q)) : affiliateConversions;
+            const pendingTotal = affiliateConversions.filter(c => c.status === "pending").reduce((s, c) => s + (c.commission_amount || 0), 0);
+            const paidTotal = affiliateConversions.filter(c => c.status === "paid").reduce((s, c) => s + (c.commission_amount || 0), 0);
+            const isPayable = (createdAt: string) => (Date.now() - new Date(createdAt).getTime()) / 86400000 >= AFFILIATE_PAYABLE_DELAY_DAYS;
+            return (
+              <div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: 12, marginBottom: 16 }}>
+                  <div style={{ background: G.blanc, borderRadius: 18, padding: "16px 18px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)", display: "flex", alignItems: "center", gap: 14 }}>
+                    <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(142,68,173,0.14)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.42 4.58a5.4 5.4 0 0 0-7.65 0l-.77.78-.77-.78a5.4 5.4 0 0 0-7.65 7.65l8.42 8.42 8.42-8.42a5.4 5.4 0 0 0 0-7.65z"/></svg>
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: "0.78rem", color: "#888", fontWeight: 600 }}>Affiliés actifs</div>
+                      <div style={{ fontSize: "1.7rem", fontWeight: 900, color: G.brun, lineHeight: 1.1 }}>{affiliatesList.filter(a => a.status === "active").length}</div>
+                      <div style={{ fontSize: "0.72rem", color: "#8e44ad", fontWeight: 700, marginTop: 1 }}>{affiliatesList.length} au total</div>
+                    </div>
+                  </div>
+                  <div style={{ background: G.blanc, borderRadius: 18, padding: "16px 18px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)", display: "flex", alignItems: "center", gap: 14 }}>
+                    <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(230,126,34,0.14)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E67E22" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: "0.78rem", color: "#888", fontWeight: 600 }}>Commissions dues (FCFA)</div>
+                      <div style={{ fontSize: "1.7rem", fontWeight: 900, color: G.brun, lineHeight: 1.1 }}>{pendingTotal.toLocaleString()}</div>
+                      <div style={{ fontSize: "0.72rem", color: "#E67E22", fontWeight: 700, marginTop: 1 }}>Pas encore marquées payées</div>
+                    </div>
+                  </div>
+                  <div style={{ background: G.blanc, borderRadius: 18, padding: "16px 18px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)", display: "flex", alignItems: "center", gap: 14 }}>
+                    <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(26,92,58,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1A5C3A" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: "0.78rem", color: "#888", fontWeight: 600 }}>Déjà versé (FCFA)</div>
+                      <div style={{ fontSize: "1.7rem", fontWeight: 900, color: G.brun, lineHeight: 1.1 }}>{paidTotal.toLocaleString()}</div>
+                      <div style={{ fontSize: "0.72rem", color: "#1A5C3A", fontWeight: 700, marginTop: 1 }}>Total historique</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Ajouter un affilié */}
+                <div style={{ background: G.blanc, borderRadius: 18, padding: 18, boxShadow: "0 2px 10px rgba(0,0,0,0.05)", marginBottom: 16 }}>
+                  <div style={{ fontSize: "0.9rem", fontWeight: 800, color: G.brun, marginBottom: 10 }}>Désigner un nouvel affilié</div>
+                  <div style={{ position: "relative", maxWidth: 420 }}>
+                    <input value={affiliateAddQuery} onChange={e => setAffiliateAddQuery(e.target.value)} placeholder="Rechercher un membre par nom..." style={{ width: "100%", boxSizing: "border-box", padding: "10px 14px", borderRadius: 12, border: `1.5px solid ${G.gris}`, fontSize: "0.85rem" }} />
+                    {affiliateAddQuery.trim() && (
+                      <div style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, right: 0, zIndex: 5, background: G.blanc, borderRadius: 12, boxShadow: "0 8px 24px rgba(0,0,0,0.15)", border: `1px solid ${G.gris}`, maxHeight: 260, overflowY: "auto" }}>
+                        {affiliateAddSearching ? (
+                          <div style={{ padding: 14, fontSize: "0.8rem", color: "#999", textAlign: "center" }}>Recherche...</div>
+                        ) : affiliateAddResults.length === 0 ? (
+                          <div style={{ padding: 14, fontSize: "0.8rem", color: "#999", textAlign: "center" }}>Aucun résultat</div>
+                        ) : affiliateAddResults.map(p => {
+                          const already = affiliatesList.some(a => a.user_id === p.id);
+                          return (
+                            <div key={p.id} onClick={() => !already && addAffiliate(p)} style={{ padding: "10px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: already ? "default" : "pointer", borderBottom: `1px solid ${G.creme}`, opacity: already ? 0.5 : 1 }}>
+                              <span style={{ fontSize: "0.85rem", color: G.brun }}>{p.name}</span>
+                              <span style={{ fontSize: "0.72rem", color: already ? "#999" : G.rouge, fontWeight: 700 }}>{already ? "Déjà affilié" : "+ Ajouter"}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Liste des affiliés */}
+                <div style={{ background: G.blanc, borderRadius: 18, padding: 18, boxShadow: "0 2px 10px rgba(0,0,0,0.05)", marginBottom: 16 }}>
+                  <div style={{ fontSize: "0.9rem", fontWeight: 800, color: G.brun, marginBottom: 10 }}>Affiliés</div>
+                  {affiliatesLoading ? (
+                    <div style={{ textAlign: "center", padding: "24px 20px", color: "#aaa" }}>Chargement...</div>
+                  ) : affiliatesList.length === 0 ? (
+                    <div style={{ textAlign: "center", padding: "24px 20px", color: "#aaa", fontSize: "0.85rem" }}>Aucun affilié pour l'instant.</div>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {affiliatesList.map(a => {
+                        const own = affiliateConversions.filter(c => c.affiliate_id === a.id);
+                        const ownPending = own.filter(c => c.status === "pending").reduce((s, c) => s + c.commission_amount, 0);
+                        return (
+                          <div key={a.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "10px 14px", background: G.creme, borderRadius: 12, flexWrap: "wrap" }}>
+                            <div>
+                              <div style={{ fontSize: "0.85rem", fontWeight: 700, color: G.brun }}>{a.name}{a.phone ? ` · ${a.phone}` : ""}</div>
+                              <div style={{ fontSize: "0.72rem", color: "#888" }}>{own.length} conversion{own.length > 1 ? "s" : ""} · {ownPending.toLocaleString()} FCFA en attente</div>
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                              <span style={{ fontSize: "0.7rem", fontWeight: 800, color: a.status === "active" ? "#1A5C3A" : "#999" }}>{a.status === "active" ? "● Actif" : "○ En pause"}</span>
+                              <button onClick={() => setAffiliateStatus(a, a.status === "active" ? "paused" : "active")} style={{ background: "#fff", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "5px 12px", fontSize: "0.74rem", fontWeight: 700, cursor: "pointer", color: "#555" }}>{a.status === "active" ? "Mettre en pause" : "Réactiver"}</button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Historique des conversions */}
+                <div style={{ background: G.blanc, borderRadius: 18, padding: 18, boxShadow: "0 2px 10px rgba(0,0,0,0.05)" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
+                    <div style={{ fontSize: "0.9rem", fontWeight: 800, color: G.brun }}>Historique des commissions</div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <input value={affiliateSearch} onChange={e => setAffiliateSearch(e.target.value)} placeholder="Rechercher un affilié ou un filleul..." style={{ padding: "8px 14px", borderRadius: 50, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", minWidth: 220 }} />
+                      <button onClick={loadAffiliateConversions} style={{ background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "8px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: "#555", fontSize: "0.78rem", fontWeight: 700 }}><IcoRefresh /> Actualiser</button>
+                    </div>
+                  </div>
+                  {affiliateConversionsLoading ? (
+                    <div style={{ textAlign: "center", padding: "40px 20px", color: "#aaa" }}>Chargement...</div>
+                  ) : filteredConversions.length === 0 ? (
+                    <div style={{ textAlign: "center", padding: "40px 20px", color: "#aaa", fontSize: "0.88rem" }}>{q ? `Aucun résultat pour « ${affiliateSearch} »` : "Aucune commission enregistrée pour l'instant. Seules les commissions générées à partir de maintenant apparaîtront ici."}</div>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {filteredConversions.map(c => {
+                        const payable = c.status === "pending" && isPayable(c.created_at);
+                        return (
+                          <div key={c.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "12px 14px", background: G.creme, borderRadius: 12, flexWrap: "wrap" }}>
+                            <div style={{ fontSize: "0.85rem", color: G.brun }}>
+                              <b>{c.affiliate_name || "?"}</b> — filleul <b>{c.filleul_name || "?"}</b> ({c.plan_label})
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                              <span style={{ background: "rgba(230,126,34,0.14)", color: "#E67E22", fontWeight: 800, fontSize: "0.78rem", borderRadius: 50, padding: "3px 10px" }}>{c.commission_amount.toLocaleString()} FCFA</span>
+                              <span style={{ fontSize: "0.72rem", color: "#999" }}>{new Date(c.created_at).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" })}</span>
+                              {c.status === "paid" ? (
+                                <span style={{ fontSize: "0.72rem", fontWeight: 800, color: "#1A5C3A" }}>✓ Payé</span>
+                              ) : payable ? (
+                                <button onClick={() => markConversionPaid(c)} style={{ background: G.rouge, color: "#fff", border: "none", borderRadius: 50, padding: "6px 14px", fontSize: "0.74rem", fontWeight: 700, cursor: "pointer" }}>Marquer payé</button>
+                              ) : (
+                                <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "#999" }}>En attente ({AFFILIATE_PAYABLE_DELAY_DAYS}j)</span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
+
+          {ambassadorApproveModal && (
+            <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10003, display: "flex", alignItems: "center", justifyContent: "center", padding: "calc(env(safe-area-inset-top) + 18px) 18px calc(env(safe-area-inset-bottom) + 18px)" }} onClick={() => setAmbassadorApproveModal(null)}>
+              <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 420, padding: "24px 22px", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
+                <div style={{ fontWeight: 900, fontSize: "1.05rem", color: G.brun, marginBottom: 6 }}>Approuver {ambassadorApproveModal.name} comme Ambassadeur</div>
+                <p style={{ fontSize: "0.8rem", color: "#888", marginBottom: 16 }}>Choisissez jusqu'à quelle date accorder le Premium (obligatoire pour un ambassadeur). Le statut affilié actif sera activé en même temps, sans date de fin.</p>
+                <label style={{ fontSize: "0.76rem", fontWeight: 700, color: "#666", display: "block", marginBottom: 6 }}>Premium jusqu'au</label>
+                <input type="date" value={ambassadorApproveDate} onChange={e => setAmbassadorApproveDate(e.target.value)} style={{ width: "100%", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.85rem", outline: "none", marginBottom: 18 }} />
+                <div style={{ display: "flex", gap: 10 }}>
+                  <button onClick={() => setAmbassadorApproveModal(null)} style={{ flex: 1, background: "none", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 700, color: "#666", cursor: "pointer" }}>Annuler</button>
+                  <button disabled={!ambassadorApproveDate || ambassadorActionLoading} onClick={approveAmbassadorRequest} style={{ flex: 1, background: !ambassadorApproveDate ? "#ddd" : "#8e44ad", border: "none", borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 700, color: "#fff", cursor: !ambassadorApproveDate || ambassadorActionLoading ? "not-allowed" : "pointer" }}>{ambassadorActionLoading ? "..." : "Confirmer"}</button>
                 </div>
               </div>
             </div>
