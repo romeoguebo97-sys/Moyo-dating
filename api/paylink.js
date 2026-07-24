@@ -53,7 +53,7 @@ export default async function handler(req, res) {
 
   const title = name ? `Paiement pour ${name}` : "Demande de paiement";
   const description = "Vous avez été invité(e) à effectuer un paiement en ligne.";
-  const image = `${SITE_URL}/favicon.png`;
+  const image = `${SITE_URL}/paylink-preview.png`;
   const redirectUrl = `${SITE_URL}/?paylink=${encodeURIComponent(token)}`;
 
   const html = `<!doctype html>
