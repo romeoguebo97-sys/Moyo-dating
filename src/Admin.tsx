@@ -6707,6 +6707,42 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
     const [affiliateAddSearching, setAffiliateAddSearching] = useState(false);
     const [affiliateRemoveModal, setAffiliateRemoveModal] = useState<{ id: string; user_id: string; name: string } | null>(null);
     const [affiliateRemoveLoading, setAffiliateRemoveLoading] = useState(false);
+    // ── Statut réel (is_ambassador, Premium) de chaque affilié sur son profil. Nécessaire car
+    //    un affilié peut avoir été ajouté directement (Désigner un nouvel affilié) sans jamais
+    //    passer par une demande approuvée, donc sans badge ni Premium. ──
+    const [affiliateProfileStatus, setAffiliateProfileStatus] = useState<Record<string, { is_ambassador: boolean; premium_until?: string; premium_is_gift?: boolean }>>({});
+    const loadAffiliateProfileStatus = async (userIds: string[]) => {
+      if (!auth || userIds.length === 0) return;
+      try {
+        const inList = userIds.map(id => `"${id}"`).join(",");
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=in.(${inList})&select=id,is_ambassador,premium_until,premium_is_gift`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+        const data = await r.json().catch(() => []);
+        if (Array.isArray(data)) {
+          const map: Record<string, { is_ambassador: boolean; premium_until?: string; premium_is_gift?: boolean }> = {};
+          data.forEach((p: any) => { map[p.id] = { is_ambassador: !!p.is_ambassador, premium_until: p.premium_until, premium_is_gift: !!p.premium_is_gift }; });
+          setAffiliateProfileStatus(map);
+        }
+      } catch {}
+    };
+    const isLifetimePremiumAff = (userId: string) => { const s = affiliateProfileStatus[userId]; return !!s?.premium_until && new Date(s.premium_until).getFullYear() >= 2090; };
+    const grantAmbassadorBadge = async (a: { user_id: string; name: string }) => {
+      if (!auth) return;
+      await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${a.user_id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ is_ambassador: true }) });
+      logAdminAction(auth.token, auth.userId, auth.name, `Badge Ambassadeur accordé à ${a.name}.`, a.user_id);
+      setAffiliateProfileStatus(s => ({ ...s, [a.user_id]: { ...s[a.user_id], is_ambassador: true } }));
+      showToast(`${a.name} a maintenant le badge Ambassadeur.`, "success");
+    };
+    const togglePremiumLifetime = async (a: { user_id: string; name: string }) => {
+      if (!auth) return;
+      const currentlyLifetime = isLifetimePremiumAff(a.user_id);
+      const body = currentlyLifetime
+        ? { is_premium: false, premium_until: null, premium_is_gift: false }
+        : { is_premium: true, premium_until: LIFETIME_PREMIUM_UNTIL, premium_is_gift: true };
+      await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${a.user_id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify(body) });
+      logAdminAction(auth.token, auth.userId, auth.name, currentlyLifetime ? `Premium à vie retiré à ${a.name}.` : `Premium à vie offert à ${a.name}.`, a.user_id);
+      setAffiliateProfileStatus(s => ({ ...s, [a.user_id]: { ...s[a.user_id], premium_until: body.premium_until || undefined, premium_is_gift: body.premium_is_gift } }));
+      showToast(currentlyLifetime ? `${a.name} n'a plus le Premium à vie.` : `${a.name} a maintenant le Premium à vie.`, "success");
+    };
     const loadAffiliates = async () => {
       if (!auth) return;
       setAffiliatesLoading(true);
@@ -6714,6 +6750,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
         const r = await fetch(`${SUPABASE_URL}/rest/v1/affiliates?select=*&order=created_at.desc&limit=200`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
         const data = await r.json().catch(() => []);
         setAffiliatesList(Array.isArray(data) ? data : []);
+        if (Array.isArray(data) && data.length > 0) loadAffiliateProfileStatus(data.map((a: any) => a.user_id));
       } catch {}
       setAffiliatesLoading(false);
     };
@@ -6736,10 +6773,26 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
       if (!auth) return;
       setAmbassadorRequestsLoading(true);
       try {
-        const r = await fetch(`${SUPABASE_URL}/rest/v1/ambassador_requests?status=eq.pending&select=id,user_id,created_at,profiles(name,photo_url,phone)&order=created_at.asc&limit=200`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/ambassador_requests?status=eq.pending&select=id,user_id,created_at&order=created_at.asc&limit=200`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
         const data = await r.json().catch(() => []);
-        setAmbassadorRequests(Array.isArray(data) ? data.map((d: any) => ({ id: d.id, user_id: d.user_id, created_at: d.created_at, name: d.profiles?.name || "?", photo_url: d.profiles?.photo_url, phone: d.profiles?.phone })) : []);
-      } catch {}
+        if (!r.ok || !Array.isArray(data)) {
+          showToast(`Impossible de charger les demandes Ambassadeur : ${(data as any)?.message || `HTTP ${r.status}`}`, "error");
+          setAmbassadorRequests([]);
+          setAmbassadorRequestsLoading(false);
+          return;
+        }
+        if (data.length === 0) { setAmbassadorRequests([]); setAmbassadorRequestsLoading(false); return; }
+        // ── Les profils sont récupérés séparément (pas de jointure imbriquée) : ce projet
+        //    n'utilise pas les relations PostgREST ailleurs, et une jointure imbriquée ici
+        //    échouait silencieusement si la relation n'était pas déclarée côté base. ──
+        const ids = data.map((d: any) => d.user_id).filter(Boolean);
+        const inList = ids.map((id: string) => `"${id}"`).join(",");
+        const pr = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=in.(${inList})&select=id,name,photo_url,phone`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+        const profiles = await pr.json().catch(() => []);
+        const profMap: Record<string, { name: string; photo_url?: string; phone?: string }> = {};
+        if (Array.isArray(profiles)) profiles.forEach((p: any) => { profMap[p.id] = p; });
+        setAmbassadorRequests(data.map((d: any) => ({ id: d.id, user_id: d.user_id, created_at: d.created_at, name: profMap[d.user_id]?.name || "?", photo_url: profMap[d.user_id]?.photo_url, phone: profMap[d.user_id]?.phone })));
+      } catch { showToast("Erreur réseau lors du chargement des demandes Ambassadeur.", "error"); }
       setAmbassadorRequestsLoading(false);
     };
     useEffect(() => { if (activeTab === "ambassadors" && ambTab === "requests") loadAmbassadorRequests(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [activeTab, ambTab]);
@@ -6837,6 +6890,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
         await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${aff.user_id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify(patchBody) });
         logAdminAction(auth.token, auth.userId, auth.name, `Contrat Ambassadeur terminé pour ${aff.name} : badge${wasGifted ? " et Premium offert" : ""} retiré(s), historique des commissions conservé.`, aff.user_id);
         setAffiliatesList(list => list.map(a => a.id === aff.id ? { ...a, status: "removed" } : a));
+        setAffiliateProfileStatus(s => ({ ...s, [aff.user_id]: { is_ambassador: false, premium_until: wasGifted ? undefined : s[aff.user_id]?.premium_until, premium_is_gift: wasGifted ? false : s[aff.user_id]?.premium_is_gift } }));
         showToast(`${aff.name} n'est plus Ambassadeur.`, "success");
         setAffiliateRemoveModal(null);
       } catch {}
@@ -12999,7 +13053,14 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                               {a.status !== "removed" && (
                                 <>
                                   <button onClick={() => setAffiliateStatus(a, a.status === "active" ? "paused" : "active")} style={{ background: "#fff", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "5px 12px", fontSize: "0.74rem", fontWeight: 700, cursor: "pointer", color: "#555" }}>{a.status === "active" ? "Mettre en pause" : "Réactiver"}</button>
-                                  <button onClick={() => confirm(`Offrir le Premium à vie à ${a.name} ? À réserver aux ambassadeurs qui ont fait leurs preuves (résultats après ~1 mois).`, () => adminAction(a.user_id, { is_premium: true, premium_until: LIFETIME_PREMIUM_UNTIL, premium_is_gift: true }, `${a.name} a maintenant le Premium à vie.`))} style={{ background: "#fff", border: "1.5px solid #8B6914", borderRadius: 50, padding: "5px 12px", fontSize: "0.74rem", fontWeight: 700, cursor: "pointer", color: "#8B6914" }}>Offrir Premium à vie</button>
+                                  {!affiliateProfileStatus[a.user_id]?.is_ambassador && (
+                                    <button onClick={() => confirm(`Accorder le badge Ambassadeur à ${a.name} ?`, () => grantAmbassadorBadge(a))} style={{ background: "#fff", border: "1.5px solid #8e44ad", borderRadius: 50, padding: "5px 12px", fontSize: "0.74rem", fontWeight: 700, cursor: "pointer", color: "#8e44ad" }}>Accorder badge</button>
+                                  )}
+                                  {isLifetimePremiumAff(a.user_id) ? (
+                                    <button onClick={() => confirm(`Retirer le Premium à vie de ${a.name} ?`, () => togglePremiumLifetime(a))} style={{ background: "rgba(231,76,60,0.08)", border: "1.5px solid rgba(231,76,60,0.25)", borderRadius: 50, padding: "5px 12px", fontSize: "0.74rem", fontWeight: 700, cursor: "pointer", color: G.rouge }}>Retirer Premium</button>
+                                  ) : (
+                                    <button onClick={() => confirm(`Offrir le Premium à vie à ${a.name} ? À réserver aux ambassadeurs qui ont fait leurs preuves (résultats après ~1 mois).`, () => togglePremiumLifetime(a))} style={{ background: "#fff", border: "1.5px solid #8B6914", borderRadius: 50, padding: "5px 12px", fontSize: "0.74rem", fontWeight: 700, cursor: "pointer", color: "#8B6914" }}>Offrir Premium à vie</button>
+                                  )}
                                   <button onClick={() => setAffiliateRemoveModal({ id: a.id, user_id: a.user_id, name: a.name })} style={{ background: "rgba(231,76,60,0.08)", border: `1.5px solid rgba(231,76,60,0.25)`, borderRadius: 50, padding: "5px 12px", fontSize: "0.74rem", fontWeight: 700, cursor: "pointer", color: G.rouge }}>Retirer</button>
                                 </>
                               )}
