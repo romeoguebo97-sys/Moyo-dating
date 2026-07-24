@@ -267,10 +267,12 @@ export let AFFILIATE_COMMISSION_WEEK = 300;
 export let AFFILIATE_COMMISSION_MONTH = 800;
 export let AFFILIATE_COMMISSION_2MONTH = 1500;
 export let AFFILIATE_PAYABLE_DELAY_DAYS = 15; // délai avant qu'une commission soit "payable"
+export let AFFILIATE_PAYOUT_MIN_FCFA = 10000; // seuil minimum pour demander un versement
 export function setAFFILIATE_COMMISSION_WEEK(v: any) { AFFILIATE_COMMISSION_WEEK = parseInt(v) || 300; }
 export function setAFFILIATE_COMMISSION_MONTH(v: any) { AFFILIATE_COMMISSION_MONTH = parseInt(v) || 800; }
 export function setAFFILIATE_COMMISSION_2MONTH(v: any) { AFFILIATE_COMMISSION_2MONTH = parseInt(v) || 1500; }
 export function setAFFILIATE_PAYABLE_DELAY_DAYS(v: any) { AFFILIATE_PAYABLE_DELAY_DAYS = parseInt(v) || 15; }
+export function setAFFILIATE_PAYOUT_MIN_FCFA(v: any) { AFFILIATE_PAYOUT_MIN_FCFA = parseInt(v) || 10000; }
 // Intervalles de polling — modifiables via app_settings
 export let POLL_BADGES_MS = 8000;        // Fallback badges (messages/likes/matchs/vues)
 export let POLL_ADMIN_BADGE_MS = 5000;   // Badge admin
@@ -347,6 +349,7 @@ function getLandingFaqItems(): { icon: string; titre: string; desc: string }[] {
     { icon: "Q", titre: "Comment offrir le Premium ?", desc: "Dans une conversation, le bouton cadeau apparait uniquement si vous êtes Premium. Vous pouvez offrir le Premium à votre partenaire non-premium, en choisissant la formule (1 semaine, 1 mois ou 2 mois)." },
     { icon: "Q", titre: "Comment obtenir le badge vérifié ?", desc: "Profil → Faire vérifier mon compte → WhatsApp. Gratuit, vérification sous 24h." },
     { icon: "Q", titre: "Comment inviter un ami ?", desc: "Dans Profil, appuyez sur Inviter un ami. Un message pré-rempli s'ouvre sur WhatsApp ou le partage natif." },
+    { icon: "Q", titre: "Qu'est-ce que le programme Ambassadeur ?", desc: "Contrairement au parrainage classique (jours Premium offerts), l'Ambassadeur touche une commission en argent sur chaque abonnement souscrit par ses filleuls. La demande se fait depuis Profil → Devenir Ambassadeur Moyo Dating. Une fois approuvée, un tableau de bord dédié permet de suivre ses gains et de demander un versement une fois le minimum atteint." },
     { icon: "Q", titre: "Comment activer le mode sombre ?", desc: "Dans Profil, utilisez le bouton Mode clair/sombre pour basculer entre les deux thèmes." },
     { icon: "Q", titre: "Comment rendre mon profil invisible ?", desc: "Dans Profil, activez le bouton Profil invisible. Vous disparaissez de Découvrir sans supprimer votre compte." },
     { icon: "Q", titre: "Pourquoi je ne vois pas mon profil dans Découvrir ?", desc: "Votre profil doit être complet jusqu'à la dernière étape de l'inscription pour apparaître dans Découvrir. Vérifiez aussi que votre profil est bien visible dans les paramètres." },
@@ -500,7 +503,7 @@ export function dedupeMatchesByCouple<T extends { user1?: string; user2?: string
 }
 
 // Charger les settings dynamiques depuis Supabase au démarrage
-fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_messages_free_femme,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,pay_wero_enabled,pay_paypal_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,feature_show_likes_views_free,feature_group_premium,feature_group_photos,feature_photo_retouch,feature_moderation_insults,feature_moderation_contact,premium_screen_variant,custom_banned_words,contact_banned_words,disabled_builtin_words,disabled_builtin_contact_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,pay_wero_number,pay_paypal_number,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,social_linkedin,store_link_android,store_link_ios,plan_week_enabled,plan_month_enabled,plan_2month_enabled,discover_default_mode,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,auto_warn_ban_contact_enabled,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price,privacy_notice_enabled,premium_boost_enabled,assistant_photo_url,broadcast_enabled,modal_match_title,modal_match_subtitle,referral_bonus_week_days,referral_bonus_month_days,referral_bonus_2month_days,affiliate_commission_week_fcfa,affiliate_commission_month_fcfa,affiliate_commission_2month_fcfa,affiliate_payable_delay_days,privacy_notice_step1_text,privacy_notice_step2_text,ban_screen_text,pay_link_enabled,feature_ambassador_program)&select=key,value`, {
+fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_messages_free_femme,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,pay_wero_enabled,pay_paypal_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,feature_show_likes_views_free,feature_group_premium,feature_group_photos,feature_photo_retouch,feature_moderation_insults,feature_moderation_contact,premium_screen_variant,custom_banned_words,contact_banned_words,disabled_builtin_words,disabled_builtin_contact_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,pay_wero_number,pay_paypal_number,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,social_linkedin,store_link_android,store_link_ios,plan_week_enabled,plan_month_enabled,plan_2month_enabled,discover_default_mode,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,auto_warn_ban_contact_enabled,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price,privacy_notice_enabled,premium_boost_enabled,assistant_photo_url,broadcast_enabled,modal_match_title,modal_match_subtitle,referral_bonus_week_days,referral_bonus_month_days,referral_bonus_2month_days,affiliate_commission_week_fcfa,affiliate_commission_month_fcfa,affiliate_commission_2month_fcfa,affiliate_payable_delay_days,privacy_notice_step1_text,privacy_notice_step2_text,ban_screen_text,pay_link_enabled,feature_ambassador_program,affiliate_payout_min_fcfa)&select=key,value`, {
   headers: { "apikey": SUPABASE_KEY },
 }).then(r => r.json()).then((data: { key: string; value: string }[]) => {
   if (!Array.isArray(data)) return;
@@ -590,6 +593,7 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
   if (map["affiliate_commission_month_fcfa"]) setAFFILIATE_COMMISSION_MONTH(map["affiliate_commission_month_fcfa"]);
   if (map["affiliate_commission_2month_fcfa"]) setAFFILIATE_COMMISSION_2MONTH(map["affiliate_commission_2month_fcfa"]);
   if (map["affiliate_payable_delay_days"]) setAFFILIATE_PAYABLE_DELAY_DAYS(map["affiliate_payable_delay_days"]);
+  if (map["affiliate_payout_min_fcfa"]) setAFFILIATE_PAYOUT_MIN_FCFA(map["affiliate_payout_min_fcfa"]);
   if (map["premium_price_eur"]) PREMIUM_PRICE_EUR = parseFloat(map["premium_price_eur"]) || 10;
   if (map["eur_to_fcfa_rate"]) EUR_TO_FCFA = parseFloat(map["eur_to_fcfa_rate"]) || 655.957;
   if (map["poll_badges_ms"]) POLL_BADGES_MS = parseInt(map["poll_badges_ms"]) || 8000;
@@ -5526,6 +5530,7 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
 const BOT_FAQ = [
   { q: ["premium", "abonnement", "payer", "prix", "coût", "momo", "airtel"], r: `Le Premium est disponible${activePlansCount() > 1 ? " en plusieurs formules" : ""} : ${activePlansText()}. Il donne accès aux likes illimités, messages illimités, voir qui vous a liké et visité, envoi de photos et bien plus. Paiement via MTN Mobile Money, Airtel Money ou carte Visa/Mastercard. Activation sous 15 minutes.` },
   { q: ["parrain", "parrainage", "filleul", "inviter", "lien", "7 jours", "jours offerts"], r: `Le parrainage est simple : sur votre Profil, appuyez sur 'Parrainer un ami' pour partager votre lien unique. Quand un ami s'inscrit via ce lien et passe Premium, vous gagnez des jours Premium offerts selon sa formule : ${REFERRAL_BONUS_WEEK} jours (1 semaine), ${REFERRAL_BONUS_MONTH} jours (1 mois) ou ${REFERRAL_BONUS_2MONTH} jours (2 mois). Pas de limite !` },
+  { q: ["ambassadeur", "ambassadrice", "commission", "versement", "gains", "cash", "argent"], r: "Le programme Ambassadeur est différent du parrainage classique : au lieu de jours Premium offerts, vous touchez une commission en argent sur chaque abonnement souscrit par vos filleuls. Depuis Profil → 'Devenir Ambassadeur Moyo Dating', envoyez votre demande. Une fois approuvée par notre équipe, un tableau de bord dédié affiche vos gains disponibles, vos performances et l'historique de vos commissions, avec un bouton pour demander le versement une fois le montant minimum atteint." },
   { q: ["match", "matcher", "matchs"], r: "Un match se crée automatiquement quand deux personnes se likent mutuellement. Un message de bienvenue apparaît automatiquement dans la conversation. Depuis l'onglet Matchs, appuyez sur les 3 traits pour envoyer un message, voir le profil, bloquer ou annuler le match." },
   { q: ["mise en relation", "demande", "proposer", "proposition", "matchmaking", "trouver quelqu'un"], r: `Moyo Dating propose un service de mise en relation personnalisé. Tout le monde peut créer et enregistrer sa carte relationnelle depuis la page Profil (bouton rouge 'Demander une mise en relation') en décrivant qui vous êtes et ce que vous recherchez. L'envoi de la demande à notre équipe est réservé aux membres Premium : au moment d'appuyer sur 'Envoyer ma demande', si vous n'êtes pas Premium, l'option de passer Premium s'affiche. Une fois la demande envoyée, notre équipe analyse votre profil et vous envoie une proposition dans l'application. Vous pouvez faire jusqu'à ${FREE_LIMITS.matchRequests} demande${FREE_LIMITS.matchRequests > 1 ? "s" : ""} par mois.` },
   { q: ["accepter proposition", "refuser proposition", "proposition reçue", "on pense à toi"], r: "Quand l'équipe Moyo Dating vous propose une rencontre, un modal s'affiche automatiquement avec la photo, le nom, l'âge et la ville de la personne. Deux choix : 'Accepter' ou 'Refuser'. Si les deux personnes acceptent → un match est créé automatiquement et une conversation s'ouvre. Si l'une refuse → la proposition est annulée pour les deux. La proposition expire si vous ne répondez pas dans le délai fixé par l'équipe." },
@@ -15550,6 +15555,10 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
   //    piloter à la fois la bannière dorée Premium et la carte de raccourci en haut de page. ──
   const [ambStatus, setAmbStatus] = useState<"loading" | "none" | "pending" | "ambassador">("loading");
   const [ambStats, setAmbStats] = useState<{ pending: number; paid: number; count: number } | null>(null);
+  const [ambAffiliateId, setAmbAffiliateId] = useState<string | null>(null);
+  const [ambConversions, setAmbConversions] = useState<{ id: string; plan_label?: string; commission_amount: number; status: string; created_at: string }[]>([]);
+  const [ambInscriptions, setAmbInscriptions] = useState(0);
+  const [ambPayoutPending, setAmbPayoutPending] = useState<{ amount: number } | null>(null);
   useEffect(() => {
     (async () => {
       try {
@@ -15560,15 +15569,23 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
           const ra = await fetch(`${SUPABASE_URL}/rest/v1/affiliates?user_id=eq.${auth.userId}&select=id&limit=1`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
           const da = await ra.json().catch(() => []);
           const affId = Array.isArray(da) ? da[0]?.id : null;
+          setAmbAffiliateId(affId || null);
           if (affId) {
-            const rc = await fetch(`${SUPABASE_URL}/rest/v1/affiliate_conversions?affiliate_id=eq.${affId}&select=commission_amount,status`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+            const rc = await fetch(`${SUPABASE_URL}/rest/v1/affiliate_conversions?affiliate_id=eq.${affId}&select=id,plan_label,commission_amount,status,created_at&order=created_at.desc&limit=100`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
             const dc = await rc.json().catch(() => []);
             if (Array.isArray(dc)) {
               const pending = dc.filter((c: any) => c.status === "pending").reduce((s: number, c: any) => s + (c.commission_amount || 0), 0);
               const paid = dc.filter((c: any) => c.status === "paid").reduce((s: number, c: any) => s + (c.commission_amount || 0), 0);
               setAmbStats({ pending, paid, count: dc.length });
+              setAmbConversions(dc);
             }
+            const rp = await fetch(`${SUPABASE_URL}/rest/v1/affiliate_payout_requests?affiliate_id=eq.${affId}&status=eq.pending&select=amount&limit=1`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+            const dp = await rp.json().catch(() => []);
+            if (Array.isArray(dp) && dp[0]) setAmbPayoutPending({ amount: dp[0].amount });
           }
+          const ri = await fetch(`${SUPABASE_URL}/rest/v1/profiles?referred_by=eq.${auth.userId}&select=id`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "count=exact" } });
+          const crHeader = ri.headers.get("content-range");
+          setAmbInscriptions(crHeader ? (parseInt(crHeader.split("/")[1]) || 0) : 0);
           return;
         }
         const rr = await fetch(`${SUPABASE_URL}/rest/v1/ambassador_requests?user_id=eq.${auth.userId}&status=eq.pending&select=id&limit=1`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
@@ -15577,7 +15594,17 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
       } catch { setAmbStatus("none"); }
     })();
   }, [auth.userId]);
+  const requestAmbassadorPayout = async () => {
+    if (!ambAffiliateId || !ambStats || ambStats.pending < AFFILIATE_PAYOUT_MIN_FCFA || ambPayoutPending) return;
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/affiliate_payout_requests`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ affiliate_id: ambAffiliateId, user_id: auth.userId, affiliate_name: auth.name, amount: ambStats.pending, status: "pending" }) });
+      setAmbPayoutPending({ amount: ambStats.pending });
+      showToast("Demande de versement envoyée, elle sera traitée sous quelques jours.", "success");
+    } catch { showToast("Erreur lors de la demande de versement.", "error"); }
+  };
   const [showAmbDashboard, setShowAmbDashboard] = useState(false);
+  const [showAllAmbConversions, setShowAllAmbConversions] = useState(false);
+  const [showAmbInfo, setShowAmbInfo] = useState(false);
   const [notifStatus, setNotifStatus] = useState<"default" | "granted" | "denied" | "unsupported">(() => {
     if (typeof window !== "undefined" && Capacitor.isNativePlatform()) return "default";
     if (typeof window === "undefined" || !("Notification" in window)) return "unsupported";
@@ -16274,36 +16301,120 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
           </div>
         )}
 
-        {showAmbDashboard && (
-          <div className="moyo-backdrop" onClick={() => setShowAmbDashboard(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10001, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
-            <div className="moyo-sheet-in" onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: "24px 24px 0 0", width: "100%", maxWidth: 500, padding: "24px 22px 32px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: ambStats ? 18 : 10 }}>
-                <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(142,68,173,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>
+        {showAmbDashboard && (() => {
+          const available = ambStats?.pending || 0;
+          const canRequest = available >= AFFILIATE_PAYOUT_MIN_FCFA && !ambPayoutPending && !!ambAffiliateId;
+          const planIcon = (label?: string) => label?.includes("2 mois") ? "#D4A843" : label?.includes("1 mois") ? "#8B0D2F" : "#D4A843";
+          const visibleConversions = showAllAmbConversions ? ambConversions : ambConversions.slice(0, 5);
+          return (
+            <div style={{ position: "fixed", inset: 0, background: "#fff", zIndex: 10001, display: "flex", flexDirection: "column" }}>
+              {/* AppBar */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "calc(env(safe-area-inset-top) + 14px) 16px 14px", borderBottom: "1px solid #f1f1f1", flexShrink: 0 }}>
+                <div onClick={() => { setShowAmbDashboard(false); setShowAllAmbConversions(false); }} style={{ cursor: "pointer", padding: 4 }}>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={G.brun} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
                 </div>
-                <div>
-                  <div style={{ fontWeight: 900, fontSize: "1.05rem", color: G.brun }}>Ambassadeur Moyo Dating</div>
-                  <div style={{ fontSize: "0.78rem", color: "#888" }}>Vos gains en temps réel</div>
+                <div style={{ fontWeight: 900, fontSize: "1.05rem", color: G.brun }}>Ambassadeur</div>
+                <div onClick={() => setShowAmbInfo(true)} style={{ cursor: "pointer", padding: 4 }}>
+                  <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
                 </div>
               </div>
-              {ambStats && (
-                <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
-                  <div style={{ flex: 1, background: "rgba(142,68,173,0.06)", borderRadius: 12, padding: "12px", textAlign: "center" }}>
-                    <div style={{ fontSize: "1.2rem", fontWeight: 900, color: "#8e44ad" }}>{ambStats.paid.toLocaleString()} FCFA</div>
-                    <div style={{ fontSize: "0.68rem", color: "#888" }}>Déjà versé</div>
+
+              <div style={{ flex: 1, overflowY: "auto", padding: "18px 16px calc(env(safe-area-inset-bottom) + 24px)" }}>
+                {/* Carte principale */}
+                <div style={{ background: "linear-gradient(135deg,#8B0D2F 0%,#6E0A25 100%)", borderRadius: 20, padding: "22px 20px", boxShadow: "0 10px 28px rgba(139,13,47,0.25)", marginBottom: 22 }}>
+                  <div style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.8)", fontWeight: 600, marginBottom: 6 }}>Mes gains disponibles</div>
+                  <div style={{ fontSize: "2.1rem", fontWeight: 900, color: "#fff", lineHeight: 1.1, marginBottom: 10 }}>{available.toLocaleString()} <span style={{ fontSize: "1.1rem", fontWeight: 700 }}>FCFA</span></div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 18 }}>
+                    <span style={{ width: 7, height: 7, borderRadius: "50%", background: canRequest ? "#4CAF50" : "rgba(255,255,255,0.5)", display: "inline-block" }} />
+                    <span style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.9)", fontWeight: 600 }}>{ambPayoutPending ? "Demande de versement en cours" : canRequest ? "Prêt à être versé" : "Pas encore atteint le minimum"}</span>
                   </div>
-                  <div style={{ flex: 1, background: "rgba(230,126,34,0.06)", borderRadius: 12, padding: "12px", textAlign: "center" }}>
-                    <div style={{ fontSize: "1.2rem", fontWeight: 900, color: "#E67E22" }}>{ambStats.pending.toLocaleString()} FCFA</div>
-                    <div style={{ fontSize: "0.68rem", color: "#888" }}>En attente</div>
+                  <button onClick={requestAmbassadorPayout} disabled={!canRequest} style={{ width: "100%", background: canRequest ? "#fff" : "rgba(255,255,255,0.25)", color: canRequest ? "#8B0D2F" : "rgba(255,255,255,0.7)", border: "none", borderRadius: 14, padding: "14px 16px", fontSize: "0.88rem", fontWeight: 800, cursor: canRequest ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h4"/></svg>
+                    {ambPayoutPending ? "Demande envoyée" : "Demander le versement"}
+                  </button>
+                  <div style={{ fontSize: "0.68rem", color: "rgba(255,255,255,0.65)", marginTop: 10, textAlign: "center" }}>Minimum de versement : {AFFILIATE_PAYOUT_MIN_FCFA.toLocaleString()} FCFA</div>
+                </div>
+
+                {/* Performances */}
+                <div style={{ fontSize: "0.95rem", fontWeight: 800, color: G.brun, marginBottom: 12 }}>Mes performances</div>
+                <div style={{ display: "flex", gap: 10, marginBottom: 26 }}>
+                  <div style={{ flex: 1, background: "#fafafa", borderRadius: 16, padding: "16px 10px", textAlign: "center" }}>
+                    <div style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(142,68,173,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 8px" }}>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    </div>
+                    <div style={{ fontSize: "1.3rem", fontWeight: 900, color: G.brun }}>{ambInscriptions}</div>
+                    <div style={{ fontSize: "0.66rem", color: "#888", fontWeight: 600 }}>Inscriptions</div>
+                  </div>
+                  <div style={{ flex: 1, background: "#fafafa", borderRadius: 16, padding: "16px 10px", textAlign: "center" }}>
+                    <div style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(139,13,47,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 8px" }}>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="#8B0D2F" stroke="none"><path d="M12 21s-6.7-4.35-9.3-8.1C.8 10 1.4 6.4 4.3 4.9c2.3-1.2 4.9-.4 6.3 1.5.4.5.6.8 1.4.8s1-.3 1.4-.8c1.4-1.9 4-2.7 6.3-1.5 2.9 1.5 3.5 5.1 1.6 8-2.6 3.75-9.3 8.1-9.3 8.1z"/></svg>
+                    </div>
+                    <div style={{ fontSize: "1.3rem", fontWeight: 900, color: G.brun }}>{ambStats?.count ?? 0}</div>
+                    <div style={{ fontSize: "0.66rem", color: "#888", fontWeight: 600, textAlign: "center" }}>Abonnements achetés</div>
+                  </div>
+                  <div style={{ flex: 1, background: "#fafafa", borderRadius: 16, padding: "16px 10px", textAlign: "center" }}>
+                    <div style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(230,126,34,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 8px" }}>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#E67E22" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                    </div>
+                    <div style={{ fontSize: "1.3rem", fontWeight: 900, color: G.brun }}>{ambConversions.filter(c => c.status === "pending").length}</div>
+                    <div style={{ fontSize: "0.66rem", color: "#888", fontWeight: 600, textAlign: "center" }}>Commissions en attente</div>
                   </div>
                 </div>
-              )}
-              <button onClick={() => {
-                const refLink = `${window.location.origin}?ref=${auth.userId}`;
-                if (navigator.share) navigator.share({ title: "Moyo Dating", text: "Rejoins Moyo Dating avec mon lien :", url: refLink });
-                else navigator.clipboard.writeText(refLink).catch(() => {});
-              }} style={{ width: "100%", background: "#8e44ad", color: "#fff", border: "none", borderRadius: 50, padding: "14px", fontSize: "0.9rem", fontWeight: 800, cursor: "pointer", marginBottom: 10 }}>Partager mon lien</button>
-              <button onClick={() => setShowAmbDashboard(false)} style={{ width: "100%", background: "none", border: "none", color: "#999", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer", padding: "8px" }}>Fermer</button>
+
+                {/* Commissions récentes */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                  <div style={{ fontSize: "0.95rem", fontWeight: 800, color: G.brun }}>Mes commissions récentes</div>
+                  {ambConversions.length > 5 && (
+                    <div onClick={() => setShowAllAmbConversions(v => !v)} style={{ fontSize: "0.78rem", fontWeight: 700, color: "#8B0D2F", cursor: "pointer", display: "flex", alignItems: "center", gap: 3 }}>
+                      {showAllAmbConversions ? "Voir moins" : "Voir tout"}
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8B0D2F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+                    </div>
+                  )}
+                </div>
+                {ambConversions.length === 0 ? (
+                  <div style={{ textAlign: "center", padding: "24px 0", color: "#aaa", fontSize: "0.82rem" }}>Aucune commission pour l'instant.</div>
+                ) : (
+                  <div style={{ marginBottom: 26 }}>
+                    {visibleConversions.map((c, i) => (
+                      <div key={c.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 0", borderBottom: i < visibleConversions.length - 1 ? "1px solid #f1f1f1" : "none" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                          <div style={{ width: 38, height: 38, borderRadius: "50%", background: `${planIcon(c.plan_label)}18`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                            <svg width="17" height="17" viewBox="0 0 24 24" fill={planIcon(c.plan_label)} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: "0.85rem", fontWeight: 700, color: G.brun }}>Premium {c.plan_label || "?"}</div>
+                            <div style={{ fontSize: "0.72rem", color: "#999" }}>{new Date(c.created_at).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" })} • {new Date(c.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</div>
+                          </div>
+                        </div>
+                        <div style={{ textAlign: "right" }}>
+                          <div style={{ fontSize: "0.85rem", fontWeight: 800, color: "#2E9E4F", marginBottom: 4 }}>+{(c.commission_amount || 0).toLocaleString()} FCFA</div>
+                          <span style={{ fontSize: "0.66rem", fontWeight: 700, padding: "2px 9px", borderRadius: 50, background: c.status === "paid" ? "rgba(46,158,79,0.12)" : "rgba(230,126,34,0.12)", color: c.status === "paid" ? "#2E9E4F" : "#E67E22" }}>{c.status === "paid" ? "✓ Validée" : "○ En attente"}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Lien d'invitation */}
+                <div style={{ background: "#fafafa", borderRadius: 16, padding: "16px" }}>
+                  <div style={{ fontSize: "0.85rem", fontWeight: 800, color: G.brun, marginBottom: 10 }}>Mon lien d'invitation</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#fff", border: "1.5px solid #eee", borderRadius: 12, padding: "10px 12px" }}>
+                    <div style={{ flex: 1, fontSize: "0.78rem", color: "#666", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{`${window.location.origin}?ref=${auth.userId}`}</div>
+                    <button onClick={() => { navigator.clipboard.writeText(`${window.location.origin}?ref=${auth.userId}`).catch(() => {}); showToast("Lien copié.", "success"); }} style={{ background: "#8B0D2F", color: "#fff", border: "none", borderRadius: 8, padding: "6px 14px", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer", flexShrink: 0 }}>Copier</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
+        {showAmbInfo && (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10002, display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }} onClick={() => setShowAmbInfo(false)}>
+            <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 20, width: "100%", maxWidth: 420, padding: "22px 20px" }}>
+              <div style={{ fontWeight: 900, fontSize: "1rem", color: G.brun, marginBottom: 10 }}>Comment ça marche</div>
+              <p style={{ fontSize: "0.82rem", color: "#666", lineHeight: 1.6, marginBottom: 10 }}>Chaque personne qui s'abonne au Premium via votre lien vous rapporte une commission en argent, versée par Mobile Money.</p>
+              <p style={{ fontSize: "0.82rem", color: "#666", lineHeight: 1.6, marginBottom: 20 }}>Une fois vos gains disponibles au-dessus du minimum, vous pouvez demander le versement depuis cet écran.</p>
+              <button onClick={() => setShowAmbInfo(false)} style={{ width: "100%", background: "#8B0D2F", color: "#fff", border: "none", borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>Compris</button>
             </div>
           </div>
         )}
@@ -18388,7 +18499,13 @@ export default function App() {
         // Demandes d'adhésion au Groupe Premium en attente (absentes du décompte jusqu'ici)
         const rGroupReqs = await fetch(`${SUPABASE_URL}/rest/v1/group_members?status=eq.pending&select=user_id`, { headers: h });
         const groupReqCount = parseCount(rGroupReqs);
-        const newCount = parseCount(rPending) + parseCount(rUnreadReviews) + parseCount(rPendingPayments) + matchReqCount + featReqCount + apptReqCount + groupReqCount;
+        // Demandes "Devenir Ambassadeur" en attente
+        const rAmbReqs = await fetch(`${SUPABASE_URL}/rest/v1/ambassador_requests?status=eq.pending&select=id`, { headers: h });
+        const ambReqCount = parseCount(rAmbReqs);
+        // Demandes de versement Ambassadeur en attente
+        const rPayoutReqs = await fetch(`${SUPABASE_URL}/rest/v1/affiliate_payout_requests?status=eq.pending&select=id`, { headers: h });
+        const payoutReqCount = parseCount(rPayoutReqs);
+        const newCount = parseCount(rPending) + parseCount(rUnreadReviews) + parseCount(rPendingPayments) + matchReqCount + featReqCount + apptReqCount + groupReqCount + ambReqCount + payoutReqCount;
         setAdminBadgeCount(prev => prev === newCount ? prev : newCount);
       } catch {}
     };
