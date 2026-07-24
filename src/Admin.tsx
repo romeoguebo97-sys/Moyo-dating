@@ -5310,6 +5310,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
   const [featurePendingCount, setFeaturePendingCount] = useState(0);
   const [proposalsBadgeCount, setProposalsBadgeCount] = useState(0);
   const [appointmentsPendingCount, setAppointmentsPendingCount] = useState(0);
+  const [ambassadorRequestsBadge, setAmbassadorRequestsBadge] = useState(0);
   const [groupMembers, setGroupMembers] = useState<{ user_id: string; role: "admin" | "moderator" | "member"; status: "pending" | "approved" | "rejected"; removed_at?: string | null; profile?: { name: string; photo_url?: string | null; gender?: string } }[]>([]);
   const [groupMembersLoading, setGroupMembersLoading] = useState(false);
   const groupPendingCount = groupMembers.filter(m => m.status === "pending").length;
@@ -8000,6 +8001,10 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
         const rAppt = await fetch(`${SUPABASE_URL}/rest/v1/appointments?status=eq.en_attente&select=id`, { headers: h });
         const apptCount = (() => { const c = rAppt.headers.get("content-range"); return c ? parseInt(c.split("/")[1]) || 0 : 0; })();
         setAppointmentsPendingCount(apptCount);
+        // Demandes "Devenir Ambassadeur" en attente
+        const rAmb = await fetch(`${SUPABASE_URL}/rest/v1/ambassador_requests?status=eq.pending&select=id`, { headers: h });
+        const ambCount = (() => { const c = rAmb.headers.get("content-range"); return c ? parseInt(c.split("/")[1]) || 0 : 0; })();
+        setAmbassadorRequestsBadge(ambCount);
       } catch {}
     };
     checkMatchBadges();
@@ -8602,7 +8607,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
   const messagingPendingCount = reports.filter(r => isPending(r) && isSupportInbox(r)).length;
   const unreadReviewsCount = reviews.filter(r => !r.is_read).length;
   // ── Badge global = signalements en attente + avis non lus + paiements en attente + nouvelles demandes de mise en relation ──
-  const adminBadgeCount = pendingCount + messagingPendingCount + unreadReviewsCount + pendingPaymentsCount + matchRequestsBadge + featurePendingCount + appointmentsPendingCount + groupPendingCount;
+  const adminBadgeCount = pendingCount + messagingPendingCount + unreadReviewsCount + pendingPaymentsCount + matchRequestsBadge + featurePendingCount + appointmentsPendingCount + groupPendingCount + ambassadorRequestsBadge;
   const matchesBadgeCount = proposalsBadgeCount + matchRequestsBadge;
   // Sync badge vers App parent
   useEffect(() => { onBadgeCount?.(adminBadgeCount); }, [adminBadgeCount]);
@@ -10224,6 +10229,11 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 {key === "groupe" && groupPendingCount > 0 && (
                   <span style={{ background: G.blanc, color: G.or, borderRadius: 50, fontSize: "0.6rem", fontWeight: 800, padding: "1px 5px", lineHeight: 1.6, boxShadow: "0 1px 4px rgba(212,168,67,0.25)", border: "1px solid rgba(212,168,67,0.2)" }}>
                     {groupPendingCount > 99 ? "99+" : groupPendingCount}
+                  </span>
+                )}
+                {key === "ambassadors" && ambassadorRequestsBadge > 0 && (
+                  <span style={{ background: G.blanc, color: "#8e44ad", borderRadius: 50, fontSize: "0.6rem", fontWeight: 800, padding: "1px 5px", lineHeight: 1.6, boxShadow: "0 1px 4px rgba(142,68,173,0.2)", border: "1px solid rgba(142,68,173,0.15)" }}>
+                    {ambassadorRequestsBadge > 99 ? "99+" : ambassadorRequestsBadge}
                   </span>
                 )}
               </div>
