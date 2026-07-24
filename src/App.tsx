@@ -16398,10 +16398,18 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
                 {/* Lien d'invitation */}
                 <div style={{ background: "#fafafa", borderRadius: 16, padding: "16px" }}>
                   <div style={{ fontSize: "0.85rem", fontWeight: 800, color: G.brun, marginBottom: 10 }}>Mon lien d'invitation</div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#fff", border: "1.5px solid #eee", borderRadius: 12, padding: "10px 12px" }}>
-                    <div style={{ flex: 1, fontSize: "0.78rem", color: "#666", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{`${window.location.origin}?ref=${auth.userId}`}</div>
-                    <button onClick={() => { navigator.clipboard.writeText(`${window.location.origin}?ref=${auth.userId}`).catch(() => {}); setToast({ msg: "Lien copié.", type: "success" }); }} style={{ background: "#8B0D2F", color: "#fff", border: "none", borderRadius: 8, padding: "6px 14px", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer", flexShrink: 0 }}>Copier</button>
-                  </div>
+                  <button onClick={() => {
+                    const refLink = `${window.location.origin}?ref=${auth.userId}`;
+                    if (navigator.share) {
+                      navigator.share({ title: "Moyo Dating", text: "Rejoins Moyo Dating avec mon lien :", url: refLink });
+                    } else {
+                      navigator.clipboard.writeText(refLink).catch(() => {});
+                      setToast({ msg: "Lien copié.", type: "success" });
+                    }
+                  }} style={{ width: "100%", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: "#fff", color: "#8B0D2F", borderRadius: 50, padding: "12px 24px", fontSize: "0.85rem", fontWeight: 700, border: "1.5px solid #8B0D2F", cursor: "pointer" }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8B0D2F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                    Partager mon lien
+                  </button>
                 </div>
               </div>
             </div>

@@ -2558,6 +2558,54 @@ export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () =
   const [editingConfig, setEditingConfig] = React.useState<string | null>(null);
   const [editingConfigValue, setEditingConfigValue] = React.useState("");
   const [matchProposalExpiryDaysM, setMatchProposalExpiryDaysM] = React.useState("30");
+  // ── Raccourcis "Automatisations" — mêmes réglages qu'ailleurs (Marketing, Matchs), pas des
+  //    copies séparées. Absents jusqu'ici de l'écran mobile (uniquement présents côté desktop),
+  //    ce qui expliquait le manque de fonctions constaté sur téléphone. ──
+  type AutoShortcutKeyM = AutoShortcutKeyShared;
+  const [autoShortcuts, setAutoShortcuts] = React.useState<Record<AutoShortcutKeyM, boolean>>({
+    phone_completion_prompt_enabled: false,
+    verification_prompt_enabled: false,
+    premium_nudge_enabled: false,
+    mm_auto_propose_enabled: false,
+    spontaneous_auto_propose_enabled: false,
+    auto_warn_ban_contact_enabled: false,
+    promo_active: false,
+    broadcast_enabled: false,
+    premium_event_active: false,
+  });
+  React.useEffect(() => {
+    if (!auth) return;
+    const keys: AutoShortcutKeyM[] = ["phone_completion_prompt_enabled", "verification_prompt_enabled", "premium_nudge_enabled", "mm_auto_propose_enabled", "spontaneous_auto_propose_enabled", "auto_warn_ban_contact_enabled", "promo_active", "broadcast_enabled", "premium_event_active"];
+    fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(${keys.join(",")})&select=key,value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } })
+      .then(r => r.json()).then(rows => {
+        if (!Array.isArray(rows)) return;
+        setAutoShortcuts(cur => {
+          const next = { ...cur };
+          rows.forEach((row: { key: AutoShortcutKeyM; value: string }) => { next[row.key] = row.value === "true"; });
+          return next;
+        });
+      }).catch(() => {});
+  }, [auth?.userId]);
+  const toggleAutoShortcut = async (key: AutoShortcutKeyM) => {
+    const next = !autoShortcuts[key];
+    setAutoShortcuts(cur => ({ ...cur, [key]: next }));
+    if (!auth) return;
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ key, value: next ? "true" : "false" }) });
+    } catch {}
+  };
+  const [premiumEventShortcutLoadingM, setPremiumEventShortcutLoadingM] = React.useState(false);
+  const deactivatePremiumEventShortcutM = async () => {
+    if (!auth) return;
+    setPremiumEventShortcutLoadingM(true);
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ key: "premium_event_active", value: "false" }) });
+      const now = new Date().toISOString();
+      await fetch(`${SUPABASE_URL}/rest/v1/profiles?or=(premium_until.is.null,premium_until.lt.${now})`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ is_premium: false }) });
+      setAutoShortcuts(cur => ({ ...cur, premium_event_active: false }));
+    } catch {}
+    setPremiumEventShortcutLoadingM(false);
+  };
 
   React.useEffect(() => {
     const allKeys = ["rule_block_same_gender_like","modal_same_gender_homme","modal_same_gender_femme","modal_same_gender_sub","modal_signup_success","modal_match_title","modal_match_subtitle","modal_premium_default","modal_likes_epuises","limit_likes_free","limit_messages_free","limit_messages_free_femme","limit_match_requests","limit_status_boosts","limit_photo_size_mb","match_welcome_message","match_proposal_expiry_days","premium_price_fcfa","premium_price_week_fcfa","premium_price_2month_fcfa","premium_days_week","premium_days_2month","premium_duration_days","feature_statuses","feature_gift_premium","feature_assistant","feature_group_premium","feature_photo_retouch","feature_moderation_insults","feature_moderation_contact","maintenance_mode","maintenance_message","custom_banned_words","contact_banned_words","disabled_builtin_words","disabled_builtin_contact_words","auto_mod_contact_reply","poll_badges_ms","poll_admin_badge_ms","poll_stats_ms","poll_broadcast_ms","poll_support_ms","affiliate_commission_week_fcfa","affiliate_commission_month_fcfa","affiliate_commission_2month_fcfa","affiliate_payable_delay_days","feature_ambassador_program","affiliate_payout_min_fcfa"];
@@ -2634,8 +2682,66 @@ export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () =
         ))}
         <div style={{ fontSize: "0.72rem", color: "#999", padding: "4px 4px 0", lineHeight: 1.5 }}>La gestion des ambassadeurs eux-mêmes (ajout, historique, versements) se fait depuis Ambassadeurs → Affiliés actifs.</div>
       </OffCanvasSection>
-      <OffCanvasSection title="Automatisations">
+      <OffCanvasSection title="Profil & Vérification">
+        <div style={{ fontSize: "0.72rem", color: "#999", marginBottom: 10, lineHeight: 1.5 }}>Raccourcis — modifier ici change le même réglage que dans Marketing → Profil incomplet.</div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 4px" }}>
+          <span style={{ fontSize: "0.82rem", fontWeight: 600, color: "#333" }}>Demander le téléphone manquant</span>
+          <SwitchBtn on={autoShortcuts.phone_completion_prompt_enabled} onToggle={() => toggleAutoShortcut("phone_completion_prompt_enabled")} />
+        </div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 4px" }}>
+          <span style={{ fontSize: "0.82rem", fontWeight: 600, color: "#333" }}>Inciter à certifier son compte</span>
+          <SwitchBtn on={autoShortcuts.verification_prompt_enabled} onToggle={() => toggleAutoShortcut("verification_prompt_enabled")} />
+        </div>
+      </OffCanvasSection>
+      <OffCanvasSection title="Monétisation">
+        <div style={{ fontSize: "0.72rem", color: "#999", marginBottom: 10, lineHeight: 1.5 }}>Raccourci — modifier ici change le même réglage que dans Marketing → Inciter au Premium / Promotion.</div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 4px" }}>
+          <span style={{ fontSize: "0.82rem", fontWeight: 600, color: "#333" }}>Inciter à passer Premium</span>
+          <SwitchBtn on={autoShortcuts.premium_nudge_enabled} onToggle={() => toggleAutoShortcut("premium_nudge_enabled")} />
+        </div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 4px" }}>
+          <span style={{ fontSize: "0.82rem", fontWeight: 600, color: "#333" }}>Super promo Premium</span>
+          <SwitchBtn on={autoShortcuts.promo_active} onToggle={() => toggleAutoShortcut("promo_active")} />
+        </div>
+      </OffCanvasSection>
+      <OffCanvasSection title="Auto-propositions">
+        <div style={{ fontSize: "0.72rem", color: "#999", marginBottom: 10, lineHeight: 1.5 }}>Raccourcis — modifier ici change le même réglage que dans Matchs. Les horaires, seuils et limites détaillés restent à régler depuis leur onglet d'origine.</div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 4px" }}>
+          <span style={{ fontSize: "0.82rem", fontWeight: 600, color: "#333" }}>Matchmaking intelligent (nocturne)</span>
+          <SwitchBtn on={autoShortcuts.mm_auto_propose_enabled} onToggle={() => toggleAutoShortcut("mm_auto_propose_enabled")} />
+        </div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 4px" }}>
+          <span style={{ fontSize: "0.82rem", fontWeight: 600, color: "#333" }}>Propositions spontanées</span>
+          <SwitchBtn on={autoShortcuts.spontaneous_auto_propose_enabled} onToggle={() => toggleAutoShortcut("spontaneous_auto_propose_enabled")} />
+        </div>
         <RelationalNudgeConfig auth={auth} />
+      </OffCanvasSection>
+      <OffCanvasSection title="Modération">
+        <div style={{ fontSize: "0.72rem", color: "#999", marginBottom: 10, lineHeight: 1.5 }}>Quand un compte gratuit tente de partager ou demander un contact : avertissement officiel automatique (1/3, 2/3), puis bannissement automatique au 3e. Désactivé = comportement d'avant (juste un signalement à traiter toi-même).</div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 4px" }}>
+          <span style={{ fontSize: "0.82rem", fontWeight: 600, color: "#333" }}>Avertir / bannir automatiquement (partage de contact)</span>
+          <SwitchBtn on={autoShortcuts.auto_warn_ban_contact_enabled} onToggle={() => toggleAutoShortcut("auto_warn_ban_contact_enabled")} />
+        </div>
+      </OffCanvasSection>
+      <OffCanvasSection title="Communication">
+        <div style={{ fontSize: "0.72rem", color: "#999", marginBottom: 10, lineHeight: 1.5 }}>Raccourci — désactive/réactive instantanément l'affichage des diffusions aux membres, sans toucher à celles déjà créées ni à leur date d'expiration.</div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 4px" }}>
+          <span style={{ fontSize: "0.82rem", fontWeight: 600, color: "#333" }}>Diffusion générale</span>
+          <SwitchBtn on={autoShortcuts.broadcast_enabled} onToggle={() => toggleAutoShortcut("broadcast_enabled")} />
+        </div>
+        <div style={{ borderTop: "1px solid #eee", margin: "12px 0" }} />
+        <div style={{ fontSize: "0.72rem", color: "#999", marginBottom: 10, lineHeight: 1.5 }}>Campagne Premium gratuite (Marketing → Campagnes Premium) : pas de raccourci "Activer" ici, il faut choisir la cible et la durée depuis son onglet d'origine. Seule la désactivation rapide est possible ici.</div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 4px" }}>
+          <div>
+            <span style={{ fontSize: "0.82rem", fontWeight: 600, color: "#333" }}>Campagne Premium gratuite</span>
+            <div style={{ fontSize: "0.7rem", color: autoShortcuts.premium_event_active ? "#1e8449" : "#999", fontWeight: 700, marginTop: 2 }}>{autoShortcuts.premium_event_active ? "● Active" : "Inactive"}</div>
+          </div>
+          {autoShortcuts.premium_event_active ? (
+            <button onClick={deactivatePremiumEventShortcutM} disabled={premiumEventShortcutLoadingM} style={{ background: "rgba(231,76,60,0.1)", color: "#e74c3c", border: "1.5px solid rgba(231,76,60,0.3)", borderRadius: 50, padding: "7px 16px", fontSize: "0.76rem", fontWeight: 700, cursor: premiumEventShortcutLoadingM ? "not-allowed" : "pointer" }}>{premiumEventShortcutLoadingM ? "…" : "Désactiver"}</button>
+          ) : (
+            <span style={{ fontSize: "0.72rem", color: "#bbb" }}>—</span>
+          )}
+        </div>
       </OffCanvasSection>
       <OffCanvasSection title="Fonctionnalités">
         {([["feature_statuses","featureStatuses" as keyof typeof appConfig,"Statuts (Stories)"],["feature_gift_premium","featureGiftPremium" as keyof typeof appConfig,"Cadeau Premium"],["feature_assistant","featureAssistant" as keyof typeof appConfig,"Assistant IA"],["feature_group_premium","featureGroupPremium" as keyof typeof appConfig,"Groupe Premium"],["feature_group_photos","featureGroupPhotos" as keyof typeof appConfig,"Photos dans le Groupe"],["feature_photo_retouch","featurePhotoRetouch" as keyof typeof appConfig,"Retouche photo Premium"],["feature_ambassador_program","featureAmbassadorProgram" as keyof typeof appConfig,"Programme Ambassadeur (bouton \"Devenir Ambassadeur\")"],["feature_moderation_insults","featureModerationInsults" as keyof typeof appConfig,"Modération auto (insultes, menaces, arnaques, sexuel)"],["feature_moderation_contact","featureModerationContact" as keyof typeof appConfig,"Blocage partage de contact (comptes gratuits)"],["maintenance_mode","maintenanceMode" as keyof typeof appConfig,"Mode maintenance"]] as [string, keyof typeof appConfig, string][]).map(([key,ck,label]) => (
@@ -5175,7 +5281,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
   // ── Vue & tri utilisateurs admin ──
   const [usersViewMode, setUsersViewMode] = useState<"grid" | "list">("grid");
   const [usersSort, setUsersSort] = useState<"created_at.desc" | "created_at.asc" | "name.asc" | "name.desc" | "last_seen.desc" | "age.asc" | "age.desc" | "online" | "premium" | "lifetime" | "admin" | "verified" | "banned" | "male" | "female">("created_at.desc");
-  type UserFilterKey = "admin" | "premium" | "verified" | "banned" | "male" | "female" | "online" | "recent";
+  type UserFilterKey = "admin" | "premium" | "verified" | "banned" | "ambassador" | "male" | "female" | "online" | "recent";
   const [usersFilters, setUsersFilters] = useState<Set<UserFilterKey>>(new Set());
   const [adminViewedProfile, setAdminViewedProfile] = useState<Profile | null>(null);
   // ── Édition du numéro de téléphone depuis la fiche admin : certains membres n'arrivent pas à
@@ -8025,6 +8131,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
         premium: "is_premium=eq.true",
         verified: "is_verified=eq.true",
         banned: "is_banned=eq.true",
+        ambassador: "is_ambassador=eq.true",
         male: "gender=eq.Homme",
         female: "gender=eq.Femme",
         online: `last_seen=gte.${onlineThreshold}`,
@@ -10705,7 +10812,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                (ex: Femmes + En ligne), s'appliquent sur toutes les pages, pas seulement celle
                affichée. ── */}
           <div style={{ display: "flex", gap: 6, marginBottom: 14, flexWrap: "wrap" }}>
-            {([["admin","⚙️ Admin"],["premium","★ Premium"],["verified","✓ Vérifiés"],["banned","⛔ Bannis"],["male","👨 Hommes"],["female","👩 Femmes"],["online","🟢 En ligne"],["recent","🕓 Actif < 7j"]] as [UserFilterKey, string][]).map(([key, label]) => (
+            {([["admin","⚙️ Admin"],["premium","★ Premium"],["verified","✓ Vérifiés"],["banned","⛔ Bannis"],["ambassador","🎖 Ambassadeurs"],["male","👨 Hommes"],["female","👩 Femmes"],["online","🟢 En ligne"],["recent","🕓 Actif < 7j"]] as [UserFilterKey, string][]).map(([key, label]) => (
               <div key={label} onClick={() => {
                   const next = new Set(usersFilters);
                   if (next.has(key)) next.delete(key); else next.add(key);
@@ -10941,6 +11048,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                               : <StatusBadge label="Admin" active={true} color={G.rouge} Icon={IcoGear} />
                           )}
                           <StatusBadge label="Vérifié" active={!!u.is_verified} color={G.vert} Icon={IcoCheck} />
+                          <StatusBadge label="Ambassadeur" active={!!u.is_ambassador} color="#8e44ad" Icon={() => <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>} />
                           <StatusBadge label="Banni" active={isCurrentlyBanned(u)} color="#e74c3c" Icon={IcoBan} />
                           {(u.warning_count || 0) > 0 && (
                             <span style={{ display: "inline-flex", alignItems: "center", gap: 3, background: (u.warning_count || 0) >= 3 ? "rgba(231,76,60,0.12)" : "rgba(243,156,18,0.12)", color: (u.warning_count || 0) >= 3 ? "#e74c3c" : "#e67e22", borderRadius: 50, padding: "2px 8px", fontSize: "0.65rem", fontWeight: 700 }}>
@@ -13197,12 +13305,6 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                             </div>
                             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                               <span style={{ fontSize: "0.7rem", fontWeight: 800, color: a.status === "active" ? "#1A5C3A" : a.status === "paused" ? "#999" : G.rouge }}>{a.status === "active" ? "● Actif" : a.status === "paused" ? "○ En pause" : "Retiré"}</span>
-                              {affiliateProfileStatus[a.user_id]?.is_ambassador && (
-                                <span style={{ fontSize: "0.68rem", fontWeight: 700, color: "#8e44ad", background: "rgba(142,68,173,0.08)", borderRadius: 50, padding: "3px 10px", display: "flex", alignItems: "center", gap: 4 }}>
-                                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>
-                                  Ambassadeur
-                                </span>
-                              )}
                               {a.status !== "removed" && (
                                 <>
                                   <button onClick={() => setAffiliateStatus(a, a.status === "active" ? "paused" : "active")} style={{ background: "#fff", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "5px 12px", fontSize: "0.74rem", fontWeight: 700, cursor: "pointer", color: "#555" }}>{a.status === "active" ? "Mettre en pause" : "Réactiver"}</button>
