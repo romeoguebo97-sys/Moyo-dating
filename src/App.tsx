@@ -15599,8 +15599,8 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
     try {
       await fetch(`${SUPABASE_URL}/rest/v1/affiliate_payout_requests`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ affiliate_id: ambAffiliateId, user_id: auth.userId, affiliate_name: auth.name, amount: ambStats.pending, status: "pending" }) });
       setAmbPayoutPending({ amount: ambStats.pending });
-      showToast("Demande de versement envoyée, elle sera traitée sous quelques jours.", "success");
-    } catch { showToast("Erreur lors de la demande de versement.", "error"); }
+      setToast({ msg: "Demande de versement envoyée, elle sera traitée sous quelques jours.", type: "success" });
+    } catch { setToast({ msg: "Erreur lors de la demande de versement.", type: "error" }); }
   };
   const [showAmbDashboard, setShowAmbDashboard] = useState(false);
   const [showAllAmbConversions, setShowAllAmbConversions] = useState(false);
@@ -16400,7 +16400,7 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
                   <div style={{ fontSize: "0.85rem", fontWeight: 800, color: G.brun, marginBottom: 10 }}>Mon lien d'invitation</div>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#fff", border: "1.5px solid #eee", borderRadius: 12, padding: "10px 12px" }}>
                     <div style={{ flex: 1, fontSize: "0.78rem", color: "#666", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{`${window.location.origin}?ref=${auth.userId}`}</div>
-                    <button onClick={() => { navigator.clipboard.writeText(`${window.location.origin}?ref=${auth.userId}`).catch(() => {}); showToast("Lien copié.", "success"); }} style={{ background: "#8B0D2F", color: "#fff", border: "none", borderRadius: 8, padding: "6px 14px", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer", flexShrink: 0 }}>Copier</button>
+                    <button onClick={() => { navigator.clipboard.writeText(`${window.location.origin}?ref=${auth.userId}`).catch(() => {}); setToast({ msg: "Lien copié.", type: "success" }); }} style={{ background: "#8B0D2F", color: "#fff", border: "none", borderRadius: 8, padding: "6px 14px", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer", flexShrink: 0 }}>Copier</button>
                   </div>
                 </div>
               </div>
