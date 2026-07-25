@@ -2431,7 +2431,9 @@ function PremiumBenefitsBlock({ gold, showAll, onToggleShowAll }: { gold: string
 }
 
 function PremiumModal({ onClose, reason, userId, token, userEmail, giftFor, promo }: { onClose: () => void; reason: string; userId: string; token: string; userEmail?: string; giftFor?: { id: string; name: string } | null; promo?: { price: number; expiresAt: string } | null }) {
-  const [step, setStep] = useState<"offer" | "mtn" | "airtel" | "b1" | "b2" | "b3" | "b4">(promo && PREMIUM_SCREEN_VARIANT === "b" ? "b2" : (PREMIUM_SCREEN_VARIANT === "b" ? "b1" : "offer"));
+  const [step, setStep] = useState<"offer" | "a2" | "mtn" | "airtel" | "a4" | "b1" | "b2" | "b3" | "b4">(promo && PREMIUM_SCREEN_VARIANT === "b" ? "b2" : (PREMIUM_SCREEN_VARIANT === "b" ? "b1" : "offer"));
+  // Opérateur Congo choisi à l'étape 2 (mémorisé pour l'étape 4, "confirmer mon paiement").
+  const [congoOperator, setCongoOperator] = useState<"mtn" | "airtel" | null>(null);
   // État local pour le retour visuel du lien de paiement copié — déclaré ici (avant le retour
   // anticipé de l'écran "offer" plus bas) car "toast" n'est déclaré que plus loin dans ce
   // composant et n'est donc pas disponible dans cet écran-là.
@@ -2581,6 +2583,13 @@ function PremiumModal({ onClose, reason, userId, token, userEmail, giftFor, prom
         {promo && promoSavings > 0 && (
           <div style={{ textAlign: "center", fontSize: "0.8rem", fontWeight: 700, color: "#1a5c3a", marginBottom: 4 }}>Vous économisez {promoSavings.toLocaleString("fr-FR")} FCFA</div>
         )}
+        <div style={{ padding: "0 20px" }}>
+          {!showPromoField ? (
+            <div onClick={() => setShowPromoField(true)} style={{ textAlign: "center", fontSize: "0.76rem", color: "#8B0D2F", fontWeight: 700, cursor: "pointer" }}>J'ai un code promo</div>
+          ) : (
+            <input value={promoCodeInput} onChange={e => setPromoCodeInput(e.target.value.toUpperCase())} placeholder="Code promo" style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: "1.5px solid #eee", fontSize: "0.82rem", textAlign: "center", fontWeight: 700, letterSpacing: 0.5 }} />
+          )}
+        </div>
         <div style={{ padding: "16px 20px", paddingBottom: "calc(20px + env(safe-area-inset-bottom))", flexShrink: 0 }}>
           <button onClick={() => setStep("b2")} style={{ width: "100%", background: gold, color: "#fff", border: "none", borderRadius: 14, padding: "15px", fontSize: "1rem", fontWeight: 800, cursor: "pointer" }}>Suivant →</button>
         </div>
@@ -2971,7 +2980,28 @@ function PremiumModal({ onClose, reason, userId, token, userEmail, giftFor, prom
             <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "#8a8a8a" }}> / mois</span>
           </div>
         )}
-        <div style={{ marginBottom: 14 }}>
+        <div style={{ padding: "16px 20px 0", margin: "0 -20px" }}>
+          <button onClick={() => setStep("a2")} style={{ width: "100%", background: gold, color: "#fff", border: "none", borderRadius: 14, padding: "15px", fontSize: "1rem", fontWeight: 800, cursor: "pointer" }}>Suivant →</button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // ════════ ÉTAPE 2 SUR 4 : CHOIX DU MOYEN DE PAIEMENT + CODE PROMO + LIEN CADEAU ════════
+  if (step === "a2") return (
+    <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 300, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
+      <div onClick={e => e.stopPropagation()} className="moyo-sheet-in" style={{ background: "#FCFBF8", width: "100%", maxWidth: 460, height: "100%", maxHeight: "100vh", overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y", boxShadow: "0 30px 80px rgba(0,0,0,0.4)", position: "relative", padding: "calc(env(safe-area-inset-top) + 18px) 20px 16px" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 22 }}>
+          <div onClick={() => setStep("offer")} style={{ cursor: "pointer", background: "#eceae5", borderRadius: "50%", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#777" strokeWidth="2.5" strokeLinecap="round"><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" /></svg>
+          </div>
+          <div style={{ fontSize: "0.68rem", fontWeight: 800, color: "#c8c0ac", letterSpacing: 1 }}>ÉTAPE 2 SUR 4</div>
+          <div onClick={onClose} style={{ cursor: "pointer", background: "#eceae5", borderRadius: "50%", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#777" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+          </div>
+        </div>
+        <div style={{ fontSize: "1.2rem", fontWeight: 800, color: G.brun, marginBottom: 18 }}>Comment veux-tu payer ?</div>
+        <div style={{ marginBottom: 18 }}>
           {!showPromoField ? (
             <div onClick={() => setShowPromoField(true)} style={{ textAlign: "center", fontSize: "0.76rem", color: "#8B0D2F", fontWeight: 700, cursor: "pointer" }}>J'ai un code promo</div>
           ) : (
@@ -2981,10 +3011,10 @@ function PremiumModal({ onClose, reason, userId, token, userEmail, giftFor, prom
         {!isDiaspora && (
           <>
             <div style={{ textAlign: "center", fontSize: "0.66rem", fontWeight: 800, color: "#a8a8a8", letterSpacing: 1, marginBottom: 7 }}>CONGO, PAYEZ AVEC</div>
-            <button onClick={() => PAY_MTN_ENABLED && setStep("mtn")} disabled={!PAY_MTN_ENABLED} style={{ width: "100%", background: PAY_MTN_ENABLED ? "#FFCC00" : "#dcdcdc", color: G.brun, border: "none", borderRadius: 14, padding: "13px", fontSize: "1rem", fontWeight: 800, cursor: PAY_MTN_ENABLED ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 8 }}>
+            <button onClick={() => { if (!PAY_MTN_ENABLED) return; setCongoOperator("mtn"); setStep("mtn"); }} disabled={!PAY_MTN_ENABLED} style={{ width: "100%", background: PAY_MTN_ENABLED ? "#FFCC00" : "#dcdcdc", color: G.brun, border: "none", borderRadius: 14, padding: "13px", fontSize: "1rem", fontWeight: 800, cursor: PAY_MTN_ENABLED ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 8 }}>
               {mtnLogo(18)} MTN MoMo{!PAY_MTN_ENABLED && <span style={{ fontSize: "0.62rem", fontWeight: 700 }}> (indisponible)</span>}
             </button>
-            <button onClick={() => PAY_AIRTEL_ENABLED && setStep("airtel")} disabled={!PAY_AIRTEL_ENABLED} style={{ width: "100%", background: G.blanc, color: "#FF0100", border: `2px solid ${PAY_AIRTEL_ENABLED ? "#FF0100" : "#dcdcdc"}`, borderRadius: 14, padding: "11px", fontSize: "1rem", fontWeight: 800, cursor: PAY_AIRTEL_ENABLED ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 12, opacity: PAY_AIRTEL_ENABLED ? 1 : 0.6 }}>
+            <button onClick={() => { if (!PAY_AIRTEL_ENABLED) return; setCongoOperator("airtel"); setStep("airtel"); }} disabled={!PAY_AIRTEL_ENABLED} style={{ width: "100%", background: G.blanc, color: "#FF0100", border: `2px solid ${PAY_AIRTEL_ENABLED ? "#FF0100" : "#dcdcdc"}`, borderRadius: 14, padding: "11px", fontSize: "1rem", fontWeight: 800, cursor: PAY_AIRTEL_ENABLED ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 12, opacity: PAY_AIRTEL_ENABLED ? 1 : 0.6 }}>
               {airtelLogo(20)} Airtel Money{!PAY_AIRTEL_ENABLED && <span style={{ fontSize: "0.62rem", fontWeight: 700 }}> (indisponible)</span>}
             </button>
           </>
@@ -3032,64 +3062,143 @@ function PremiumModal({ onClose, reason, userId, token, userEmail, giftFor, prom
     </div>
   );
 
-  // ════════ ÉCRANS 2 & 3 : PAIEMENT (MTN / AIRTEL) ════════
-  const OP = step === "mtn"
-    ? { name: "MTN MoMo", main: "#FFCC00", onColor: "#1a1a1a", numBg: "#F5A623", numColor: "#fff", responsable: PAY_MTN_RESPONSABLE, ussd: `*105*1*1*${PAY_MTN_NUMBER}*${planAmount}#`, placeholder: "Ex : 7753031542", operator: "MTN", tint: "#fff8e6", tintBorder: "rgba(245,166,35,0.4)", tintText: "#9a6a00", logo: mtnLogo(20), subColor: "rgba(0,0,0,0.65)" }
-    : { name: "Airtel Money", main: "#FF0100", onColor: "#fff", numBg: "#FF0100", numColor: "#fff", responsable: PAY_AIRTEL_RESPONSABLE, ussd: `*128*2*1*1*${PAY_AIRTEL_NUMBER}*${planAmount}#`, placeholder: "Ex de l'ID : PP260523.2232.A52074", operator: "Airtel", tint: "#fff0f0", tintBorder: "rgba(228,0,0,0.3)", tintText: "#c0392b", logo: airtelLogo(22), subColor: "rgba(255,255,255,0.9)" };
-  const submit = async () => {
-    setTxLoading(true);
-    setTxErr(null);
-    const ref = txRef.trim();
-    const commonHeaders = { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${token}` };
-    try {
-      // En mode cadeau, pas d'activation auto instantanée (voir même logique côté flow B) : on
-      // s'assure que c'est bien le destinataire du cadeau qui est crédité, via la demande manuelle.
-      if (!giftFor) {
-        // 1) Vérification automatique : on cherche le paiement reçu par SMS (Moyo Dating Payment Listener).
-        //    La formule est déterminée par le MONTANT RÉELLEMENT REÇU, pas par la formule choisie.
-        const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/redeem_mobile_money`, {
-          method: "POST",
-          headers: commonHeaders,
-          body: JSON.stringify({ p_transaction_id: ref, p_user_id: userId }),
-        });
-        const data = await r.json().catch(() => null);
+  // ════════ ÉTAPE 4 SUR 4 : NUMÉRO ID OU CAPTURE D'ÉCRAN (MTN / AIRTEL) ════════
+  if (step === "a4" && congoOperator) {
+    const A4OP = congoOperator === "mtn"
+      ? { name: "MTN MoMo", main: "#FFCC00", onColor: "#1a1a1a", placeholder: "Ex : 7753031542", operator: "MTN" }
+      : { name: "Airtel Money", main: "#FF0100", onColor: "#fff", placeholder: "Ex de l'ID : PP260523.2232.A52074", operator: "Airtel" };
 
-        if (r.ok && data && data.success) {
-          // Premium activé instantanément.
-          setTxGrantDays(typeof data.days === "number" ? data.days : null);
-          setTxActivated(true);
-          setTxSent(true);
-          setTxLoading(false);
-          return;
+    const submitId = async () => {
+      setTxLoading(true); setTxErr(null);
+      const ref = txRef.trim();
+      const commonHeaders = { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${token}` };
+      try {
+        if (!giftFor) {
+          const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/redeem_mobile_money`, {
+            method: "POST", headers: commonHeaders,
+            body: JSON.stringify({ p_transaction_id: ref, p_user_id: userId }),
+          });
+          const data = await r.json().catch(() => null);
+          if (r.ok && data && data.success) {
+            setTxGrantDays(typeof data.days === "number" ? data.days : null);
+            setTxActivated(true); setTxSent(true); setTxLoading(false); return;
+          }
+          if (data && data.error === "already_used") {
+            setTxErr("Paiement déjà utilisé. Ce numéro de transaction a déjà servi à activer un abonnement.");
+            setTxLoading(false); return;
+          }
+          await fetch(`${SUPABASE_URL}/rest/v1/payment_verification_requests`, { method: "POST", headers: commonHeaders, body: JSON.stringify({ user_id: userId, transaction_id: ref, phone_number: null, subscription_selected: selectedPlan.label, status: "pending" }) }).catch(() => {});
         }
-
-        if (data && data.error === "already_used") {
-          setTxErr("Paiement déjà utilisé. Ce numéro de transaction a déjà servi à activer un abonnement.");
-          setTxLoading(false);
-          return;
-        }
-
-        // 2) Repli : transaction pas encore reçue (SMS en route) ou fonction absente →
-        //    on crée une DEMANDE DE VÉRIFICATION MANUELLE et on conserve la demande
-        //    de paiement classique, pour que l'équipe Moyo Dating garde la main (rien n'est perdu).
-        await fetch(`${SUPABASE_URL}/rest/v1/payment_verification_requests`, { method: "POST", headers: commonHeaders, body: JSON.stringify({ user_id: userId, transaction_id: ref, phone_number: null, subscription_selected: selectedPlan.label, status: "pending" }) }).catch(() => {});
+        await fetch(`${SUPABASE_URL}/rest/v1/payment_requests`, { method: "POST", headers: { ...commonHeaders, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: userId, operator: A4OP.operator, tx_ref: ref, amount: planAmount, status: "pending", ...(giftFor ? { gift_for: giftFor.id, gift_for_name: giftFor.name } : {}), ...(promoCodeInput.trim() ? { promo_code_used: promoCodeInput.trim() } : {}) }) });
+        setTxActivated(false); setTxSent(true);
+      } catch {
+        setTxActivated(false); setTxSent(true);
       }
-      await fetch(`${SUPABASE_URL}/rest/v1/payment_requests`, { method: "POST", headers: { ...commonHeaders, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: userId, operator: OP.operator, tx_ref: ref, amount: planAmount, status: "pending", ...(giftFor ? { gift_for: giftFor.id, gift_for_name: giftFor.name } : {}), ...(promoCodeInput.trim() ? { promo_code_used: promoCodeInput.trim() } : {}) }) });
-      setTxActivated(false);
-      setTxSent(true);
-    } catch {
-      // En cas d'erreur réseau, on tente quand même d'enregistrer la demande (vérification + paiement).
+      setTxLoading(false);
+    };
+
+    const submitScreenshot = async () => {
+      if (!screenshotFile) return;
+      setScreenshotUploading(true);
       try {
-        if (!giftFor) await fetch(`${SUPABASE_URL}/rest/v1/payment_verification_requests`, { method: "POST", headers: commonHeaders, body: JSON.stringify({ user_id: userId, transaction_id: ref, phone_number: null, subscription_selected: selectedPlan.label, status: "pending" }) });
-      } catch {}
-      try {
-        await fetch(`${SUPABASE_URL}/rest/v1/payment_requests`, { method: "POST", headers: { ...commonHeaders, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: userId, operator: OP.operator, tx_ref: ref, amount: planAmount, status: "pending", ...(giftFor ? { gift_for: giftFor.id, gift_for_name: giftFor.name } : {}), ...(promoCodeInput.trim() ? { promo_code_used: promoCodeInput.trim() } : {}) }) });
-      } catch {}
-      setTxActivated(false);
-      setTxSent(true);
-    }
-    setTxLoading(false);
-  };
+        const ext = (screenshotFile.name.split(".").pop() || "jpg").toLowerCase();
+        const path = `${userId}/${Date.now()}.${ext}`;
+        const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/payment-proofs/${path}`, {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${token}`, "apikey": SUPABASE_KEY, "Content-Type": screenshotFile.type || "image/jpeg", "x-upsert": "true" },
+          body: screenshotFile,
+        });
+        if (!uploadRes.ok) throw new Error("upload_failed");
+        const screenshotUrl = `${SUPABASE_URL}/storage/v1/object/public/payment-proofs/${path}`;
+        const commonHeaders = { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${token}` };
+        if (!giftFor) {
+          await fetch(`${SUPABASE_URL}/rest/v1/payment_verification_requests`, { method: "POST", headers: commonHeaders, body: JSON.stringify({ user_id: userId, transaction_id: null, screenshot_url: screenshotUrl, phone_number: null, subscription_selected: selectedPlan.label, status: "pending" }) }).catch(() => {});
+        }
+        await fetch(`${SUPABASE_URL}/rest/v1/payment_requests`, { method: "POST", headers: { ...commonHeaders, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: userId, operator: A4OP.operator, tx_ref: `[capture] ${screenshotUrl}`, amount: planAmount, status: "pending", ...(giftFor ? { gift_for: giftFor.id, gift_for_name: giftFor.name } : {}), ...(promoCodeInput.trim() ? { promo_code_used: promoCodeInput.trim() } : {}) }) });
+        setScreenshotSent(true);
+      } catch {
+        setTxErr("Envoi impossible, réessaie dans un instant.");
+      }
+      setScreenshotUploading(false);
+    };
+
+    if (txSent || screenshotSent) return (
+      <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+        <div className="moyo-card-in" style={{ background: G.blanc, borderRadius: 20, padding: "32px 26px", width: "100%", maxWidth: 340, textAlign: "center" }}>
+          <div style={{ width: 60, height: 60, borderRadius: "50%", background: txActivated ? "rgba(26,92,58,0.1)" : "rgba(212,168,67,0.14)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={txActivated ? "#1A5C3A" : gold} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+          </div>
+          <div style={{ fontSize: "1.15rem", fontWeight: 800, color: G.brun, marginBottom: 8 }}>{txActivated ? "Premium activé !" : "Demande envoyée"}</div>
+          <p style={{ fontSize: "0.85rem", color: "#8a8a8a", lineHeight: 1.5, marginBottom: 20 }}>{txActivated ? `Ton abonnement ${selectedPlan.label} est actif dès maintenant.` : (giftFor ? `Notre équipe vérifie le paiement. Le Premium de ${giftFor.name} sera activé sous peu.` : "Notre équipe vérifie ton paiement, ça ne prend généralement pas longtemps.")}</p>
+          <Btn variant="primary" onClick={onClose} style={{ width: "100%" }}>Terminer</Btn>
+        </div>
+      </div>
+    );
+
+    return (
+      <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 300, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
+        <div onClick={e => e.stopPropagation()} className="moyo-sheet-in" style={{ background: "#FCFBF8", width: "100%", maxWidth: 460, height: "100%", maxHeight: "100vh", overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y", boxShadow: "0 30px 80px rgba(0,0,0,0.4)" }}>
+          <div style={{ padding: "calc(env(safe-area-inset-top) + 18px) 20px 0" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
+              <div onClick={() => setStep(congoOperator)} style={{ cursor: "pointer", background: "#eceae5", borderRadius: "50%", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#777" strokeWidth="2.5" strokeLinecap="round"><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" /></svg>
+              </div>
+              <div style={{ fontSize: "0.68rem", fontWeight: 800, color: "#c8c0ac", letterSpacing: 1 }}>ÉTAPE 4 SUR 4</div>
+              <div onClick={onClose} style={{ cursor: "pointer", background: "#eceae5", borderRadius: "50%", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#777" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+              </div>
+            </div>
+            <div style={{ fontSize: "1.2rem", fontWeight: 800, color: G.brun, marginBottom: 16 }}>Comment veux-tu confirmer ?</div>
+          </div>
+
+          <div style={{ padding: "0 20px 20px" }}>
+            <div style={{ display: "flex", background: "#F0EDE6", borderRadius: 50, padding: 4, marginBottom: 16 }}>
+              <div onClick={() => setProofMode("id")} className="moyo-tactile" style={{ flex: 1, textAlign: "center", padding: "9px 4px", borderRadius: 50, cursor: "pointer", background: proofMode === "id" ? gold : "transparent", color: proofMode === "id" ? "#fff" : "#8a8a8a", fontWeight: 800, fontSize: "0.76rem" }}>Envoyer l'ID</div>
+              <div onClick={() => setProofMode("screenshot")} className="moyo-tactile" style={{ flex: 1, textAlign: "center", padding: "9px 4px", borderRadius: 50, cursor: "pointer", background: proofMode === "screenshot" ? gold : "transparent", color: proofMode === "screenshot" ? "#fff" : "#8a8a8a", fontWeight: 800, fontSize: "0.76rem" }}>Capture d'écran</div>
+            </div>
+
+            {proofMode === "id" ? (
+              <>
+                <div style={{ fontSize: "0.82rem", color: "#666", lineHeight: 1.5, marginBottom: 12 }}>Après ton paiement, tu reçois un SMS de <b>{A4OP.name}</b> avec un numéro de transaction (ID). Entre-le dans la case ci-dessous pour activer ton abonnement :</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, border: `1.5px solid ${txRef ? A4OP.main : "#e2e2e2"}`, borderRadius: 12, padding: "12px 14px", marginBottom: 16 }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" /><line x1="1" y1="10" x2="23" y2="10" /></svg>
+                  <input value={txRef} onChange={e => { setTxRef(e.target.value); setTxErr(null); }} placeholder={A4OP.placeholder} style={{ flex: 1, minWidth: 0, border: "none", outline: "none", fontSize: "0.9rem", fontFamily: "inherit", fontWeight: 600, color: G.brun, background: "transparent" }} />
+                </div>
+                {txErr && <div style={{ color: "#C0392B", fontSize: "0.78rem", marginBottom: 12 }}>{txErr}</div>}
+                <button onClick={submitId} disabled={!txRef.trim() || txLoading} style={{ width: "100%", background: txRef.trim() ? gold : "#dcdcdc", color: "#fff", border: "none", borderRadius: 14, padding: "15px", fontSize: "1rem", fontWeight: 800, cursor: txRef.trim() ? "pointer" : "not-allowed" }}>{txLoading ? "Vérification…" : "Confirmer mon paiement"}</button>
+              </>
+            ) : (
+              <>
+                <div style={{ fontSize: "0.82rem", color: "#666", lineHeight: 1.5, marginBottom: 12 }}>Envoie la capture d'écran du message que <b>{A4OP.name}</b> t'a envoyé après ton paiement :</div>
+                <input type="file" accept="image/*" id="moyo-a4-screenshot" style={{ display: "none" }} onChange={e => {
+                  const f = e.target.files?.[0]; if (!f) return;
+                  setScreenshotFile(f); setScreenshotPreview(URL.createObjectURL(f));
+                }} />
+                {screenshotPreview ? (
+                  <div onClick={() => document.getElementById("moyo-a4-screenshot")?.click()} style={{ borderRadius: 14, overflow: "hidden", marginBottom: 16, cursor: "pointer", position: "relative" }}>
+                    <img src={screenshotPreview} style={{ width: "100%", maxHeight: 220, objectFit: "cover", display: "block" }} />
+                    <div style={{ position: "absolute", bottom: 8, right: 8, background: "rgba(0,0,0,0.6)", color: "#fff", fontSize: "0.7rem", fontWeight: 700, padding: "4px 10px", borderRadius: 50 }}>Changer</div>
+                  </div>
+                ) : (
+                  <div onClick={() => document.getElementById("moyo-a4-screenshot")?.click()} style={{ border: "2px dashed #ddd", borderRadius: 14, padding: "28px 16px", textAlign: "center", cursor: "pointer", marginBottom: 16 }}>
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ margin: "0 auto 8px" }}><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" /></svg>
+                    <div style={{ fontSize: "0.82rem", color: "#999", fontWeight: 600 }}>Touche pour choisir une image</div>
+                  </div>
+                )}
+                {txErr && <div style={{ color: "#C0392B", fontSize: "0.78rem", marginBottom: 12 }}>{txErr}</div>}
+                <button onClick={submitScreenshot} disabled={!screenshotFile || screenshotUploading} style={{ width: "100%", background: screenshotFile ? gold : "#dcdcdc", color: "#fff", border: "none", borderRadius: 14, padding: "15px", fontSize: "1rem", fontWeight: 800, cursor: screenshotFile ? "pointer" : "not-allowed" }}>{screenshotUploading ? "Envoi…" : "Envoyer la capture"}</button>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ════════ ÉCRAN 3 SUR 4 : INSTRUCTIONS DE PAIEMENT (MTN / AIRTEL) ════════
+  const OP = step === "mtn"
+    ? { name: "MTN MoMo", main: "#FFCC00", onColor: "#1a1a1a", numBg: "#F5A623", numColor: "#fff", responsable: PAY_MTN_RESPONSABLE, ussd: `*105*1*1*${PAY_MTN_NUMBER}*${planAmount}#`, operator: "MTN", logo: mtnLogo(20), subColor: "rgba(0,0,0,0.65)" }
+    : { name: "Airtel Money", main: "#FF0100", onColor: "#fff", numBg: "#FF0100", numColor: "#fff", responsable: PAY_AIRTEL_RESPONSABLE, ussd: `*128*2*1*1*${PAY_AIRTEL_NUMBER}*${planAmount}#`, operator: "Airtel", logo: airtelLogo(22), subColor: "rgba(255,255,255,0.9)" };
   const numBadge = (n: string) => <div style={{ width: 26, height: 26, borderRadius: "50%", background: OP.numBg, color: OP.numColor, fontWeight: 800, fontSize: "0.85rem", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{n}</div>;
 
   return (
@@ -3097,7 +3206,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail, giftFor, prom
       <div className="moyo-sheet-in" style={{ background: "#f6f6f7", width: "100%", maxWidth: 460, height: "100%", maxHeight: "100vh", display: "flex", flexDirection: "column", overscrollBehavior: "contain" }}>
         <div style={{ background: OP.main, padding: "calc(env(safe-area-inset-top) + 16px) 18px 14px", flexShrink: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div onClick={() => { setStep("offer"); setTxSent(false); setTxActivated(false); setTxErr(null); setTxRef(""); }} style={{ cursor: "pointer", background: OP.onColor === "#fff" ? "rgba(255,255,255,0.22)" : "rgba(0,0,0,0.1)", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <div onClick={() => setStep("a2")} style={{ cursor: "pointer", background: OP.onColor === "#fff" ? "rgba(255,255,255,0.22)" : "rgba(0,0,0,0.1)", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={OP.onColor} strokeWidth="2.5" strokeLinecap="round"><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" /></svg>
             </div>
             {OP.logo}
@@ -3110,8 +3219,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail, giftFor, prom
         </div>
 
         <div style={{ flex: 1, overflowY: "auto", padding: "16px", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}>
-          {/* Étape 1 */}
-          <div style={{ background: G.blanc, borderRadius: 16, padding: 18, marginBottom: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
+          <div style={{ background: G.blanc, borderRadius: 16, padding: 18, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>{numBadge("1")}<div style={{ fontWeight: 800, fontSize: "1.02rem", color: "#1a1a2e" }}>Effectuez votre paiement</div></div>
             <div style={{ fontSize: "0.86rem", color: "#666", lineHeight: 1.55, marginBottom: 16 }}>Votre paiement {OP.name} sera reçu et traité par notre responsable des finances.<br /><span style={{ fontWeight: 700, color: "#444" }}>{OP.responsable}</span></div>
             {/* Le bouton d'appel automatique a été retiré — MTN/Airtel n'acceptent plus le format
@@ -3122,57 +3230,17 @@ function PremiumModal({ onClose, reason, userId, token, userEmail, giftFor, prom
               <div style={{ fontSize: "1.05rem", fontWeight: 800, color: "#1a1a2e", fontFamily: "monospace", letterSpacing: 0.5 }}>{OP.ussd}</div>
             </div>
           </div>
-
-          {/* Étape 2 */}
-          <div style={{ background: G.blanc, borderRadius: 16, padding: 18, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>{numBadge("2")}<div style={{ fontWeight: 800, fontSize: "1.02rem", color: "#1a1a2e" }}>Entrez le numéro ID ci-dessous</div></div>
-            <div style={{ fontSize: "0.84rem", color: "#666", lineHeight: 1.55, marginBottom: 14 }}>Après validation du paiement {OP.operator}, vous recevrez un SMS avec un numéro de transaction (ID). Entrez ce numéro ID ci-dessous.</div>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, border: `1.5px solid ${txRef ? OP.main : "#e2e2e2"}`, borderRadius: 12, padding: "12px 14px", marginBottom: 14 }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" /><line x1="1" y1="10" x2="23" y2="10" /></svg>
-              <input value={txRef} onChange={e => { setTxRef(e.target.value); setTxErr(null); }} placeholder={OP.placeholder} style={{ flex: 1, minWidth: 0, border: "none", outline: "none", fontSize: "0.9rem", fontFamily: "inherit", fontWeight: 600, color: "#1a1a2e", background: "transparent" }} />
-            </div>
-            <div style={{ background: OP.tint, border: `1px solid ${OP.tintBorder}`, borderRadius: 12, padding: "12px 14px", display: "flex", gap: 10 }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={OP.tintText} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}><circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" /></svg>
-              <div><div style={{ fontWeight: 800, fontSize: "0.82rem", color: OP.tintText, marginBottom: 2 }}>Important</div><div style={{ fontSize: "0.78rem", color: "#777", lineHeight: 1.5 }}>Vous devez entrer le numéro de transaction (ID) reçu par SMS pour que votre paiement soit confirmé.</div></div>
-            </div>
-          </div>
-
-          {txErr && !txSent && (
-            <div style={{ background: "rgba(192,57,43,0.08)", border: "1.5px solid #C0392B", borderRadius: 12, padding: 14, marginTop: 14, display: "flex", gap: 10, alignItems: "flex-start" }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
-              <div style={{ fontSize: "0.82rem", color: "#C0392B", fontWeight: 600, lineHeight: 1.5 }}>{txErr}</div>
-            </div>
-          )}
-
-          {txSent && (
-            <div style={{ background: "rgba(39,174,96,0.08)", border: "2px solid #27ae60", borderRadius: 14, padding: 18, textAlign: "center", marginTop: 14 }}>
-              {txActivated ? (
-                <>
-                  <div style={{ fontWeight: 800, fontSize: "0.98rem", color: "#27ae60", marginBottom: 6 }}>🎉 Premium activé !</div>
-                  <div style={{ fontSize: "0.82rem", color: "#555", lineHeight: 1.6 }}>Votre paiement a été vérifié automatiquement{txGrantDays ? ` et votre abonnement de ${txGrantDays} jours est actif` : ""}. Actualisez l'application pour voir les changements.</div>
-                </>
-              ) : (
-                <>
-                  <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#27ae60", marginBottom: 6 }}>✓ Numéro ID envoyé avec succès !</div>
-                  <div style={{ fontSize: "0.82rem", color: "#555", lineHeight: 1.6 }}>{giftFor ? `Votre paiement est en cours de vérification. Le Premium de ${giftFor.name} sera activé dans les plus brefs délais.` : "Votre paiement est en cours de vérification. L'activation est automatique dès réception, sinon notre équipe la validera dans les plus brefs délais."}</div>
-                </>
-              )}
-              <button onClick={onClose} style={{ marginTop: 14, background: "#27ae60", color: "#fff", border: "none", borderRadius: 50, padding: "11px 26px", fontWeight: 700, cursor: "pointer", fontSize: "0.86rem" }}>Fermer</button>
-            </div>
-          )}
         </div>
 
-        {!txSent && (
-          <div style={{ padding: "14px 16px", background: G.blanc, borderTop: "1px solid #eee", flexShrink: 0 }}>
-            <button disabled={!txRef.trim() || txLoading} onClick={submit} style={{ width: "100%", background: !txRef.trim() || txLoading ? "#d2d2d2" : OP.main, color: !txRef.trim() || txLoading ? "#888" : OP.onColor, border: "none", borderRadius: 50, padding: "15px", fontSize: "0.95rem", fontWeight: 800, cursor: !txRef.trim() ? "not-allowed" : "pointer" }}>
-              {txLoading ? "Envoi en cours…" : "✓ J'ai payé - Envoyer mon numéro ID"}
-            </button>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7, color: "#a8a8a8", fontSize: "0.78rem", marginTop: 12 }}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#a8a8a8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
-              Paiement 100% sécurisé
-            </div>
+        <div style={{ padding: "14px 16px", background: G.blanc, borderTop: "1px solid #eee", flexShrink: 0 }}>
+          <button onClick={() => setStep("a4")} style={{ width: "100%", background: OP.main, color: OP.onColor, border: "none", borderRadius: 50, padding: "15px", fontSize: "0.95rem", fontWeight: 800, cursor: "pointer" }}>
+            J'ai payé — Suivant →
+          </button>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7, color: "#a8a8a8", fontSize: "0.78rem", marginTop: 12 }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#a8a8a8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+            Paiement 100% sécurisé
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
@@ -15147,7 +15215,7 @@ function AmbassadorCard({ auth, status, onRequested }: { auth: Auth; status: "no
           <div className="moyo-sheet-in" onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: "24px 24px 0 0", width: "100%", maxWidth: 500, padding: "24px 22px 32px" }}>
             <div style={{ fontWeight: 900, fontSize: "1.1rem", color: G.brun, marginBottom: 10 }}>Devenir Ambassadeur Moyo Dating</div>
             <p style={{ fontSize: "0.85rem", color: "#555", lineHeight: 1.6, marginBottom: 10 }}>Contrairement au parrainage classique (jours Premium offerts), l'Ambassadeur touche une <strong>commission en argent</strong> sur chaque abonnement souscrit par ses filleuls.</p>
-            <p style={{ fontSize: "0.85rem", color: "#555", lineHeight: 1.6, marginBottom: 20 }}>Votre demande sera examinée par notre équipe. Si elle est acceptée, vous obtenez le badge Ambassadeur et vous pourrez suivre vos gains directement depuis cet écran. Aucun Premium n'est offert à l'acceptation : après un mois d'activité, si vos résultats le justifient, notre équipe peut vous offrir le Premium à vie.</p>
+            <p style={{ fontSize: "0.85rem", color: "#555", lineHeight: 1.6, marginBottom: 20 }}>Votre demande sera examinée par notre équipe. Si elle est acceptée, un contrat est mis en place et vous pourrez suivre vos gains directement depuis cet écran. Aucun Premium n'est offert à l'acceptation : après un mois d'activité, si vos résultats le justifient, notre équipe peut vous offrir le Premium à vie.</p>
             <button onClick={sendRequest} disabled={requesting} style={{ width: "100%", background: G.rouge, color: "#fff", border: "none", borderRadius: 50, padding: "14px", fontSize: "0.9rem", fontWeight: 800, cursor: requesting ? "not-allowed" : "pointer", marginBottom: 10 }}>{requesting ? "Envoi..." : "Envoyer ma demande"}</button>
             <button onClick={() => setShowInfo(false)} style={{ width: "100%", background: "none", border: "none", color: "#999", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer", padding: "8px" }}>Annuler</button>
           </div>
@@ -16321,7 +16389,7 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
           const planIcon = (label?: string) => label?.includes("2 mois") ? "#D4A843" : label?.includes("1 mois") ? "#8B0D2F" : "#D4A843";
           const visibleConversions = showAllAmbConversions ? ambConversions : ambConversions.slice(0, 5);
           return (
-            <div style={{ position: "fixed", inset: 0, background: "#fff", zIndex: 10001, display: "flex", flexDirection: "column" }}>
+            <div style={{ position: "fixed", inset: 0, background: "#fff", zIndex: 10001, display: "flex", flexDirection: "column", overscrollBehavior: "contain" }}>
               {/* AppBar */}
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "calc(env(safe-area-inset-top) + 14px) 16px 14px", borderBottom: "1px solid #f1f1f1", flexShrink: 0 }}>
                 <div onClick={() => { setShowAmbDashboard(false); setShowAllAmbConversions(false); }} style={{ cursor: "pointer", padding: 4 }}>
@@ -16333,7 +16401,7 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
                 </div>
               </div>
 
-              <div style={{ flex: 1, overflowY: "auto", padding: "18px 16px calc(env(safe-area-inset-bottom) + 24px)" }}>
+              <div style={{ flex: 1, overflowY: "auto", padding: "18px 16px calc(env(safe-area-inset-bottom) + 24px)", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}>
                 {/* Carte principale */}
                 <div style={{ background: "linear-gradient(135deg,#8B0D2F 0%,#6E0A25 100%)", borderRadius: 20, padding: "22px 20px", boxShadow: "0 10px 28px rgba(139,13,47,0.25)", marginBottom: 22 }}>
                   <div style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.8)", fontWeight: 600, marginBottom: 6 }}>Mes gains disponibles</div>
@@ -17749,6 +17817,8 @@ export default function App() {
   const [premiumNudgeOpen, setPremiumNudgeOpen] = useState(false);
   const [nudgeShowAllAdv, setNudgeShowAllAdv] = useState(false);
   const [premiumNudgeMessage, setPremiumNudgeMessage] = useState("");
+  const [ambassadorNudgeOpen, setAmbassadorNudgeOpen] = useState(false);
+  const [ambassadorNudgeMessage, setAmbassadorNudgeMessage] = useState("");
   // ── Fenêtre "Super promo" : offre Premium 1 mois à prix réduit, ciblée par segment,
   //    affichée au max une fois par jour. Le prix/l'expiration/le message viennent de
   //    app_settings (promo_*) et sont transmis à PremiumModal pour appliquer le tarif réduit. ──
@@ -18685,8 +18755,8 @@ export default function App() {
     (async () => {
       try {
         const [settingRows, profileRows] = await Promise.all([
-          sb.query<{ key: string; value: string }>(auth.token, "app_settings", `?key=in.(phone_completion_prompt_enabled,verification_prompt_enabled,premium_nudge_enabled,premium_nudge_target,premium_nudge_message,promo_active,promo_price_fcfa,promo_expires_at,promo_target,promo_message)&select=key,value`),
-          sb.query<{ phone: string | null; age?: number; gender?: string; is_verified?: boolean; is_premium?: boolean; created_at?: string; last_seen?: string; city?: string }>(auth.token, "profiles", `?id=eq.${auth.userId}&select=phone,age,gender,is_verified,is_premium,created_at,last_seen,city`),
+          sb.query<{ key: string; value: string }>(auth.token, "app_settings", `?key=in.(phone_completion_prompt_enabled,verification_prompt_enabled,premium_nudge_enabled,premium_nudge_target,premium_nudge_message,promo_active,promo_price_fcfa,promo_expires_at,promo_target,promo_message,ambassador_nudge_enabled,ambassador_nudge_target,ambassador_nudge_message)&select=key,value`),
+          sb.query<{ phone: string | null; age?: number; gender?: string; is_verified?: boolean; is_premium?: boolean; is_ambassador?: boolean; created_at?: string; last_seen?: string; city?: string }>(auth.token, "profiles", `?id=eq.${auth.userId}&select=phone,age,gender,is_verified,is_premium,is_ambassador,created_at,last_seen,city`),
         ]);
         const settings: Record<string, string> = {};
         (Array.isArray(settingRows) ? settingRows : []).forEach(r => { settings[r.key] = r.value; });
@@ -18756,6 +18826,27 @@ export default function App() {
             if (lastSeen !== today) {
               setPremiumNudgeMessage(settings["premium_nudge_message"] || "Passe Premium pour multiplier tes chances de rencontre !");
               setPremiumNudgeOpen(true);
+              localStorage.setItem(seenKey, today);
+            }
+          }
+        } else if (FEATURE_AMBASSADOR_PROGRAM && settings["ambassador_nudge_enabled"] === "true" && !me.is_ambassador) {
+          // Une seule fenêtre à la fois : la campagne Ambassadeur ne se déclenche que si la
+          // relance Premium ne s'est pas déjà déclenchée ci-dessus pour ce membre.
+          const target = settings["ambassador_nudge_target"] || "all";
+          const matchesTarget =
+            target === "all" ? true :
+            target === "femmes" ? me.gender === "Femme" :
+            target === "hommes" ? me.gender === "Homme" :
+            target === "nouveaux" ? (me.created_at ? (Date.now() - new Date(me.created_at).getTime()) < 7 * 24 * 3600 * 1000 : false) :
+            target === "inactifs" ? (me.last_seen ? (Date.now() - new Date(me.last_seen).getTime()) > 14 * 24 * 3600 * 1000 : false) :
+            true;
+          if (matchesTarget) {
+            const seenKey = `moyo_ambassador_nudge_seen_${auth.userId}`;
+            const lastSeen = localStorage.getItem(seenKey);
+            const today = new Date().toDateString();
+            if (lastSeen !== today) {
+              setAmbassadorNudgeMessage(settings["ambassador_nudge_message"] || "Gagne de l'argent en recommandant Moyo Dating à ton entourage. Chaque personne qui s'abonne au Premium grâce à toi te rapporte une vraie commission, versée par Mobile Money.");
+              setAmbassadorNudgeOpen(true);
               localStorage.setItem(seenKey, today);
             }
           }
@@ -19033,7 +19124,7 @@ export default function App() {
     })()}
 
     {/* ── Fenêtre : incitation à passer Premium (dismissible, "Plus tard") ── */}
-    {premiumNudgeOpen && !phonePromptOpen && !verifyPromptOpen && !superPromoOpen && (() => {
+    {premiumNudgeOpen && !phonePromptOpen && !verifyPromptOpen && !superPromoOpen && !ambassadorNudgeOpen && (() => {
       const gold = G.or;
       return (
         <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 19000, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
@@ -19064,6 +19155,43 @@ export default function App() {
             <div style={{ height: 8 }} />
             <Btn variant="primary" style={{ width: "100%", marginBottom: 12 }} onClick={() => { setPremiumNudgeOpen(false); showPremium(premiumNudgeMessage); }}>Je passe Premium →</Btn>
             <button onClick={() => setPremiumNudgeOpen(false)} style={{ width: "100%", background: "none", border: "none", color: "#999", fontSize: "0.85rem", fontWeight: 600, cursor: "pointer", padding: "8px 12px" }}>Je garde les restrictions</button>
+          </div>
+        </div>
+      );
+    })()}
+
+    {ambassadorNudgeOpen && !phonePromptOpen && !verifyPromptOpen && !superPromoOpen && !premiumNudgeOpen && (() => {
+      const brand = "#8B0D2F";
+      return (
+        <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 19000, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
+          <div onClick={e => e.stopPropagation()} className="moyo-sheet-in" style={{ background: "#FCFBF8", borderRadius: 0, width: "100%", maxWidth: 460, height: "100%", maxHeight: "100vh", overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y", boxShadow: "0 30px 80px rgba(0,0,0,0.4)", position: "relative", display: "flex", flexDirection: "column", justifyContent: "center", padding: "calc(env(safe-area-inset-top) + 18px) 22px calc(env(safe-area-inset-bottom) + 26px)" }}>
+            <div onClick={() => setAmbassadorNudgeOpen(false)} style={{ position: "fixed", top: "calc(env(safe-area-inset-top) + 16px)", right: "max(16px, calc((100vw - 460px) / 2 + 16px))", cursor: "pointer", background: "#eceae5", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 19001 }}>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#777" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+            </div>
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: 14 }}>
+              <div style={{ width: 54, height: 54, borderRadius: "50%", background: "rgba(139,13,47,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <svg width="27" height="27" viewBox="0 0 24 24" fill="none" stroke={brand} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>
+              </div>
+            </div>
+            <div style={{ textAlign: "center", fontSize: "1.2rem", fontWeight: 800, color: "#1a1a2e", lineHeight: 1.2, marginBottom: 9, padding: "0 6px" }}>Deviens Ambassadeur</div>
+            <div style={{ textAlign: "center", fontSize: "0.87rem", color: "#8a8a8a", lineHeight: 1.5, marginBottom: 22, padding: "0 8px" }}>{ambassadorNudgeMessage}</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 22 }}>
+              {[
+                "Commission en argent sur chaque abonnement",
+                "Versement par Mobile Money, à ta demande",
+                "Aucune limite au nombre de filleuls",
+                "Premium à vie offert aux meilleurs ambassadeurs",
+              ].map((txt, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div style={{ width: 22, height: 22, borderRadius: "50%", background: "rgba(139,13,47,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={brand} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  </div>
+                  <span style={{ fontSize: "0.85rem", color: "#3a2e2e", fontWeight: 600 }}>{txt}</span>
+                </div>
+              ))}
+            </div>
+            <Btn variant="primary" style={{ width: "100%", marginBottom: 12 }} onClick={() => { setAmbassadorNudgeOpen(false); setTab("profile"); }}>Je deviens Ambassadeur →</Btn>
+            <button onClick={() => setAmbassadorNudgeOpen(false)} style={{ width: "100%", background: "none", border: "none", color: "#999", fontSize: "0.85rem", fontWeight: 600, cursor: "pointer", padding: "8px 12px" }}>Peut-être plus tard</button>
           </div>
         </div>
       );
