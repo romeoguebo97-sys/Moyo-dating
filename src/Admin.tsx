@@ -4125,6 +4125,8 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
     status: "pending" | "accepted" | "refused" | "expired";
     user1_response: "accepted" | "refused" | null;
     user2_response: "accepted" | "refused" | null;
+    user1_responded_at?: string | null;
+    user2_responded_at?: string | null;
     refused_by: string | null;
     expires_at: string;
     created_by: string;
