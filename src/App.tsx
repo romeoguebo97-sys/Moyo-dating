@@ -17350,7 +17350,7 @@ function UserWarningModal({ warning, onAcknowledge }: {
   );
 }
 
-export type PaymentRequest = { id: string; user_id: string; operator: string; tx_ref: string; amount: number; status: string; created_at: string; approved_at?: string; gift_for?: string; gift_for_name?: string; archived?: boolean; currency?: string; kind?: string; appointment_id?: string; profile?: { name: string; photo_url?: string | null; gender?: string } };
+export type PaymentRequest = { id: string; user_id: string; operator: string; tx_ref: string; amount: number; status: string; created_at: string; approved_at?: string; gift_for?: string; gift_for_name?: string; archived?: boolean; currency?: string; kind?: string; appointment_id?: string; promo_code_used?: string; profile?: { name: string; photo_url?: string | null; gender?: string } };
 
 export function logAdminAction(token: string, adminId: string, adminName: string, action: string, targetUserId?: string) {
   try {
