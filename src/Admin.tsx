@@ -6596,6 +6596,12 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
         onSetAutoShortcut("promo_active", true),
       ]);
       setPromoStart(startISO);
+      sendBroadcastPush({
+        gender: promoGender === "femmes" ? "Femme" : promoGender === "hommes" ? "Homme" : "all",
+        freeOnly: promoPlan === "gratuit",
+        title: "⭐ Super promo Premium",
+        body: promoMessage.trim() || `Premium à ${price.toLocaleString()} FCFA au lieu de ${PREMIUM_PRICE_FCFA.toLocaleString()} FCFA, offre limitée !`,
+      });
       showToast("Super promo activée.", "success");
     } catch { showToast("Erreur lors de l'enregistrement de la promo.", "error"); }
     finally { setPromoSaving(false); }
@@ -7235,6 +7241,19 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
         await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ key: key, value }) });
       } catch {}
     };
+    // ── Notifie par push un segment d'utilisateurs (pas les admins) : appelé directement au
+    //    moment où l'admin lance Premium gratuit / Super promo / Diffusion générale. Best-effort
+    //    (une erreur ici n'empêche jamais la campagne elle-même de se lancer). ──
+    const sendBroadcastPush = async (opts: { gender?: string; premiumOnly?: boolean; freeOnly?: boolean; title: string; body: string }) => {
+      if (!auth) return;
+      try {
+        await fetch(`${SUPABASE_URL}/functions/v1/push-notify`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` },
+          body: JSON.stringify({ mode: "broadcast_push", gender: opts.gender || "all", premium_only: !!opts.premiumOnly, free_only: !!opts.freeOnly, title: opts.title, body: opts.body }),
+        });
+      } catch {}
+    };
   const campTargetLabel = (t: string) => CAMP_TARGETS.find(x => x.key === t)?.label || "Tous les utilisateurs gratuits";
   const campName = (t: string) => ({ all: "Premium pour tous", femmes: "Premium spécial femmes", hommes: "Premium spécial hommes", nouveaux: "Bienvenue nouveaux inscrits", inactifs: "Campagne de réengagement", actifs: "Premium membres actifs", verifies: "Premium comptes vérifiés" } as Record<string, string>)[t] || "Campagne Premium";
   useEffect(() => {
@@ -7276,6 +7295,12 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
         const genderPart = campTarget === "femmes" ? "femmes" : campTarget === "hommes" ? "hommes" : "all";
         await fetch(`${SUPABASE_URL}/rest/v1/broadcasts`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ message: campMessage.trim(), created_by: auth.userId, expires_at: endISO, target: `${genderPart}|all` }) });
       }
+      sendBroadcastPush({
+        gender: campTarget === "femmes" ? "Femme" : campTarget === "hommes" ? "Homme" : "all",
+        freeOnly: true,
+        title: "🎁 Premium offert !",
+        body: campMessage.trim() || `Vous venez de recevoir le Premium gratuitement pour ${campDays} jours, profitez-en !`,
+      });
       showToast(`Campagne lancée : ${campCount || 0} bénéficiaires.`, "success");
       setCampMessage("");
     } catch { showToast("Erreur lors du lancement de la campagne.", "error"); }
@@ -9281,6 +9306,13 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     setBroadcastLoading(false);
                     setBroadcastModal(false); setBroadcastText(""); setBroadcastExpiresAt(""); setBroadcastTarget("all");
                     setBroadcastResult({ ok: true, message: created.message || broadcastText.trim() });
+                    sendBroadcastPush({
+                      gender: broadcastTarget === "femmes" ? "Femme" : broadcastTarget === "hommes" ? "Homme" : "all",
+                      premiumOnly: broadcastTarget === "premium",
+                      freeOnly: broadcastTarget === "gratuit",
+                      title: "📢 Moyo Dating",
+                      body: broadcastText.trim(),
+                    });
                   } catch {
                     setBroadcastLoading(false);
                     setBroadcastResult({ ok: false, message: "Impossible de joindre le serveur. Vérifie ta connexion internet et réessaie." });
@@ -11315,6 +11347,13 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                       setBroadcastLoading(false);
                       setBroadcastText(""); setBroadcastDate(""); setBroadcastTime(""); setBroadcastGender("all"); setBroadcastPlan("all");
                       setBroadcastResult({ ok: true, message: created.message || broadcastText.trim() });
+                      sendBroadcastPush({
+                        gender: broadcastGender === "femmes" ? "Femme" : broadcastGender === "hommes" ? "Homme" : "all",
+                        premiumOnly: broadcastPlan === "premium",
+                        freeOnly: broadcastPlan === "gratuit",
+                        title: "📢 Moyo Dating",
+                        body: broadcastText.trim(),
+                      });
                       loadBroadcasts();
                     } catch { setBroadcastLoading(false); setBroadcastResult({ ok: false, message: "Impossible de joindre le serveur. Vérifie ta connexion et réessaie." }); }
                   }} style={{ display: "flex", alignItems: "center", gap: 8, background: (broadcastLoading || !broadcastText.trim() || !broadcastDate) ? "rgba(192,57,43,0.45)" : G.rouge, color: "#fff", border: "none", borderRadius: 12, padding: "12px 24px", fontSize: "0.88rem", fontWeight: 800, cursor: (broadcastLoading || !broadcastText.trim() || !broadcastDate) ? "not-allowed" : "pointer", boxShadow: "0 6px 18px rgba(192,57,43,0.28)" }}>
@@ -12862,6 +12901,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     <div style={{ fontSize: "0.72rem", color: "#999", margin: "6px 0 20px" }}>À la date sélectionnée, le Premium sera retiré automatiquement.</div>
 
                     <div style={{ fontWeight: 800, fontSize: "0.84rem", color: G.brun, marginBottom: 8 }}>4. Message affiché aux bénéficiaires <span style={{ color: "#aaa", fontWeight: 500 }}>(optionnel)</span></div>
+                    <div style={{ fontSize: "0.72rem", color: "#999", marginBottom: 6 }}>Champ vide pour l'instant — clique dedans pour écrire ton propre message (l'exemple grisé ci-dessous disparaît dès que tu tapes).</div>
                     <textarea value={campMessage} onChange={e => setCampMessage(e.target.value.slice(0, 200))} rows={3} placeholder="🎉 Moyo Dating vous offre le Premium pour célébrer un événement. Profitez-en !" style={{ width: "100%", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "11px 13px", fontSize: "0.84rem", outline: "none", resize: "vertical", fontFamily: "inherit" }} />
                     <div style={{ textAlign: "right", fontSize: "0.7rem", color: "#aaa", marginTop: 4 }}>{campMessage.length}/200</div>
 
