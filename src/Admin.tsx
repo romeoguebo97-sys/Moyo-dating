@@ -1544,7 +1544,7 @@ function AdminPinConfig({ auth }: { auth: Auth }) {
   return (
     <div>
       <div style={{ background: "#f9f0ff", borderRadius: 10, padding: "9px 12px", marginBottom: 10, fontSize: "0.78rem", color: "#5b2c6f", border: "1px solid rgba(142,68,173,0.2)", lineHeight: 1.5 }}>
-        🔒 Ce code à 4 chiffress vous est demandé à chaque ouverture du tableau de bord. Ne le communiquez à personne.
+        🔒 Ce code à 4 chiffres vous est demandé à chaque ouverture du tableau de bord. Ne le communiquez à personne.
       </div>
       {!editing ? (
         <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
