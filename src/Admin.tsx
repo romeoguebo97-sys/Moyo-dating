@@ -3707,6 +3707,7 @@ const HELP_SECTIONS: HelpSection[] = [
         ["Commissions par formule", "Montant en FCFA versé selon que le filleul a pris Premium 1 semaine / 1 mois / 2 mois. Modifiable à tout moment, appliqué immédiatement aux nouvelles conversions."],
         ["Délai avant commission payable", "Nombre de jours avant qu'une commission individuelle puisse être marquée payée (protection contre les remboursements/annulations récents)."],
         ["Minimum de versement", "Montant en dessous duquel le bouton \"Demander le versement\" reste désactivé côté ambassadeur."],
+        ["Jours bonus offerts (code promo)", "Nombre de jours Premium offerts au client, payés par Moyo (jamais déduits de la commission de l'ambassadeur). S'applique automatiquement dans les deux cas : inscription via le lien d'invitation, ou code promo saisi à l'achat — jamais les deux à la fois."],
         ["Toggle \"Programme Ambassadeur\"", "Dans Fonctionnalités : désactive uniquement le bouton \"Devenir Ambassadeur\" côté profil (utile si trop de demandes arrivent d'un coup). Les ambassadeurs déjà actifs gardent leur accès."],
       ] },
       { kind: "subhead", text: "Notifications" },
@@ -5579,47 +5580,54 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
     //    payeur : sans effet si le compte n'était pas banni, mais débloque automatiquement s'il
     //    l'était (cas "payer pour débloquer mon compte"). ──
     const targetId = p.gift_for || p.user_id;
-    // Un code promo Ambassadeur saisi à l'achat prime sur le parrainage classique pour CETTE
-    // commission (n'écrase jamais profiles.referred_by). Le client gagne des jours bonus, payés
-    // par Moyo, en plus de sa formule — jamais de déduction sur la commission de l'ambassadeur.
-    let promoAffiliate: { id: string; name: string } | null = null;
-    let promoBonusDays = 0;
+    // Deux façons d'être crédité à un Ambassadeur, jamais cumulées :
+    //  1. Code promo saisi à l'achat (n'écrase jamais profiles.referred_by).
+    //  2. Lien d'invitation utilisé à l'inscription (profiles.referred_by déjà renseigné).
+    // Dans les deux cas : le client gagne des jours bonus (payés par Moyo, jamais déduits de la
+    // commission), et l'ambassadeur reçoit sa commission cash normale.
+    let creditAffiliate: { id: string; name: string } | null = null;
+    let bonusDays = 0;
+    let viaPromoCode = false;
+    let parrain: string | null = null;
+    let filleulName = "votre filleul";
     if (p.promo_code_used) {
       try {
         const pcRes = await fetch(`${SUPABASE_URL}/rest/v1/affiliates?promo_code=eq.${encodeURIComponent(p.promo_code_used.trim().toUpperCase())}&status=eq.active&select=id,name`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
         const pcData = await pcRes.json().catch(() => []);
-        if (Array.isArray(pcData) && pcData[0]) { promoAffiliate = pcData[0]; promoBonusDays = AFFILIATE_PROMO_BONUS_DAYS; }
+        if (Array.isArray(pcData) && pcData[0]) { creditAffiliate = pcData[0]; bonusDays = AFFILIATE_PROMO_BONUS_DAYS; viaPromoCode = true; }
       } catch {}
     }
-    const premiumUntil = new Date(Date.now() + premiumMsForAmount(p.amount) + promoBonusDays * 86400000).toISOString();
+    if (!creditAffiliate) {
+      try {
+        const profileRes = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${targetId}&select=referred_by,name`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+        const profileData = await profileRes.json().catch(() => []);
+        if (Array.isArray(profileData) && profileData[0]?.referred_by) {
+          parrain = profileData[0].referred_by;
+          filleulName = profileData[0].name || "votre filleul";
+          const affRes = await fetch(`${SUPABASE_URL}/rest/v1/affiliates?user_id=eq.${parrain}&status=eq.active&select=id,name`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+          const affData = await affRes.json().catch(() => []);
+          if (Array.isArray(affData) && affData[0]) { creditAffiliate = affData[0]; bonusDays = AFFILIATE_PROMO_BONUS_DAYS; }
+        }
+      } catch {}
+    }
+    const premiumUntil = new Date(Date.now() + premiumMsForAmount(p.amount) + bonusDays * 86400000).toISOString();
     await adminAction(targetId, { is_premium: true, premium_until: premiumUntil, premium_is_gift: false, is_banned: false, ban_until: null, is_visible: true } as Partial<AdminProfile>, `Premium activé.`);
-    logAdminAction(auth.token, auth.userId, auth.name, p.gift_for ? `Premium cadeau activé pour ${p.gift_for_name || targetId} - payé par ${p.user_id}` : `Premium activé - réf: ${p.tx_ref}${promoAffiliate ? ` - code promo ${p.promo_code_used} (${promoAffiliate.name}), +${promoBonusDays}j offerts` : ""}`, targetId);
+    logAdminAction(auth.token, auth.userId, auth.name, p.gift_for ? `Premium cadeau activé pour ${p.gift_for_name || targetId} - payé par ${p.user_id}` : `Premium activé - réf: ${p.tx_ref}${creditAffiliate ? ` - ${viaPromoCode ? `code promo ${p.promo_code_used}` : "lien Ambassadeur"} (${creditAffiliate.name}), +${bonusDays}j offerts au client` : ""}`, targetId);
     await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?id=eq.${p.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ status: "approved", approved_at: new Date().toISOString() }) });
     // Met à jour la file de vérification manuelle (validation humaine).
     fetch(`${SUPABASE_URL}/rest/v1/payment_verification_requests?transaction_id=eq.${encodeURIComponent(p.tx_ref)}&status=eq.pending`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ status: "verified_manually" }) }).catch(() => {});
     try {
-      if (promoAffiliate) {
+      if (creditAffiliate) {
         const commission = affiliateCommissionForAmount(p.amount);
         if (commission > 0) {
-          await fetch(`${SUPABASE_URL}/rest/v1/affiliate_conversions`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ affiliate_id: promoAffiliate.id, affiliate_name: promoAffiliate.name || null, filleul_id: targetId, filleul_name: p.gift_for_name || null, plan_label: planLabelForAmount(p.amount), commission_amount: commission, status: "pending" }) });
+          await fetch(`${SUPABASE_URL}/rest/v1/affiliate_conversions`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ affiliate_id: creditAffiliate.id, affiliate_name: creditAffiliate.name || null, filleul_id: targetId, filleul_name: p.gift_for_name || filleulName, plan_label: planLabelForAmount(p.amount), commission_amount: commission, status: "pending" }) });
         }
         return;
       }
-      const profileRes = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${targetId}&select=referred_by,name`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
-      const profileData = await profileRes.json().catch(() => []);
-      if (Array.isArray(profileData) && profileData[0]?.referred_by) {
-        const parrain = profileData[0].referred_by;
-        const filleulName = profileData[0].name || "votre filleul";
-        // Le parrain est-il un affilié enregistré (programme affiliés, commission cash) ?
-        // Si oui, il reçoit une commission FCFA à la place des jours Premium — jamais les deux.
-        const affRes = await fetch(`${SUPABASE_URL}/rest/v1/affiliates?user_id=eq.${parrain}&status=eq.active&select=id,name`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
-        const affData = await affRes.json().catch(() => []);
-        if (Array.isArray(affData) && affData[0]) {
-          const commission = affiliateCommissionForAmount(p.amount);
-          if (commission > 0) {
-            await fetch(`${SUPABASE_URL}/rest/v1/affiliate_conversions`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ affiliate_id: affData[0].id, affiliate_name: affData[0].name || null, filleul_id: targetId, filleul_name: filleulName, plan_label: planLabelForAmount(p.amount), commission_amount: commission, status: "pending" }) });
-          }
-        } else {
+      if (parrain) {
+        // Le parrain n'est pas un affilié (programme Ambassadeur) : parrainage classique, jours
+        // Premium offerts au parrain uniquement (comportement inchangé).
+        {
           const parrainRes = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${parrain}&select=premium_until,is_premium,name`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
           const parrainData = await parrainRes.json().catch(() => []);
           if (Array.isArray(parrainData) && parrainData[0]) {
@@ -13342,24 +13350,20 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                             <div>
                               <div style={{ fontSize: "0.85rem", fontWeight: 700, color: G.brun }}>{a.name}{a.phone ? ` · ${a.phone}` : ""}</div>
                               <div style={{ fontSize: "0.72rem", color: "#888" }}>{own.length} conversion{own.length > 1 ? "s" : ""} · {ownPending.toLocaleString()} FCFA en attente</div>
-                              {a.status !== "removed" && (
-                                editingPromoCode === a.id ? (
-                                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
-                                    <input autoFocus value={promoCodeDraft} onChange={e => setPromoCodeDraft(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))} placeholder="ROMEO20" style={{ width: 110, boxSizing: "border-box", padding: "4px 8px", borderRadius: 8, border: `1.5px solid ${G.gris}`, fontSize: "0.74rem", fontWeight: 700 }} />
-                                    <span onClick={() => savePromoCode(a)} style={{ fontSize: "0.72rem", fontWeight: 700, color: "#1A5C3A", cursor: "pointer" }}>OK</span>
-                                    <span onClick={() => setEditingPromoCode(null)} style={{ fontSize: "0.72rem", fontWeight: 700, color: "#999", cursor: "pointer" }}>Annuler</span>
-                                  </div>
-                                ) : (
-                                  <div onClick={() => { setEditingPromoCode(a.id); setPromoCodeDraft(a.promo_code || ""); }} style={{ fontSize: "0.72rem", color: a.promo_code ? "#8B0D2F" : "#bbb", fontWeight: a.promo_code ? 700 : 500, marginTop: 3, cursor: "pointer" }}>
-                                    {a.promo_code ? `Code promo : ${a.promo_code}` : "+ Ajouter un code promo"}
-                                  </div>
-                                )
-                              )}
                             </div>
                             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                               <span style={{ fontSize: "0.7rem", fontWeight: 800, color: a.status === "active" ? "#1A5C3A" : a.status === "paused" ? "#999" : G.rouge }}>{a.status === "active" ? "● Actif" : a.status === "paused" ? "○ En pause" : "Retiré"}</span>
                               {a.status !== "removed" && (
                                 <>
+                                  {editingPromoCode === a.id ? (
+                                    <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#fff", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "3px 6px 3px 12px" }}>
+                                      <input autoFocus value={promoCodeDraft} onChange={e => setPromoCodeDraft(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))} placeholder="ROMEO20" style={{ width: 90, border: "none", outline: "none", fontSize: "0.74rem", fontWeight: 700, background: "transparent" }} />
+                                      <span onClick={() => savePromoCode(a)} style={{ fontSize: "0.72rem", fontWeight: 700, color: "#1A5C3A", cursor: "pointer", padding: "3px 6px" }}>OK</span>
+                                      <span onClick={() => setEditingPromoCode(null)} style={{ fontSize: "0.72rem", fontWeight: 700, color: "#999", cursor: "pointer", padding: "3px 6px" }}>✕</span>
+                                    </div>
+                                  ) : (
+                                    <button onClick={() => { setEditingPromoCode(a.id); setPromoCodeDraft(a.promo_code || ""); }} style={{ background: a.promo_code ? "rgba(142,68,173,0.08)" : "#fff", border: `1.5px solid ${a.promo_code ? "#8e44ad" : G.gris}`, borderRadius: 50, padding: "5px 12px", fontSize: "0.74rem", fontWeight: 700, cursor: "pointer", color: a.promo_code ? "#8e44ad" : "#555" }}>{a.promo_code ? `Code : ${a.promo_code}` : "+ Code promo"}</button>
+                                  )}
                                   <button onClick={() => setAffiliateStatus(a, a.status === "active" ? "paused" : "active")} style={{ background: "#fff", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "5px 12px", fontSize: "0.74rem", fontWeight: 700, cursor: "pointer", color: "#555" }}>{a.status === "active" ? "Mettre en pause" : "Réactiver"}</button>
                                   {isLifetimePremiumAff(a.user_id) ? (
                                     <button onClick={() => confirm(`Retirer le Premium à vie de ${a.name} ?`, () => togglePremiumLifetime(a))} style={{ background: "rgba(231,76,60,0.08)", border: "1.5px solid rgba(231,76,60,0.25)", borderRadius: 50, padding: "5px 12px", fontSize: "0.74rem", fontWeight: 700, cursor: "pointer", color: G.rouge }}>Retirer Premium</button>

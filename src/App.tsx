@@ -16415,12 +16415,12 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
                     <div style={{ fontSize: "0.85rem", fontWeight: 800, color: G.brun, marginBottom: 10 }}>Mon code promo</div>
                     <p style={{ fontSize: "0.74rem", color: "#999", lineHeight: 1.5, marginBottom: 10 }}>Vos filleuls peuvent le saisir à l'achat de leur Premium pour gagner {AFFILIATE_PROMO_BONUS_DAYS} jour{AFFILIATE_PROMO_BONUS_DAYS > 1 ? "s" : ""} bonus.</p>
                     <button onClick={() => {
-                      const shareText = `Utilise le code ${ambPromoCode} sur Moyo Dating pour gagner des jours Premium bonus !`;
+                      const shareText = `Utilise le code ${ambPromoCode} sur Moyo Dating pour gagner ${AFFILIATE_PROMO_BONUS_DAYS} jour${AFFILIATE_PROMO_BONUS_DAYS > 1 ? "s" : ""} Premium bonus :`;
                       if (navigator.share) {
-                        navigator.share({ title: "Moyo Dating", text: shareText });
+                        navigator.share({ title: "Moyo Dating", text: shareText, url: window.location.origin });
                       } else {
-                        navigator.clipboard.writeText(ambPromoCode).catch(() => {});
-                        setToast({ msg: "Code copié.", type: "success" });
+                        navigator.clipboard.writeText(`${shareText} ${window.location.origin}`).catch(() => {});
+                        setToast({ msg: "Code et lien copiés.", type: "success" });
                       }
                     }} style={{ width: "100%", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: "#fff", color: "#8B0D2F", borderRadius: 50, padding: "12px 24px", fontSize: "0.85rem", fontWeight: 700, border: "1.5px solid #8B0D2F", cursor: "pointer" }}>
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8B0D2F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
@@ -16454,8 +16454,9 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
           <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10002, display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }} onClick={() => setShowAmbInfo(false)}>
             <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 20, width: "100%", maxWidth: 420, padding: "22px 20px" }}>
               <div style={{ fontWeight: 900, fontSize: "1rem", color: G.brun, marginBottom: 10 }}>Comment ça marche</div>
-              <p style={{ fontSize: "0.82rem", color: "#666", lineHeight: 1.6, marginBottom: 10 }}>Chaque personne qui s'abonne au Premium via votre lien vous rapporte une commission en argent, versée par Mobile Money.</p>
-              <p style={{ fontSize: "0.82rem", color: "#666", lineHeight: 1.6, marginBottom: 20 }}>Une fois vos gains disponibles au-dessus du minimum, vous pouvez demander le versement depuis cet écran.</p>
+              <p style={{ fontSize: "0.82rem", color: "#666", lineHeight: 1.6, marginBottom: 14 }}>Chaque personne qui s'abonne au Premium grâce à vous vous rapporte une commission en argent, versée par Mobile Money. Elle gagne elle aussi {AFFILIATE_PROMO_BONUS_DAYS} jour{AFFILIATE_PROMO_BONUS_DAYS > 1 ? "s" : ""} de Premium en plus de sa formule, offerts par Moyo Dating. Deux façons de vous faire créditer, jamais cumulées :</p>
+              <p style={{ fontSize: "0.82rem", color: "#666", lineHeight: 1.6, marginBottom: 10 }}><strong>Lien d'invitation</strong> : à utiliser pour quelqu'un qui n'a pas encore de compte. Dès son inscription via ce lien, il est automatiquement rattaché à vous. Le jour où il passe Premium, tout se déclenche tout seul : votre commission et ses jours bonus.</p>
+              <p style={{ fontSize: "0.82rem", color: "#666", lineHeight: 1.6, marginBottom: 20 }}>{ambPromoCode ? <><strong>Code promo</strong> : à utiliser pour quelqu'un qui a déjà un compte Moyo Dating, créé sans votre lien. Il le saisit lui-même au moment de payer son Premium : ça vous crédite la commission et lui donne ses jours bonus, même si son compte n'était pas rattaché à vous au départ.</> : "Un code promo pourra aussi vous être attribué par l'équipe Moyo Dating, pour les personnes qui ont déjà un compte créé sans votre lien."}</p>
               <button onClick={() => setShowAmbInfo(false)} style={{ width: "100%", background: "#8B0D2F", color: "#fff", border: "none", borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>Compris</button>
             </div>
           </div>
