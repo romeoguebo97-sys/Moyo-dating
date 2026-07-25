@@ -268,11 +268,13 @@ export let AFFILIATE_COMMISSION_MONTH = 800;
 export let AFFILIATE_COMMISSION_2MONTH = 1500;
 export let AFFILIATE_PAYABLE_DELAY_DAYS = 15; // délai avant qu'une commission soit "payable"
 export let AFFILIATE_PAYOUT_MIN_FCFA = 10000; // seuil minimum pour demander un versement
+export let AFFILIATE_PROMO_BONUS_DAYS = 3; // jours Premium bonus offerts au client qui saisit un code promo Ambassadeur
 export function setAFFILIATE_COMMISSION_WEEK(v: any) { AFFILIATE_COMMISSION_WEEK = parseInt(v) || 300; }
 export function setAFFILIATE_COMMISSION_MONTH(v: any) { AFFILIATE_COMMISSION_MONTH = parseInt(v) || 800; }
 export function setAFFILIATE_COMMISSION_2MONTH(v: any) { AFFILIATE_COMMISSION_2MONTH = parseInt(v) || 1500; }
 export function setAFFILIATE_PAYABLE_DELAY_DAYS(v: any) { AFFILIATE_PAYABLE_DELAY_DAYS = parseInt(v) || 15; }
 export function setAFFILIATE_PAYOUT_MIN_FCFA(v: any) { AFFILIATE_PAYOUT_MIN_FCFA = parseInt(v) || 10000; }
+export function setAFFILIATE_PROMO_BONUS_DAYS(v: any) { AFFILIATE_PROMO_BONUS_DAYS = parseInt(v) || 3; }
 // Intervalles de polling — modifiables via app_settings
 export let POLL_BADGES_MS = 8000;        // Fallback badges (messages/likes/matchs/vues)
 export let POLL_ADMIN_BADGE_MS = 5000;   // Badge admin
@@ -503,7 +505,7 @@ export function dedupeMatchesByCouple<T extends { user1?: string; user2?: string
 }
 
 // Charger les settings dynamiques depuis Supabase au démarrage
-fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_messages_free_femme,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,pay_wero_enabled,pay_paypal_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,feature_show_likes_views_free,feature_group_premium,feature_group_photos,feature_photo_retouch,feature_moderation_insults,feature_moderation_contact,premium_screen_variant,custom_banned_words,contact_banned_words,disabled_builtin_words,disabled_builtin_contact_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,pay_wero_number,pay_paypal_number,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,social_linkedin,store_link_android,store_link_ios,plan_week_enabled,plan_month_enabled,plan_2month_enabled,discover_default_mode,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,auto_warn_ban_contact_enabled,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price,privacy_notice_enabled,premium_boost_enabled,assistant_photo_url,broadcast_enabled,modal_match_title,modal_match_subtitle,referral_bonus_week_days,referral_bonus_month_days,referral_bonus_2month_days,affiliate_commission_week_fcfa,affiliate_commission_month_fcfa,affiliate_commission_2month_fcfa,affiliate_payable_delay_days,privacy_notice_step1_text,privacy_notice_step2_text,ban_screen_text,pay_link_enabled,feature_ambassador_program,affiliate_payout_min_fcfa)&select=key,value`, {
+fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_messages_free_femme,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,pay_wero_enabled,pay_paypal_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,feature_show_likes_views_free,feature_group_premium,feature_group_photos,feature_photo_retouch,feature_moderation_insults,feature_moderation_contact,premium_screen_variant,custom_banned_words,contact_banned_words,disabled_builtin_words,disabled_builtin_contact_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,pay_wero_number,pay_paypal_number,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,social_linkedin,store_link_android,store_link_ios,plan_week_enabled,plan_month_enabled,plan_2month_enabled,discover_default_mode,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,auto_warn_ban_contact_enabled,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price,privacy_notice_enabled,premium_boost_enabled,assistant_photo_url,broadcast_enabled,modal_match_title,modal_match_subtitle,referral_bonus_week_days,referral_bonus_month_days,referral_bonus_2month_days,affiliate_commission_week_fcfa,affiliate_commission_month_fcfa,affiliate_commission_2month_fcfa,affiliate_payable_delay_days,privacy_notice_step1_text,privacy_notice_step2_text,ban_screen_text,pay_link_enabled,feature_ambassador_program,affiliate_payout_min_fcfa,affiliate_promo_bonus_days)&select=key,value`, {
   headers: { "apikey": SUPABASE_KEY },
 }).then(r => r.json()).then((data: { key: string; value: string }[]) => {
   if (!Array.isArray(data)) return;
@@ -594,6 +596,7 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
   if (map["affiliate_commission_2month_fcfa"]) setAFFILIATE_COMMISSION_2MONTH(map["affiliate_commission_2month_fcfa"]);
   if (map["affiliate_payable_delay_days"]) setAFFILIATE_PAYABLE_DELAY_DAYS(map["affiliate_payable_delay_days"]);
   if (map["affiliate_payout_min_fcfa"]) setAFFILIATE_PAYOUT_MIN_FCFA(map["affiliate_payout_min_fcfa"]);
+  if (map["affiliate_promo_bonus_days"]) setAFFILIATE_PROMO_BONUS_DAYS(map["affiliate_promo_bonus_days"]);
   if (map["premium_price_eur"]) PREMIUM_PRICE_EUR = parseFloat(map["premium_price_eur"]) || 10;
   if (map["eur_to_fcfa_rate"]) EUR_TO_FCFA = parseFloat(map["eur_to_fcfa_rate"]) || 655.957;
   if (map["poll_badges_ms"]) POLL_BADGES_MS = parseInt(map["poll_badges_ms"]) || 8000;
@@ -2437,6 +2440,8 @@ function PremiumModal({ onClose, reason, userId, token, userEmail, giftFor, prom
   //    Amérique", etc. sont déjà des options existantes dans le formulaire de profil). Tant que
   //    ce n'est pas encore chargé (null), on affiche par défaut les moyens Congo (public majoritaire). ──
   const [isDiaspora, setIsDiaspora] = useState<boolean | null>(null);
+  const [showPromoField, setShowPromoField] = useState(false);
+  const [promoCodeInput, setPromoCodeInput] = useState("");
   useEffect(() => {
     if (!userId || !token) return;
     (async () => {
@@ -2793,7 +2798,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail, giftFor, prom
           }
           await fetch(`${SUPABASE_URL}/rest/v1/payment_verification_requests`, { method: "POST", headers: commonHeaders, body: JSON.stringify({ user_id: userId, transaction_id: ref, phone_number: null, subscription_selected: submitPlanLabel, status: "pending" }) }).catch(() => {});
         }
-        await fetch(`${SUPABASE_URL}/rest/v1/payment_requests`, { method: "POST", headers: { ...commonHeaders, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: userId, operator: B3OP.operator, tx_ref: ref, amount: submitAmount, status: "pending", ...(giftFor ? { gift_for: giftFor.id, gift_for_name: giftFor.name } : {}) }) });
+        await fetch(`${SUPABASE_URL}/rest/v1/payment_requests`, { method: "POST", headers: { ...commonHeaders, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: userId, operator: B3OP.operator, tx_ref: ref, amount: submitAmount, status: "pending", ...(giftFor ? { gift_for: giftFor.id, gift_for_name: giftFor.name } : {}), ...(promoCodeInput.trim() ? { promo_code_used: promoCodeInput.trim() } : {}) }) });
         setTxActivated(false); setTxSent(true);
       } catch {
         setTxActivated(false); setTxSent(true);
@@ -2818,7 +2823,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail, giftFor, prom
         if (!giftFor) {
           await fetch(`${SUPABASE_URL}/rest/v1/payment_verification_requests`, { method: "POST", headers: commonHeaders, body: JSON.stringify({ user_id: userId, transaction_id: null, screenshot_url: screenshotUrl, phone_number: null, subscription_selected: submitPlanLabel, status: "pending" }) }).catch(() => {});
         }
-        await fetch(`${SUPABASE_URL}/rest/v1/payment_requests`, { method: "POST", headers: { ...commonHeaders, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: userId, operator: B3OP.operator, tx_ref: `[capture] ${screenshotUrl}`, amount: submitAmount, status: "pending", ...(giftFor ? { gift_for: giftFor.id, gift_for_name: giftFor.name } : {}) }) });
+        await fetch(`${SUPABASE_URL}/rest/v1/payment_requests`, { method: "POST", headers: { ...commonHeaders, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: userId, operator: B3OP.operator, tx_ref: `[capture] ${screenshotUrl}`, amount: submitAmount, status: "pending", ...(giftFor ? { gift_for: giftFor.id, gift_for_name: giftFor.name } : {}), ...(promoCodeInput.trim() ? { promo_code_used: promoCodeInput.trim() } : {}) }) });
         setScreenshotSent(true);
       } catch {
         setTxErr("Envoi impossible, réessaie dans un instant.");
@@ -2966,6 +2971,13 @@ function PremiumModal({ onClose, reason, userId, token, userEmail, giftFor, prom
             <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "#8a8a8a" }}> / mois</span>
           </div>
         )}
+        <div style={{ marginBottom: 14 }}>
+          {!showPromoField ? (
+            <div onClick={() => setShowPromoField(true)} style={{ textAlign: "center", fontSize: "0.76rem", color: "#8B0D2F", fontWeight: 700, cursor: "pointer" }}>J'ai un code promo</div>
+          ) : (
+            <input value={promoCodeInput} onChange={e => setPromoCodeInput(e.target.value.toUpperCase())} placeholder="Code promo" style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: "1.5px solid #eee", fontSize: "0.82rem", textAlign: "center", fontWeight: 700, letterSpacing: 0.5 }} />
+          )}
+        </div>
         {!isDiaspora && (
           <>
             <div style={{ textAlign: "center", fontSize: "0.66rem", fontWeight: 800, color: "#a8a8a8", letterSpacing: 1, marginBottom: 7 }}>CONGO, PAYEZ AVEC</div>
@@ -3062,7 +3074,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail, giftFor, prom
         //    de paiement classique, pour que l'équipe Moyo Dating garde la main (rien n'est perdu).
         await fetch(`${SUPABASE_URL}/rest/v1/payment_verification_requests`, { method: "POST", headers: commonHeaders, body: JSON.stringify({ user_id: userId, transaction_id: ref, phone_number: null, subscription_selected: selectedPlan.label, status: "pending" }) }).catch(() => {});
       }
-      await fetch(`${SUPABASE_URL}/rest/v1/payment_requests`, { method: "POST", headers: { ...commonHeaders, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: userId, operator: OP.operator, tx_ref: ref, amount: planAmount, status: "pending", ...(giftFor ? { gift_for: giftFor.id, gift_for_name: giftFor.name } : {}) }) });
+      await fetch(`${SUPABASE_URL}/rest/v1/payment_requests`, { method: "POST", headers: { ...commonHeaders, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: userId, operator: OP.operator, tx_ref: ref, amount: planAmount, status: "pending", ...(giftFor ? { gift_for: giftFor.id, gift_for_name: giftFor.name } : {}), ...(promoCodeInput.trim() ? { promo_code_used: promoCodeInput.trim() } : {}) }) });
       setTxActivated(false);
       setTxSent(true);
     } catch {
@@ -3071,7 +3083,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail, giftFor, prom
         if (!giftFor) await fetch(`${SUPABASE_URL}/rest/v1/payment_verification_requests`, { method: "POST", headers: commonHeaders, body: JSON.stringify({ user_id: userId, transaction_id: ref, phone_number: null, subscription_selected: selectedPlan.label, status: "pending" }) });
       } catch {}
       try {
-        await fetch(`${SUPABASE_URL}/rest/v1/payment_requests`, { method: "POST", headers: { ...commonHeaders, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: userId, operator: OP.operator, tx_ref: ref, amount: planAmount, status: "pending", ...(giftFor ? { gift_for: giftFor.id, gift_for_name: giftFor.name } : {}) }) });
+        await fetch(`${SUPABASE_URL}/rest/v1/payment_requests`, { method: "POST", headers: { ...commonHeaders, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: userId, operator: OP.operator, tx_ref: ref, amount: planAmount, status: "pending", ...(giftFor ? { gift_for: giftFor.id, gift_for_name: giftFor.name } : {}), ...(promoCodeInput.trim() ? { promo_code_used: promoCodeInput.trim() } : {}) }) });
       } catch {}
       setTxActivated(false);
       setTxSent(true);
@@ -15556,6 +15568,7 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
   const [ambStatus, setAmbStatus] = useState<"loading" | "none" | "pending" | "ambassador">("loading");
   const [ambStats, setAmbStats] = useState<{ pending: number; paid: number; count: number } | null>(null);
   const [ambAffiliateId, setAmbAffiliateId] = useState<string | null>(null);
+  const [ambPromoCode, setAmbPromoCode] = useState<string | null>(null);
   const [ambConversions, setAmbConversions] = useState<{ id: string; plan_label?: string; commission_amount: number; status: string; created_at: string }[]>([]);
   const [ambInscriptions, setAmbInscriptions] = useState(0);
   const [ambPayoutPending, setAmbPayoutPending] = useState<{ amount: number } | null>(null);
@@ -15566,10 +15579,11 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
         const d = await r.json().catch(() => []);
         if (Array.isArray(d) && d[0]?.is_ambassador) {
           setAmbStatus("ambassador");
-          const ra = await fetch(`${SUPABASE_URL}/rest/v1/affiliates?user_id=eq.${auth.userId}&select=id&limit=1`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+          const ra = await fetch(`${SUPABASE_URL}/rest/v1/affiliates?user_id=eq.${auth.userId}&select=id,promo_code&limit=1`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
           const da = await ra.json().catch(() => []);
           const affId = Array.isArray(da) ? da[0]?.id : null;
           setAmbAffiliateId(affId || null);
+          setAmbPromoCode(Array.isArray(da) ? da[0]?.promo_code || null : null);
           if (affId) {
             const rc = await fetch(`${SUPABASE_URL}/rest/v1/affiliate_conversions?affiliate_id=eq.${affId}&select=id,plan_label,commission_amount,status,created_at&order=created_at.desc&limit=100`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
             const dc = await rc.json().catch(() => []);
@@ -16392,6 +16406,26 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
                         </div>
                       </div>
                     ))}
+                  </div>
+                )}
+
+                {/* Mon code promo — visible seulement si l'admin en a attribué un */}
+                {ambPromoCode && (
+                  <div style={{ background: "#fafafa", borderRadius: 16, padding: "16px", marginBottom: 14 }}>
+                    <div style={{ fontSize: "0.85rem", fontWeight: 800, color: G.brun, marginBottom: 10 }}>Mon code promo</div>
+                    <p style={{ fontSize: "0.74rem", color: "#999", lineHeight: 1.5, marginBottom: 10 }}>Vos filleuls peuvent le saisir à l'achat de leur Premium pour gagner {AFFILIATE_PROMO_BONUS_DAYS} jour{AFFILIATE_PROMO_BONUS_DAYS > 1 ? "s" : ""} bonus.</p>
+                    <button onClick={() => {
+                      const shareText = `Utilise le code ${ambPromoCode} sur Moyo Dating pour gagner des jours Premium bonus !`;
+                      if (navigator.share) {
+                        navigator.share({ title: "Moyo Dating", text: shareText });
+                      } else {
+                        navigator.clipboard.writeText(ambPromoCode).catch(() => {});
+                        setToast({ msg: "Code copié.", type: "success" });
+                      }
+                    }} style={{ width: "100%", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: "#fff", color: "#8B0D2F", borderRadius: 50, padding: "12px 24px", fontSize: "0.85rem", fontWeight: 700, border: "1.5px solid #8B0D2F", cursor: "pointer" }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8B0D2F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                      Partager mon code : {ambPromoCode}
+                    </button>
                   </div>
                 )}
 
