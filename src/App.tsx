@@ -263,15 +263,11 @@ export let REFERRAL_BONUS_2MONTH = 14; // filleul prend 2 mois     -> parrain ga
 // Programme affiliés : commission en FCFA (pas de jours Premium) selon la formule achetée par le
 // filleul — distinct du parrainage classique ci-dessus. Un parrain marqué "affilié" (table
 // affiliates) reçoit ceci à la place des jours, un parrain normal garde le système au-dessus.
-export let AFFILIATE_COMMISSION_WEEK = 300;
-export let AFFILIATE_COMMISSION_MONTH = 800;
-export let AFFILIATE_COMMISSION_2MONTH = 1500;
+export let AFFILIATE_COMMISSION_PERCENT = 15; // % du prix payé, par défaut (modifiable par ambassadeur)
 export let AFFILIATE_PAYABLE_DELAY_DAYS = 15; // délai avant qu'une commission soit "payable"
 export let AFFILIATE_PAYOUT_MIN_FCFA = 10000; // seuil minimum pour demander un versement
 export let AFFILIATE_PROMO_BONUS_DAYS = 3; // jours Premium bonus offerts au client qui saisit un code promo Ambassadeur
-export function setAFFILIATE_COMMISSION_WEEK(v: any) { AFFILIATE_COMMISSION_WEEK = parseInt(v) || 300; }
-export function setAFFILIATE_COMMISSION_MONTH(v: any) { AFFILIATE_COMMISSION_MONTH = parseInt(v) || 800; }
-export function setAFFILIATE_COMMISSION_2MONTH(v: any) { AFFILIATE_COMMISSION_2MONTH = parseInt(v) || 1500; }
+export function setAFFILIATE_COMMISSION_PERCENT(v: any) { AFFILIATE_COMMISSION_PERCENT = parseFloat(v) || 15; }
 export function setAFFILIATE_PAYABLE_DELAY_DAYS(v: any) { AFFILIATE_PAYABLE_DELAY_DAYS = parseInt(v) || 15; }
 export function setAFFILIATE_PAYOUT_MIN_FCFA(v: any) { AFFILIATE_PAYOUT_MIN_FCFA = parseInt(v) || 10000; }
 export function setAFFILIATE_PROMO_BONUS_DAYS(v: any) { AFFILIATE_PROMO_BONUS_DAYS = parseInt(v) || 3; }
@@ -505,7 +501,7 @@ export function dedupeMatchesByCouple<T extends { user1?: string; user2?: string
 }
 
 // Charger les settings dynamiques depuis Supabase au démarrage
-fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_messages_free_femme,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,pay_wero_enabled,pay_paypal_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,feature_show_likes_views_free,feature_group_premium,feature_group_photos,feature_photo_retouch,feature_moderation_insults,feature_moderation_contact,premium_screen_variant,custom_banned_words,contact_banned_words,disabled_builtin_words,disabled_builtin_contact_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,pay_wero_number,pay_paypal_number,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,social_linkedin,store_link_android,store_link_ios,plan_week_enabled,plan_month_enabled,plan_2month_enabled,discover_default_mode,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,auto_warn_ban_contact_enabled,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price,privacy_notice_enabled,premium_boost_enabled,assistant_photo_url,broadcast_enabled,modal_match_title,modal_match_subtitle,referral_bonus_week_days,referral_bonus_month_days,referral_bonus_2month_days,affiliate_commission_week_fcfa,affiliate_commission_month_fcfa,affiliate_commission_2month_fcfa,affiliate_payable_delay_days,privacy_notice_step1_text,privacy_notice_step2_text,ban_screen_text,pay_link_enabled,feature_ambassador_program,affiliate_payout_min_fcfa,affiliate_promo_bonus_days)&select=key,value`, {
+fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_messages_free_femme,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,pay_wero_enabled,pay_paypal_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,feature_show_likes_views_free,feature_group_premium,feature_group_photos,feature_photo_retouch,feature_moderation_insults,feature_moderation_contact,premium_screen_variant,custom_banned_words,contact_banned_words,disabled_builtin_words,disabled_builtin_contact_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,pay_wero_number,pay_paypal_number,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,social_linkedin,store_link_android,store_link_ios,plan_week_enabled,plan_month_enabled,plan_2month_enabled,discover_default_mode,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,auto_warn_ban_contact_enabled,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price,privacy_notice_enabled,premium_boost_enabled,assistant_photo_url,broadcast_enabled,modal_match_title,modal_match_subtitle,referral_bonus_week_days,referral_bonus_month_days,referral_bonus_2month_days,affiliate_commission_percent,affiliate_payable_delay_days,privacy_notice_step1_text,privacy_notice_step2_text,ban_screen_text,pay_link_enabled,feature_ambassador_program,affiliate_payout_min_fcfa,affiliate_promo_bonus_days)&select=key,value`, {
   headers: { "apikey": SUPABASE_KEY },
 }).then(r => r.json()).then((data: { key: string; value: string }[]) => {
   if (!Array.isArray(data)) return;
@@ -591,9 +587,7 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
   if (map["referral_bonus_week_days"]) REFERRAL_BONUS_WEEK = parseInt(map["referral_bonus_week_days"]) || 2;
   if (map["referral_bonus_month_days"]) REFERRAL_BONUS_MONTH = parseInt(map["referral_bonus_month_days"]) || 7;
   if (map["referral_bonus_2month_days"]) REFERRAL_BONUS_2MONTH = parseInt(map["referral_bonus_2month_days"]) || 14;
-  if (map["affiliate_commission_week_fcfa"]) setAFFILIATE_COMMISSION_WEEK(map["affiliate_commission_week_fcfa"]);
-  if (map["affiliate_commission_month_fcfa"]) setAFFILIATE_COMMISSION_MONTH(map["affiliate_commission_month_fcfa"]);
-  if (map["affiliate_commission_2month_fcfa"]) setAFFILIATE_COMMISSION_2MONTH(map["affiliate_commission_2month_fcfa"]);
+  if (map["affiliate_commission_percent"]) setAFFILIATE_COMMISSION_PERCENT(map["affiliate_commission_percent"]);
   if (map["affiliate_payable_delay_days"]) setAFFILIATE_PAYABLE_DELAY_DAYS(map["affiliate_payable_delay_days"]);
   if (map["affiliate_payout_min_fcfa"]) setAFFILIATE_PAYOUT_MIN_FCFA(map["affiliate_payout_min_fcfa"]);
   if (map["affiliate_promo_bonus_days"]) setAFFILIATE_PROMO_BONUS_DAYS(map["affiliate_promo_bonus_days"]);
@@ -15184,6 +15178,18 @@ function AmbassadorCard({ auth, status, onRequested }: { auth: Auth; status: "no
   const [showInfo, setShowInfo] = useState(false);
   const [requesting, setRequesting] = useState(false);
 
+  // ── Raccourci depuis la campagne "Deviens Ambassadeur" → agit exactement comme si la
+  //    personne avait tapé sur cette carte elle-même : ouvre directement l'écran de demande. ──
+  useEffect(() => {
+    if (status !== "none") return;
+    try {
+      if (sessionStorage.getItem("moyo_open_ambassador_request") === "1") {
+        sessionStorage.removeItem("moyo_open_ambassador_request");
+        setShowInfo(true);
+      }
+    } catch {}
+  }, [status]);
+
   const sendRequest = async () => {
     setRequesting(true);
     try {
@@ -15637,6 +15643,7 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
   const [ambStats, setAmbStats] = useState<{ pending: number; paid: number; count: number } | null>(null);
   const [ambAffiliateId, setAmbAffiliateId] = useState<string | null>(null);
   const [ambPromoCode, setAmbPromoCode] = useState<string | null>(null);
+  const [ambCommissionPercent, setAmbCommissionPercent] = useState<number | null>(null);
   const [ambConversions, setAmbConversions] = useState<{ id: string; plan_label?: string; commission_amount: number; status: string; created_at: string }[]>([]);
   const [ambInscriptions, setAmbInscriptions] = useState(0);
   const [ambPayoutPending, setAmbPayoutPending] = useState<{ amount: number } | null>(null);
@@ -15647,11 +15654,12 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
         const d = await r.json().catch(() => []);
         if (Array.isArray(d) && d[0]?.is_ambassador) {
           setAmbStatus("ambassador");
-          const ra = await fetch(`${SUPABASE_URL}/rest/v1/affiliates?user_id=eq.${auth.userId}&select=id,promo_code&limit=1`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+          const ra = await fetch(`${SUPABASE_URL}/rest/v1/affiliates?user_id=eq.${auth.userId}&select=id,promo_code,commission_percent&limit=1`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
           const da = await ra.json().catch(() => []);
           const affId = Array.isArray(da) ? da[0]?.id : null;
           setAmbAffiliateId(affId || null);
           setAmbPromoCode(Array.isArray(da) ? da[0]?.promo_code || null : null);
+          setAmbCommissionPercent(Array.isArray(da) && typeof da[0]?.commission_percent === "number" ? da[0].commission_percent : AFFILIATE_COMMISSION_PERCENT);
           if (affId) {
             const rc = await fetch(`${SUPABASE_URL}/rest/v1/affiliate_conversions?affiliate_id=eq.${affId}&select=id,plan_label,commission_amount,status,created_at&order=created_at.desc&limit=100`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
             const dc = await rc.json().catch(() => []);
@@ -16404,7 +16412,12 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
               <div style={{ flex: 1, overflowY: "auto", padding: "18px 16px calc(env(safe-area-inset-bottom) + 24px)", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}>
                 {/* Carte principale */}
                 <div style={{ background: "linear-gradient(135deg,#8B0D2F 0%,#6E0A25 100%)", borderRadius: 20, padding: "22px 20px", boxShadow: "0 10px 28px rgba(139,13,47,0.25)", marginBottom: 22 }}>
-                  <div style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.8)", fontWeight: 600, marginBottom: 6 }}>Mes gains disponibles</div>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                    <div style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.8)", fontWeight: 600 }}>Mes gains disponibles</div>
+                    {ambCommissionPercent !== null && (
+                      <div style={{ fontSize: "0.7rem", color: "#fff", fontWeight: 800, background: "rgba(255,255,255,0.18)", borderRadius: 50, padding: "3px 10px" }}>{ambCommissionPercent}% de commission</div>
+                    )}
+                  </div>
                   <div style={{ fontSize: "2.1rem", fontWeight: 900, color: "#fff", lineHeight: 1.1, marginBottom: 10 }}>{available.toLocaleString()} <span style={{ fontSize: "1.1rem", fontWeight: 700 }}>FCFA</span></div>
                   <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 18 }}>
                     <span style={{ width: 7, height: 7, borderRadius: "50%", background: canRequest ? "#4CAF50" : "rgba(255,255,255,0.5)", display: "inline-block" }} />
@@ -16500,6 +16513,7 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
                 {/* Lien d'invitation */}
                 <div style={{ background: "#fafafa", borderRadius: 16, padding: "16px" }}>
                   <div style={{ fontSize: "0.85rem", fontWeight: 800, color: G.brun, marginBottom: 10 }}>Mon lien d'invitation</div>
+                  <p style={{ fontSize: "0.74rem", color: "#999", lineHeight: 1.5, marginBottom: 10 }}>Dès leur inscription via ce lien, vos filleuls gagnent {AFFILIATE_PROMO_BONUS_DAYS} jour{AFFILIATE_PROMO_BONUS_DAYS > 1 ? "s" : ""} bonus au premier Premium acheté, sans rien saisir.</p>
                   <button onClick={() => {
                     const refLink = `${window.location.origin}?ref=${auth.userId}`;
                     if (navigator.share) {
@@ -19190,7 +19204,7 @@ export default function App() {
                 </div>
               ))}
             </div>
-            <Btn variant="primary" style={{ width: "100%", marginBottom: 12 }} onClick={() => { setAmbassadorNudgeOpen(false); setTab("profile"); }}>Je deviens Ambassadeur →</Btn>
+            <Btn variant="primary" style={{ width: "100%", marginBottom: 12 }} onClick={() => { setAmbassadorNudgeOpen(false); try { sessionStorage.setItem("moyo_open_ambassador_request", "1"); } catch {} setTab("profile"); }}>Je deviens Ambassadeur →</Btn>
             <button onClick={() => setAmbassadorNudgeOpen(false)} style={{ width: "100%", background: "none", border: "none", color: "#999", fontSize: "0.85rem", fontWeight: 600, cursor: "pointer", padding: "8px 12px" }}>Peut-être plus tard</button>
           </div>
         </div>

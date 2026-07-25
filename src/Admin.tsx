@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback, memo } from "react";
 import type { Auth, Match, Message, PaymentRequest, Profile, StatusPost, ToastState } from "./App";
 import {
-  APPOINTMENT_PHYSICAL_PRICE, APPT_HOUR_MAX, APPT_HOUR_MIN, AUTO_MOD_CONTACT_REPLY, Avatar, BLOCK_SAME_GENDER, Badge, Btn, CONTACT_ADDRESS, CONTACT_EMAIL, CONTACT_WHATSAPP, ConfirmModal, DISCOVER_DEFAULT_MODE, DateTimePicker, EUR_TO_FCFA, EXPENSE_CATEGORIES, EXPENSE_CAT_COLORS, FREE_LIMITS, G, LANDING_MEMBERS, LANDING_SLOGAN, LANDING_STAT_CITIES, LANDING_STAT_COUPLES, LANDING_STAT_MEMBERS, LANDING_TITLE_END, LANDING_TITLE_HIGHLIGHT, LANDING_TITLE_START, LIFETIME_PREMIUM_UNTIL, Messages, PAY_AIRTEL_ENABLED, PAY_AIRTEL_NUMBER, PAY_AIRTEL_RESPONSABLE, PAY_CB_ENABLED, PAY_MTN_ENABLED, PAY_MTN_NUMBER, PAY_MTN_RESPONSABLE, PAY_WERO_ENABLED, PAY_WERO_NUMBER, PAY_PAYPAL_ENABLED, PAY_PAYPAL_NUMBER, PLAN_2MONTH_ENABLED, PLAN_MONTH_ENABLED, PLAN_WEEK_ENABLED, POLL_ADMIN_BADGE_MS, POLL_BADGES_MS, POLL_BROADCAST_MS, POLL_STATS_MS, POLL_SUPPORT_MS, PREMIUM_30_DAYS_MS, PREMIUM_DAYS_2MONTH, PREMIUM_DAYS_WEEK, PREMIUM_PRICE_2MONTH_FCFA, PREMIUM_PRICE_EUR, PREMIUM_PRICE_FCFA, PREMIUM_PRICE_WEEK_FCFA, PREMIUM_STAT_COUPLES, PREMIUM_STAT_MEMBERS, PremiumBadge, REFERRAL_BONUS_2MONTH, REFERRAL_BONUS_MONTH, REFERRAL_BONUS_WEEK, AFFILIATE_COMMISSION_WEEK, AFFILIATE_COMMISSION_MONTH, AFFILIATE_COMMISSION_2MONTH, AFFILIATE_PAYABLE_DELAY_DAYS, AFFILIATE_PAYOUT_MIN_FCFA, AFFILIATE_PROMO_BONUS_DAYS, PRIVACY_NOTICE_STEP1_TEXT, PRIVACY_NOTICE_STEP2_TEXT, BAN_SCREEN_TEXT, SOCIAL_FACEBOOK, SOCIAL_INSTAGRAM, SOCIAL_TIKTOK, SOCIAL_YOUTUBE, SOCIAL_LINKEDIN, STORE_LINK_ANDROID, STORE_LINK_IOS, SUPABASE_KEY, SUPABASE_URL, SUPER_ADMIN_ID, SUPPORT_PREFIX_REPLY, SUPPORT_PREFIX_USER, SUPPORT_TEAM_ID, SUPPORT_TEAM_NAME, SUPPORT_TEAM_PHOTO, Toast, VerifiedBadge, apptStatusInfo, buildContactBannedRegex, buildCustomBannedRegex, setExemptedBuiltinWords, setExemptedContactWords, cleanSupportReason, dedupeMatchesByCouple, fmtApptDT, fmtDate, formatMoney, isSupportReason, logAdminAction, mmLevel, mmScore, paymentCurrency, resolveStatusImageUrl, sb, sendMatchWelcomeMessage,
-  setAPPOINTMENT_PHYSICAL_PRICE, setAUTO_MOD_CONTACT_REPLY, setBLOCK_SAME_GENDER, setCONTACT_ADDRESS, setCONTACT_EMAIL, setCONTACT_WHATSAPP, setDISCOVER_DEFAULT_MODE, setEUR_TO_FCFA, setLANDING_MEMBERS, setLANDING_SLOGAN, setLANDING_STAT_CITIES, setLANDING_STAT_COUPLES, setLANDING_STAT_MEMBERS, setLANDING_TITLE_END, setLANDING_TITLE_HIGHLIGHT, setLANDING_TITLE_START, setPAY_AIRTEL_ENABLED, setPAY_AIRTEL_NUMBER, setPAY_AIRTEL_RESPONSABLE, setPAY_CB_ENABLED, setPAY_MTN_ENABLED, setPAY_MTN_NUMBER, setPAY_MTN_RESPONSABLE, setPAY_WERO_ENABLED, setPAY_WERO_NUMBER, setPAY_PAYPAL_ENABLED, setPAY_PAYPAL_NUMBER, setPLAN_2MONTH_ENABLED, setPLAN_MONTH_ENABLED, setPLAN_WEEK_ENABLED, setPOLL_ADMIN_BADGE_MS, setPOLL_BADGES_MS, setPOLL_BROADCAST_MS, setPOLL_STATS_MS, setPOLL_SUPPORT_MS, setPREMIUM_30_DAYS_MS, setPREMIUM_DAYS_2MONTH, setPREMIUM_DAYS_WEEK, setPREMIUM_PRICE_2MONTH_FCFA, setPREMIUM_PRICE_EUR, setPREMIUM_PRICE_FCFA, setPREMIUM_PRICE_WEEK_FCFA, setPREMIUM_STAT_COUPLES, setPREMIUM_STAT_MEMBERS, setPREMIUM_BOOST_ENABLED, setPREMIUM_SCREEN_VARIANT, setFEATURE_SHOW_LIKES_VIEWS_FREE, setPRIVACY_NOTICE_ENABLED, setSOCIAL_FACEBOOK, setSOCIAL_INSTAGRAM, setSOCIAL_TIKTOK, setSOCIAL_YOUTUBE, setSOCIAL_LINKEDIN, setSTORE_LINK_ANDROID, setSTORE_LINK_IOS, setSUPPORT_TEAM_PHOTO, setAFFILIATE_COMMISSION_WEEK, setAFFILIATE_COMMISSION_MONTH, setAFFILIATE_COMMISSION_2MONTH, setAFFILIATE_PAYABLE_DELAY_DAYS, setAFFILIATE_PAYOUT_MIN_FCFA, setAFFILIATE_PROMO_BONUS_DAYS, setPRIVACY_NOTICE_STEP1_TEXT, setPRIVACY_NOTICE_STEP2_TEXT, setBAN_SCREEN_TEXT, setPAY_LINK_ENABLED,
+  APPOINTMENT_PHYSICAL_PRICE, APPT_HOUR_MAX, APPT_HOUR_MIN, AUTO_MOD_CONTACT_REPLY, Avatar, BLOCK_SAME_GENDER, Badge, Btn, CONTACT_ADDRESS, CONTACT_EMAIL, CONTACT_WHATSAPP, ConfirmModal, DISCOVER_DEFAULT_MODE, DateTimePicker, EUR_TO_FCFA, EXPENSE_CATEGORIES, EXPENSE_CAT_COLORS, FREE_LIMITS, G, LANDING_MEMBERS, LANDING_SLOGAN, LANDING_STAT_CITIES, LANDING_STAT_COUPLES, LANDING_STAT_MEMBERS, LANDING_TITLE_END, LANDING_TITLE_HIGHLIGHT, LANDING_TITLE_START, LIFETIME_PREMIUM_UNTIL, Messages, PAY_AIRTEL_ENABLED, PAY_AIRTEL_NUMBER, PAY_AIRTEL_RESPONSABLE, PAY_CB_ENABLED, PAY_MTN_ENABLED, PAY_MTN_NUMBER, PAY_MTN_RESPONSABLE, PAY_WERO_ENABLED, PAY_WERO_NUMBER, PAY_PAYPAL_ENABLED, PAY_PAYPAL_NUMBER, PLAN_2MONTH_ENABLED, PLAN_MONTH_ENABLED, PLAN_WEEK_ENABLED, POLL_ADMIN_BADGE_MS, POLL_BADGES_MS, POLL_BROADCAST_MS, POLL_STATS_MS, POLL_SUPPORT_MS, PREMIUM_30_DAYS_MS, PREMIUM_DAYS_2MONTH, PREMIUM_DAYS_WEEK, PREMIUM_PRICE_2MONTH_FCFA, PREMIUM_PRICE_EUR, PREMIUM_PRICE_FCFA, PREMIUM_PRICE_WEEK_FCFA, PREMIUM_STAT_COUPLES, PREMIUM_STAT_MEMBERS, PremiumBadge, REFERRAL_BONUS_2MONTH, REFERRAL_BONUS_MONTH, REFERRAL_BONUS_WEEK, AFFILIATE_COMMISSION_PERCENT, AFFILIATE_PAYABLE_DELAY_DAYS, AFFILIATE_PAYOUT_MIN_FCFA, AFFILIATE_PROMO_BONUS_DAYS, PRIVACY_NOTICE_STEP1_TEXT, PRIVACY_NOTICE_STEP2_TEXT, BAN_SCREEN_TEXT, SOCIAL_FACEBOOK, SOCIAL_INSTAGRAM, SOCIAL_TIKTOK, SOCIAL_YOUTUBE, SOCIAL_LINKEDIN, STORE_LINK_ANDROID, STORE_LINK_IOS, SUPABASE_KEY, SUPABASE_URL, SUPER_ADMIN_ID, SUPPORT_PREFIX_REPLY, SUPPORT_PREFIX_USER, SUPPORT_TEAM_ID, SUPPORT_TEAM_NAME, SUPPORT_TEAM_PHOTO, Toast, VerifiedBadge, apptStatusInfo, buildContactBannedRegex, buildCustomBannedRegex, setExemptedBuiltinWords, setExemptedContactWords, cleanSupportReason, dedupeMatchesByCouple, fmtApptDT, fmtDate, formatMoney, isSupportReason, logAdminAction, mmLevel, mmScore, paymentCurrency, resolveStatusImageUrl, sb, sendMatchWelcomeMessage,
+  setAPPOINTMENT_PHYSICAL_PRICE, setAUTO_MOD_CONTACT_REPLY, setBLOCK_SAME_GENDER, setCONTACT_ADDRESS, setCONTACT_EMAIL, setCONTACT_WHATSAPP, setDISCOVER_DEFAULT_MODE, setEUR_TO_FCFA, setLANDING_MEMBERS, setLANDING_SLOGAN, setLANDING_STAT_CITIES, setLANDING_STAT_COUPLES, setLANDING_STAT_MEMBERS, setLANDING_TITLE_END, setLANDING_TITLE_HIGHLIGHT, setLANDING_TITLE_START, setPAY_AIRTEL_ENABLED, setPAY_AIRTEL_NUMBER, setPAY_AIRTEL_RESPONSABLE, setPAY_CB_ENABLED, setPAY_MTN_ENABLED, setPAY_MTN_NUMBER, setPAY_MTN_RESPONSABLE, setPAY_WERO_ENABLED, setPAY_WERO_NUMBER, setPAY_PAYPAL_ENABLED, setPAY_PAYPAL_NUMBER, setPLAN_2MONTH_ENABLED, setPLAN_MONTH_ENABLED, setPLAN_WEEK_ENABLED, setPOLL_ADMIN_BADGE_MS, setPOLL_BADGES_MS, setPOLL_BROADCAST_MS, setPOLL_STATS_MS, setPOLL_SUPPORT_MS, setPREMIUM_30_DAYS_MS, setPREMIUM_DAYS_2MONTH, setPREMIUM_DAYS_WEEK, setPREMIUM_PRICE_2MONTH_FCFA, setPREMIUM_PRICE_EUR, setPREMIUM_PRICE_FCFA, setPREMIUM_PRICE_WEEK_FCFA, setPREMIUM_STAT_COUPLES, setPREMIUM_STAT_MEMBERS, setPREMIUM_BOOST_ENABLED, setPREMIUM_SCREEN_VARIANT, setFEATURE_SHOW_LIKES_VIEWS_FREE, setPRIVACY_NOTICE_ENABLED, setSOCIAL_FACEBOOK, setSOCIAL_INSTAGRAM, setSOCIAL_TIKTOK, setSOCIAL_YOUTUBE, setSOCIAL_LINKEDIN, setSTORE_LINK_ANDROID, setSTORE_LINK_IOS, setSUPPORT_TEAM_PHOTO, setAFFILIATE_COMMISSION_PERCENT, setAFFILIATE_PAYABLE_DELAY_DAYS, setAFFILIATE_PAYOUT_MIN_FCFA, setAFFILIATE_PROMO_BONUS_DAYS, setPRIVACY_NOTICE_STEP1_TEXT, setPRIVACY_NOTICE_STEP2_TEXT, setBAN_SCREEN_TEXT, setPAY_LINK_ENABLED,
 } from "./App";
 
 async function saveSetting(key: string, value: string, token: string): Promise<boolean> {
@@ -33,13 +33,12 @@ function referralBonusForAmount(amount: number): number {
   return 0;
 }
 
-// Commission en FCFA (programme affiliés) selon la formule achetée par le filleul — même logique
-// par palier que referralBonusForAmount ci-dessus, mais en argent plutôt qu'en jours Premium.
-function affiliateCommissionForAmount(amount: number): number {
-  if (amount >= PREMIUM_PRICE_2MONTH_FCFA) return AFFILIATE_COMMISSION_2MONTH;
-  if (amount >= PREMIUM_PRICE_FCFA) return AFFILIATE_COMMISSION_MONTH;
-  if (amount >= PREMIUM_PRICE_WEEK_FCFA) return AFFILIATE_COMMISSION_WEEK;
-  return 0;
+// Commission en FCFA (programme Ambassadeur) : un pourcentage du prix payé, identique quelle
+// que soit la formule. Un ambassadeur avec un pourcentage personnalisé (négocié individuellement)
+// l'utilise à la place du pourcentage global par défaut — sans jamais affecter les autres.
+function affiliateCommissionForAmount(amount: number, customPercent?: number | null): number {
+  const pct = (typeof customPercent === "number" && customPercent > 0) ? customPercent : AFFILIATE_COMMISSION_PERCENT;
+  return Math.round(amount * pct / 100);
 }
 function planLabelForAmount(amount: number): string {
   if (amount >= PREMIUM_PRICE_2MONTH_FCFA) return "2 mois";
@@ -547,9 +546,7 @@ export function AdminDesktopPage() {
     featureModerationContact: "true",
     disabledBuiltinWords: "",
     disabledBuiltinContactWords: "",
-    affiliateCommissionWeekFcfa: "300",
-    affiliateCommissionMonthFcfa: "800",
-    affiliateCommission2monthFcfa: "1500",
+    affiliateCommissionPercent: "15",
     affiliatePayableDelayDays: "15",
     affiliatePayoutMinFcfa: "10000",
     affiliatePromoBonusDays: "3",
@@ -592,7 +589,7 @@ export function AdminDesktopPage() {
       "disabled_builtin_words",
       "disabled_builtin_contact_words",
       "auto_mod_contact_reply",
-      "affiliate_commission_week_fcfa","affiliate_commission_month_fcfa","affiliate_commission_2month_fcfa","affiliate_payable_delay_days",
+      "affiliate_commission_percent","affiliate_payable_delay_days",
       "feature_ambassador_program","affiliate_payout_min_fcfa","affiliate_promo_bonus_days",
     ];
     fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(${allKeys.join(",")})&select=key,value`, {
@@ -635,9 +632,7 @@ export function AdminDesktopPage() {
         featureModerationContact: map["feature_moderation_contact"] || c.featureModerationContact,
         disabledBuiltinWords: map["disabled_builtin_words"] !== undefined ? map["disabled_builtin_words"] : c.disabledBuiltinWords,
         disabledBuiltinContactWords: map["disabled_builtin_contact_words"] !== undefined ? map["disabled_builtin_contact_words"] : c.disabledBuiltinContactWords,
-        affiliateCommissionWeekFcfa: map["affiliate_commission_week_fcfa"] || c.affiliateCommissionWeekFcfa,
-        affiliateCommissionMonthFcfa: map["affiliate_commission_month_fcfa"] || c.affiliateCommissionMonthFcfa,
-        affiliateCommission2monthFcfa: map["affiliate_commission_2month_fcfa"] || c.affiliateCommission2monthFcfa,
+        affiliateCommissionPercent: map["affiliate_commission_percent"] || c.affiliateCommissionPercent,
         affiliatePayableDelayDays: map["affiliate_payable_delay_days"] || c.affiliatePayableDelayDays,
         affiliatePayoutMinFcfa: map["affiliate_payout_min_fcfa"] || c.affiliatePayoutMinFcfa,
         affiliatePromoBonusDays: map["affiliate_promo_bonus_days"] || c.affiliatePromoBonusDays,
@@ -848,6 +843,10 @@ export function AdminDesktopPage() {
                 <SwitchBtn on={autoShortcuts.premium_nudge_enabled} onToggle={() => toggleAutoShortcut("premium_nudge_enabled")} />
               </div>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 4px" }}>
+                <span style={{ fontSize: "0.82rem", fontWeight: 600, color: "#333" }}>Inciter à devenir Ambassadeur</span>
+                <SwitchBtn on={autoShortcuts.ambassador_nudge_enabled} onToggle={() => toggleAutoShortcut("ambassador_nudge_enabled")} />
+              </div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 4px" }}>
                 <span style={{ fontSize: "0.82rem", fontWeight: 600, color: "#333" }}>Super promo Premium</span>
                 <SwitchBtn on={autoShortcuts.promo_active} onToggle={() => toggleAutoShortcut("promo_active")} />
               </div>
@@ -895,14 +894,12 @@ export function AdminDesktopPage() {
             </OffCanvasSection>}
 
             {configTab === "affilies" && <OffCanvasSection title="Programme Ambassadeur">
-              <div style={{ fontSize: "0.72rem", color: "#999", marginBottom: 10, lineHeight: 1.5 }}>Commission cash (pas de jours Premium) versée à un ambassadeur quand son filleul passe Premium — un montant différent selon la formule achetée. La gestion des ambassadeurs eux-mêmes (ajout, historique, versements) se fait depuis Ambassadeurs → Affiliés actifs.</div>
+              <div style={{ fontSize: "0.72rem", color: "#999", marginBottom: 10, lineHeight: 1.5 }}>Commission cash (pas de jours Premium) versée à un ambassadeur quand son filleul passe Premium — un pourcentage du prix payé, identique quelle que soit la formule. La gestion des ambassadeurs eux-mêmes (ajout, historique, versements, commission personnalisée) se fait depuis Ambassadeurs → Affiliés actifs.</div>
               {([
-                ["affiliate_commission_week_fcfa", "affiliateCommissionWeekFcfa" as keyof typeof appConfig, "Commission — formule Semaine (FCFA)", appConfig.affiliateCommissionWeekFcfa, setAFFILIATE_COMMISSION_WEEK],
-                ["affiliate_commission_month_fcfa", "affiliateCommissionMonthFcfa" as keyof typeof appConfig, "Commission — formule Mois (FCFA)", appConfig.affiliateCommissionMonthFcfa, setAFFILIATE_COMMISSION_MONTH],
-                ["affiliate_commission_2month_fcfa", "affiliateCommission2monthFcfa" as keyof typeof appConfig, "Commission — formule 2 mois (FCFA)", appConfig.affiliateCommission2monthFcfa, setAFFILIATE_COMMISSION_2MONTH],
+                ["affiliate_commission_percent", "affiliateCommissionPercent" as keyof typeof appConfig, "Commission par défaut (% du prix payé)", appConfig.affiliateCommissionPercent, setAFFILIATE_COMMISSION_PERCENT],
                 ["affiliate_payable_delay_days", "affiliatePayableDelayDays" as keyof typeof appConfig, "Délai avant commission payable (jours)", appConfig.affiliatePayableDelayDays, setAFFILIATE_PAYABLE_DELAY_DAYS],
                 ["affiliate_payout_min_fcfa", "affiliatePayoutMinFcfa" as keyof typeof appConfig, "Minimum de versement (FCFA)", appConfig.affiliatePayoutMinFcfa, setAFFILIATE_PAYOUT_MIN_FCFA],
-                ["affiliate_promo_bonus_days", "affiliatePromoBonusDays" as keyof typeof appConfig, "Jours bonus offerts (code promo)", appConfig.affiliatePromoBonusDays, setAFFILIATE_PROMO_BONUS_DAYS],
+                ["affiliate_promo_bonus_days", "affiliatePromoBonusDays" as keyof typeof appConfig, "Jours bonus offerts (lien & code promo)", appConfig.affiliatePromoBonusDays, setAFFILIATE_PROMO_BONUS_DAYS],
               ] as [string, keyof typeof appConfig, string, string, (v: any) => void][]).map(([key, ck, label, value, setter]) => (
                 <EditableRow key={key} label={label} value={value} open={editingConfig === key} type="number"
                   onOpen={() => { setEditingConfig(editingConfig === key ? null : key); setEditingConfigValue(value); }}
@@ -2557,7 +2554,7 @@ function AssistantPhotoConfig({ auth }: { auth: Auth }) {
 export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () => void }) {
   const [rules, setRules] = React.useState({ blockSameGenderLike: true });
   const [modalTexts, setModalTexts] = React.useState({ sameGenderHomme: "Eh frère, reste du bon côté ! 😂", sameGenderFemme: "Eh soeur, reste du bon côté ! 😂", sameGenderSub: "Moyo Dating c'est pour les rencontres hétérosexuelles 😄", signupSuccess: "Ton compte est prêt ! Connecte-toi maintenant.", matchTitle: "C'est un Match !", matchSubtitle: "Toi et {name} vous plaisez mutuellement !", premiumDefault: "Passe Premium pour débloquer toutes les fonctionnalités de Moyo Dating !", likesEpuises: "Tu as utilisé tes {n} likes gratuits aujourd'hui. Passe Premium pour liker sans limite !" });
-  const [appConfig, setAppConfig] = React.useState({ limitLikes: "5", limitMessages: "3", limitMessagesFemme: "100", limitMatchRequests: "2", limitStatusBoosts: "2", limitPhotoSizeMb: "5", matchWelcomeMessage: "Vous avez un nouveau match ! Dites bonjour 👋", premiumPriceFcfa: "3500", premiumPriceEur: "10", eurToFcfaRate: "655.957", premiumDurationDays: "31", premiumPriceWeekFcfa: "1200", premiumPrice2monthFcfa: "5900", premiumDaysWeek: "7", premiumDays2month: "62", likesNotifDelayHours: "24", featureStatuses: "true", featureGiftPremium: "true", featureAssistant: "true", featureGroupPremium: "true", featureGroupPhotos: "true", featurePhotoRetouch: "true", maintenanceMode: "false", maintenanceMessage: "Moyo Dating est en maintenance. Nous revenons très vite ! 🔧", customBannedWords: "", contactBannedWords: "", autoModContactReply: AUTO_MOD_CONTACT_REPLY, featureModerationInsults: "true", featureModerationContact: "true", disabledBuiltinWords: "", disabledBuiltinContactWords: "", affiliateCommissionWeekFcfa: "300", affiliateCommissionMonthFcfa: "800", affiliateCommission2monthFcfa: "1500", affiliatePayableDelayDays: "15", featureAmbassadorProgram: "true", affiliatePayoutMinFcfa: "10000", affiliatePromoBonusDays: "3" });
+  const [appConfig, setAppConfig] = React.useState({ limitLikes: "5", limitMessages: "3", limitMessagesFemme: "100", limitMatchRequests: "2", limitStatusBoosts: "2", limitPhotoSizeMb: "5", matchWelcomeMessage: "Vous avez un nouveau match ! Dites bonjour 👋", premiumPriceFcfa: "3500", premiumPriceEur: "10", eurToFcfaRate: "655.957", premiumDurationDays: "31", premiumPriceWeekFcfa: "1200", premiumPrice2monthFcfa: "5900", premiumDaysWeek: "7", premiumDays2month: "62", likesNotifDelayHours: "24", featureStatuses: "true", featureGiftPremium: "true", featureAssistant: "true", featureGroupPremium: "true", featureGroupPhotos: "true", featurePhotoRetouch: "true", maintenanceMode: "false", maintenanceMessage: "Moyo Dating est en maintenance. Nous revenons très vite ! 🔧", customBannedWords: "", contactBannedWords: "", autoModContactReply: AUTO_MOD_CONTACT_REPLY, featureModerationInsults: "true", featureModerationContact: "true", disabledBuiltinWords: "", disabledBuiltinContactWords: "", affiliateCommissionPercent: "15", affiliatePayableDelayDays: "15", featureAmbassadorProgram: "true", affiliatePayoutMinFcfa: "10000", affiliatePromoBonusDays: "3" });
   const [editingModal, setEditingModal] = React.useState<string | null>(null);
   const [editingValue, setEditingValue] = React.useState("");
   const [editingConfig, setEditingConfig] = React.useState<string | null>(null);
@@ -2614,7 +2611,7 @@ export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () =
   };
 
   React.useEffect(() => {
-    const allKeys = ["rule_block_same_gender_like","modal_same_gender_homme","modal_same_gender_femme","modal_same_gender_sub","modal_signup_success","modal_match_title","modal_match_subtitle","modal_premium_default","modal_likes_epuises","limit_likes_free","limit_messages_free","limit_messages_free_femme","limit_match_requests","limit_status_boosts","limit_photo_size_mb","match_welcome_message","match_proposal_expiry_days","premium_price_fcfa","premium_price_week_fcfa","premium_price_2month_fcfa","premium_days_week","premium_days_2month","premium_duration_days","feature_statuses","feature_gift_premium","feature_assistant","feature_group_premium","feature_photo_retouch","feature_moderation_insults","feature_moderation_contact","maintenance_mode","maintenance_message","custom_banned_words","contact_banned_words","disabled_builtin_words","disabled_builtin_contact_words","auto_mod_contact_reply","poll_badges_ms","poll_admin_badge_ms","poll_stats_ms","poll_broadcast_ms","poll_support_ms","affiliate_commission_week_fcfa","affiliate_commission_month_fcfa","affiliate_commission_2month_fcfa","affiliate_payable_delay_days","feature_ambassador_program","affiliate_payout_min_fcfa","affiliate_promo_bonus_days"];
+    const allKeys = ["rule_block_same_gender_like","modal_same_gender_homme","modal_same_gender_femme","modal_same_gender_sub","modal_signup_success","modal_match_title","modal_match_subtitle","modal_premium_default","modal_likes_epuises","limit_likes_free","limit_messages_free","limit_messages_free_femme","limit_match_requests","limit_status_boosts","limit_photo_size_mb","match_welcome_message","match_proposal_expiry_days","premium_price_fcfa","premium_price_week_fcfa","premium_price_2month_fcfa","premium_days_week","premium_days_2month","premium_duration_days","feature_statuses","feature_gift_premium","feature_assistant","feature_group_premium","feature_photo_retouch","feature_moderation_insults","feature_moderation_contact","maintenance_mode","maintenance_message","custom_banned_words","contact_banned_words","disabled_builtin_words","disabled_builtin_contact_words","auto_mod_contact_reply","poll_badges_ms","poll_admin_badge_ms","poll_stats_ms","poll_broadcast_ms","poll_support_ms","affiliate_commission_percent","affiliate_payable_delay_days","feature_ambassador_program","affiliate_payout_min_fcfa","affiliate_promo_bonus_days"];
     fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(${allKeys.join(",")})&select=key,value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } })
       .then(r => r.json()).then(data => {
         if (!Array.isArray(data)) return;
@@ -2624,7 +2621,7 @@ export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () =
         if (map["rule_block_same_gender_like"]) setRules(r => ({ ...r, blockSameGenderLike: map["rule_block_same_gender_like"] === "true" }));
         setModalTexts(t => ({ sameGenderHomme: map["modal_same_gender_homme"] || t.sameGenderHomme, sameGenderFemme: map["modal_same_gender_femme"] || t.sameGenderFemme, sameGenderSub: map["modal_same_gender_sub"] || t.sameGenderSub, signupSuccess: map["modal_signup_success"] || t.signupSuccess, matchTitle: map["modal_match_title"] || t.matchTitle, matchSubtitle: map["modal_match_subtitle"] || t.matchSubtitle, premiumDefault: map["modal_premium_default"] || t.premiumDefault, likesEpuises: map["modal_likes_epuises"] || t.likesEpuises }));
         setAppConfig(c => ({ limitLikes: map["limit_likes_free"] || c.limitLikes, limitMessages: map["limit_messages_free"] || c.limitMessages, limitMessagesFemme: map["limit_messages_free_femme"] || c.limitMessagesFemme, limitMatchRequests: map["limit_match_requests"] || c.limitMatchRequests, limitStatusBoosts: map["limit_status_boosts"] || c.limitStatusBoosts, limitPhotoSizeMb: map["limit_photo_size_mb"] || c.limitPhotoSizeMb, matchWelcomeMessage: map["match_welcome_message"] || c.matchWelcomeMessage, premiumPriceFcfa: map["premium_price_fcfa"] || c.premiumPriceFcfa, premiumPriceWeekFcfa: map["premium_price_week_fcfa"] || c.premiumPriceWeekFcfa, premiumPrice2monthFcfa: map["premium_price_2month_fcfa"] || c.premiumPrice2monthFcfa, premiumDaysWeek: map["premium_days_week"] || c.premiumDaysWeek, premiumDays2month: map["premium_days_2month"] || c.premiumDays2month, premiumPriceEur: map["premium_price_eur"] || c.premiumPriceEur, eurToFcfaRate: map["eur_to_fcfa_rate"] || c.eurToFcfaRate, premiumDurationDays: map["premium_duration_days"] || c.premiumDurationDays, likesNotifDelayHours: map["likes_notification_delay_hours"] || c.likesNotifDelayHours, featureStatuses: map["feature_statuses"] || c.featureStatuses, featureGiftPremium: map["feature_gift_premium"] || c.featureGiftPremium, featureAssistant: map["feature_assistant"] || c.featureAssistant, featureGroupPremium: map["feature_group_premium"] || c.featureGroupPremium,
-        featureGroupPhotos: map["feature_group_photos"] || c.featureGroupPhotos, featurePhotoRetouch: map["feature_photo_retouch"] || c.featurePhotoRetouch, maintenanceMode: map["maintenance_mode"] || c.maintenanceMode, maintenanceMessage: map["maintenance_message"] || c.maintenanceMessage, customBannedWords: map["custom_banned_words"] || c.customBannedWords, contactBannedWords: map["contact_banned_words"] || c.contactBannedWords, autoModContactReply: map["auto_mod_contact_reply"] || c.autoModContactReply, featureModerationInsults: map["feature_moderation_insults"] || c.featureModerationInsults, featureModerationContact: map["feature_moderation_contact"] || c.featureModerationContact, disabledBuiltinWords: map["disabled_builtin_words"] !== undefined ? map["disabled_builtin_words"] : c.disabledBuiltinWords, disabledBuiltinContactWords: map["disabled_builtin_contact_words"] !== undefined ? map["disabled_builtin_contact_words"] : c.disabledBuiltinContactWords, affiliateCommissionWeekFcfa: map["affiliate_commission_week_fcfa"] || c.affiliateCommissionWeekFcfa, affiliateCommissionMonthFcfa: map["affiliate_commission_month_fcfa"] || c.affiliateCommissionMonthFcfa, affiliateCommission2monthFcfa: map["affiliate_commission_2month_fcfa"] || c.affiliateCommission2monthFcfa, affiliatePayableDelayDays: map["affiliate_payable_delay_days"] || c.affiliatePayableDelayDays, featureAmbassadorProgram: map["feature_ambassador_program"] || c.featureAmbassadorProgram, affiliatePayoutMinFcfa: map["affiliate_payout_min_fcfa"] || c.affiliatePayoutMinFcfa, affiliatePromoBonusDays: map["affiliate_promo_bonus_days"] || c.affiliatePromoBonusDays }));
+        featureGroupPhotos: map["feature_group_photos"] || c.featureGroupPhotos, featurePhotoRetouch: map["feature_photo_retouch"] || c.featurePhotoRetouch, maintenanceMode: map["maintenance_mode"] || c.maintenanceMode, maintenanceMessage: map["maintenance_message"] || c.maintenanceMessage, customBannedWords: map["custom_banned_words"] || c.customBannedWords, contactBannedWords: map["contact_banned_words"] || c.contactBannedWords, autoModContactReply: map["auto_mod_contact_reply"] || c.autoModContactReply, featureModerationInsults: map["feature_moderation_insults"] || c.featureModerationInsults, featureModerationContact: map["feature_moderation_contact"] || c.featureModerationContact, disabledBuiltinWords: map["disabled_builtin_words"] !== undefined ? map["disabled_builtin_words"] : c.disabledBuiltinWords, disabledBuiltinContactWords: map["disabled_builtin_contact_words"] !== undefined ? map["disabled_builtin_contact_words"] : c.disabledBuiltinContactWords, affiliateCommissionPercent: map["affiliate_commission_percent"] || c.affiliateCommissionPercent, affiliatePayableDelayDays: map["affiliate_payable_delay_days"] || c.affiliatePayableDelayDays, featureAmbassadorProgram: map["feature_ambassador_program"] || c.featureAmbassadorProgram, affiliatePayoutMinFcfa: map["affiliate_payout_min_fcfa"] || c.affiliatePayoutMinFcfa, affiliatePromoBonusDays: map["affiliate_promo_bonus_days"] || c.affiliatePromoBonusDays }));
         if (map["custom_banned_words"] !== undefined) buildCustomBannedRegex(map["custom_banned_words"]);
         if (map["contact_banned_words"] !== undefined) buildContactBannedRegex(map["contact_banned_words"]);
       }).catch(() => {});
@@ -2683,7 +2680,7 @@ export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () =
         ))}
       </OffCanvasSection>
       <OffCanvasSection title="Programme Ambassadeur">
-        {([["affiliate_commission_week_fcfa","affiliateCommissionWeekFcfa" as keyof typeof appConfig,"Commission — formule Semaine (FCFA)",appConfig.affiliateCommissionWeekFcfa,setAFFILIATE_COMMISSION_WEEK],["affiliate_commission_month_fcfa","affiliateCommissionMonthFcfa" as keyof typeof appConfig,"Commission — formule Mois (FCFA)",appConfig.affiliateCommissionMonthFcfa,setAFFILIATE_COMMISSION_MONTH],["affiliate_commission_2month_fcfa","affiliateCommission2monthFcfa" as keyof typeof appConfig,"Commission — formule 2 mois (FCFA)",appConfig.affiliateCommission2monthFcfa,setAFFILIATE_COMMISSION_2MONTH],["affiliate_payable_delay_days","affiliatePayableDelayDays" as keyof typeof appConfig,"Délai avant commission payable (jours)",appConfig.affiliatePayableDelayDays,setAFFILIATE_PAYABLE_DELAY_DAYS],["affiliate_payout_min_fcfa","affiliatePayoutMinFcfa" as keyof typeof appConfig,"Minimum de versement (FCFA)",appConfig.affiliatePayoutMinFcfa,setAFFILIATE_PAYOUT_MIN_FCFA],["affiliate_promo_bonus_days","affiliatePromoBonusDays" as keyof typeof appConfig,"Jours bonus offerts (code promo)",appConfig.affiliatePromoBonusDays,setAFFILIATE_PROMO_BONUS_DAYS]] as [string, keyof typeof appConfig, string, string, (v: any) => void][]).map(([key,ck,label,value,setter]) => (
+        {([["affiliate_commission_percent","affiliateCommissionPercent" as keyof typeof appConfig,"Commission par défaut (% du prix payé)",appConfig.affiliateCommissionPercent,setAFFILIATE_COMMISSION_PERCENT],["affiliate_payable_delay_days","affiliatePayableDelayDays" as keyof typeof appConfig,"Délai avant commission payable (jours)",appConfig.affiliatePayableDelayDays,setAFFILIATE_PAYABLE_DELAY_DAYS],["affiliate_payout_min_fcfa","affiliatePayoutMinFcfa" as keyof typeof appConfig,"Minimum de versement (FCFA)",appConfig.affiliatePayoutMinFcfa,setAFFILIATE_PAYOUT_MIN_FCFA],["affiliate_promo_bonus_days","affiliatePromoBonusDays" as keyof typeof appConfig,"Jours bonus offerts (lien & code promo)",appConfig.affiliatePromoBonusDays,setAFFILIATE_PROMO_BONUS_DAYS]] as [string, keyof typeof appConfig, string, string, (v: any) => void][]).map(([key,ck,label,value,setter]) => (
           <EditableRow key={key} label={label} value={value} type="number" open={editingConfig === key} onOpen={() => { setEditingConfig(editingConfig === key ? null : key); setEditingConfigValue(value); }} editValue={editingConfigValue} onEdit={setEditingConfigValue} onSave={async () => { await upsertSetting(key, editingConfigValue); setAppConfig(c => ({ ...c, [ck]: editingConfigValue })); setter(editingConfigValue); setEditingConfig(null); }} />
         ))}
         <div style={{ fontSize: "0.72rem", color: "#999", padding: "4px 4px 0", lineHeight: 1.5 }}>La gestion des ambassadeurs eux-mêmes (ajout, historique, versements) se fait depuis Ambassadeurs → Affiliés actifs.</div>
@@ -3712,10 +3709,10 @@ const HELP_SECTIONS: HelpSection[] = [
       ] },
       { kind: "subhead", text: "Réglages (Configuration ☰ → Programme Ambassadeur)" },
       { kind: "rows", color: "#8e44ad", items: [
-        ["Commissions par formule", "Montant en FCFA versé selon que le filleul a pris Premium 1 semaine / 1 mois / 2 mois. Modifiable à tout moment, appliqué immédiatement aux nouvelles conversions."],
+        ["Commission par défaut", "Pourcentage du prix payé, identique quelle que soit la formule (semaine/mois/2 mois). Modifiable à tout moment, appliqué immédiatement aux nouvelles conversions. Chaque ambassadeur peut avoir un pourcentage personnalisé (négocié individuellement) qui remplace ce défaut pour lui seul, réglable depuis sa ligne dans \"Affiliés actifs\"."],
         ["Délai avant commission payable", "Nombre de jours avant qu'une commission individuelle puisse être marquée payée (protection contre les remboursements/annulations récents)."],
         ["Minimum de versement", "Montant en dessous duquel le bouton \"Demander le versement\" reste désactivé côté ambassadeur."],
-        ["Jours bonus offerts (code promo)", "Nombre de jours Premium offerts au client, payés par Moyo (jamais déduits de la commission de l'ambassadeur). S'applique automatiquement dans les deux cas : inscription via le lien d'invitation, ou code promo saisi à l'achat — jamais les deux à la fois."],
+        ["Jours bonus offerts (lien & code promo)", "Nombre de jours Premium offerts au client, payés par Moyo (jamais déduits de la commission de l'ambassadeur). S'applique automatiquement dans les deux cas : inscription via le lien d'invitation, ou code promo saisi à l'achat — jamais les deux à la fois."],
         ["Toggle \"Programme Ambassadeur\"", "Dans Fonctionnalités : désactive uniquement le bouton \"Devenir Ambassadeur\" côté profil (utile si trop de demandes arrivent d'un coup). Les ambassadeurs déjà actifs gardent leur accès."],
       ] },
       { kind: "subhead", text: "Notifications" },
@@ -5593,14 +5590,14 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
     //  2. Lien d'invitation utilisé à l'inscription (profiles.referred_by déjà renseigné).
     // Dans les deux cas : le client gagne des jours bonus (payés par Moyo, jamais déduits de la
     // commission), et l'ambassadeur reçoit sa commission cash normale.
-    let creditAffiliate: { id: string; name: string } | null = null;
+    let creditAffiliate: { id: string; name: string; commission_percent?: number | null } | null = null;
     let bonusDays = 0;
     let viaPromoCode = false;
     let parrain: string | null = null;
     let filleulName = "votre filleul";
     if (p.promo_code_used) {
       try {
-        const pcRes = await fetch(`${SUPABASE_URL}/rest/v1/affiliates?promo_code=eq.${encodeURIComponent(p.promo_code_used.trim().toUpperCase())}&status=eq.active&select=id,name`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+        const pcRes = await fetch(`${SUPABASE_URL}/rest/v1/affiliates?promo_code=eq.${encodeURIComponent(p.promo_code_used.trim().toUpperCase())}&status=eq.active&select=id,name,commission_percent`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
         const pcData = await pcRes.json().catch(() => []);
         if (Array.isArray(pcData) && pcData[0]) { creditAffiliate = pcData[0]; bonusDays = AFFILIATE_PROMO_BONUS_DAYS; viaPromoCode = true; }
       } catch {}
@@ -5612,7 +5609,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
         if (Array.isArray(profileData) && profileData[0]?.referred_by) {
           parrain = profileData[0].referred_by;
           filleulName = profileData[0].name || "votre filleul";
-          const affRes = await fetch(`${SUPABASE_URL}/rest/v1/affiliates?user_id=eq.${parrain}&status=eq.active&select=id,name`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+          const affRes = await fetch(`${SUPABASE_URL}/rest/v1/affiliates?user_id=eq.${parrain}&status=eq.active&select=id,name,commission_percent`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
           const affData = await affRes.json().catch(() => []);
           if (Array.isArray(affData) && affData[0]) { creditAffiliate = affData[0]; bonusDays = AFFILIATE_PROMO_BONUS_DAYS; }
         }
@@ -5626,7 +5623,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
     fetch(`${SUPABASE_URL}/rest/v1/payment_verification_requests?transaction_id=eq.${encodeURIComponent(p.tx_ref)}&status=eq.pending`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ status: "verified_manually" }) }).catch(() => {});
     try {
       if (creditAffiliate) {
-        const commission = affiliateCommissionForAmount(p.amount);
+        const commission = affiliateCommissionForAmount(p.amount, creditAffiliate.commission_percent);
         if (commission > 0) {
           await fetch(`${SUPABASE_URL}/rest/v1/affiliate_conversions`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ affiliate_id: creditAffiliate.id, affiliate_name: creditAffiliate.name || null, filleul_id: targetId, filleul_name: p.gift_for_name || filleulName, plan_label: planLabelForAmount(p.amount), commission_amount: commission, status: "pending" }) });
         }
@@ -6889,7 +6886,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
     useEffect(() => { if (mktTab === "inactive") { loadInactiveTemplates(); loadInactiveSmsTemplates(); } /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [mktTab]);
 
     // ── Programme affiliés : liste des affiliés + historique de leurs commissions ──
-    const [affiliatesList, setAffiliatesList] = useState<{ id: string; user_id: string; name: string; phone?: string; status: string; created_at: string; promo_code?: string | null }[]>([]);
+    const [affiliatesList, setAffiliatesList] = useState<{ id: string; user_id: string; name: string; phone?: string; status: string; created_at: string; promo_code?: string | null; commission_percent?: number | null }[]>([]);
     const [affiliatesLoading, setAffiliatesLoading] = useState(false);
     const [affiliateConversions, setAffiliateConversions] = useState<{ id: string; affiliate_id: string; affiliate_name: string; filleul_id: string; filleul_name: string; plan_label: string; commission_amount: number; status: string; created_at: string; paid_at?: string }[]>([]);
     const [affiliateConversionsLoading, setAffiliateConversionsLoading] = useState(false);
@@ -6916,6 +6913,23 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
         showToast(code ? `Code promo "${code}" attribué à ${a.name}.` : `Code promo retiré pour ${a.name}.`, "success");
         setEditingPromoCode(null);
       } catch { showToast("Erreur lors de l'enregistrement du code.", "error"); }
+    };
+    const [editingCommission, setEditingCommission] = useState<string | null>(null);
+    const [commissionDraft, setCommissionDraft] = useState("");
+    const saveCommissionPercent = async (a: { id: string; name: string }) => {
+      if (!auth) return;
+      const raw = commissionDraft.trim().replace(",", ".");
+      const pct = raw === "" ? null : parseFloat(raw);
+      if (raw !== "" && (isNaN(pct as number) || (pct as number) <= 0 || (pct as number) > 100)) {
+        showToast("Entrez un pourcentage valide entre 0 et 100.", "error");
+        return;
+      }
+      try {
+        await fetch(`${SUPABASE_URL}/rest/v1/affiliates?id=eq.${a.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ commission_percent: pct }) });
+        setAffiliatesList(list => list.map(x => x.id === a.id ? { ...x, commission_percent: pct } : x));
+        showToast(pct !== null ? `Commission de ${a.name} fixée à ${pct}%.` : `${a.name} repasse au taux de commission par défaut.`, "success");
+        setEditingCommission(null);
+      } catch { showToast("Erreur lors de l'enregistrement.", "error"); }
     };
     // ── Statut réel (is_ambassador, Premium) de chaque affilié sur son profil. Nécessaire car
     //    un affilié peut avoir été ajouté directement (Désigner un nouvel affilié) sans jamais
@@ -12232,7 +12246,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
           </div>
 
           {/* ── Cartes KPI (contextuelles selon le sous-onglet, masquées sur Événement Premium) ── */}
-          {mktTab !== "event" && mktTab !== "promo" && mktTab !== "phoneprompt" && mktTab !== "premiumnudge" && mktTab !== "referrals" && mktTab !== "inactive" && (
+          {mktTab !== "event" && mktTab !== "promo" && mktTab !== "phoneprompt" && mktTab !== "premiumnudge" && mktTab !== "ambassadornudge" && mktTab !== "referrals" && mktTab !== "inactive" && (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: 12, marginBottom: 16 }}>
             {(mktTab === "statuts" ? [
               { ic: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>, bg: "rgba(192,57,43,0.12)", label: "Statuts actifs", value: officialStatuses.length, sub: "En ligne actuellement", subColor: G.rouge },
@@ -12565,7 +12579,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
                 <div>
                   <div style={{ fontSize: "0.95rem", fontWeight: 800, color: G.brun }}>Inciter à devenir Ambassadeur</div>
-                  <div style={{ fontSize: "0.78rem", color: "#888", marginTop: 4, lineHeight: 1.5 }}>Même mécanisme que "Inciter au Premium" (une fenêtre non bloquante, une fois par jour maximum), mais le bouton renvoie vers Profil où se trouve "Devenir Ambassadeur". Ne s'affiche jamais en même temps que la relance Premium, et jamais si le programme Ambassadeur est désactivé (Fonctionnalités).</div>
+                  <div style={{ fontSize: "0.78rem", color: "#888", marginTop: 4, lineHeight: 1.5 }}>Affiche une fenêtre au groupe ciblé, une fois par jour maximum, pour proposer de devenir Ambassadeur. Le bouton ouvre directement l'écran de demande dans Profil. Inactif si le programme Ambassadeur est désactivé (Fonctionnalités).</div>
                 </div>
                 <SwitchBtn on={autoShortcuts.ambassador_nudge_enabled} onToggle={toggleAmbassadorNudge} />
               </div>
@@ -13403,6 +13417,16 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                                   ) : (
                                     <button onClick={() => { setEditingPromoCode(a.id); setPromoCodeDraft(a.promo_code || ""); }} style={{ background: a.promo_code ? "rgba(142,68,173,0.08)" : "#fff", border: `1.5px solid ${a.promo_code ? "#8e44ad" : G.gris}`, borderRadius: 50, padding: "5px 12px", fontSize: "0.74rem", fontWeight: 700, cursor: "pointer", color: a.promo_code ? "#8e44ad" : "#555" }}>{a.promo_code ? `Code : ${a.promo_code}` : "+ Code promo"}</button>
                                   )}
+                                  {editingCommission === a.id ? (
+                                    <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#fff", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "3px 6px 3px 12px" }}>
+                                      <input autoFocus type="number" min="0" max="100" step="0.5" value={commissionDraft} onChange={e => setCommissionDraft(e.target.value)} placeholder={`${AFFILIATE_COMMISSION_PERCENT}`} style={{ width: 50, border: "none", outline: "none", fontSize: "0.74rem", fontWeight: 700, background: "transparent" }} />
+                                      <span style={{ fontSize: "0.72rem", color: "#999" }}>%</span>
+                                      <span onClick={() => saveCommissionPercent(a)} style={{ fontSize: "0.72rem", fontWeight: 700, color: "#1A5C3A", cursor: "pointer", padding: "3px 6px" }}>OK</span>
+                                      <span onClick={() => setEditingCommission(null)} style={{ fontSize: "0.72rem", fontWeight: 700, color: "#999", cursor: "pointer", padding: "3px 6px" }}>✕</span>
+                                    </div>
+                                  ) : (
+                                    <button onClick={() => { setEditingCommission(a.id); setCommissionDraft(a.commission_percent != null ? String(a.commission_percent) : ""); }} style={{ background: a.commission_percent != null ? "rgba(26,92,58,0.08)" : "#fff", border: `1.5px solid ${a.commission_percent != null ? "#1A5C3A" : G.gris}`, borderRadius: 50, padding: "5px 12px", fontSize: "0.74rem", fontWeight: 700, cursor: "pointer", color: a.commission_percent != null ? "#1A5C3A" : "#555" }}>{a.commission_percent != null ? `Commission : ${a.commission_percent}%` : `Commission : ${AFFILIATE_COMMISSION_PERCENT}% (défaut)`}</button>
+                                  )}
                                   <button onClick={() => setAffiliateStatus(a, a.status === "active" ? "paused" : "active")} style={{ background: "#fff", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "5px 12px", fontSize: "0.74rem", fontWeight: 700, cursor: "pointer", color: "#555" }}>{a.status === "active" ? "Mettre en pause" : "Réactiver"}</button>
                                   {isLifetimePremiumAff(a.user_id) ? (
                                     <button onClick={() => confirm(`Retirer le Premium à vie de ${a.name} ?`, () => togglePremiumLifetime(a))} style={{ background: "rgba(231,76,60,0.08)", border: "1.5px solid rgba(231,76,60,0.25)", borderRadius: 50, padding: "5px 12px", fontSize: "0.74rem", fontWeight: 700, cursor: "pointer", color: G.rouge }}>Retirer Premium</button>
@@ -13453,7 +13477,10 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                               ) : payable ? (
                                 <button onClick={() => markConversionPaid(c)} style={{ background: G.rouge, color: "#fff", border: "none", borderRadius: 50, padding: "6px 14px", fontSize: "0.74rem", fontWeight: 700, cursor: "pointer" }}>Marquer payé</button>
                               ) : (
-                                <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "#999" }}>En attente ({AFFILIATE_PAYABLE_DELAY_DAYS}j)</span>
+                                <>
+                                  <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "#666" }}>En attente ({AFFILIATE_PAYABLE_DELAY_DAYS}j)</span>
+                                  <button onClick={() => confirm(`Forcer le paiement de cette commission avant la fin du délai de sécurité de ${AFFILIATE_PAYABLE_DELAY_DAYS} jours ? À réserver aux cas où tu es certain que le paiement du filleul est fiable.`, () => markConversionPaid(c))} style={{ background: "#8B6914", color: "#fff", border: "none", borderRadius: 50, padding: "8px 16px", fontSize: "0.8rem", fontWeight: 800, cursor: "pointer" }}>⚠ Forcer le paiement</button>
+                                </>
                               )}
                             </div>
                           </div>
@@ -15060,12 +15087,13 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 </div>
                 <div style={proposalsViewMode === "grid" ? { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 10 } : { display: "flex", flexDirection: "column", gap: 10 }}>
                   {visibleProposals.map(p => {
+                    const refusedAtGrid = p.refused_by === p.user1_id ? p.user1_responded_at : p.user2_responded_at;
                     const statusInfo = p.status === "pending"
                       ? (propFilterCategory(p) === "pending_response"
                           ? { label: p.user1_response === "accepted" ? `En attente de ${p.profile2?.name || "..."}` : `En attente de ${p.profile1?.name || "..."}`, color: "#2980b9", bg: "rgba(41,128,185,0.08)" }
                           : { label: "En attente", color: "#f39c12", bg: "rgba(243,156,18,0.08)" })
                       : p.status === "accepted" ? { label: "Match créé", color: "#27ae60", bg: "rgba(39,174,96,0.08)" }
-                      : p.status === "refused" ? { label: `Refusée par ${p.refused_by === p.user1_id ? p.profile1?.name : p.profile2?.name || "..."}`, color: "#e74c3c", bg: "rgba(231,76,60,0.08)" }
+                      : p.status === "refused" ? { label: `Refusée par ${p.refused_by === p.user1_id ? p.profile1?.name : p.profile2?.name || "..."}${refusedAtGrid ? ` le ${new Date(refusedAtGrid).toLocaleDateString("fr-FR")}` : ""}`, color: "#e74c3c", bg: "rgba(231,76,60,0.08)" }
                       : { label: "Expirée", color: "#888", bg: "rgba(0,0,0,0.04)" };
                     // Toujours femme à gauche, homme à droite — peu importe l'ordre user1/user2 en base.
                     const p1IsWoman = p.profile1?.gender === "Femme";
@@ -15271,10 +15299,11 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 <div style={mmFollowViewMode === "grid" ? { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 10 } : { display: "flex", flexDirection: "column", gap: 10 }}>
                   {visibleMmFollow.map(p => {
                     const oneAnswered = p.user1_response === "accepted" || p.user2_response === "accepted";
+                    const refusedAt = p.refused_by === p.user1_id ? p.user1_responded_at : p.user2_responded_at;
                     const statusInfo = p.status === "pending"
                       ? { label: oneAnswered ? "Un seul a répondu" : "En attente", color: oneAnswered ? "#2980b9" : "#f39c12", bg: oneAnswered ? "rgba(41,128,185,0.08)" : "rgba(243,156,18,0.08)" }
                       : p.status === "accepted" ? { label: "Les deux ont accepté", color: "#27ae60", bg: "rgba(39,174,96,0.08)" }
-                      : p.status === "refused" ? { label: `Refusée par ${p.refused_by === p.user1_id ? (p.profile1?.name || "?") : (p.profile2?.name || "?")}`, color: "#e74c3c", bg: "rgba(231,76,60,0.08)" }
+                      : p.status === "refused" ? { label: `Refusée par ${p.refused_by === p.user1_id ? (p.profile1?.name || "?") : (p.profile2?.name || "?")}${refusedAt ? ` le ${fmtDT(refusedAt)}` : ""}`, color: "#e74c3c", bg: "rgba(231,76,60,0.08)" }
                       : { label: "Expirée", color: "#888", bg: "rgba(0,0,0,0.04)" };
                     // Toujours femme à gauche, homme à droite — peu importe l'ordre user1/user2 en base.
                     const p1IsWoman = p.profile1?.gender === "Femme";
