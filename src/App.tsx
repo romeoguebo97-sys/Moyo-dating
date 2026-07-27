@@ -16547,7 +16547,7 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
                 </div>
               </div>
 
-              <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
+              <div style={{ flex: 1, minHeight: 0, position: "relative", overflow: "hidden" }}>
                 <div style={{ height: "100%", overflowY: ambContractSigned ? "auto" : "hidden", padding: "18px 16px calc(env(safe-area-inset-bottom) + 24px)", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y", filter: ambContractSigned ? "none" : "blur(7px)", pointerEvents: ambContractSigned ? "auto" : "none", userSelect: ambContractSigned ? "auto" : "none" }}>
                 {/* Carte principale */}
                 <div style={{ background: "linear-gradient(135deg,#8B0D2F 0%,#6E0A25 100%)", borderRadius: 20, padding: "22px 20px", boxShadow: "0 10px 28px rgba(139,13,47,0.25)", marginBottom: 22 }}>
@@ -16707,7 +16707,7 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
                 <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="#8B0D2F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
               </div>
               <div style={{ fontWeight: 900, fontSize: "1.05rem", color: G.brun, marginBottom: 8 }}>Contrat Ambassadeur</div>
-              <p style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.6, marginBottom: 20 }}>Prends connaissance des 5 pages du contrat avant de le signer. Tu pourras ensuite remplir tes informations.</p>
+              <p style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.6, marginBottom: 20 }}>Prends connaissance des 5 pages du contrat. Tu pourras ensuite le remplir avec tes informations et le signer électroniquement.</p>
               <a href={`${SUPABASE_URL}/storage/v1/object/public/contracts/template.pdf`} target="_blank" rel="noopener noreferrer" style={{ display: "block", width: "100%", boxSizing: "border-box", background: "#fff", color: "#8B0D2F", border: "1.5px solid #8B0D2F", borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 700, textDecoration: "none", marginBottom: 10 }}>📄 Lire le contrat (PDF)</a>
               <button onClick={() => { setShowAmbContractRead(false); setShowAmbContractForm(true); }} style={{ width: "100%", background: "#8B0D2F", color: "#fff", border: "none", borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer", marginBottom: 10 }}>J'ai lu, je continue →</button>
               <div onClick={() => setShowAmbContractRead(false)} style={{ fontSize: "0.82rem", color: "#999", cursor: "pointer" }}>Annuler</div>
