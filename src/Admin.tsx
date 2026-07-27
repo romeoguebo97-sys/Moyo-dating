@@ -5347,7 +5347,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
     setSelectedUsers(new Set());
     setBulkDeleting(false);
     showToast(`${count} profil(s) supprimé(s).${skipped > 0 ? ` ${skipped} Super Admin(s) ignoré(s).` : ""}`, "success");
-    loadUsers(userSearch, userPage, usersSort, userSearchEmail);
+    loadUsers(userSearch, userPage, usersSort, userSearchEmail, usersFilters, userSearchPhone);
   };
 
 
@@ -6016,7 +6016,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
       setWarnModal(m => m ? { ...m, user: { ...m.user, warning_count: newCount } } : m);
       logAdminAction(auth.token, auth.userId, auth.name, `Avertissement supprimé pour ${user.name} (reste ${newCount}/3)`, user.id);
       showToast(`Avertissement supprimé. Il reste ${newCount}/3.`, "success");
-      loadUsers(userSearch, userPage, usersSort, userSearchEmail);
+      loadUsers(userSearch, userPage, usersSort, userSearchEmail, usersFilters, userSearchPhone);
     } catch { showToast("Erreur lors de la suppression.", "error"); }
   };
   const [pinModal, setPinModal] = useState<{ user: AdminProfile; mode: "set" | "reset" } | null>(null);
@@ -7097,6 +7097,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
           body: JSON.stringify({ status: "approved", reviewed_at: new Date().toISOString(), reviewed_by: auth.userId }),
         });
         logAdminAction(auth.token, auth.userId, auth.name, `Demande Ambassadeur approuvée pour ${req.name} : badge et statut affilié actif (pas de Premium offert à l'approbation).`, req.user_id);
+        fetch(`${SUPABASE_URL}/functions/v1/push-notify`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ mode: "user_push", user_id: req.user_id, title: "🎖 Tu es Ambassadeur !", body: "Ta demande a été acceptée. Direction ton profil pour découvrir ton tableau de bord." }) }).catch(() => {});
         showToast(`✅ ${req.name} est maintenant Ambassadeur.`, "success");
         setAmbassadorRequests(prev => prev.filter(r => r.id !== req.id));
         setAmbassadorApproveModal(null);
@@ -7112,6 +7113,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
           body: JSON.stringify({ status: "rejected", reviewed_at: new Date().toISOString(), reviewed_by: auth.userId }),
         });
         logAdminAction(auth.token, auth.userId, auth.name, `Demande Ambassadeur refusée pour ${req.name}.`, req.user_id);
+        fetch(`${SUPABASE_URL}/functions/v1/push-notify`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ mode: "user_push", user_id: req.user_id, title: "Réponse à ta demande Ambassadeur", body: "Ta demande n'a pas été retenue cette fois-ci. Tu peux réessayer plus tard depuis ton profil." }) }).catch(() => {});
         showToast(`Demande de ${req.name} refusée.`, "success");
         setAmbassadorRequests(prev => prev.filter(r => r.id !== req.id));
       } catch { showToast("Erreur lors du refus.", "error"); }
@@ -7994,16 +7996,17 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
   const displayedUsers = showIncomplete ? sortedUsers.filter(u => u.name === "..." || !u.name) : sortedUsers;
   const [userSearch, setUserSearch] = useState("");
   const [userSearchEmail, setUserSearchEmail] = useState("");
-  // Recherche automatique en direct (debounce ~450ms) dès qu'on tape dans l'un des deux champs,
+  const [userSearchPhone, setUserSearchPhone] = useState("");
+  // Recherche automatique en direct (debounce ~450ms) dès qu'on tape dans l'un des trois champs,
   // interroge directement la base sur TOUS les utilisateurs (pas seulement ceux déjà affichés).
   useEffect(() => {
     if (activeTab !== "users") return;
     const t = setTimeout(() => {
       setUserPage(0);
-      loadUsers(userSearch, 0, usersSort, userSearchEmail);
+      loadUsers(userSearch, 0, usersSort, userSearchEmail, usersFilters, userSearchPhone);
     }, 450);
     return () => clearTimeout(t);
-  }, [userSearch, userSearchEmail, activeTab]);
+  }, [userSearch, userSearchEmail, userSearchPhone, activeTab]);
   const [usersLoading, setUsersLoading] = useState(false);
   const [userPage, setUserPage] = useState(0);
   const USER_PAGE_SIZE_GRID = 50;
@@ -8204,7 +8207,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
   };
 
   // ── Chargement des utilisateurs avec recherche ──
-  const loadUsers = async (search = "", page = 0, sort = usersSort, searchEmail = "", filters = usersFilters) => {
+  const loadUsers = async (search = "", page = 0, sort = usersSort, searchEmail = "", filters = usersFilters, searchPhone = "") => {
     setUsersLoading(true);
     try {
       const pageSize = usersViewMode === "list" ? USER_PAGE_SIZE_LIST : USER_PAGE_SIZE_GRID;
@@ -8240,25 +8243,28 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
         recent: `last_seen=gte.${recentThreshold}`,
       };
       const filterQs = Array.from(filters).map(f => `&${filterClauses[f]}`).join("");
-      let params = `?select=id,name,age,city,gender,is_premium,is_admin,is_verified,is_banned,is_ambassador,created_at,last_seen,premium_until,premium_is_gift,email,admin_level&order=${serverSort}&limit=${pageSize}&offset=${offset}${filterQs}`;
-      if (search.trim() || searchEmail.trim()) {
+      let params = `?select=id,name,age,city,gender,is_premium,is_admin,is_verified,is_banned,is_ambassador,created_at,last_seen,premium_until,premium_is_gift,email,phone,admin_level&order=${serverSort}&limit=${pageSize}&offset=${offset}${filterQs}`;
+      if (search.trim() || searchEmail.trim() || searchPhone.trim()) {
         const nameQ = search.trim() ? `name.ilike.*${encodeURIComponent(search.trim())}*` : null;
         const emailQ = searchEmail.trim() ? `email.ilike.*${encodeURIComponent(searchEmail.trim())}*` : null;
+        const phoneQ = searchPhone.trim() ? `phone.ilike.*${encodeURIComponent(searchPhone.trim())}*` : null;
         // Toujours envelopper dans or=(...), même avec un seul filtre : la syntaxe "colonne.operateur.valeur"
         // (avec un point) n'est valide qu'à l'intérieur de or(...) — utilisée seule, elle est invalide
         // et Supabase l'ignore silencieusement, d'où le filtre qui ne trouvait jamais rien.
-        const orFilter = [nameQ, emailQ].filter(Boolean).join(",");
-        params = `?select=id,name,age,city,gender,is_premium,is_admin,is_verified,is_banned,is_ambassador,created_at,last_seen,premium_until,premium_is_gift,email,admin_level&or=(${orFilter})&order=${serverSort}&limit=${pageSize}&offset=${offset}${filterQs}`;
+        const orFilter = [nameQ, emailQ, phoneQ].filter(Boolean).join(",");
+        params = `?select=id,name,age,city,gender,is_premium,is_admin,is_verified,is_banned,is_ambassador,created_at,last_seen,premium_until,premium_is_gift,email,phone,admin_level&or=(${orFilter})&order=${serverSort}&limit=${pageSize}&offset=${offset}${filterQs}`;
       }
       const res = await sb.query<AdminProfile>(auth.token, "profiles", params);
       // Quand une recherche est active, on trie par pertinence (correspondance exacte / "commence par" en premier)
       // plutôt que par le tri générique (date, etc.) — pour que la bonne personne apparaisse en tête, pas noyée.
-      if (search.trim() || searchEmail.trim()) {
+      if (search.trim() || searchEmail.trim() || searchPhone.trim()) {
         const nq = search.trim().toLowerCase();
         const eq = searchEmail.trim().toLowerCase();
+        const pq = searchPhone.trim().toLowerCase();
         const score = (u: AdminProfile) => {
           const n = (u.name || "").toLowerCase();
           const e = ((u as any).email || "").toLowerCase();
+          const ph = ((u as any).phone || "").toLowerCase();
           let best = 3; // 3 = correspond seulement en "contient" (déjà filtré côté serveur)
           if (nq) {
             if (n === nq) best = Math.min(best, 0);
@@ -8269,6 +8275,11 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
             if (e === eq) best = Math.min(best, 0);
             else if (e.startsWith(eq)) best = Math.min(best, 1);
             else if (e.includes(eq)) best = Math.min(best, 2);
+          }
+          if (pq) {
+            if (ph === pq) best = Math.min(best, 0);
+            else if (ph.startsWith(pq)) best = Math.min(best, 1);
+            else if (ph.includes(pq)) best = Math.min(best, 2);
           }
           return best;
         };
@@ -8333,7 +8344,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
   useEffect(() => {
     // Recharger les stats à chaque fois qu'on revient sur l'onglet "stats"
     if (activeTab === "stats") loadStats();
-    if (activeTab === "users") { setUserPage(0); loadUsers(userSearch, 0, usersSort, userSearchEmail); }
+    if (activeTab === "users") { setUserPage(0); loadUsers(userSearch, 0, usersSort, userSearchEmail, usersFilters, userSearchPhone); }
   }, [activeTab, usersViewMode]);
 
   // ── Action admin générique sur un profil ──
@@ -10853,31 +10864,41 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               </div>
             </div>
           )}
-          {/* Barre de recherche : deux champs côte à côte (nom / email) */}
-          <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-            <div style={{ position: "relative", flex: 1 }}>
+          {/* Barre de recherche : trois champs côte à côte (nom / email / téléphone) */}
+          <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
+            <div style={{ position: "relative", flex: 1, minWidth: 200 }}>
               <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}><IcoSearch /></span>
               <input
                 value={userSearch}
                 onChange={e => setUserSearch(e.target.value)}
-                onKeyDown={e => { if (e.key === "Enter") { setUserPage(0); loadUsers(userSearch, 0, usersSort, userSearchEmail); } }}
+                onKeyDown={e => { if (e.key === "Enter") { setUserPage(0); loadUsers(userSearch, 0, usersSort, userSearchEmail, usersFilters, userSearchPhone); } }}
                 placeholder="Nom d'utilisateur…"
                 style={{ width: "100%", padding: "11px 14px 11px 38px", borderRadius: 12, border: `2px solid ${G.gris}`, fontSize: "0.9rem", background: G.blanc, color: G.brun, outline: "none", boxSizing: "border-box" }}
               />
             </div>
-            <div style={{ position: "relative", flex: 1 }}>
+            <div style={{ position: "relative", flex: 1, minWidth: 200 }}>
               <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></span>
               <input
                 value={userSearchEmail}
                 onChange={e => setUserSearchEmail(e.target.value)}
-                onKeyDown={e => { if (e.key === "Enter") { setUserPage(0); loadUsers(userSearch, 0, usersSort, userSearchEmail); } }}
+                onKeyDown={e => { if (e.key === "Enter") { setUserPage(0); loadUsers(userSearch, 0, usersSort, userSearchEmail, usersFilters, userSearchPhone); } }}
                 placeholder="Email d'utilisateur…"
+                style={{ width: "100%", padding: "11px 14px 11px 38px", borderRadius: 12, border: `2px solid ${G.gris}`, fontSize: "0.9rem", background: G.blanc, color: G.brun, outline: "none", boxSizing: "border-box" }}
+              />
+            </div>
+            <div style={{ position: "relative", flex: 1, minWidth: 200 }}>
+              <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg></span>
+              <input
+                value={userSearchPhone}
+                onChange={e => setUserSearchPhone(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter") { setUserPage(0); loadUsers(userSearch, 0, usersSort, userSearchEmail, usersFilters, userSearchPhone); } }}
+                placeholder="Téléphone d'utilisateur…"
                 style={{ width: "100%", padding: "11px 14px 11px 38px", borderRadius: 12, border: `2px solid ${G.gris}`, fontSize: "0.9rem", background: G.blanc, color: G.brun, outline: "none", boxSizing: "border-box" }}
               />
             </div>
           </div>
           <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-            <Btn variant="primary" onClick={() => { setUserPage(0); loadUsers(userSearch, 0, usersSort, userSearchEmail); }} style={{ flex: 1, padding: "10px" }}>
+            <Btn variant="primary" onClick={() => { setUserPage(0); loadUsers(userSearch, 0, usersSort, userSearchEmail, usersFilters, userSearchPhone); }} style={{ flex: 1, padding: "10px" }}>
               Rechercher
             </Btn>
             <Btn variant="ghost" onClick={() => { setUserSearch(""); setUserSearchEmail(""); setUserPage(0); loadUsers("", 0, usersSort, ""); }} style={{ padding: "10px 16px" }}>
@@ -10888,7 +10909,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
           <div style={{ display: "flex", gap: 8, marginBottom: 14, alignItems: "center" }}>
             <select
               value={usersSort}
-              onChange={e => { const s = e.target.value as typeof usersSort; setUsersSort(s); setUserPage(0); loadUsers(userSearch, 0, s, userSearchEmail); }}
+              onChange={e => { const s = e.target.value as typeof usersSort; setUsersSort(s); setUserPage(0); loadUsers(userSearch, 0, s, userSearchEmail, usersFilters, userSearchPhone); }}
               style={{ flex: 1, padding: "8px 12px", borderRadius: 10, border: `2px solid ${G.gris}`, fontSize: "0.8rem", fontWeight: 600, color: "#333", background: G.blanc, cursor: "pointer", outline: "none" }}
             >
               <option value="created_at.desc">📅 Plus récents</option>
@@ -10925,13 +10946,13 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               <div key={label} onClick={() => {
                   const next = new Set(usersFilters);
                   if (next.has(key)) next.delete(key); else next.add(key);
-                  setUsersFilters(next); setUserPage(0); loadUsers(userSearch, 0, usersSort, userSearchEmail, next);
+                  setUsersFilters(next); setUserPage(0); loadUsers(userSearch, 0, usersSort, userSearchEmail, next, userSearchPhone);
                 }}
                 style={{ fontSize: "0.72rem", fontWeight: 600, color: usersFilters.has(key) ? "#fff" : "#555", background: usersFilters.has(key) ? G.rouge : G.creme, border: `1.5px solid ${usersFilters.has(key) ? G.rouge : G.gris}`, borderRadius: 50, padding: "5px 11px", cursor: "pointer" }}>
                 {label}
               </div>
             ))}
-            {usersFilters.size > 0 && <div onClick={() => { const empty = new Set<any>(); setUsersFilters(empty); setUserPage(0); loadUsers(userSearch, 0, usersSort, userSearchEmail, empty); }} style={{ fontSize: "0.72rem", color: "#999", fontWeight: 600, cursor: "pointer", padding: "5px 9px", textDecoration: "underline" }}>Tout afficher</div>}
+            {usersFilters.size > 0 && <div onClick={() => { const empty = new Set<any>(); setUsersFilters(empty); setUserPage(0); loadUsers(userSearch, 0, usersSort, userSearchEmail, empty, userSearchPhone); }} style={{ fontSize: "0.72rem", color: "#999", fontWeight: 600, cursor: "pointer", padding: "5px 9px", textDecoration: "underline" }}>Tout afficher</div>}
           </div>
 
           {usersLoading ? (
@@ -11204,13 +11225,13 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
 
               {/* Pagination */}
               <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
-                <Btn variant="ghost" onClick={() => { const p = Math.max(0, userPage - 1); setUserPage(p); loadUsers(userSearch, p, usersSort, userSearchEmail); }} disabled={userPage === 0} style={{ flex: 1, padding: "10px" }}>
+                <Btn variant="ghost" onClick={() => { const p = Math.max(0, userPage - 1); setUserPage(p); loadUsers(userSearch, p, usersSort, userSearchEmail, usersFilters, userSearchPhone); }} disabled={userPage === 0} style={{ flex: 1, padding: "10px" }}>
                   ← Précédent
                 </Btn>
                 <span style={{ display: "flex", alignItems: "center", fontSize: "0.8rem", color: "#888", padding: "0 8px" }}>
                   Page {userPage + 1}
                 </span>
-                <Btn variant="ghost" onClick={() => { const p = userPage + 1; setUserPage(p); loadUsers(userSearch, p, usersSort, userSearchEmail); }} disabled={users.length < USER_PAGE_SIZE} style={{ flex: 1, padding: "10px" }}>
+                <Btn variant="ghost" onClick={() => { const p = userPage + 1; setUserPage(p); loadUsers(userSearch, p, usersSort, userSearchEmail, usersFilters, userSearchPhone); }} disabled={users.length < USER_PAGE_SIZE} style={{ flex: 1, padding: "10px" }}>
                   Suivant →
                 </Btn>
               </div>

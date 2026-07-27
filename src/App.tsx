@@ -4849,6 +4849,26 @@ function Login({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth
   const [forgotEmail, setForgotEmail] = useState("");
   const [forgotName, setForgotName] = useState("");
   const [forgotDesiredPassword, setForgotDesiredPassword] = useState("");
+  const [forgotMatchStatus, setForgotMatchStatus] = useState<"idle" | "checking" | "match" | "no_match">("idle");
+  useEffect(() => {
+    if (!showForgot || forgotMethod !== "whatsapp") { setForgotMatchStatus("idle"); return; }
+    const email = forgotEmail.trim();
+    const name = forgotName.trim();
+    if (!email || !name) { setForgotMatchStatus("idle"); return; }
+    setForgotMatchStatus("checking");
+    const t = setTimeout(async () => {
+      try {
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/check_account_match`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY },
+          body: JSON.stringify({ p_email: email, p_name: name }),
+        });
+        const data = await r.json().catch(() => null);
+        setForgotMatchStatus(data === true ? "match" : "no_match");
+      } catch { setForgotMatchStatus("no_match"); }
+    }, 500);
+    return () => clearTimeout(t);
+  }, [showForgot, forgotMethod, forgotEmail, forgotName]);
   const [forgotSent, setForgotSent] = useState(false);
 
   const handleLogin = async () => {
@@ -5081,13 +5101,22 @@ function Login({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth
 
         {forgotMethod === "whatsapp" && (
           <>
-            <p style={{ color: "#666", fontSize: "0.82rem", lineHeight: 1.5, marginBottom: 18 }}>Renseigne ton email pour qu'on retrouve ton compte, puis envoie ta demande sur WhatsApp, on te répond avec un nouveau mot de passe.</p>
+            <p style={{ color: "#666", fontSize: "0.82rem", lineHeight: 1.5, marginBottom: 10 }}>Renseigne ton email et ton prénom pour qu'on retrouve ton compte, puis envoie ta demande sur WhatsApp, on te répond avec un nouveau mot de passe.</p>
+            <p style={{ color: "#999", fontSize: "0.76rem", lineHeight: 1.5, marginBottom: 18, fontStyle: "italic" }}>Pour la sécurité et la confidentialité de nos abonnés, le nom et l'email doivent être identiques à ceux du compte dont tu veux changer le mot de passe.</p>
             <Input label="Ton email" type="email" value={forgotEmail} onChange={e => setForgotEmail(e.target.value)} placeholder="ton@email.com" icon="email" variant="line" />
-            <Input label={<>Ton prénom <span style={{ color: "#aaa", fontSize: "0.78rem", fontWeight: 500 }}>(optionnel, aide à te retrouver plus vite)</span></>} value={forgotName} onChange={e => setForgotName(e.target.value)} placeholder="Ex: Faïda" icon="user" variant="line" />
+            <Input label="Ton prénom" value={forgotName} onChange={e => setForgotName(e.target.value)} placeholder="Ex: Faïda" icon="user" variant="line" />
             <Input label={<>Mot de passe souhaité <span style={{ color: "#aaa", fontSize: "0.78rem", fontWeight: 500 }}>(optionnel)</span></>} type="password" value={forgotDesiredPassword} onChange={e => setForgotDesiredPassword(e.target.value)} placeholder="Le mot de passe que tu veux" icon="lock" hint="Si tu ne remplis pas ce champ, on t'en attribuera un nouveau." variant="line" />
-            <a href={forgotEmail.trim() ? waSupportLink : undefined} target="_blank" rel="noopener noreferrer"
-              onClick={e => { if (!forgotEmail.trim()) { e.preventDefault(); setErrorMsg("Entre ton email d'abord."); } }}
-              style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", boxSizing: "border-box", background: forgotEmail.trim() ? "#25D366" : "#ccc", color: "#fff", border: "none", borderRadius: 50, padding: "13px", fontSize: "0.9rem", fontWeight: 800, cursor: "pointer", textDecoration: "none", marginBottom: 12 }}>
+            {forgotMatchStatus === "checking" && (
+              <div style={{ fontSize: "0.8rem", color: "#999", marginBottom: 12, textAlign: "center" }}>Vérification...</div>
+            )}
+            {forgotMatchStatus === "no_match" && (
+              <div style={{ background: "rgba(192,57,43,0.08)", border: "1.5px solid #C0392B", borderRadius: 12, padding: 12, marginBottom: 14 }}>
+                <p style={{ fontSize: "0.8rem", color: "#C0392B", lineHeight: 1.5, margin: 0 }}>Nous n'avons pas trouvé de compte correspondant à ces identifiants. Vérifie que le nom et l'email sont bien ceux avec lesquels tu as créé ton compte, ou <span onClick={closeForgot} style={{ textDecoration: "underline", cursor: "pointer", fontWeight: 700 }}>crée un compte</span>.</p>
+              </div>
+            )}
+            <a href={forgotMatchStatus === "match" ? waSupportLink : undefined} target="_blank" rel="noopener noreferrer"
+              onClick={e => { if (forgotMatchStatus !== "match") e.preventDefault(); }}
+              style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", boxSizing: "border-box", background: forgotMatchStatus === "match" ? "#25D366" : "#ccc", color: "#fff", border: "none", borderRadius: 50, padding: "13px", fontSize: "0.9rem", fontWeight: 800, cursor: forgotMatchStatus === "match" ? "pointer" : "not-allowed", textDecoration: "none", marginBottom: 12 }}>
               <svg width="17" height="17" viewBox="0 0 24 24" fill="#fff"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24z"/></svg>
               Envoyer la demande via WhatsApp
             </a>
@@ -13999,6 +14028,17 @@ function GroupChat({ auth, onBack, onShowPremium, onOpenPrivateChat }: { auth: A
   const isApproved = myStatus === "approved" && !isRemoved;
 
   const [statusLoading, setStatusLoading] = useState(true);
+  const [myIsPremium, setMyIsPremium] = useState<boolean | null>(null);
+  // Statut Premium ACTUEL (pas au moment de la demande d'adhésion) : un membre déjà approuvé
+  // dont le Premium a expiré reste membre (pas de nouvelle demande à refaire), mais n'accède plus
+  // au contenu tant qu'il n'a pas repris son abonnement — voir le garde-fou plus bas.
+  useEffect(() => {
+    let alive = true;
+    sb.query<{ is_premium: boolean }>(auth.token, "profiles", `?id=eq.${auth.userId}&select=is_premium`)
+      .then(rows => { if (alive && rows[0]) setMyIsPremium(!!rows[0].is_premium); })
+      .catch(() => { if (alive) setMyIsPremium(null); });
+    return () => { alive = false; };
+  }, [auth.userId, auth.token]);
 
   const [showWelcome, setShowWelcome] = useState(false);
   // Mon statut dans le groupe (rôle, statut de la demande, éventuelle exclusion)
@@ -14392,6 +14432,10 @@ function GroupChat({ auth, onBack, onShowPremium, onOpenPrivateChat }: { auth: A
   }
   if (myStatus !== "approved") {
     return <StatusScreen icon={groupIcon} title="Pas encore membre" text="Tu dois d'abord demander à rejoindre le Groupe Premium." />;
+  }
+  if (myIsPremium === false) {
+    return <StatusScreen icon={groupIcon} title="Reprends ton Premium" text="Le Groupe Premium est réservé aux membres avec un abonnement actif. Ton accès reviendra automatiquement dès que tu reprends ton Premium — tu restes membre, pas besoin de redemander à rejoindre."
+      action={<Btn variant="primary" onClick={() => onShowPremium("group_premium_expired")} style={{ width: "100%", maxWidth: 240 }}>Reprendre mon Premium</Btn>} />;
   }
 
   return (
@@ -15644,6 +15688,8 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
   const [ambAffiliateId, setAmbAffiliateId] = useState<string | null>(null);
   const [ambPromoCode, setAmbPromoCode] = useState<string | null>(null);
   const [ambCommissionPercent, setAmbCommissionPercent] = useState<number | null>(null);
+  const [showAmbWelcome, setShowAmbWelcome] = useState(false);
+  const [showAmbRejected, setShowAmbRejected] = useState(false);
   const [ambConversions, setAmbConversions] = useState<{ id: string; plan_label?: string; commission_amount: number; status: string; created_at: string }[]>([]);
   const [ambInscriptions, setAmbInscriptions] = useState(0);
   const [ambPayoutPending, setAmbPayoutPending] = useState<{ amount: number } | null>(null);
@@ -15654,6 +15700,12 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
         const d = await r.json().catch(() => []);
         if (Array.isArray(d) && d[0]?.is_ambassador) {
           setAmbStatus("ambassador");
+          // Message de bienvenue une seule fois, la première fois qu'on se voit Ambassadeur
+          // (même principe que le message de bienvenue du Groupe Premium).
+          try {
+            const key = `moyo_ambassador_welcome_${auth.userId}`;
+            if (!localStorage.getItem(key)) { localStorage.setItem(key, "1"); setShowAmbWelcome(true); }
+          } catch {}
           const ra = await fetch(`${SUPABASE_URL}/rest/v1/affiliates?user_id=eq.${auth.userId}&select=id,promo_code,commission_percent&limit=1`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
           const da = await ra.json().catch(() => []);
           const affId = Array.isArray(da) ? da[0]?.id : null;
@@ -15680,7 +15732,18 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
         }
         const rr = await fetch(`${SUPABASE_URL}/rest/v1/ambassador_requests?user_id=eq.${auth.userId}&status=eq.pending&select=id&limit=1`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
         const dr = await rr.json().catch(() => []);
-        setAmbStatus(Array.isArray(dr) && dr.length > 0 ? "pending" : "none");
+        if (Array.isArray(dr) && dr.length > 0) { setAmbStatus("pending"); return; }
+        setAmbStatus("none");
+        // Demande refusée pas encore vue : un message ponctuel s'affiche une seule fois, gardé
+        // en mémoire par identifiant de demande (une nouvelle demande refusée réaffiche le message).
+        try {
+          const rj = await fetch(`${SUPABASE_URL}/rest/v1/ambassador_requests?user_id=eq.${auth.userId}&status=eq.rejected&select=id&order=reviewed_at.desc&limit=1`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+          const dj = await rj.json().catch(() => []);
+          if (Array.isArray(dj) && dj[0]) {
+            const key = `moyo_ambassador_rejected_seen_${dj[0].id}`;
+            if (!localStorage.getItem(key)) { localStorage.setItem(key, "1"); setShowAmbRejected(true); }
+          }
+        } catch {}
       } catch { setAmbStatus("none"); }
     })();
   }, [auth.userId]);
@@ -16540,6 +16603,29 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
               <p style={{ fontSize: "0.82rem", color: "#666", lineHeight: 1.6, marginBottom: 10 }}><strong>Lien d'invitation</strong> : à utiliser pour quelqu'un qui n'a pas encore de compte. Dès son inscription via ce lien, il est automatiquement rattaché à vous. Le jour où il passe Premium, tout se déclenche tout seul : votre commission et ses jours bonus.</p>
               <p style={{ fontSize: "0.82rem", color: "#666", lineHeight: 1.6, marginBottom: 20 }}>{ambPromoCode ? <><strong>Code promo</strong> : à utiliser pour quelqu'un qui a déjà un compte Moyo Dating, créé sans votre lien. Il le saisit lui-même au moment de payer son Premium : ça vous crédite la commission et lui donne ses jours bonus, même si son compte n'était pas rattaché à vous au départ.</> : "Un code promo pourra aussi vous être attribué par l'équipe Moyo Dating, pour les personnes qui ont déjà un compte créé sans votre lien."}</p>
               <button onClick={() => setShowAmbInfo(false)} style={{ width: "100%", background: "#8B0D2F", color: "#fff", border: "none", borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>Compris</button>
+            </div>
+          </div>
+        )}
+
+        {showAmbWelcome && (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10002, display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }} onClick={() => setShowAmbWelcome(false)}>
+            <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 20, width: "100%", maxWidth: 380, padding: "26px 22px", textAlign: "center" }}>
+              <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(139,13,47,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
+                <svg width="27" height="27" viewBox="0 0 24 24" fill="none" stroke="#8B0D2F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>
+              </div>
+              <div style={{ fontWeight: 900, fontSize: "1.05rem", color: G.brun, marginBottom: 8 }}>Tu es Ambassadeur !</div>
+              <p style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.6, marginBottom: 20 }}>Ta demande a été acceptée. Tu peux dès maintenant partager ton lien ou ton code, et suivre tes gains depuis ton tableau de bord.</p>
+              <button onClick={() => setShowAmbWelcome(false)} style={{ width: "100%", background: "#8B0D2F", color: "#fff", border: "none", borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>Découvrir mon tableau de bord</button>
+            </div>
+          </div>
+        )}
+
+        {showAmbRejected && (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10002, display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }} onClick={() => setShowAmbRejected(false)}>
+            <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 20, width: "100%", maxWidth: 380, padding: "26px 22px", textAlign: "center" }}>
+              <div style={{ fontWeight: 900, fontSize: "1.05rem", color: G.brun, marginBottom: 8 }}>Réponse à ta demande</div>
+              <p style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.6, marginBottom: 20 }}>Ta demande pour devenir Ambassadeur n'a pas été retenue cette fois-ci. Tu peux réessayer plus tard depuis cet écran.</p>
+              <button onClick={() => setShowAmbRejected(false)} style={{ width: "100%", background: "#8B0D2F", color: "#fff", border: "none", borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>Compris</button>
             </div>
           </div>
         )}
