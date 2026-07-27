@@ -418,6 +418,8 @@ let FEATURE_PHOTO_RETOUCH = true;
 let FEATURE_MODERATION_INSULTS = true;
 // Blocage automatique du partage de numéro/réseaux pour les comptes gratuits (hasContactInfo).
 let FEATURE_MODERATION_CONTACT = true;
+export let SUPPORT_REPLY_PUSH_ENABLED = true;
+export function setSUPPORT_REPLY_PUSH_ENABLED(v: boolean) { SUPPORT_REPLY_PUSH_ENABLED = v; }
 // Avertissement officiel (1/3, 2/3, 3/3) + bannissement automatique au 3e, en cas de tentative
 // de partage de contact — remplace le simple signalement quand activé.
 let AUTO_WARN_BAN_CONTACT_ENABLED = false;
@@ -501,7 +503,7 @@ export function dedupeMatchesByCouple<T extends { user1?: string; user2?: string
 }
 
 // Charger les settings dynamiques depuis Supabase au démarrage
-fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_messages_free_femme,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,pay_wero_enabled,pay_paypal_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,feature_show_likes_views_free,feature_group_premium,feature_group_photos,feature_photo_retouch,feature_moderation_insults,feature_moderation_contact,premium_screen_variant,custom_banned_words,contact_banned_words,disabled_builtin_words,disabled_builtin_contact_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,pay_wero_number,pay_paypal_number,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,social_linkedin,store_link_android,store_link_ios,plan_week_enabled,plan_month_enabled,plan_2month_enabled,discover_default_mode,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,auto_warn_ban_contact_enabled,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price,privacy_notice_enabled,premium_boost_enabled,assistant_photo_url,broadcast_enabled,modal_match_title,modal_match_subtitle,referral_bonus_week_days,referral_bonus_month_days,referral_bonus_2month_days,affiliate_commission_percent,affiliate_payable_delay_days,privacy_notice_step1_text,privacy_notice_step2_text,ban_screen_text,pay_link_enabled,feature_ambassador_program,affiliate_payout_min_fcfa,affiliate_promo_bonus_days)&select=key,value`, {
+fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_messages_free_femme,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,pay_wero_enabled,pay_paypal_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,feature_show_likes_views_free,feature_group_premium,feature_group_photos,feature_photo_retouch,feature_moderation_insults,feature_moderation_contact,premium_screen_variant,custom_banned_words,contact_banned_words,disabled_builtin_words,disabled_builtin_contact_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,pay_wero_number,pay_paypal_number,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,social_linkedin,store_link_android,store_link_ios,plan_week_enabled,plan_month_enabled,plan_2month_enabled,discover_default_mode,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,auto_warn_ban_contact_enabled,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price,privacy_notice_enabled,premium_boost_enabled,assistant_photo_url,broadcast_enabled,modal_match_title,modal_match_subtitle,referral_bonus_week_days,referral_bonus_month_days,referral_bonus_2month_days,affiliate_commission_percent,affiliate_payable_delay_days,privacy_notice_step1_text,privacy_notice_step2_text,ban_screen_text,pay_link_enabled,feature_ambassador_program,affiliate_payout_min_fcfa,affiliate_promo_bonus_days,support_reply_push_enabled)&select=key,value`, {
   headers: { "apikey": SUPABASE_KEY },
 }).then(r => r.json()).then((data: { key: string; value: string }[]) => {
   if (!Array.isArray(data)) return;
@@ -521,6 +523,7 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
   if (map["feature_group_photos"] !== undefined) FEATURE_GROUP_PHOTOS = map["feature_group_photos"] !== "false";
   if (map["feature_moderation_insults"] !== undefined) FEATURE_MODERATION_INSULTS = map["feature_moderation_insults"] !== "false";
   if (map["feature_moderation_contact"] !== undefined) FEATURE_MODERATION_CONTACT = map["feature_moderation_contact"] !== "false";
+  if (map["support_reply_push_enabled"] !== undefined) SUPPORT_REPLY_PUSH_ENABLED = map["support_reply_push_enabled"] !== "false";
   if (map["auto_warn_ban_contact_enabled"] !== undefined) setAUTO_WARN_BAN_CONTACT_ENABLED(map["auto_warn_ban_contact_enabled"]);
   if (map["broadcast_enabled"] !== undefined) setBROADCAST_ENABLED(map["broadcast_enabled"]);
   if (map["modal_match_title"] !== undefined) setMATCH_TITLE(map["modal_match_title"]);
@@ -11029,8 +11032,11 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
     const supportRows = await sb.query<ReportRowLike>(auth.token, "reports", `?select=id,reason,reporter_id,reported_id,status,created_at&or=(reporter_id.eq.${auth.userId},reported_id.eq.${auth.userId})&order=created_at.desc&limit=50`).catch(() => [] as ReportRowLike[]);
     const hasSupport = supportRows.some(r => isSupportReason(r.reason));
     if (!res.length) {
-      const onlySupport = hasSupport ? [{ ...supportMatch, lastMsg: supportRows.find(r => isSupportReason(r.reason)) ? { match_id: "__support__", sender_id: supportRows.find(r => isSupportReason(r.reason))!.reason.startsWith(SUPPORT_PREFIX_REPLY) ? SUPPORT_TEAM_ID : auth.userId, content: cleanSupportReason(supportRows.find(r => isSupportReason(r.reason))!.reason), is_read: true, created_at: supportRows.find(r => isSupportReason(r.reason))!.created_at } : undefined } as Match] : [];
-      setConvs(onlySupport); await loadStatuses(onlySupport); onUnreadCount(0); setLoading(false); return onlySupport;
+      const supportLastOnly = supportRows.find(r => isSupportReason(r.reason));
+      const supportSeenAtOnly = (() => { try { return localStorage.getItem(`moyo_support_seen_${auth.userId}`); } catch { return null; } })();
+      const supportIsReadOnly = !supportLastOnly || !supportLastOnly.reason.startsWith(SUPPORT_PREFIX_REPLY) || (!!supportSeenAtOnly && supportSeenAtOnly >= (supportLastOnly.created_at || ""));
+      const onlySupport = hasSupport ? [{ ...supportMatch, unreadCount: supportIsReadOnly ? 0 : 1, lastMsg: supportLastOnly ? { match_id: "__support__", sender_id: supportLastOnly.reason.startsWith(SUPPORT_PREFIX_REPLY) ? SUPPORT_TEAM_ID : auth.userId, content: cleanSupportReason(supportLastOnly.reason), is_read: supportIsReadOnly, created_at: supportLastOnly.created_at } : undefined } as Match] : [];
+      setConvs(onlySupport); await loadStatuses(onlySupport); onUnreadCount(hasSupport && !supportIsReadOnly ? 1 : 0); setLoading(false); return onlySupport;
     }
     // ── Requêtes regroupées : au lieu de 3 requêtes PAR conversation (profil, dernier message,
     //    non-lus), on récupère TOUS les profils en un seul appel, et le dernier message + les
@@ -11065,8 +11071,10 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
       return true;
     });
     const supportLast = supportRows.find(r => isSupportReason(r.reason));
+    const supportSeenAt = (() => { try { return localStorage.getItem(`moyo_support_seen_${auth.userId}`); } catch { return null; } })();
+    const supportIsRead = !supportLast || !supportLast.reason.startsWith(SUPPORT_PREFIX_REPLY) || (!!supportSeenAt && supportSeenAt >= (supportLast.created_at || ""));
     const finalConvs = hasSupport
-      ? [{ ...supportMatch, lastMsg: supportLast ? { match_id: "__support__", sender_id: supportLast.reason.startsWith(SUPPORT_PREFIX_REPLY) ? SUPPORT_TEAM_ID : auth.userId, content: cleanSupportReason(supportLast.reason), is_read: true, created_at: supportLast.created_at } : undefined } as Match, ...deduped]
+      ? [{ ...supportMatch, unreadCount: supportIsRead ? 0 : 1, lastMsg: supportLast ? { match_id: "__support__", sender_id: supportLast.reason.startsWith(SUPPORT_PREFIX_REPLY) ? SUPPORT_TEAM_ID : auth.userId, content: cleanSupportReason(supportLast.reason), is_read: supportIsRead, created_at: supportLast.created_at } : undefined } as Match, ...deduped]
       : deduped;
     setConvs(finalConvs);
     await loadStatuses(finalConvs);
@@ -11091,6 +11099,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
         created_at: r.created_at,
       }));
       setMsgs(supportMsgs);
+      try { localStorage.setItem(`moyo_support_seen_${auth.userId}`, new Date().toISOString()); } catch {}
       const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       setMsgCount(supportMsgs.filter(m => m.sender_id === auth.userId && (m.created_at || "") >= since24h).length);
       loadConvs();
@@ -11288,6 +11297,17 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
                 console.error("[Moyo][AutoWarnContact] ❌ La fonction Edge a répondu ok:false :", okData.error || "(pas de détail)");
               } else {
                 console.log("[Moyo][AutoWarnContact] ✅", okData);
+                // Push uniquement au tout premier avertissement (jamais aux suivants, pour ne pas
+                // multiplier les notifications sur une même conversation).
+                if (SUPPORT_REPLY_PUSH_ENABLED) {
+                  try {
+                    const wc = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${auth.userId}&select=warning_count`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+                    const wd = await wc.json().catch(() => []);
+                    if (Array.isArray(wd) && wd[0]?.warning_count === 1) {
+                      fetch(`${SUPABASE_URL}/functions/v1/push-notify`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ mode: "user_push", user_id: auth.userId, title: "⚠️ Avertissement Moyo Dating", body: "Tu as reçu un message dans Assistance Moyo Dating, consulte-le." }) }).catch(() => {});
+                    }
+                  } catch {}
+                }
               }
             }
           } catch (e: any) {
@@ -15688,7 +15708,6 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
   const [ambAffiliateId, setAmbAffiliateId] = useState<string | null>(null);
   const [ambPromoCode, setAmbPromoCode] = useState<string | null>(null);
   const [ambCommissionPercent, setAmbCommissionPercent] = useState<number | null>(null);
-  const [showAmbWelcome, setShowAmbWelcome] = useState(false);
   const [showAmbRejected, setShowAmbRejected] = useState(false);
   const [ambConversions, setAmbConversions] = useState<{ id: string; plan_label?: string; commission_amount: number; status: string; created_at: string }[]>([]);
   const [ambInscriptions, setAmbInscriptions] = useState(0);
@@ -15700,11 +15719,13 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
         const d = await r.json().catch(() => []);
         if (Array.isArray(d) && d[0]?.is_ambassador) {
           setAmbStatus("ambassador");
-          // Message de bienvenue une seule fois, la première fois qu'on se voit Ambassadeur
-          // (même principe que le message de bienvenue du Groupe Premium).
+          // Ouverture directe du tableau de bord si on arrive depuis l'écran de bienvenue globale
+          // ou la campagne "Deviens Ambassadeur" (voir moyo_open_ambassador_dashboard).
           try {
-            const key = `moyo_ambassador_welcome_${auth.userId}`;
-            if (!localStorage.getItem(key)) { localStorage.setItem(key, "1"); setShowAmbWelcome(true); }
+            if (sessionStorage.getItem("moyo_open_ambassador_dashboard") === "1") {
+              sessionStorage.removeItem("moyo_open_ambassador_dashboard");
+              setShowAmbDashboard(true);
+            }
           } catch {}
           const ra = await fetch(`${SUPABASE_URL}/rest/v1/affiliates?user_id=eq.${auth.userId}&select=id,promo_code,commission_percent&limit=1`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
           const da = await ra.json().catch(() => []);
@@ -16607,18 +16628,6 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
           </div>
         )}
 
-        {showAmbWelcome && (
-          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10002, display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }} onClick={() => setShowAmbWelcome(false)}>
-            <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 20, width: "100%", maxWidth: 380, padding: "26px 22px", textAlign: "center" }}>
-              <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(139,13,47,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
-                <svg width="27" height="27" viewBox="0 0 24 24" fill="none" stroke="#8B0D2F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>
-              </div>
-              <div style={{ fontWeight: 900, fontSize: "1.05rem", color: G.brun, marginBottom: 8 }}>Tu es Ambassadeur !</div>
-              <p style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.6, marginBottom: 20 }}>Ta demande a été acceptée. Tu peux dès maintenant partager ton lien ou ton code, et suivre tes gains depuis ton tableau de bord.</p>
-              <button onClick={() => setShowAmbWelcome(false)} style={{ width: "100%", background: "#8B0D2F", color: "#fff", border: "none", borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>Découvrir mon tableau de bord</button>
-            </div>
-          </div>
-        )}
 
         {showAmbRejected && (
           <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10002, display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }} onClick={() => setShowAmbRejected(false)}>
@@ -17919,6 +17928,7 @@ export default function App() {
   const [premiumNudgeMessage, setPremiumNudgeMessage] = useState("");
   const [ambassadorNudgeOpen, setAmbassadorNudgeOpen] = useState(false);
   const [ambassadorNudgeMessage, setAmbassadorNudgeMessage] = useState("");
+  const [showAmbWelcomeGlobal, setShowAmbWelcomeGlobal] = useState(false);
   // ── Fenêtre "Super promo" : offre Premium 1 mois à prix réduit, ciblée par segment,
   //    affichée au max une fois par jour. Le prix/l'expiration/le message viennent de
   //    app_settings (promo_*) et sont transmis à PremiumModal pour appliquer le tarif réduit. ──
@@ -18868,6 +18878,13 @@ export default function App() {
 
         if (settings["verification_prompt_enabled"] === "true" && !me.is_verified) { setVerifyPromptMe({ age: me.age, gender: me.gender }); setVerifyPromptOpen(true); return; }
 
+        // Bienvenue Ambassadeur : dès l'ouverture de l'app, pas seulement en visitant Profil —
+        // et pas un simple toggle admin, ça reflète un vrai changement de statut du compte.
+        if (me.is_ambassador) {
+          const key = `moyo_ambassador_welcome_${auth.userId}`;
+          if (!localStorage.getItem(key)) { localStorage.setItem(key, "1"); setShowAmbWelcomeGlobal(true); return; }
+        }
+
         if (settings["promo_active"] === "true") {
           const expiresAt = settings["promo_expires_at"];
           const notExpired = !expiresAt || new Date(expiresAt).getTime() > Date.now();
@@ -19297,7 +19314,41 @@ export default function App() {
       );
     })()}
 
-    {/* ── SONDAGE : invitation ── */}
+    {showAmbWelcomeGlobal && !phonePromptOpen && !verifyPromptOpen && !superPromoOpen && !premiumNudgeOpen && !ambassadorNudgeOpen && (() => {
+      const brand = "#8B0D2F";
+      return (
+        <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 19000, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
+          <div onClick={e => e.stopPropagation()} className="moyo-sheet-in" style={{ background: "#FCFBF8", borderRadius: 0, width: "100%", maxWidth: 460, height: "100%", maxHeight: "100vh", overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y", boxShadow: "0 30px 80px rgba(0,0,0,0.4)", position: "relative", display: "flex", flexDirection: "column", justifyContent: "center", padding: "calc(env(safe-area-inset-top) + 18px) 22px calc(env(safe-area-inset-bottom) + 26px)" }}>
+            <div onClick={() => setShowAmbWelcomeGlobal(false)} style={{ position: "fixed", top: "calc(env(safe-area-inset-top) + 16px)", right: "max(16px, calc((100vw - 460px) / 2 + 16px))", cursor: "pointer", background: "#eceae5", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 19001 }}>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#777" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+            </div>
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: 14 }}>
+              <div style={{ width: 54, height: 54, borderRadius: "50%", background: "rgba(139,13,47,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <svg width="27" height="27" viewBox="0 0 24 24" fill="none" stroke={brand} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>
+              </div>
+            </div>
+            <div style={{ textAlign: "center", fontSize: "1.2rem", fontWeight: 800, color: "#1a1a2e", lineHeight: 1.2, marginBottom: 9, padding: "0 6px" }}>Tu es Ambassadeur !</div>
+            <div style={{ textAlign: "center", fontSize: "0.87rem", color: "#8a8a8a", lineHeight: 1.5, marginBottom: 22, padding: "0 8px" }}>Ta demande a été acceptée. Tu peux dès maintenant partager ton lien ou ton code, et suivre tes gains depuis ton tableau de bord.</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 22 }}>
+              {[
+                "Commission en argent sur chaque abonnement",
+                "Versement par Mobile Money, à ta demande",
+                "Aucune limite au nombre de filleuls",
+                "Premium à vie offert aux meilleurs ambassadeurs",
+              ].map((txt, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div style={{ width: 22, height: 22, borderRadius: "50%", background: "rgba(139,13,47,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={brand} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  </div>
+                  <span style={{ fontSize: "0.85rem", color: "#3a2e2e", fontWeight: 600 }}>{txt}</span>
+                </div>
+              ))}
+            </div>
+            <Btn variant="primary" style={{ width: "100%" }} onClick={() => { setShowAmbWelcomeGlobal(false); try { sessionStorage.setItem("moyo_open_ambassador_dashboard", "1"); } catch {} setTab("profile"); }}>Découvrir mon tableau de bord →</Btn>
+          </div>
+        </div>
+      );
+    })()}
     {activeSurvey && !showSurveyInvite && !pendingWarning && !pendingBroadcast && !pendingProposal && !phonePromptOpen && !verifyPromptOpen && !premiumNudgeOpen && (
       <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
         <div className="moyo-card-in" style={{ background: G.blanc, maxHeight: "85vh", overflowY: "auto", borderRadius: 22, width: "100%", maxWidth: 380, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
