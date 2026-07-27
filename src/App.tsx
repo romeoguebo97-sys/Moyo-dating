@@ -16517,15 +16517,15 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
 
         {/* Bouton Ambassadeur — visible uniquement une fois le statut acquis, même position que le bouton Admin */}
         {(!isWideProfile || activeSection === "main") && ambStatus === "ambassador" && (
-          <div onClick={() => setShowAmbDashboard(true)} className="moyo-tap" style={{ background: G.blanc, borderRadius: 18, padding: "16px 20px", cursor: "pointer", boxShadow: "0 4px 16px rgba(142,68,173,0.15)", display: "flex", alignItems: "center", gap: 14, border: "1.5px solid rgba(142,68,173,0.25)" }}>
-            <div style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(142,68,173,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>
+          <div onClick={() => setShowAmbDashboard(true)} className="moyo-tap" style={{ background: G.blanc, borderRadius: 18, padding: "16px 20px", cursor: "pointer", boxShadow: "0 4px 16px rgba(0,0,0,0.06)", display: "flex", alignItems: "center", gap: 14, border: `1.5px solid ${G.gris}` }}>
+            <div style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(44,26,14,0.06)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={G.brun} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>
             </div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 800, fontSize: "1rem", color: "#8e44ad", marginBottom: 3 }}>Ambassadeur Moyo Dating</div>
+              <div style={{ fontWeight: 800, fontSize: "1rem", color: G.brun, marginBottom: 3 }}>Ambassadeur Moyo Dating</div>
               <div style={{ fontSize: "0.78rem", color: "#888", lineHeight: 1.4 }}>{ambStats ? `${(ambStats.paid + ambStats.pending).toLocaleString()} FCFA de gains au total` : "Tableau de bord"}</div>
             </div>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.brun} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
           </div>
         )}
 
