@@ -16535,7 +16535,7 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
           const planIcon = (label?: string) => label?.includes("2 mois") ? "#D4A843" : label?.includes("1 mois") ? "#8B0D2F" : "#D4A843";
           const visibleConversions = showAllAmbConversions ? ambConversions : ambConversions.slice(0, 5);
           return (
-            <div style={{ position: "fixed", inset: 0, background: "#fff", zIndex: 10001, display: "flex", flexDirection: "column", overscrollBehavior: "contain" }}>
+            <div style={{ position: "fixed", inset: 0, background: "#fff", zIndex: 10001, display: "flex", flexDirection: "column", overflow: "hidden", overscrollBehavior: "contain" }}>
               {/* AppBar */}
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "calc(env(safe-area-inset-top) + 14px) 16px 14px", borderBottom: "1px solid #f1f1f1", flexShrink: 0 }}>
                 <div onClick={() => { setShowAmbDashboard(false); setShowAllAmbConversions(false); }} style={{ cursor: "pointer", padding: 4 }}>
@@ -16684,13 +16684,15 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
                     {ambContractSignedAt ? (
                       <>
                         <div style={{ fontWeight: 900, fontSize: "0.98rem", color: G.brun, marginBottom: 8 }}>Contrat signé</div>
-                        <div style={{ fontSize: "0.82rem", color: "#777", lineHeight: 1.5 }}>En attente de validation par notre équipe. Ton tableau de bord sera débloqué juste après.</div>
+                        <div style={{ fontSize: "0.82rem", color: "#777", lineHeight: 1.5, marginBottom: 18 }}>En attente de validation par notre équipe. Ton tableau de bord sera débloqué juste après.</div>
+                        <button onClick={() => { setShowAmbDashboard(false); setShowAllAmbConversions(false); }} style={{ width: "100%", background: "none", color: "#8B0D2F", border: "1.5px solid #8B0D2F", borderRadius: 50, padding: "10px 22px", fontSize: "0.83rem", fontWeight: 700, cursor: "pointer" }}>← Retour à l'app</button>
                       </>
                     ) : (
                       <>
                         <div style={{ fontWeight: 900, fontSize: "0.98rem", color: G.brun, marginBottom: 8 }}>Signature du contrat Ambassadeur requise</div>
                         <div style={{ fontSize: "0.82rem", color: "#777", lineHeight: 1.5, marginBottom: 16 }}>Ton tableau de bord sera débloqué une fois ton contrat lu et signé.</div>
-                        <button onClick={() => { setAmbContractName(auth.name || ""); setShowAmbContractRead(true); }} style={{ background: "#8B0D2F", color: "#fff", border: "none", borderRadius: 50, padding: "11px 22px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>Lire et signer mon contrat</button>
+                        <button onClick={() => { setAmbContractName(auth.name || ""); setShowAmbContractRead(true); }} style={{ width: "100%", background: "#8B0D2F", color: "#fff", border: "none", borderRadius: 50, padding: "11px 22px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer", marginBottom: 10 }}>Lire et signer mon contrat</button>
+                        <button onClick={() => { setShowAmbDashboard(false); setShowAllAmbConversions(false); }} style={{ width: "100%", background: "none", color: "#999", border: "none", borderRadius: 50, padding: "8px 22px", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer" }}>← Retour à l'app</button>
                       </>
                     )}
                   </div>
@@ -16708,7 +16710,7 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
               </div>
               <div style={{ fontWeight: 900, fontSize: "1.05rem", color: G.brun, marginBottom: 8 }}>Contrat Ambassadeur</div>
               <p style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.6, marginBottom: 20 }}>Prends connaissance des 5 pages du contrat. Tu pourras ensuite le remplir avec tes informations et le signer électroniquement.</p>
-              <a href={`${SUPABASE_URL}/storage/v1/object/public/contracts/template.pdf`} target="_blank" rel="noopener noreferrer" style={{ display: "block", width: "100%", boxSizing: "border-box", background: "#fff", color: "#8B0D2F", border: "1.5px solid #8B0D2F", borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 700, textDecoration: "none", marginBottom: 10 }}>📄 Lire le contrat (PDF)</a>
+              <a href={`${SUPABASE_URL}/storage/v1/object/public/contracts/template.pdf?v=${Date.now()}`} target="_blank" rel="noopener noreferrer" style={{ display: "block", width: "100%", boxSizing: "border-box", background: "#fff", color: "#8B0D2F", border: "1.5px solid #8B0D2F", borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 700, textDecoration: "none", marginBottom: 10 }}>📄 Lire le contrat (PDF)</a>
               <button onClick={() => { setShowAmbContractRead(false); setShowAmbContractForm(true); }} style={{ width: "100%", background: "#8B0D2F", color: "#fff", border: "none", borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer", marginBottom: 10 }}>J'ai lu, je continue →</button>
               <div onClick={() => setShowAmbContractRead(false)} style={{ fontSize: "0.82rem", color: "#999", cursor: "pointer" }}>Annuler</div>
             </div>

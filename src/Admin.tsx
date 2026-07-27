@@ -7162,6 +7162,9 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
       //    automatiquement (le bouton "Devenir Ambassadeur" disparaît côté profil, son tableau
       //    de bord apparaît). ──
       await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${profile.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ is_ambassador: true }) });
+      // Même push que pour une demande approuvée : sans ça, la personne découvre son tableau de
+      // bord flouté sans jamais savoir qu'elle est devenue Ambassadeur ni pourquoi.
+      fetch(`${SUPABASE_URL}/functions/v1/push-notify`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ mode: "user_push", user_id: profile.id, title: "🎖 Tu es Ambassadeur !", body: "Direction ton profil pour découvrir ton tableau de bord et signer ton contrat." }) }).catch(() => {});
       setAffiliateAddQuery(""); setAffiliateAddResults([]); setAffiliateAddSearchRan(false);
       showToast(`${profile.name} est maintenant Ambassadeur.`, "success");
       loadAffiliates();
@@ -13487,28 +13490,27 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                           <div key={a.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "10px 14px", background: G.creme, borderRadius: 12, flexWrap: "wrap" }}>
                             <div>
                               <div style={{ fontSize: "0.85rem", fontWeight: 700, color: G.brun }}>{a.name}{a.phone ? ` · ${a.phone}` : ""}</div>
-                              <div style={{ fontSize: "0.72rem", color: "#888" }}>{own.length} conversion{own.length > 1 ? "s" : ""} · {ownPending.toLocaleString()} FCFA en attente</div>
+                              <div style={{ fontSize: "0.85rem", color: "#555", fontWeight: 700 }}>{own.length} conversion{own.length > 1 ? "s" : ""} · {ownPending.toLocaleString()} FCFA en attente</div>
                             </div>
                             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                               <span style={{ fontSize: "0.7rem", fontWeight: 800, color: a.status === "active" ? "#1A5C3A" : a.status === "paused" ? "#999" : G.rouge }}>{a.status === "active" ? "● Actif" : a.status === "paused" ? "○ En pause" : "Retiré"}</span>
                               {a.status !== "removed" && (
                                 <>
-                                  {!a.contract_signed && a.contract_pdf_url && (
-                                    <a href={a.contract_pdf_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: "0.72rem", fontWeight: 700, color: "#8e44ad", textDecoration: "underline" }}>Voir le PDF signé ({a.contract_full_name || a.name}{a.contract_signed_at ? `, ${new Date(a.contract_signed_at).toLocaleDateString("fr-FR")}` : ""})</a>
+                                  {a.contract_pdf_url && (
+                                    <a href={a.contract_pdf_url} target="_blank" rel="noopener noreferrer" title={`Voir le PDF signé (${a.contract_full_name || a.name}${a.contract_signed_at ? `, ${new Date(a.contract_signed_at).toLocaleDateString("fr-FR")}` : ""})`} style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 30, height: 30, borderRadius: 50, background: "rgba(142,68,173,0.08)", border: "1.5px solid #8e44ad", color: "#8e44ad", flexShrink: 0 }}>
+                                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                    </a>
                                   )}
-                                  <div onClick={() => confirm(
+                                  <button onClick={() => confirm(
                                     a.contract_signed
-                                      ? `Repasser le contrat de ${a.name} en "non signé" ? Son tableau de bord redeviendra flouté.`
+                                      ? `Désactiver le contrat de ${a.name} ? Son tableau de bord redeviendra flouté.`
                                       : a.contract_signed_at
-                                        ? `Confirmer : ${a.contract_full_name || a.name} a signé le ${new Date(a.contract_signed_at).toLocaleDateString("fr-FR")}. Marquer le contrat comme validé ? Son tableau de bord se débloque immédiatement.`
-                                        : `${a.name} n'a pas encore signé son contrat depuis l'app. Marquer quand même comme signé ?`,
+                                        ? `Confirmer : ${a.contract_full_name || a.name} a signé le ${new Date(a.contract_signed_at).toLocaleDateString("fr-FR")}. Activer le contrat ? Son tableau de bord se débloque immédiatement.`
+                                        : `${a.name} n'a pas encore signé son contrat depuis l'app. Activer quand même le contrat ?`,
                                     () => toggleContractSigned(a)
-                                  )} style={{ display: "flex", alignItems: "center", gap: 7, cursor: "pointer", background: a.contract_signed ? "rgba(26,92,58,0.08)" : "rgba(231,76,60,0.08)", border: `1.5px solid ${a.contract_signed ? "#1A5C3A" : G.rouge}`, borderRadius: 50, padding: "5px 12px" }}>
-                                    <span style={{ fontSize: "0.74rem", fontWeight: 800, color: a.contract_signed ? "#1A5C3A" : G.rouge }}>Contrat{!a.contract_signed && a.contract_signed_at ? " ✓ reçu" : ""}</span>
-                                    <span style={{ width: 30, height: 17, borderRadius: 50, background: a.contract_signed ? "#1A5C3A" : "#ddd", position: "relative", flexShrink: 0, transition: "background 0.15s" }}>
-                                      <span style={{ position: "absolute", top: 2, left: a.contract_signed ? 15 : 2, width: 13, height: 13, borderRadius: "50%", background: "#fff", transition: "left 0.15s" }} />
-                                    </span>
-                                  </div>
+                                  )} style={{ background: a.contract_signed ? "rgba(26,92,58,0.08)" : a.contract_signed_at ? "rgba(231,76,60,0.08)" : "rgba(230,126,34,0.1)", border: `1.5px solid ${a.contract_signed ? "#1A5C3A" : a.contract_signed_at ? G.rouge : "#E67E22"}`, borderRadius: 50, padding: "5px 12px", fontSize: "0.74rem", fontWeight: 800, cursor: "pointer", color: a.contract_signed ? "#1A5C3A" : a.contract_signed_at ? G.rouge : "#E67E22" }}>
+                                    {a.contract_signed ? "Désactiver le contrat" : a.contract_signed_at ? "Activer le contrat ✓ reçu" : "Activer sans signature reçue"}
+                                  </button>
                                   {editingPromoCode === a.id ? (
                                     <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#fff", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "3px 6px 3px 12px" }}>
                                       <input autoFocus value={promoCodeDraft} onChange={e => setPromoCodeDraft(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))} placeholder="ROMEO20" style={{ width: 90, border: "none", outline: "none", fontSize: "0.74rem", fontWeight: 700, background: "transparent" }} />
