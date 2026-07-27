@@ -6897,7 +6897,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
     useEffect(() => { if (mktTab === "inactive") { loadInactiveTemplates(); loadInactiveSmsTemplates(); } /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [mktTab]);
 
     // ── Programme affiliés : liste des affiliés + historique de leurs commissions ──
-    const [affiliatesList, setAffiliatesList] = useState<{ id: string; user_id: string; name: string; phone?: string; status: string; created_at: string; promo_code?: string | null; commission_percent?: number | null }[]>([]);
+    const [affiliatesList, setAffiliatesList] = useState<{ id: string; user_id: string; name: string; phone?: string; status: string; created_at: string; promo_code?: string | null; commission_percent?: number | null; contract_signed?: boolean; contract_signed_at?: string | null; contract_full_name?: string | null; contract_pdf_url?: string | null }[]>([]);
     const [affiliatesLoading, setAffiliatesLoading] = useState(false);
     const [affiliateConversions, setAffiliateConversions] = useState<{ id: string; affiliate_id: string; affiliate_name: string; filleul_id: string; filleul_name: string; plan_label: string; commission_amount: number; status: string; created_at: string; paid_at?: string }[]>([]);
     const [affiliateConversionsLoading, setAffiliateConversionsLoading] = useState(false);
@@ -6941,6 +6941,19 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
         showToast(pct !== null ? `Commission de ${a.name} fixée à ${pct}%.` : `${a.name} repasse au taux de commission par défaut.`, "success");
         setEditingCommission(null);
       } catch { showToast("Erreur lors de l'enregistrement.", "error"); }
+    };
+    const toggleContractSigned = async (a: { id: string; user_id: string; name: string; contract_signed?: boolean }) => {
+      if (!auth) return;
+      const next = !a.contract_signed;
+      try {
+        await fetch(`${SUPABASE_URL}/rest/v1/affiliates?id=eq.${a.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ contract_signed: next }) });
+        setAffiliatesList(list => list.map(x => x.id === a.id ? { ...x, contract_signed: next } : x));
+        logAdminAction(auth.token, auth.userId, auth.name, next ? `Contrat Ambassadeur signé pour ${a.name} : tableau de bord débloqué.` : `Contrat Ambassadeur repassé en attente de signature pour ${a.name}.`, a.user_id);
+        if (next && SUPPORT_REPLY_PUSH_ENABLED) {
+          fetch(`${SUPABASE_URL}/functions/v1/push-notify`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ mode: "user_push", user_id: a.user_id, title: "✅ Contrat signé", body: "Ton contrat Ambassadeur est confirmé, ton tableau de bord est débloqué." }) }).catch(() => {});
+        }
+        showToast(next ? `Contrat de ${a.name} marqué comme signé.` : `Contrat de ${a.name} repassé en attente.`, "success");
+      } catch { showToast("Erreur lors de la mise à jour du contrat.", "error"); }
     };
     // ── Statut réel (is_ambassador, Premium) de chaque affilié sur son profil. Nécessaire car
     //    un affilié peut avoir été ajouté directement (Désigner un nouvel affilié) sans jamais
@@ -7092,7 +7105,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
         // 2. Devient affilié actif : réutilise tel quel le système de commissions déjà existant.
         await fetch(`${SUPABASE_URL}/rest/v1/affiliates`, {
           method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "resolution=merge-duplicates,return=minimal" },
-          body: JSON.stringify({ user_id: req.user_id, name: req.name, phone: req.phone || null, status: "active" }),
+          body: JSON.stringify({ user_id: req.user_id, name: req.name, phone: req.phone || null, status: "active", contract_signed: false }),
         });
         // 3. Marque la demande comme traitée.
         await fetch(`${SUPABASE_URL}/rest/v1/ambassador_requests?id=eq.${req.id}`, {
@@ -7144,7 +7157,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
     };
     const addAffiliate = async (profile: { id: string; name: string; phone?: string }) => {
       if (!auth) return;
-      await fetch(`${SUPABASE_URL}/rest/v1/affiliates`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ user_id: profile.id, name: profile.name, phone: profile.phone || null, status: "active" }) });
+      await fetch(`${SUPABASE_URL}/rest/v1/affiliates`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ user_id: profile.id, name: profile.name, phone: profile.phone || null, status: "active", contract_signed: false }) });
       // ── Un affilié actif EST un Ambassadeur : plus de double action à faire, le badge suit
       //    automatiquement (le bouton "Devenir Ambassadeur" disparaît côté profil, son tableau
       //    de bord apparaît). ──
@@ -13480,6 +13493,22 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                               <span style={{ fontSize: "0.7rem", fontWeight: 800, color: a.status === "active" ? "#1A5C3A" : a.status === "paused" ? "#999" : G.rouge }}>{a.status === "active" ? "● Actif" : a.status === "paused" ? "○ En pause" : "Retiré"}</span>
                               {a.status !== "removed" && (
                                 <>
+                                  {!a.contract_signed && a.contract_pdf_url && (
+                                    <a href={a.contract_pdf_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: "0.72rem", fontWeight: 700, color: "#8e44ad", textDecoration: "underline" }}>Voir le PDF signé ({a.contract_full_name || a.name}{a.contract_signed_at ? `, ${new Date(a.contract_signed_at).toLocaleDateString("fr-FR")}` : ""})</a>
+                                  )}
+                                  <div onClick={() => confirm(
+                                    a.contract_signed
+                                      ? `Repasser le contrat de ${a.name} en "non signé" ? Son tableau de bord redeviendra flouté.`
+                                      : a.contract_signed_at
+                                        ? `Confirmer : ${a.contract_full_name || a.name} a signé le ${new Date(a.contract_signed_at).toLocaleDateString("fr-FR")}. Marquer le contrat comme validé ? Son tableau de bord se débloque immédiatement.`
+                                        : `${a.name} n'a pas encore signé son contrat depuis l'app. Marquer quand même comme signé ?`,
+                                    () => toggleContractSigned(a)
+                                  )} style={{ display: "flex", alignItems: "center", gap: 7, cursor: "pointer", background: a.contract_signed ? "rgba(26,92,58,0.08)" : "rgba(231,76,60,0.08)", border: `1.5px solid ${a.contract_signed ? "#1A5C3A" : G.rouge}`, borderRadius: 50, padding: "5px 12px" }}>
+                                    <span style={{ fontSize: "0.74rem", fontWeight: 800, color: a.contract_signed ? "#1A5C3A" : G.rouge }}>Contrat{!a.contract_signed && a.contract_signed_at ? " ✓ reçu" : ""}</span>
+                                    <span style={{ width: 30, height: 17, borderRadius: 50, background: a.contract_signed ? "#1A5C3A" : "#ddd", position: "relative", flexShrink: 0, transition: "background 0.15s" }}>
+                                      <span style={{ position: "absolute", top: 2, left: a.contract_signed ? 15 : 2, width: 13, height: 13, borderRadius: "50%", background: "#fff", transition: "left 0.15s" }} />
+                                    </span>
+                                  </div>
                                   {editingPromoCode === a.id ? (
                                     <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#fff", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "3px 6px 3px 12px" }}>
                                       <input autoFocus value={promoCodeDraft} onChange={e => setPromoCodeDraft(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))} placeholder="ROMEO20" style={{ width: 90, border: "none", outline: "none", fontSize: "0.74rem", fontWeight: 700, background: "transparent" }} />

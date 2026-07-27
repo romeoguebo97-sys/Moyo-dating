@@ -15708,6 +15708,57 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
   const [ambAffiliateId, setAmbAffiliateId] = useState<string | null>(null);
   const [ambPromoCode, setAmbPromoCode] = useState<string | null>(null);
   const [ambCommissionPercent, setAmbCommissionPercent] = useState<number | null>(null);
+  const [ambContractSigned, setAmbContractSigned] = useState(true);
+  const [ambContractSignedAt, setAmbContractSignedAt] = useState<string | null>(null);
+  const [ambContractPdfUrl, setAmbContractPdfUrl] = useState<string | null>(null);
+  const [showAmbContractRead, setShowAmbContractRead] = useState(false);
+  const [showAmbContractForm, setShowAmbContractForm] = useState(false);
+  const [ambContractName, setAmbContractName] = useState("");
+  const [ambContractBirth, setAmbContractBirth] = useState("");
+  const [ambContractAddress, setAmbContractAddress] = useState("");
+  const [ambContractPhone, setAmbContractPhone] = useState("");
+  const [ambContractEmail, setAmbContractEmail] = useState("");
+  const [ambContractAccept, setAmbContractAccept] = useState(false);
+  const [ambContractSubmitting, setAmbContractSubmitting] = useState(false);
+  const [ambContractError, setAmbContractError] = useState("");
+  const submitAmbassadorContract = async () => {
+    setAmbContractError("");
+    if (!ambContractName.trim() || !ambContractBirth.trim() || !ambContractAddress.trim() || !ambContractPhone.trim() || !ambContractEmail.trim()) {
+      setAmbContractError("Merci de remplir tous les champs.");
+      return;
+    }
+    if (!ambContractAccept) {
+      setAmbContractError("Merci de cocher la case d'acceptation.");
+      return;
+    }
+    setAmbContractSubmitting(true);
+    try {
+      const r = await fetch(`${SUPABASE_URL}/functions/v1/sign-ambassador-contract`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` },
+        body: JSON.stringify({
+          full_name: ambContractName.trim(),
+          birth_date_place: ambContractBirth.trim(),
+          address: ambContractAddress.trim(),
+          phone: ambContractPhone.trim(),
+          email: ambContractEmail.trim(),
+          accepted: ambContractAccept,
+        }),
+      });
+      const data = await r.json().catch(() => null);
+      if (!r.ok || !data?.ok) {
+        setAmbContractError(data?.error || "Erreur lors de la signature, réessaie dans un instant.");
+        setAmbContractSubmitting(false);
+        return;
+      }
+      setAmbContractSignedAt(new Date().toISOString());
+      setShowAmbContractForm(false);
+      setToast({ msg: "Contrat signé, en attente de validation par notre équipe.", type: "success" });
+    } catch {
+      setAmbContractError("Erreur réseau, réessaie dans un instant.");
+    }
+    setAmbContractSubmitting(false);
+  };
   const [showAmbRejected, setShowAmbRejected] = useState(false);
   const [ambConversions, setAmbConversions] = useState<{ id: string; plan_label?: string; commission_amount: number; status: string; created_at: string }[]>([]);
   const [ambInscriptions, setAmbInscriptions] = useState(0);
@@ -15727,12 +15778,15 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
               setShowAmbDashboard(true);
             }
           } catch {}
-          const ra = await fetch(`${SUPABASE_URL}/rest/v1/affiliates?user_id=eq.${auth.userId}&select=id,promo_code,commission_percent&limit=1`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+          const ra = await fetch(`${SUPABASE_URL}/rest/v1/affiliates?user_id=eq.${auth.userId}&select=id,promo_code,commission_percent,contract_signed,contract_signed_at,contract_pdf_url&limit=1`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
           const da = await ra.json().catch(() => []);
           const affId = Array.isArray(da) ? da[0]?.id : null;
           setAmbAffiliateId(affId || null);
           setAmbPromoCode(Array.isArray(da) ? da[0]?.promo_code || null : null);
           setAmbCommissionPercent(Array.isArray(da) && typeof da[0]?.commission_percent === "number" ? da[0].commission_percent : AFFILIATE_COMMISSION_PERCENT);
+          setAmbContractSigned(Array.isArray(da) && da[0] ? !!da[0].contract_signed : true);
+          setAmbContractSignedAt(Array.isArray(da) ? da[0]?.contract_signed_at || null : null);
+          setAmbContractPdfUrl(Array.isArray(da) ? da[0]?.contract_pdf_url || null : null);
           if (affId) {
             const rc = await fetch(`${SUPABASE_URL}/rest/v1/affiliate_conversions?affiliate_id=eq.${affId}&select=id,plan_label,commission_amount,status,created_at&order=created_at.desc&limit=100`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
             const dc = await rc.json().catch(() => []);
@@ -16493,7 +16547,8 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
                 </div>
               </div>
 
-              <div style={{ flex: 1, overflowY: "auto", padding: "18px 16px calc(env(safe-area-inset-bottom) + 24px)", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}>
+              <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
+                <div style={{ height: "100%", overflowY: ambContractSigned ? "auto" : "hidden", padding: "18px 16px calc(env(safe-area-inset-bottom) + 24px)", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y", filter: ambContractSigned ? "none" : "blur(7px)", pointerEvents: ambContractSigned ? "auto" : "none", userSelect: ambContractSigned ? "auto" : "none" }}>
                 {/* Carte principale */}
                 <div style={{ background: "linear-gradient(135deg,#8B0D2F 0%,#6E0A25 100%)", borderRadius: 20, padding: "22px 20px", boxShadow: "0 10px 28px rgba(139,13,47,0.25)", marginBottom: 22 }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
@@ -16513,6 +16568,13 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
                   </button>
                   <div style={{ fontSize: "0.68rem", color: "rgba(255,255,255,0.65)", marginTop: 10, textAlign: "center" }}>Minimum de versement : {AFFILIATE_PAYOUT_MIN_FCFA.toLocaleString()} FCFA</div>
                 </div>
+
+                {ambContractPdfUrl && (
+                  <a href={ambContractPdfUrl} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", boxSizing: "border-box", background: "#fafafa", color: "#8B0D2F", border: "1.5px solid #eee", borderRadius: 50, padding: "11px", fontSize: "0.82rem", fontWeight: 700, textDecoration: "none", marginBottom: 22 }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8B0D2F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                    Voir mon contrat signé
+                  </a>
+                )}
 
                 {/* Performances */}
                 <div style={{ fontSize: "0.95rem", fontWeight: 800, color: G.brun, marginBottom: 12 }}>Mes performances</div>
@@ -16612,9 +16674,75 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
                   </button>
                 </div>
               </div>
+              </div>
+              {!ambContractSigned && (
+                <div style={{ position: "absolute", inset: 0, top: 0, display: "flex", alignItems: "center", justifyContent: "center", padding: "24px 28px", textAlign: "center" }}>
+                  <div style={{ background: "rgba(255,255,255,0.97)", borderRadius: 18, padding: "24px 22px", boxShadow: "0 8px 30px rgba(0,0,0,0.15)", maxWidth: 320 }}>
+                    <div style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(139,13,47,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
+                      <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="#8B0D2F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+                    </div>
+                    {ambContractSignedAt ? (
+                      <>
+                        <div style={{ fontWeight: 900, fontSize: "0.98rem", color: G.brun, marginBottom: 8 }}>Contrat signé</div>
+                        <div style={{ fontSize: "0.82rem", color: "#777", lineHeight: 1.5 }}>En attente de validation par notre équipe. Ton tableau de bord sera débloqué juste après.</div>
+                      </>
+                    ) : (
+                      <>
+                        <div style={{ fontWeight: 900, fontSize: "0.98rem", color: G.brun, marginBottom: 8 }}>Signature du contrat Ambassadeur requise</div>
+                        <div style={{ fontSize: "0.82rem", color: "#777", lineHeight: 1.5, marginBottom: 16 }}>Ton tableau de bord sera débloqué une fois ton contrat lu et signé.</div>
+                        <button onClick={() => { setAmbContractName(auth.name || ""); setShowAmbContractRead(true); }} style={{ background: "#8B0D2F", color: "#fff", border: "none", borderRadius: 50, padding: "11px 22px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>Lire et signer mon contrat</button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           );
         })()}
+
+        {showAmbContractRead && (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10003, display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }} onClick={() => setShowAmbContractRead(false)}>
+            <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 20, width: "100%", maxWidth: 400, padding: "24px 22px", textAlign: "center" }}>
+              <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(139,13,47,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
+                <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="#8B0D2F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+              </div>
+              <div style={{ fontWeight: 900, fontSize: "1.05rem", color: G.brun, marginBottom: 8 }}>Contrat Ambassadeur</div>
+              <p style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.6, marginBottom: 20 }}>Prends connaissance des 5 pages du contrat avant de le signer. Tu pourras ensuite remplir tes informations.</p>
+              <a href={`${SUPABASE_URL}/storage/v1/object/public/contracts/template.pdf`} target="_blank" rel="noopener noreferrer" style={{ display: "block", width: "100%", boxSizing: "border-box", background: "#fff", color: "#8B0D2F", border: "1.5px solid #8B0D2F", borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 700, textDecoration: "none", marginBottom: 10 }}>📄 Lire le contrat (PDF)</a>
+              <button onClick={() => { setShowAmbContractRead(false); setShowAmbContractForm(true); }} style={{ width: "100%", background: "#8B0D2F", color: "#fff", border: "none", borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer", marginBottom: 10 }}>J'ai lu, je continue →</button>
+              <div onClick={() => setShowAmbContractRead(false)} style={{ fontSize: "0.82rem", color: "#999", cursor: "pointer" }}>Annuler</div>
+            </div>
+          </div>
+        )}
+
+        {showAmbContractForm && (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10003, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={() => !ambContractSubmitting && setShowAmbContractForm(false)}>
+            <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 460, maxHeight: "88vh", overflowY: "auto", padding: "20px 20px calc(env(safe-area-inset-bottom) + 20px)" }}>
+              <div style={{ fontWeight: 900, fontSize: "1.05rem", color: G.brun, marginBottom: 4 }}>Signer mon contrat</div>
+              <p style={{ fontSize: "0.78rem", color: "#999", marginBottom: 16 }}>Ces informations seront insérées dans ton exemplaire du contrat.</p>
+              {[
+                { label: "Nom et prénom", value: ambContractName, set: setAmbContractName, ph: "Ex : Faïda Moukoko" },
+                { label: "Date et lieu de naissance", value: ambContractBirth, set: setAmbContractBirth, ph: "Ex : 12/05/1994 à Brazzaville" },
+                { label: "Adresse", value: ambContractAddress, set: setAmbContractAddress, ph: "Ex : Quartier Bacongo, Brazzaville" },
+                { label: "Téléphone", value: ambContractPhone, set: setAmbContractPhone, ph: "Ex : +242065432109" },
+                { label: "E-mail", value: ambContractEmail, set: setAmbContractEmail, ph: "Ex : toi@email.com" },
+              ].map((f, i) => (
+                <div key={i} style={{ marginBottom: 12 }}>
+                  <div style={{ fontSize: "0.76rem", fontWeight: 700, color: "#666", marginBottom: 5 }}>{f.label}</div>
+                  <input value={f.value} onChange={e => f.set(e.target.value)} placeholder={f.ph} style={{ width: "100%", boxSizing: "border-box", padding: "11px 13px", borderRadius: 10, border: "1.5px solid #eee", fontSize: "0.85rem", outline: "none" }} />
+                </div>
+              ))}
+              <div onClick={() => setAmbContractAccept(v => !v)} style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer", marginTop: 8, marginBottom: 6 }}>
+                <div style={{ width: 20, height: 20, borderRadius: 5, border: `1.5px solid ${ambContractAccept ? "#8B0D2F" : "#ccc"}`, background: ambContractAccept ? "#8B0D2F" : "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>
+                  {ambContractAccept && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
+                </div>
+                <span style={{ fontSize: "0.8rem", color: "#555", lineHeight: 1.4 }}>J'ai lu et j'accepte les termes du contrat Ambassadeur Moyo Dating.</span>
+              </div>
+              {ambContractError && <div style={{ color: "#C0392B", fontSize: "0.8rem", marginBottom: 10 }}>{ambContractError}</div>}
+              <button onClick={submitAmbassadorContract} disabled={ambContractSubmitting} style={{ width: "100%", background: "#8B0D2F", color: "#fff", border: "none", borderRadius: 50, padding: "13px", fontSize: "0.88rem", fontWeight: 800, cursor: ambContractSubmitting ? "not-allowed" : "pointer", marginTop: 6 }}>{ambContractSubmitting ? "Signature en cours…" : "Signer électroniquement"}</button>
+            </div>
+          </div>
+        )}
 
         {showAmbInfo && (
           <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10002, display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }} onClick={() => setShowAmbInfo(false)}>
