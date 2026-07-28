@@ -75,8 +75,8 @@ function DateTimeModal({ title, initialISO, confirmLabel, onConfirm, onClose }: 
   );
 }
 
-function AdminAppointments({ auth, showToast }: { auth: any; showToast: (m: string, t?: string) => void }) {
-  const [filter, setFilter] = useState<"en_attente" | "confirme" | "today" | "passes" | "annule" | "archive">("en_attente");
+function AdminAppointments({ auth, showToast, onOpenProfile }: { auth: any; showToast: (m: string, t?: string) => void; onOpenProfile: (userId: string) => void }) {
+  const [filter, setFilter] = useState<"en_attente" | "confirme" | "today" | "passes" | "annule" | "archive" | "mine">("en_attente");
   const [scheduling, setScheduling] = useState<{ a: any; mode: "confirme" | "reporte" } | null>(null);
   const [list, setList] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -86,6 +86,15 @@ function AdminAppointments({ auth, showToast }: { auth: any; showToast: (m: stri
   const [noteText, setNoteText] = useState("");
   const [delTarget, setDelTarget] = useState<any>(null);
   const [busy, setBusy] = useState(false);
+  // ── Conseillers assignables : tout compte admin/super admin, récupéré dynamiquement — jamais
+  //    une liste figée en dur, pour tenir aussi bien à 2 qu'à 200 conseillers. ──
+  const [advisors, setAdvisors] = useState<{ id: string; name: string; photo_url?: string }[]>([]);
+  const [assignMenuFor, setAssignMenuFor] = useState<string | null>(null);
+  const [assignSearch, setAssignSearch] = useState("");
+  useEffect(() => {
+    fetch(`${SUPABASE_URL}/rest/v1/profiles?is_admin=eq.true&select=id,name,photo_url&order=name.asc`, { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${auth.token}` } })
+      .then(r => r.json()).then(d => { if (Array.isArray(d)) setAdvisors(d); }).catch(() => {});
+  }, [auth.token]);
   const load = async () => {
     setLoading(true);
     try {
@@ -96,7 +105,7 @@ function AdminAppointments({ auth, showToast }: { auth: any; showToast: (m: stri
       const profs: Record<string, any> = {};
       for (let i = 0; i < ids.length; i += 50) {
         const batch = ids.slice(i, i + 50);
-        const pr = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=in.(${batch.join(",")})&select=id,name,photo_url`, { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${auth.token}` } });
+        const pr = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=in.(${batch.join(",")})&select=id,name,photo_url,is_verified,phone,relational_profile`, { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${auth.token}` } });
         const pd = await pr.json().catch(() => []); if (Array.isArray(pd)) pd.forEach((p: any) => { profs[p.id] = p; });
       }
       setList(d.map((a: any) => ({ ...a, user: profs[a.user_id] })));
@@ -112,8 +121,37 @@ function AdminAppointments({ auth, showToast }: { auth: any; showToast: (m: stri
       if (!r.ok || (Array.isArray(b) && b.length === 0)) { showToast("Action refusée par la base (vérifie la contrainte status ou les policies UPDATE).", "error"); return; }
       setList(prev => prev.map(a => a.id === id ? { ...a, ...fields } : a));
       if (okMsg) showToast(okMsg, "success");
+      // ── Push au membre concerné, adapté au nouveau statut. Best-effort : une erreur ici ne
+      //    bloque jamais l'action elle-même. ──
+      if (fields.status) {
+        const appt = list.find(a => a.id === id);
+        if (appt?.user_id) {
+          const fmtWhen = (iso?: string) => { try { return iso ? new Date(iso).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : ""; } catch { return ""; } };
+          const when = fmtWhen(fields.scheduled_at || appt.scheduled_at);
+          const pushByStatus: Record<string, { title: string; body: string } | null> = {
+            confirme: { title: "🗓 Rendez-vous confirmé", body: when ? `Ton rendez-vous est confirmé pour le ${when}.` : "Ton rendez-vous est confirmé." },
+            reporte: { title: "🔁 Nouveau créneau proposé", body: when ? `Ton rendez-vous a été reprogrammé au ${when}.` : "Ton rendez-vous a été reprogrammé." },
+            annule: { title: "Rendez-vous annulé", body: fields.admin_note ? `Ton rendez-vous a été annulé. ${fields.admin_note}` : "Ton rendez-vous a été annulé." },
+            effectue: null,
+            absent: null,
+          };
+          const push = pushByStatus[fields.status];
+          if (push) {
+            fetch(`${SUPABASE_URL}/functions/v1/push-notify`, { method: "POST", headers: { "Content-Type": "application/json", apikey: SUPABASE_KEY, Authorization: `Bearer ${auth.token}` }, body: JSON.stringify({ mode: "user_push", user_id: appt.user_id, title: push.title, body: push.body }) }).catch(() => {});
+          }
+        }
+      }
     } catch { showToast("Erreur", "error"); }
   };
+  const assignAppt = async (a: any, advisorId: string, advisorName: string) => {
+    await patch(a.id, { assigned_to: advisorId }, `Assigné à ${advisorName}`);
+    setAssignMenuFor(null); setAssignSearch("");
+    // Prévient le conseiller nouvellement assigné, jamais celui qui vient de céder.
+    if (advisorId !== auth.userId) {
+      fetch(`${SUPABASE_URL}/functions/v1/push-notify`, { method: "POST", headers: { "Content-Type": "application/json", apikey: SUPABASE_KEY, Authorization: `Bearer ${auth.token}` }, body: JSON.stringify({ mode: "user_push", user_id: advisorId, title: "📋 Rendez-vous assigné", body: `${a.user?.name || "Un membre"} t'a été assigné en rendez-vous.` }) }).catch(() => {});
+    }
+  };
+  const unassignAppt = (a: any) => patch(a.id, { assigned_to: null }, "Rendez-vous libéré");
   const confirmAppt = (a: any) => setScheduling({ a, mode: "confirme" });
   const rescheduleAppt = (a: any) => setScheduling({ a, mode: "reporte" });
   const openCancel = (a: any) => { setCancelReason(a.admin_note || ""); setCancelTarget(a); };
@@ -136,6 +174,7 @@ function AdminAppointments({ auth, showToast }: { auth: any; showToast: (m: stri
   const filtered = list.filter(a => {
     if (filter === "archive") return a.archived === true;
     if (a.archived) return false;
+    if (filter === "mine") return a.assigned_to === auth.userId;
     if (filter === "today") return a.scheduled_at && new Date(a.scheduled_at).toDateString() === new Date().toDateString() && a.status !== "annule";
     if (filter === "passes") return a.status === "effectue" || a.status === "absent" || (a.scheduled_at && new Date(a.scheduled_at).getTime() < now && a.status !== "annule" && a.status !== "en_attente");
     if (filter === "confirme") return a.status === "confirme" || a.status === "reporte";
@@ -143,6 +182,28 @@ function AdminAppointments({ auth, showToast }: { auth: any; showToast: (m: stri
     return a.status === "en_attente";
   });
   const isPastOrDone = (a: any) => a.status === "annule" || a.status === "effectue" || a.status === "absent" || (a.scheduled_at && new Date(a.scheduled_at).getTime() < now && a.status !== "en_attente");
+
+  // Compteurs matchs/propositions, calculés uniquement pour les rendez-vous visibles à l'écran
+  // (pas les 400 chargés en mémoire) — pour ne pas multiplier les requêtes réseau inutilement.
+  const [userCounts, setUserCounts] = useState<Record<string, { matches: number; proposals: number }>>({});
+  useEffect(() => {
+    const missing = ([...new Set(filtered.map(a => a.user_id))] as string[]).filter(uid => uid && !(uid in userCounts));
+    if (missing.length === 0) return;
+    (async () => {
+      const next: Record<string, { matches: number; proposals: number }> = {};
+      await Promise.all(missing.map(async (uid: string) => {
+        try {
+          const [mR, pR] = await Promise.all([
+            fetch(`${SUPABASE_URL}/rest/v1/matches?or=(user1.eq.${uid},user2.eq.${uid})&select=id`, { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${auth.token}`, Prefer: "count=exact", Range: "0-0" } }),
+            fetch(`${SUPABASE_URL}/rest/v1/match_proposals?status=eq.pending&or=(user1_id.eq.${uid},user2_id.eq.${uid})&select=id`, { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${auth.token}`, Prefer: "count=exact", Range: "0-0" } }),
+          ]);
+          const mC = mR.headers.get("content-range"); const pC = pR.headers.get("content-range");
+          next[uid] = { matches: mC ? parseInt(mC.split("/")[1] || "0") || 0 : 0, proposals: pC ? parseInt(pC.split("/")[1] || "0") || 0 : 0 };
+        } catch { next[uid] = { matches: 0, proposals: 0 }; }
+      }));
+      setUserCounts(prev => ({ ...prev, ...next }));
+    })();
+  }, [filtered.map(a => a.user_id).join(",")]);
   const counts = {
     en_attente: list.filter(a => !a.archived && a.status === "en_attente").length,
     today: list.filter(a => !a.archived && a.scheduled_at && new Date(a.scheduled_at).toDateString() === new Date().toDateString() && a.status !== "annule").length,
@@ -151,7 +212,7 @@ function AdminAppointments({ auth, showToast }: { auth: any; showToast: (m: stri
   return (
     <div>
       <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
-        {([["en_attente", "En attente", counts.en_attente], ["confirme", "Confirmés", 0], ["today", "Aujourd'hui", counts.today], ["passes", "Passés", 0], ["annule", "Annulés", 0], ["archive", "Archivés", 0]] as [string, string, number][]).map(([k, lbl, badge]) => (
+        {([["en_attente", "En attente", counts.en_attente], ["confirme", "Confirmés", 0], ["mine", "Mes rendez-vous", 0], ["today", "Aujourd'hui", counts.today], ["passes", "Passés", 0], ["annule", "Annulés", 0], ["archive", "Archivés", 0]] as [string, string, number][]).map(([k, lbl, badge]) => (
           <button key={k} onClick={() => setFilter(k as any)} style={{ padding: "7px 14px", borderRadius: 50, border: `2px solid ${filter === k ? G.vert : G.gris}`, background: filter === k ? G.vert : G.blanc, color: filter === k ? "#fff" : "#666", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
             {lbl}{badge > 0 && <span style={{ background: filter === k ? "#fff" : G.rouge, color: filter === k ? G.vert : "#fff", borderRadius: 50, fontSize: "0.6rem", fontWeight: 800, padding: "1px 6px" }}>{badge}</span>}
           </button>
@@ -164,10 +225,21 @@ function AdminAppointments({ auth, showToast }: { auth: any; showToast: (m: stri
           {filtered.map(a => { const si = apptStatusInfo(a.status); return (
             <div key={a.id} style={{ background: G.blanc, borderRadius: 16, padding: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.06)", border: `1.5px solid ${si.color}22` }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-                <div style={{ width: 38, height: 38, borderRadius: "50%", overflow: "hidden", background: G.creme, flexShrink: 0 }}>{a.user?.photo_url && <img src={a.user.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}</div>
+                <div onClick={() => a.user_id && onOpenProfile(a.user_id)} style={{ width: 38, height: 38, borderRadius: "50%", overflow: "hidden", background: G.creme, flexShrink: 0, cursor: "pointer" }}>{a.user?.photo_url && <img src={a.user.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}</div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>{a.user?.name || "Utilisateur"}</div>
+                  <div onClick={() => a.user_id && onOpenProfile(a.user_id)} style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun, cursor: "pointer" }}>{a.user?.name || "Utilisateur"}</div>
                   <div style={{ fontSize: "0.7rem", color: "#888" }}>{a.type === "physique" ? "🏢 À l'agence" : "📞 Téléphonique"}{a.phone ? ` · ${a.phone}` : ""}{a.city ? ` · ${a.city}` : ""}</div>
+                  <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 4 }}>
+                    <span style={{ fontSize: "0.62rem", fontWeight: 700, padding: "2px 7px", borderRadius: 50, background: a.user?.is_verified ? "rgba(39,174,96,0.12)" : "rgba(153,153,153,0.12)", color: a.user?.is_verified ? "#1a8c4a" : "#999" }}>{a.user?.is_verified ? "✓ Vérifié" : "Non vérifié"}</span>
+                    <span style={{ fontSize: "0.62rem", fontWeight: 700, padding: "2px 7px", borderRadius: 50, background: a.user?.phone ? "rgba(39,174,96,0.12)" : "rgba(153,153,153,0.12)", color: a.user?.phone ? "#1a8c4a" : "#999" }}>{a.user?.phone ? "✓ Téléphone activé" : "Pas de téléphone"}</span>
+                    <span style={{ fontSize: "0.62rem", fontWeight: 700, padding: "2px 7px", borderRadius: 50, background: a.user?.relational_profile ? "rgba(39,174,96,0.12)" : "rgba(153,153,153,0.12)", color: a.user?.relational_profile ? "#1a8c4a" : "#999" }}>{a.user?.relational_profile ? "✓ Profil relationnel" : "Profil relationnel vide"}</span>
+                    {a.user_id && userCounts[a.user_id] && (
+                      <>
+                        <span style={{ fontSize: "0.62rem", fontWeight: 700, padding: "2px 7px", borderRadius: 50, background: "rgba(233,30,140,0.1)", color: "#c2185b" }}>{userCounts[a.user_id].matches} match{userCounts[a.user_id].matches > 1 ? "s" : ""}</span>
+                        <span style={{ fontSize: "0.62rem", fontWeight: 700, padding: "2px 7px", borderRadius: 50, background: "rgba(41,128,185,0.1)", color: "#2471a3" }}>{userCounts[a.user_id].proposals} proposition{userCounts[a.user_id].proposals > 1 ? "s" : ""}</span>
+                      </>
+                    )}
+                  </div>
                 </div>
                 <span style={{ background: si.color + "1a", color: si.color, borderRadius: 50, padding: "3px 10px", fontSize: "0.68rem", fontWeight: 700, flexShrink: 0 }}>{si.label}</span>
               </div>
@@ -177,6 +249,34 @@ function AdminAppointments({ auth, showToast }: { auth: any; showToast: (m: stri
               {a.scheduled_at && <div style={{ fontSize: "0.78rem", color: G.vert, fontWeight: 700, marginBottom: 6 }}>📅 {fmtApptDT(a.scheduled_at)}</div>}
               {!a.scheduled_at && Array.isArray(a.preferred_slots) && a.preferred_slots.length > 0 && <div style={{ fontSize: "0.72rem", color: "#999", marginBottom: 6 }}>Créneaux souhaités : {a.preferred_slots.map(fmtApptDT).join(" · ")}</div>}
               {a.admin_note && <div style={{ fontSize: "0.72rem", color: "#8a6d2a", background: "rgba(212,168,67,0.1)", borderRadius: 8, padding: "5px 8px", marginBottom: 6 }}>Note : {a.admin_note}</div>}
+              <div style={{ position: "relative", marginBottom: 6 }}>
+                {a.assigned_to ? (
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                    <span style={{ fontSize: "0.72rem", color: "#555" }}>👤 Assigné à <b>{advisors.find(v => v.id === a.assigned_to)?.name || "un conseiller"}</b></span>
+                    <span onClick={() => setAssignMenuFor(assignMenuFor === a.id ? null : a.id)} style={{ fontSize: "0.68rem", color: "#2980b9", fontWeight: 700, cursor: "pointer", textDecoration: "underline" }}>Céder à...</span>
+                    <span onClick={() => unassignAppt(a)} style={{ fontSize: "0.68rem", color: "#aaa", fontWeight: 700, cursor: "pointer", textDecoration: "underline" }}>Se désister</span>
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <button onClick={() => assignAppt(a, auth.userId, auth.name || "moi")} style={{ background: "rgba(41,128,185,0.08)", border: "1.5px solid rgba(41,128,185,0.25)", borderRadius: 50, padding: "4px 12px", fontSize: "0.68rem", fontWeight: 700, color: "#2471a3", cursor: "pointer" }}>M'attribuer ce rendez-vous</button>
+                    <span onClick={() => setAssignMenuFor(assignMenuFor === a.id ? null : a.id)} style={{ fontSize: "0.68rem", color: "#999", fontWeight: 600, cursor: "pointer", textDecoration: "underline" }}>Assigner à quelqu'un d'autre</span>
+                  </div>
+                )}
+                {assignMenuFor === a.id && (
+                  <div onClick={e => e.stopPropagation()} style={{ position: "absolute", top: "100%", left: 0, marginTop: 6, width: 240, maxHeight: 260, overflowY: "auto", background: G.blanc, border: `1.5px solid ${G.gris}`, borderRadius: 12, boxShadow: "0 8px 24px rgba(0,0,0,0.15)", zIndex: 50, padding: 8 }}>
+                    <input autoFocus value={assignSearch} onChange={e => setAssignSearch(e.target.value)} placeholder="Chercher un conseiller..." style={{ width: "100%", boxSizing: "border-box", padding: "7px 10px", borderRadius: 8, border: `1.5px solid ${G.gris}`, fontSize: "0.78rem", marginBottom: 6 }} />
+                    {advisors.filter(v => v.name?.toLowerCase().includes(assignSearch.toLowerCase())).map(v => (
+                      <div key={v.id} onClick={() => assignAppt(a, v.id, v.name)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 6px", borderRadius: 8, cursor: "pointer" }}
+                        onMouseOver={e => { (e.currentTarget as HTMLElement).style.background = G.creme; }}
+                        onMouseOut={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
+                        <div style={{ width: 24, height: 24, borderRadius: "50%", overflow: "hidden", background: G.creme, flexShrink: 0 }}>{v.photo_url && <img src={v.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}</div>
+                        <span style={{ fontSize: "0.8rem", color: "#333" }}>{v.name}</span>
+                      </div>
+                    ))}
+                    {advisors.filter(v => v.name?.toLowerCase().includes(assignSearch.toLowerCase())).length === 0 && <div style={{ fontSize: "0.76rem", color: "#aaa", padding: "8px 6px", textAlign: "center" }}>Aucun conseiller trouvé</div>}
+                  </div>
+                )}
+              </div>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
                 {(a.status === "en_attente" || a.status === "reporte") && <button onClick={() => confirmAppt(a)} style={{ background: "rgba(39,174,96,0.1)", border: "1.5px solid rgba(39,174,96,0.3)", borderRadius: 50, padding: "5px 12px", fontSize: "0.68rem", fontWeight: 700, color: "#1a8c4a", cursor: "pointer" }}>Confirmer</button>}
                 {a.status !== "annule" && a.status !== "effectue" && <button onClick={() => rescheduleAppt(a)} style={{ background: "rgba(41,128,185,0.1)", border: "1.5px solid rgba(41,128,185,0.3)", borderRadius: 50, padding: "5px 12px", fontSize: "0.68rem", fontWeight: 700, color: "#2471a3", cursor: "pointer" }}>Autre créneau</button>}
@@ -465,10 +565,11 @@ export function AdminDesktopPage() {
     broadcast_enabled: false,
     premium_event_active: false,
     proposal_reminder_enabled: false,
+    appointment_reminder_enabled: false,
   });
   React.useEffect(() => {
     if (!auth) return;
-    const keys: AutoShortcutKey[] = ["phone_completion_prompt_enabled", "verification_prompt_enabled", "premium_nudge_enabled", "ambassador_nudge_enabled", "mm_auto_propose_enabled", "spontaneous_auto_propose_enabled", "auto_warn_ban_contact_enabled", "promo_active", "broadcast_enabled", "premium_event_active", "proposal_reminder_enabled"];
+    const keys: AutoShortcutKey[] = ["phone_completion_prompt_enabled", "verification_prompt_enabled", "premium_nudge_enabled", "ambassador_nudge_enabled", "mm_auto_propose_enabled", "spontaneous_auto_propose_enabled", "auto_warn_ban_contact_enabled", "promo_active", "broadcast_enabled", "premium_event_active", "proposal_reminder_enabled", "appointment_reminder_enabled"];
     fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(${keys.join(",")})&select=key,value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } })
       .then(r => r.json()).then(rows => {
         if (!Array.isArray(rows)) return;
@@ -872,6 +973,14 @@ export function AdminDesktopPage() {
                 </div>
                 <SwitchBtn on={autoShortcuts.proposal_reminder_enabled} onToggle={() => toggleAutoShortcut("proposal_reminder_enabled")} />
               </div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 4px" }}>
+                <div>
+                  <span style={{ fontSize: "0.82rem", fontWeight: 600, color: "#333" }}>Rappel de rendez-vous</span>
+                  <div style={{ fontSize: "0.7rem", color: "#999" }}>Push automatique ~2h avant un rendez-vous confirmé, une seule fois.</div>
+                </div>
+                <SwitchBtn on={autoShortcuts.appointment_reminder_enabled} onToggle={() => toggleAutoShortcut("appointment_reminder_enabled")} />
+              </div>
+              <AppointmentReminderHoursConfig auth={auth} />
               <RelationalNudgeConfig auth={auth} />
             </OffCanvasSection>}
 
@@ -1930,6 +2039,42 @@ function DiscoverModeConfig({ auth }: { auth: Auth }) {
 // Interrupteur "Inviter à remplir le profil relationnel" — même réglage (relational_nudge) que
 // celui déjà présent dans Matchmaking intelligent, dupliqué ici pour l'avoir aussi dans
 // Configuration → Automatisations, comme demandé.
+// ── Délai (en heures) avant un rendez-vous où le rappel push part — autonome, réutilisable
+//    dans les deux écrans de configuration, comme RelationalNudgeConfig juste au-dessus. ──
+function AppointmentReminderHoursConfig({ auth }: { auth: Auth }) {
+  const [hours, setHours] = React.useState("2");
+  const H = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` };
+
+  React.useEffect(() => {
+    fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.appointment_reminder_hours_before&select=value`, { headers: H })
+      .then(r => r.json()).then((data: { value: string }[]) => {
+        if (Array.isArray(data) && data[0]?.value) setHours(data[0].value);
+      }).catch(() => {});
+  }, [auth.token]);
+
+  const save = async () => {
+    const n = parseFloat(hours);
+    if (!n || n <= 0) { setHours("2"); return; }
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, { method: "POST", headers: { ...H, "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ key: "appointment_reminder_hours_before", value: String(n) }) });
+    } catch {}
+  };
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 4px" }}>
+      <div>
+        <span style={{ fontSize: "0.82rem", fontWeight: 600, color: "#333" }}>Délai du rappel de rendez-vous</span>
+        <div style={{ fontSize: "0.7rem", color: "#999" }}>Nombre d'heures avant le rendez-vous où le push part.</div>
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <input type="number" min="0.5" step="0.5" value={hours} onChange={e => setHours(e.target.value)} onBlur={save} style={{ width: 56, padding: "6px 8px", borderRadius: 8, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", textAlign: "center" }} />
+        <span style={{ fontSize: "0.78rem", color: "#999" }}>h</span>
+      </div>
+    </div>
+  );
+}
+
+
 function RelationalNudgeConfig({ auth }: { auth: Auth }) {
   const [on, setOn] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
@@ -2595,10 +2740,11 @@ export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () =
     broadcast_enabled: false,
     premium_event_active: false,
     proposal_reminder_enabled: false,
+    appointment_reminder_enabled: false,
   });
   React.useEffect(() => {
     if (!auth) return;
-    const keys: AutoShortcutKeyM[] = ["phone_completion_prompt_enabled", "verification_prompt_enabled", "premium_nudge_enabled", "ambassador_nudge_enabled", "mm_auto_propose_enabled", "spontaneous_auto_propose_enabled", "auto_warn_ban_contact_enabled", "promo_active", "broadcast_enabled", "premium_event_active", "proposal_reminder_enabled"];
+    const keys: AutoShortcutKeyM[] = ["phone_completion_prompt_enabled", "verification_prompt_enabled", "premium_nudge_enabled", "ambassador_nudge_enabled", "mm_auto_propose_enabled", "spontaneous_auto_propose_enabled", "auto_warn_ban_contact_enabled", "promo_active", "broadcast_enabled", "premium_event_active", "proposal_reminder_enabled", "appointment_reminder_enabled"];
     fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(${keys.join(",")})&select=key,value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } })
       .then(r => r.json()).then(rows => {
         if (!Array.isArray(rows)) return;
@@ -2750,6 +2896,14 @@ export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () =
           </div>
           <SwitchBtn on={autoShortcuts.proposal_reminder_enabled} onToggle={() => toggleAutoShortcut("proposal_reminder_enabled")} />
         </div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 4px" }}>
+          <div>
+            <span style={{ fontSize: "0.82rem", fontWeight: 600, color: "#333" }}>Rappel de rendez-vous</span>
+            <div style={{ fontSize: "0.7rem", color: "#999" }}>Push automatique ~2h avant un rendez-vous confirmé.</div>
+          </div>
+          <SwitchBtn on={autoShortcuts.appointment_reminder_enabled} onToggle={() => toggleAutoShortcut("appointment_reminder_enabled")} />
+        </div>
+        <AppointmentReminderHoursConfig auth={auth} />
         <RelationalNudgeConfig auth={auth} />
       </OffCanvasSection>
       <OffCanvasSection title="Modération">
@@ -3320,10 +3474,11 @@ export function AdminPinGate({ auth, onBack, onBadgeCount, autoShortcuts: autoSh
     broadcast_enabled: false,
     premium_event_active: false,
     proposal_reminder_enabled: false,
+    appointment_reminder_enabled: false,
   });
   useEffect(() => {
     if (autoShortcutsProp || !auth) return;
-    const keys: AutoShortcutKeyShared[] = ["phone_completion_prompt_enabled", "verification_prompt_enabled", "premium_nudge_enabled", "ambassador_nudge_enabled", "mm_auto_propose_enabled", "spontaneous_auto_propose_enabled", "auto_warn_ban_contact_enabled", "promo_active", "broadcast_enabled", "premium_event_active", "proposal_reminder_enabled"];
+    const keys: AutoShortcutKeyShared[] = ["phone_completion_prompt_enabled", "verification_prompt_enabled", "premium_nudge_enabled", "ambassador_nudge_enabled", "mm_auto_propose_enabled", "spontaneous_auto_propose_enabled", "auto_warn_ban_contact_enabled", "promo_active", "broadcast_enabled", "premium_event_active", "proposal_reminder_enabled", "appointment_reminder_enabled"];
     fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(${keys.join(",")})&select=key,value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } })
       .then(r => r.json()).then(rows => {
         if (!Array.isArray(rows)) return;
@@ -3719,13 +3874,16 @@ const HELP_SECTIONS: HelpSection[] = [
       { kind: "paragraph", text: "Un Ambassadeur gagne une commission en argent (pas des jours Premium) quand une personne qu'il a parrainée souscrit au Premium. Trois sous-onglets : Demandes, Affiliés actifs, Versements." },
       { kind: "subhead", text: "Demandes" },
       { kind: "rows", color: "#8e44ad", items: [
-        ["Approuver", "Accorde le statut affilié actif (commissions) et le badge Ambassadeur en un seul geste. Aucun Premium n'est offert à cette étape — le bouton \"Devenir Ambassadeur\" disparaît côté profil et son tableau de bord apparaît."],
+        ["Approuver", "Accorde le statut affilié actif (commissions) et le badge Ambassadeur en un seul geste. Aucun Premium n'est offert à cette étape. Son tableau de bord reste flouté tant qu'il n'a pas lu, signé son contrat depuis l'app, et que toi tu n'as pas validé la signature (voir \"Contrat\" dans Affiliés actifs)."],
         ["Refuser", "Rejette la demande. La personne garde son compte normal et peut refaire une demande plus tard."],
       ] },
       { kind: "subhead", text: "Affiliés actifs" },
       { kind: "rows", color: "#8e44ad", items: [
-        ["Désigner un nouvel affilié", "Recherche par nom (insensible aux accents) puis clic sur \"Rechercher\". Ajouter quelqu'un ici pose automatiquement le badge Ambassadeur, comme une approbation de demande."],
+        ["Désigner un nouvel affilié", "Recherche par nom (insensible aux accents) puis clic sur \"Rechercher\". Ajouter quelqu'un ici pose automatiquement le badge Ambassadeur, comme une approbation de demande — même contrat à signer et valider avant que son tableau de bord se débloque."],
         ["Badge \"Ambassadeur\"", "Juste un repère visuel à côté du nom, ce n'est pas une action à faire séparément."],
+        ["Photo cliquable", "Ouvre la fiche complète du membre (même écran que dans Utilisateurs), sans avoir à aller le rechercher séparément."],
+        ["Contrat", "Trois états : orange \"Activer sans signature reçue\" (rien reçu), rouge \"Activer le contrat ✓ reçu\" (signé, en attente de ta validation), vert \"Désactiver le contrat\" (actif). L'icône œil à côté ouvre le PDF signé dès qu'il existe. Basculer sur vert débloque son tableau de bord et lui envoie un push."],
+        ["Code promo", "Code personnel de l'ambassadeur (ex: ROMEO20), modifiable à tout moment. Les deux méthodes (lien ou code) donnent les mêmes jours bonus au filleul et la même commission à l'ambassadeur."],
         ["Mettre en pause / Réactiver", "Suspend ou reprend les commissions sans rien supprimer."],
         ["Offrir / Retirer Premium à vie", "Geste manuel réservé aux ambassadeurs qui ont fait leurs preuves (résultats après ~1 mois). Le bouton bascule automatiquement en \"Retirer Premium\" une fois accordé."],
         ["Retirer", "Fin de contrat : repasse la personne en utilisateur normal (badge retiré, Premium offert retiré s'il y en avait un, bouton \"Devenir Ambassadeur\" qui redevient disponible). L'historique des commissions est conservé, le statut passe à \"Retiré\"."],
@@ -3778,6 +3936,34 @@ const HELP_SECTIONS: HelpSection[] = [
         ["🗑 Supprimer", "Sur un RDV passé ou annulé : supprime définitivement le rendez-vous (irréversible)."],
         ["💳 Paiement agence", "Un RDV à l'agence est payant (" + APPOINTMENT_PHYSICAL_PRICE.toLocaleString("fr-FR") + " FCFA). Le paiement apparaît dans Budget avec le badge « 🗓 Rendez-vous agence » et se valide là-bas, paiement DISTINCT du Premium : le valider n'active aucun abonnement."],
         ["Côté utilisateur", "Dans « Mes rendez-vous », le membre suit l'état de sa demande et peut supprimer lui-même un RDV annulé ou déjà passé."],
+        ["Notifications au membre", "Un push part automatiquement à chaque changement de statut (confirmé, reporté avec le nouveau créneau, annulé avec le motif si renseigné)."],
+        ["Rappel avant le rendez-vous", "Réglable dans Configuration → Automatisations : push automatique un certain nombre d'heures avant (2h par défaut, modifiable), une seule fois par rendez-vous."],
+        ["Photo + indicateurs sur la carte", "Photo cliquable vers la fiche complète du membre. Badges directs : Vérifié, Téléphone activé, Profil relationnel rempli, nombre de matchs, nombre de propositions en attente — pour préparer la prise en charge sans devoir chercher ailleurs."],
+        ["Attribution à un conseiller", "\"M'attribuer ce rendez-vous\" (soi-même) ou \"Assigner à quelqu'un d'autre\" (recherche parmi tous les comptes admin). Une fois assigné : \"Céder à...\" pour transférer en cas d'indisponibilité, ou \"Se désister\" pour libérer. La personne assignée reçoit un push. Filtre \"Mes rendez-vous\" pour ne voir que les siens."],
+      ] },
+    ],
+  },
+  {
+    id: "notifbell", label: "Cloche de notifications", color: "#B8860B",
+    icon: helpIco(<><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></>, "#B8860B"),
+    blocks: [
+      { kind: "paragraph", text: "Icône entre Aide et Fermer, avec un badge reprenant le compteur global. S'ouvre en un clic, ferme au clic en dehors ou sur une ligne (qui redirige directement vers le bon onglet, parfois le bon sous-onglet)." },
+      { kind: "subhead", text: "En attente" },
+      { kind: "paragraph", text: "Regroupe tout ce qui attend une action sur la plateforme : signalements, messages Assistance, avis non lus, paiements à vérifier, mises en avant, rendez-vous à confirmer, demandes Groupe Premium, mises en relation, demandes et versements Ambassadeur. Chaque ligne disparaît d'elle-même une fois réglée, ce n'est que le reflet de vraies données en attente ailleurs." },
+      { kind: "subhead", text: "Suggestions" },
+      { kind: "paragraph", text: "Alertes basées sur de vraies règles (seuils, comparaisons de périodes, délais), pas une simple liste décorative : taux de non-vérifiés ou de téléphones manquants élevé, baisse des achats Premium ou des inscriptions, programme Ambassadeur désactivé alors que des demandes attendent, contrats signés en attente de validation, membres inactifs, propositions ou rendez-vous qui traînent, mode maintenance oublié, et plus. Chaque suggestion a un bouton d'action direct (Activer/Désactiver un réglage, ou Aller y voir) et un bouton Ignorer." },
+    ],
+  },
+  {
+    id: "targetednudges", label: "Campagnes ciblées (par membre)", color: "#8B0D2F",
+    icon: helpIco(<><path d="M3 11l18-5v12L3 14v-3z" /><path d="M11.6 16.8a2 2 0 0 1-3.2 2.4L6 15" /></>, "#8B0D2F"),
+    blocks: [
+      { kind: "paragraph", text: "Depuis Utilisateurs → Gérer un membre → onglet \"Campagnes ciblées\" : envoie une incitation à cette seule personne, visible instantanément si elle est en ligne (sondage ~8 secondes), sans qu'elle ait besoin de se déconnecter ou de quitter l'app." },
+      { kind: "rows", color: "#8B0D2F", items: [
+        ["Inciter au Premium", "Affiche l'écran Premium à ce membre. Grisé s'il est déjà Premium."],
+        ["Promotion", "Affiche l'écran de la Super promo actuellement configurée. Grisé s'il est déjà Premium."],
+        ["Profil incomplet", "Affiche l'écran demandant son numéro de téléphone. Grisé s'il l'a déjà renseigné."],
+        ["Inciter à devenir Ambassadeur", "Affiche l'écran de la campagne Ambassadeur. Grisé s'il l'est déjà."],
       ] },
     ],
   },
@@ -4027,7 +4213,7 @@ function AdminHelpModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-type AutoShortcutKeyShared = "phone_completion_prompt_enabled" | "verification_prompt_enabled" | "premium_nudge_enabled" | "ambassador_nudge_enabled" | "mm_auto_propose_enabled" | "spontaneous_auto_propose_enabled" | "auto_warn_ban_contact_enabled" | "promo_active" | "broadcast_enabled" | "premium_event_active" | "proposal_reminder_enabled";
+type AutoShortcutKeyShared = "phone_completion_prompt_enabled" | "verification_prompt_enabled" | "premium_nudge_enabled" | "ambassador_nudge_enabled" | "mm_auto_propose_enabled" | "spontaneous_auto_propose_enabled" | "auto_warn_ban_contact_enabled" | "promo_active" | "broadcast_enabled" | "premium_event_active" | "proposal_reminder_enabled" | "appointment_reminder_enabled";
 // ── Panneau de la cloche de notifications : agrège tout ce qui est en attente sur la
 //    plateforme (chaque ligne disparaît d'elle-même dès que réglée, puisque ce n'est que le
 //    reflet de vraies données en attente ailleurs) + des suggestions basées sur des règles
@@ -8399,7 +8585,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
   const [actionLoading, setActionLoading] = useState<string | null>(null); // userId en cours
   const [banModal, setBanModal] = useState<AdminProfile | null>(null);
   const [manageUserModal, setManageUserModal] = useState<AdminProfile | null>(null);
-  const [manageTab, setManageTab] = useState<"statuts" | "moderation">("statuts");
+  const [manageTab, setManageTab] = useState<"statuts" | "moderation" | "campagnes">("statuts");
   // Garde la fenêtre "Gérer" à jour avec les dernières données (ex: après avoir vérifié/banni
   // depuis la fenêtre elle-même, les boutons doivent refléter le nouvel état sans la refermer).
   useEffect(() => {
@@ -10473,7 +10659,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
         const targetIsSuperAdmin = (u as any).admin_level === "superadmin";
         const cannotModerate = isSelf || (targetIsSuperAdmin && !iAmSuperAdmin);
         const close = () => setManageUserModal(null);
-        const NavItem = ({ id, label, Icon }: { id: "statuts" | "moderation"; label: string; Icon: () => React.ReactElement }) => {
+        const NavItem = ({ id, label, Icon }: { id: "statuts" | "moderation" | "campagnes"; label: string; Icon: () => React.ReactElement }) => {
           const active = manageTab === id;
           return (
             <div onClick={() => setManageTab(id)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderRadius: 10, cursor: "pointer", background: active ? "rgba(192,57,43,0.08)" : "transparent", color: active ? G.rouge : "#666", fontWeight: 700, fontSize: "0.85rem", marginBottom: 4 }}>
@@ -10515,6 +10701,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 <div className="mng-side" style={{ width: 190, flexShrink: 0, borderRight: `1px solid ${G.gris}`, padding: 14 }}>
                   <NavItem id="statuts" label="Statuts" Icon={() => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>} />
                   <NavItem id="moderation" label="Modération" Icon={() => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>} />
+                  <NavItem id="campagnes" label="Campagnes ciblées" Icon={() => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a2 2 0 0 1-3.2 2.4L6 15"/></svg>} />
                 </div>
                 {/* Contenu */}
                 <div style={{ flex: 1, minWidth: 0, padding: 20, overflowY: "auto" }}>
@@ -10608,15 +10795,6 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                         onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } setMailModal({ user: u }); setMailHistory([]); setMailTab("modeles"); loadMailHistory(u.id); }} />
                       <Row label={photoReplaceTargetId === u.id ? "…" : "Photo"} color="#16a085" desc="Remplacer la photo de profil de ce membre (recadrage inclus)." disabled={isLoading || cannotModerate || photoReplaceTargetId === u.id}
                         onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } triggerPhotoReplace(u); }} />
-                      {!u.is_premium && (
-                        <Row label="Inciter au Premium" color="#E67E22" desc="Afficher à ce membre un écran l'invitant à passer Premium (visible en direct s'il est en ligne)." disabled={isLoading}
-                          onClick={async () => {
-                            try {
-                              await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ user_id: u.id, admin_id: auth.userId, reason: "[PREMIUM_NUDGE] Passe Premium pour profiter de tous les avantages !", warning_number: 0, acknowledged: false }) });
-                              showToast(`Incitation Premium envoyée à ${u.name}.`, "success");
-                            } catch { showToast("Erreur lors de l'envoi.", "error"); }
-                          }} />
-                      )}
                       {/* Lien de paiement unique — pour les gens bannis ou qui n'arrivent pas à
                           payer depuis l'app et demandent le lien directement. Ouvre un écran de
                           paiement (photo/nom affichés) sans connexion, MTN/Airtel uniquement.
@@ -10645,6 +10823,33 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                             showToast(clipboardOk ? "Lien de paiement copié (valable 7 jours)." : "Lien créé mais non copié — copie-le manuellement : " + link, clipboardOk ? "success" : "error");
                           } catch (e: any) { showToast(`Erreur lors de la génération du lien : ${e?.message || "inconnue"}`, "error"); }
                         }} />
+                    </>
+                  )}
+                  {manageTab === "campagnes" && (
+                    <>
+                      <div style={{ fontWeight: 800, fontSize: "0.95rem", color: G.brun, marginBottom: 4 }}>Campagnes ciblées</div>
+                      <div style={{ fontSize: "0.76rem", color: "#999", marginBottom: 16 }}>Déclenche l'écran correspondant instantanément pour ce membre seul, sans qu'il ait besoin de se déconnecter ou de quitter l'app — visible en direct s'il est en ligne.</div>
+
+                      {(() => {
+                        const sendNudge = async (prefix: string, defaultMsg: string, label: string) => {
+                          try {
+                            await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ user_id: u.id, admin_id: auth.userId, reason: `[${prefix}] ${defaultMsg}`, warning_number: 0, acknowledged: false }) });
+                            showToast(`${label} envoyé à ${u.name}.`, "success");
+                          } catch { showToast("Erreur lors de l'envoi.", "error"); }
+                        };
+                        return (
+                          <>
+                            <Row label="Inciter au Premium" color="#E67E22" desc={u.is_premium ? "Déjà Premium, action non pertinente pour ce membre." : "Afficher à ce membre l'écran l'invitant à passer Premium."} disabled={isLoading || !!u.is_premium}
+                              onClick={() => sendNudge("PREMIUM_NUDGE", "Passe Premium pour profiter de tous les avantages !", "Incitation Premium")} />
+                            <Row label="Promotion" color="#c0392b" desc={u.is_premium ? "Déjà Premium, action non pertinente pour ce membre." : "Afficher à ce membre l'écran de la Super promo en cours."} disabled={isLoading || !!u.is_premium}
+                              onClick={() => sendNudge("PROMO_NUDGE", "Une promotion vous attend !", "La promotion")} />
+                            <Row label="Profil incomplet" color="#2980b9" desc={u.phone ? "Ce membre a déjà renseigné son téléphone." : "Afficher à ce membre l'écran lui demandant son numéro de téléphone."} disabled={isLoading || !!u.phone}
+                              onClick={() => sendNudge("PHONE_NUDGE", "Complète ton profil !", "La demande de téléphone")} />
+                            <Row label="Inciter à devenir Ambassadeur" color="#8B0D2F" desc={(u as any).is_ambassador ? "Déjà Ambassadeur, action non pertinente pour ce membre." : "Afficher à ce membre l'écran de la campagne Ambassadeur."} disabled={isLoading || !!(u as any).is_ambassador}
+                              onClick={() => sendNudge("AMBASSADOR_NUDGE", "Gagne de l'argent en recommandant Moyo Dating à ton entourage. Chaque personne qui s'abonne au Premium grâce à toi te rapporte une vraie commission, versée par Mobile Money.", "La campagne Ambassadeur")} />
+                          </>
+                        );
+                      })()}
                     </>
                   )}
                 </div>
@@ -14297,7 +14502,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
       {/* ═══════════════════════════════════════════ ONGLET BUDGET (Recettes / Dépenses / Résultat net) */}
       {activeTab === "appointments" && (
         <div style={{ padding: "16px" }}>
-          <AdminAppointments auth={auth!} showToast={showToast} />
+          <AdminAppointments auth={auth!} showToast={showToast} onOpenProfile={openAffiliateProfile} />
         </div>
       )}
 

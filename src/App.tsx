@@ -348,7 +348,7 @@ function getLandingFaqItems(): { icon: string; titre: string; desc: string }[] {
     { icon: "Q", titre: "Comment offrir le Premium ?", desc: "Dans une conversation, le bouton cadeau apparait uniquement si vous êtes Premium. Vous pouvez offrir le Premium à votre partenaire non-premium, en choisissant la formule (1 semaine, 1 mois ou 2 mois)." },
     { icon: "Q", titre: "Comment obtenir le badge vérifié ?", desc: "Profil → Faire vérifier mon compte → WhatsApp. Gratuit, vérification sous 24h." },
     { icon: "Q", titre: "Comment inviter un ami ?", desc: "Dans Profil, appuyez sur Inviter un ami. Un message pré-rempli s'ouvre sur WhatsApp ou le partage natif." },
-    { icon: "Q", titre: "Qu'est-ce que le programme Ambassadeur ?", desc: "Contrairement au parrainage classique (jours Premium offerts), l'Ambassadeur touche une commission en argent sur chaque abonnement souscrit par ses filleuls. La demande se fait depuis Profil → Devenir Ambassadeur Moyo Dating. Une fois approuvée, un tableau de bord dédié permet de suivre ses gains et de demander un versement une fois le minimum atteint." },
+    { icon: "Q", titre: "Qu'est-ce que le programme Ambassadeur ?", desc: "Contrairement au parrainage classique (jours Premium offerts), l'Ambassadeur touche une commission en argent sur chaque abonnement souscrit par ses filleuls. La demande se fait depuis Profil → Devenir Ambassadeur Moyo Dating. Une fois approuvée, un contrat est à lire et signer électroniquement depuis l'app ; après validation par l'équipe, le tableau de bord se débloque pour suivre ses gains et demander un versement une fois le minimum atteint." },
     { icon: "Q", titre: "Comment activer le mode sombre ?", desc: "Dans Profil, utilisez le bouton Mode clair/sombre pour basculer entre les deux thèmes." },
     { icon: "Q", titre: "Comment rendre mon profil invisible ?", desc: "Dans Profil, activez le bouton Profil invisible. Vous disparaissez de Découvrir sans supprimer votre compte." },
     { icon: "Q", titre: "Pourquoi je ne vois pas mon profil dans Découvrir ?", desc: "Votre profil doit être complet jusqu'à la dernière étape de l'inscription pour apparaître dans Découvrir. Vérifiez aussi que votre profil est bien visible dans les paramètres." },
@@ -1187,8 +1187,8 @@ function AppointmentsButton({ auth, onShowPremium }: { auth: any; onShowPremium:
               <div style={{ marginBottom: 12 }}><div style={{ fontSize: "0.8rem", fontWeight: 700, color: G.brun, marginBottom: 6 }}>Motif</div><textarea value={topic} onChange={e => setTopic(e.target.value)} placeholder="Ex. étudier mon cas, améliorer mon profil, préparer une mise en relation…" style={{ ...APPT_INPUT, minHeight: 60, resize: "vertical" }} /></div>
               {type === "telephonique" && <div style={{ marginBottom: 12 }}><div style={{ fontSize: "0.8rem", fontWeight: 700, color: G.brun, marginBottom: 6 }}>Téléphone</div><input value={phone} onChange={e => setPhone(e.target.value)} placeholder="Votre numéro" style={APPT_INPUT} /></div>}
               <div style={{ marginBottom: 12 }}>
-                <div style={{ fontSize: "0.8rem", fontWeight: 700, color: G.brun, marginBottom: 6 }}>Trois créneaux souhaités</div>
-                {[0, 1, 2].map(i => (
+                <div style={{ fontSize: "0.8rem", fontWeight: 700, color: G.brun, marginBottom: 6 }}>Deux créneaux souhaités</div>
+                {[0, 1].map(i => (
                   <div key={i} style={{ marginBottom: 8 }}>
                     <div style={{ fontSize: "0.7rem", color: "#999", marginBottom: 3 }}>Créneau {i + 1}{i === 0 ? "" : " (facultatif)"}</div>
                     <DateTimePicker date={slots[i].date} hour={slots[i].hour} minute={slots[i].minute} onChange={(d, h, m) => setSlots(prev => prev.map((s, j) => j === i ? { date: d, hour: h, minute: m } : s))} />
@@ -5641,7 +5641,7 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
 const BOT_FAQ = [
   { q: ["premium", "abonnement", "payer", "prix", "coût", "momo", "airtel"], r: `Le Premium est disponible${activePlansCount() > 1 ? " en plusieurs formules" : ""} : ${activePlansText()}. Il donne accès aux likes illimités, messages illimités, voir qui vous a liké et visité, envoi de photos et bien plus. Paiement via MTN Mobile Money, Airtel Money ou carte Visa/Mastercard. Activation sous 15 minutes.` },
   { q: ["parrain", "parrainage", "filleul", "inviter", "lien", "7 jours", "jours offerts"], r: `Le parrainage est simple : sur votre Profil, appuyez sur 'Parrainer un ami' pour partager votre lien unique. Quand un ami s'inscrit via ce lien et passe Premium, vous gagnez des jours Premium offerts selon sa formule : ${REFERRAL_BONUS_WEEK} jours (1 semaine), ${REFERRAL_BONUS_MONTH} jours (1 mois) ou ${REFERRAL_BONUS_2MONTH} jours (2 mois). Pas de limite !` },
-  { q: ["ambassadeur", "ambassadrice", "commission", "versement", "gains", "cash", "argent"], r: "Le programme Ambassadeur est différent du parrainage classique : au lieu de jours Premium offerts, vous touchez une commission en argent sur chaque abonnement souscrit par vos filleuls. Depuis Profil → 'Devenir Ambassadeur Moyo Dating', envoyez votre demande. Une fois approuvée par notre équipe, un tableau de bord dédié affiche vos gains disponibles, vos performances et l'historique de vos commissions, avec un bouton pour demander le versement une fois le montant minimum atteint." },
+  { q: ["ambassadeur", "ambassadrice", "commission", "versement", "gains", "cash", "argent"], r: "Le programme Ambassadeur est différent du parrainage classique : au lieu de jours Premium offerts, vous touchez une commission en argent sur chaque abonnement souscrit par vos filleuls. Depuis Profil → 'Devenir Ambassadeur Moyo Dating', envoyez votre demande. Une fois approuvée, lisez et signez électroniquement votre contrat depuis l'app ; après validation par notre équipe, un tableau de bord dédié affiche vos gains disponibles, vos performances et l'historique de vos commissions, avec un bouton pour demander le versement une fois le montant minimum atteint." },
   { q: ["match", "matcher", "matchs"], r: "Un match se crée automatiquement quand deux personnes se likent mutuellement. Un message de bienvenue apparaît automatiquement dans la conversation. Depuis l'onglet Matchs, appuyez sur les 3 traits pour envoyer un message, voir le profil, bloquer ou annuler le match." },
   { q: ["mise en relation", "demande", "proposer", "proposition", "matchmaking", "trouver quelqu'un"], r: `Moyo Dating propose un service de mise en relation personnalisé. Tout le monde peut créer et enregistrer sa carte relationnelle depuis la page Profil (bouton rouge 'Demander une mise en relation') en décrivant qui vous êtes et ce que vous recherchez. L'envoi de la demande à notre équipe est réservé aux membres Premium : au moment d'appuyer sur 'Envoyer ma demande', si vous n'êtes pas Premium, l'option de passer Premium s'affiche. Une fois la demande envoyée, notre équipe analyse votre profil et vous envoie une proposition dans l'application. Vous pouvez faire jusqu'à ${FREE_LIMITS.matchRequests} demande${FREE_LIMITS.matchRequests > 1 ? "s" : ""} par mois.` },
   { q: ["accepter proposition", "refuser proposition", "proposition reçue", "on pense à toi"], r: "Quand l'équipe Moyo Dating vous propose une rencontre, un modal s'affiche automatiquement avec la photo, le nom, l'âge et la ville de la personne. Deux choix : 'Accepter' ou 'Refuser'. Si les deux personnes acceptent → un match est créé automatiquement et une conversation s'ouvre. Si l'une refuse → la proposition est annulée pour les deux. La proposition expire si vous ne répondez pas dans le délai fixé par l'équipe." },
@@ -6459,6 +6459,13 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
         "Vous pouvez annuler une demande de mise en avant en attente à tout moment ; l'annulation est définitive.",
       ]},
       { title: "Sécurité et confidentialité", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>, items: ["Moyo Dating est réservé aux personnes majeures de 18 ans et plus.", "La modération automatique bloque les insultes, menaces, arnaques et contenus inappropriés avant envoi. Le message ne part pas, un avertissement s'affiche, et un signalement est automatiquement transmis à notre équipe.", "Si votre comportement enfreint les règles, un administrateur peut vous envoyer un avertissement officiel. Une notification apparaît à votre prochaine connexion. Après plusieurs avertissements, le compte peut être banni.", "En cas de bannissement, un encadré Motif s'affiche sur votre écran pour expliquer clairement la raison exacte (par exemple : partage de coordonnées, contenu inapproprié...). Si vous pensez qu'il s'agit d'une erreur, contactez notre équipe via WhatsApp depuis cet écran.", "Pour supprimer votre compte, rendez-vous dans Profil puis Supprimer mon compte. Cette action est définitive et irréversible."] },
+      { title: "Programme Ambassadeur", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>, items: [
+        "Contrairement au parrainage classique (jours Premium offerts), l'Ambassadeur touche une vraie commission en argent sur chaque abonnement souscrit par ses filleuls, versée par Mobile Money.",
+        "La demande se fait depuis Profil → 'Devenir Ambassadeur Moyo Dating'. Une fois approuvée par l'équipe, un contrat de 5 pages est à lire directement dans l'app, puis à signer électroniquement (nom, date et lieu de naissance, adresse, téléphone, e-mail).",
+        "Après validation du contrat par l'équipe, le tableau de bord se débloque : gains disponibles, performances, historique des commissions, lien d'invitation et code promo personnels, et le contrat signé consultable/téléchargeable à tout moment.",
+        "Deux façons de recommander : le lien d'invitation (rattache automatiquement la personne dès son inscription) ou le code promo (à saisir par la personne au moment de payer son Premium). Dans les deux cas, le filleul reçoit aussi des jours de Premium bonus offerts par Moyo Dating.",
+        "Le versement n'est pas automatique : il se demande depuis le tableau de bord une fois le montant minimum atteint, après un court délai de sécurité suivant chaque commission.",
+      ]},
       { title: "Questions fréquentes", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>, items: getLandingFaqItems() },
       { title: "Assistant Moyo Dating", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7H3a7 7 0 0 1 7-7h1V5.73A2 2 0 0 1 10 4a2 2 0 0 1 2-2z"/><path d="M5 14v4a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-4"/></svg>, items: ["L'icône verte en forme de robot à côté du bouton Guide ouvre l'Assistant Moyo Dating.", "Il propose deux options : Besoin d'aide (répond instantanément à vos questions sur l'app) et Signaler un problème (comportement abusif, arnaque, harcèlement).", "Les signalements sont traités par notre équipe sous 24h."] },
           ].map((s, i) => (
@@ -16656,7 +16663,7 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
                 {ambPromoCode && (
                   <div style={{ background: "#fafafa", borderRadius: 16, padding: "16px", marginBottom: 14 }}>
                     <div style={{ fontSize: "0.85rem", fontWeight: 800, color: G.brun, marginBottom: 10 }}>Mon code promo</div>
-                    <p style={{ fontSize: "0.74rem", color: "#999", lineHeight: 1.5, marginBottom: 10 }}>Vos filleuls peuvent le saisir à l'achat de leur Premium pour gagner {AFFILIATE_PROMO_BONUS_DAYS} jour{AFFILIATE_PROMO_BONUS_DAYS > 1 ? "s" : ""} bonus.</p>
+                    <p style={{ fontSize: "0.74rem", color: "#999", lineHeight: 1.5, marginBottom: 10 }}>Vos filleuls peuvent le saisir à l'achat de leur Premium pour gagner {AFFILIATE_PROMO_BONUS_DAYS} jour{AFFILIATE_PROMO_BONUS_DAYS > 1 ? "s" : ""} bonus. En retour, vous touchez {ambCommissionPercent ?? AFFILIATE_COMMISSION_PERCENT}% de commission sur leur achat.</p>
                     <button onClick={() => {
                       const shareText = `Utilise le code ${ambPromoCode} sur Moyo Dating pour gagner ${AFFILIATE_PROMO_BONUS_DAYS} jour${AFFILIATE_PROMO_BONUS_DAYS > 1 ? "s" : ""} Premium bonus :`;
                       if (navigator.share) {
@@ -16675,7 +16682,7 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
                 {/* Lien d'invitation */}
                 <div style={{ background: "#fafafa", borderRadius: 16, padding: "16px" }}>
                   <div style={{ fontSize: "0.85rem", fontWeight: 800, color: G.brun, marginBottom: 10 }}>Mon lien d'invitation</div>
-                  <p style={{ fontSize: "0.74rem", color: "#999", lineHeight: 1.5, marginBottom: 10 }}>Dès leur inscription via ce lien, vos filleuls gagnent {AFFILIATE_PROMO_BONUS_DAYS} jour{AFFILIATE_PROMO_BONUS_DAYS > 1 ? "s" : ""} bonus au premier Premium acheté, sans rien saisir.</p>
+                  <p style={{ fontSize: "0.74rem", color: "#999", lineHeight: 1.5, marginBottom: 10 }}>Dès leur inscription via ce lien, vos filleuls gagnent {AFFILIATE_PROMO_BONUS_DAYS} jour{AFFILIATE_PROMO_BONUS_DAYS > 1 ? "s" : ""} bonus au premier Premium acheté, sans rien saisir, et vous percevez votre commission dès l'achat de leur Premium.</p>
                   <button onClick={() => {
                     const refLink = `${window.location.origin}?ref=${auth.userId}`;
                     if (navigator.share) {
@@ -18508,6 +18515,16 @@ export default function App() {
             setPremiumNudgeMessage(w.reason.replace("[PREMIUM_NUDGE]", "").trim() || "Passe Premium pour profiter de tous les avantages !");
             setPremiumNudgeOpen(true);
             fetch(`${SUPABASE_URL}/rest/v1/user_warnings?id=eq.${w.id}`, { method: "PATCH", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json" }, body: JSON.stringify({ acknowledged: true }) }).catch(() => {});
+          } else if (typeof w.reason === "string" && w.reason.startsWith("[PROMO_NUDGE]")) {
+            setSuperPromoOpen(true);
+            fetch(`${SUPABASE_URL}/rest/v1/user_warnings?id=eq.${w.id}`, { method: "PATCH", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json" }, body: JSON.stringify({ acknowledged: true }) }).catch(() => {});
+          } else if (typeof w.reason === "string" && w.reason.startsWith("[PHONE_NUDGE]")) {
+            setPhonePromptOpen(true);
+            fetch(`${SUPABASE_URL}/rest/v1/user_warnings?id=eq.${w.id}`, { method: "PATCH", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json" }, body: JSON.stringify({ acknowledged: true }) }).catch(() => {});
+          } else if (typeof w.reason === "string" && w.reason.startsWith("[AMBASSADOR_NUDGE]")) {
+            setAmbassadorNudgeMessage(w.reason.replace("[AMBASSADOR_NUDGE]", "").trim() || "Gagne de l'argent en recommandant Moyo Dating à ton entourage. Chaque personne qui s'abonne au Premium grâce à toi te rapporte une vraie commission, versée par Mobile Money.");
+            setAmbassadorNudgeOpen(true);
+            fetch(`${SUPABASE_URL}/rest/v1/user_warnings?id=eq.${w.id}`, { method: "PATCH", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json" }, body: JSON.stringify({ acknowledged: true }) }).catch(() => {});
           } else {
             setPendingWarning({ id: w.id, warning_number: w.warning_number, reason: w.reason });
           }
@@ -18921,6 +18938,16 @@ export default function App() {
           if (typeof w.reason === "string" && w.reason.startsWith("[PREMIUM_NUDGE]")) {
             setPremiumNudgeMessage(w.reason.replace("[PREMIUM_NUDGE]", "").trim() || "Passe Premium pour profiter de tous les avantages !");
             setPremiumNudgeOpen(true);
+            fetch(`${SUPABASE_URL}/rest/v1/user_warnings?id=eq.${w.id}`, { method: "PATCH", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json" }, body: JSON.stringify({ acknowledged: true }) }).catch(() => {});
+          } else if (typeof w.reason === "string" && w.reason.startsWith("[PROMO_NUDGE]")) {
+            setSuperPromoOpen(true);
+            fetch(`${SUPABASE_URL}/rest/v1/user_warnings?id=eq.${w.id}`, { method: "PATCH", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json" }, body: JSON.stringify({ acknowledged: true }) }).catch(() => {});
+          } else if (typeof w.reason === "string" && w.reason.startsWith("[PHONE_NUDGE]")) {
+            setPhonePromptOpen(true);
+            fetch(`${SUPABASE_URL}/rest/v1/user_warnings?id=eq.${w.id}`, { method: "PATCH", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json" }, body: JSON.stringify({ acknowledged: true }) }).catch(() => {});
+          } else if (typeof w.reason === "string" && w.reason.startsWith("[AMBASSADOR_NUDGE]")) {
+            setAmbassadorNudgeMessage(w.reason.replace("[AMBASSADOR_NUDGE]", "").trim() || "Gagne de l'argent en recommandant Moyo Dating à ton entourage. Chaque personne qui s'abonne au Premium grâce à toi te rapporte une vraie commission, versée par Mobile Money.");
+            setAmbassadorNudgeOpen(true);
             fetch(`${SUPABASE_URL}/rest/v1/user_warnings?id=eq.${w.id}`, { method: "PATCH", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json" }, body: JSON.stringify({ acknowledged: true }) }).catch(() => {});
           } else {
             setPendingWarning(prev => prev?.id === w.id ? prev : { id: w.id, warning_number: w.warning_number, reason: w.reason });
