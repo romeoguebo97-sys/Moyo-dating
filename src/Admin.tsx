@@ -105,7 +105,7 @@ function AdminAppointments({ auth, showToast, onOpenProfile }: { auth: any; show
       const profs: Record<string, any> = {};
       for (let i = 0; i < ids.length; i += 50) {
         const batch = ids.slice(i, i + 50);
-        const pr = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=in.(${batch.join(",")})&select=id,name,photo_url,is_verified,phone,relational_profile`, { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${auth.token}` } });
+        const pr = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=in.(${batch.join(",")})&select=id,name,photo_url,is_verified,phone,relational_profile,share_phone_with_matches`, { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${auth.token}` } });
         const pd = await pr.json().catch(() => []); if (Array.isArray(pd)) pd.forEach((p: any) => { profs[p.id] = p; });
       }
       setList(d.map((a: any) => ({ ...a, user: profs[a.user_id] })));
@@ -213,10 +213,6 @@ function AdminAppointments({ auth, showToast, onOpenProfile }: { auth: any; show
     today: list.filter(a => !a.archived && a.scheduled_at && new Date(a.scheduled_at).toDateString() === new Date().toDateString() && a.status !== "annule").length,
   };
 
-  // ── Repli de la zone d'assignation (Céder à.../Se désister/M'attribuer), masquée par défaut
-  //    derrière le lien « (Modifier) » pour garder la carte aérée. ──
-  const [editingAssignFor, setEditingAssignFor] = useState<string | null>(null);
-
   // ── Vue rapide déclenchée par les badges cliquables : profil relationnel (déjà en mémoire,
   //    pas de requête), ou liste nominative (matchs / propositions en attente / profils likés). ──
   const [quickView, setQuickView] = useState<{ type: "rel" | "matches" | "proposals" | "likes"; user: { id: string; name?: string; photo_url?: string }; loading: boolean; rel?: any; people?: any[] } | null>(null);
@@ -281,14 +277,9 @@ function AdminAppointments({ auth, showToast, onOpenProfile }: { auth: any; show
                   </div>
                   <div style={{ fontSize: "0.72rem", color: "#999", marginTop: 2 }}>{a.type === "physique" ? "🏢 À l'agence" : "📞 Téléphonique"}{a.city ? ` · ${a.city}` : ""}</div>
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
-                    {a.user?.is_verified && a.user?.phone ? (
-                      <span style={{ ...pillBase, background: "rgba(39,174,96,0.12)", color: "#1a8c4a" }}>✓ Profil & Tél Vérifiés</span>
-                    ) : (
-                      <>
-                        <span style={{ ...pillBase, background: a.user?.is_verified ? "rgba(39,174,96,0.12)" : "rgba(153,153,153,0.12)", color: a.user?.is_verified ? "#1a8c4a" : "#999" }}>{a.user?.is_verified ? "✓ Vérifié" : "Non vérifié"}</span>
-                        <span style={{ ...pillBase, background: a.user?.phone ? "rgba(39,174,96,0.12)" : "rgba(153,153,153,0.12)", color: a.user?.phone ? "#1a8c4a" : "#999" }}>{a.user?.phone ? "✓ Téléphone activé" : "Pas de téléphone"}</span>
-                      </>
-                    )}
+                    <span style={{ ...pillBase, background: a.user?.is_verified ? "rgba(39,174,96,0.12)" : "rgba(153,153,153,0.12)", color: a.user?.is_verified ? "#1a8c4a" : "#999" }}>{a.user?.is_verified ? "✓ Profil vérifié" : "Profil non vérifié"}</span>
+                    <span style={{ ...pillBase, background: a.user?.phone ? "rgba(39,174,96,0.12)" : "rgba(153,153,153,0.12)", color: a.user?.phone ? "#1a8c4a" : "#999" }}>{a.user?.phone ? "✓ Téléphone renseigné" : "Téléphone non renseigné"}</span>
+                    <span style={{ ...pillBase, background: a.user?.share_phone_with_matches ? "rgba(39,174,96,0.12)" : "rgba(153,153,153,0.12)", color: a.user?.share_phone_with_matches ? "#1a8c4a" : "#999" }}>{a.user?.share_phone_with_matches ? "✓ Téléphone visible" : "Téléphone non visible"}</span>
                     <span onClick={() => openRelView(a)} title="Voir le profil relationnel" style={{ ...pillBase, cursor: "pointer", background: a.user?.relational_profile ? "rgba(142,68,173,0.1)" : "rgba(153,153,153,0.12)", color: a.user?.relational_profile ? "#7d3c98" : "#999" }}>{a.user?.relational_profile ? "✓ Profil relationnel" : "Profil relationnel vide"}</span>
                     {a.user_id && userCounts[a.user_id] && (
                       <>
@@ -319,39 +310,8 @@ function AdminAppointments({ auth, showToast, onOpenProfile }: { auth: any; show
                 </span>
                 <span style={{ fontSize: "0.78rem", color: "#777" }}>
                   {a.assigned_to ? <>Assigné à : <b style={{ color: G.brun }}>{advisors.find(v => v.id === a.assigned_to)?.name || "un conseiller"}</b></> : <span style={{ color: "#999" }}>Non assigné</span>}
-                  {" "}<span onClick={() => setEditingAssignFor(editingAssignFor === a.id ? null : a.id)} style={{ color: "#2980b9", fontWeight: 700, cursor: "pointer", textDecoration: "underline" }}>(Modifier)</span>
                 </span>
               </div>
-
-              {editingAssignFor === a.id && (
-                <div style={{ position: "relative", marginBottom: 12 }}>
-                  {a.assigned_to ? (
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                      <span onClick={() => setAssignMenuFor(assignMenuFor === a.id ? null : a.id)} style={{ fontSize: "0.74rem", color: "#2980b9", fontWeight: 700, cursor: "pointer", textDecoration: "underline" }}>Céder à...</span>
-                      <span onClick={() => unassignAppt(a)} style={{ fontSize: "0.74rem", color: "#aaa", fontWeight: 700, cursor: "pointer", textDecoration: "underline" }}>Se désister</span>
-                    </div>
-                  ) : (
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                      <button onClick={() => assignAppt(a, auth.userId, auth.name || "moi")} style={{ background: "rgba(41,128,185,0.08)", border: "1.5px solid rgba(41,128,185,0.25)", borderRadius: 50, padding: "5px 14px", fontSize: "0.74rem", fontWeight: 700, color: "#2471a3", cursor: "pointer" }}>M'attribuer ce rendez-vous</button>
-                      <span onClick={() => setAssignMenuFor(assignMenuFor === a.id ? null : a.id)} style={{ fontSize: "0.74rem", color: "#999", fontWeight: 600, cursor: "pointer", textDecoration: "underline" }}>Assigner à quelqu'un d'autre</span>
-                    </div>
-                  )}
-                  {assignMenuFor === a.id && (
-                    <div onClick={e => e.stopPropagation()} style={{ position: "absolute", top: "100%", left: 0, marginTop: 6, width: 240, maxHeight: 260, overflowY: "auto", background: G.blanc, border: `1.5px solid ${G.gris}`, borderRadius: 12, boxShadow: "0 8px 24px rgba(0,0,0,0.15)", zIndex: 50, padding: 8 }}>
-                      <input autoFocus value={assignSearch} onChange={e => setAssignSearch(e.target.value)} placeholder="Chercher un conseiller..." style={{ width: "100%", boxSizing: "border-box", padding: "7px 10px", borderRadius: 8, border: `1.5px solid ${G.gris}`, fontSize: "0.78rem", marginBottom: 6 }} />
-                      {advisors.filter(v => v.name?.toLowerCase().includes(assignSearch.toLowerCase())).map(v => (
-                        <div key={v.id} onClick={() => assignAppt(a, v.id, v.name)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 6px", borderRadius: 8, cursor: "pointer" }}
-                          onMouseOver={e => { (e.currentTarget as HTMLElement).style.background = G.creme; }}
-                          onMouseOut={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
-                          <div style={{ width: 24, height: 24, borderRadius: "50%", overflow: "hidden", background: G.creme, flexShrink: 0 }}>{v.photo_url && <img src={v.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}</div>
-                          <span style={{ fontSize: "0.8rem", color: "#333" }}>{v.name}</span>
-                        </div>
-                      ))}
-                      {advisors.filter(v => v.name?.toLowerCase().includes(assignSearch.toLowerCase())).length === 0 && <div style={{ fontSize: "0.76rem", color: "#aaa", padding: "8px 6px", textAlign: "center" }}>Aucun conseiller trouvé</div>}
-                    </div>
-                  )}
-                </div>
-              )}
 
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
                 {(a.status === "en_attente" || a.status === "reporte") && <button onClick={() => confirmAppt(a)} style={btnPrimary}>✓ Confirmer</button>}
@@ -361,9 +321,31 @@ function AdminAppointments({ auth, showToast, onOpenProfile }: { auth: any; show
                 <button onClick={() => openNote(a)} style={btnOutline}>✎ Note interne</button>
                 {isPastOrDone(a) && !a.archived && <button onClick={() => archiveAppt(a)} style={btnWarnOutline}>📦 Archiver</button>}
                 {a.archived && <button onClick={() => unarchiveAppt(a)} style={btnOutline}>↩ Désarchiver</button>}
-                <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
+                <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
                   {isPastOrDone(a) && <button onClick={() => setDelTarget(a)} style={btnDangerOutline}>🗑 Supprimer</button>}
                   {a.status !== "annule" && a.status !== "effectue" && <button onClick={() => openCancel(a)} style={btnDangerOutline}>🚫 Annuler</button>}
+                  <div style={{ position: "relative" }}>
+                    {a.assigned_to
+                      ? <button onClick={() => setAssignMenuFor(assignMenuFor === a.id ? null : a.id)} style={btnOutline}>Céder à quelqu'un d'autre</button>
+                      : <button onClick={() => assignAppt(a, auth.userId, auth.name || "moi")} style={btnOutline}>M'attribuer ce rendez-vous</button>}
+                    {assignMenuFor === a.id && (
+                      <div onClick={e => e.stopPropagation()} style={{ position: "absolute", top: "100%", right: 0, marginTop: 6, width: 240, maxHeight: 260, overflowY: "auto", background: G.blanc, border: `1.5px solid ${G.gris}`, borderRadius: 12, boxShadow: "0 8px 24px rgba(0,0,0,0.15)", zIndex: 50, padding: 8 }}>
+                        <input autoFocus value={assignSearch} onChange={e => setAssignSearch(e.target.value)} placeholder="Chercher un conseiller..." style={{ width: "100%", boxSizing: "border-box", padding: "7px 10px", borderRadius: 8, border: `1.5px solid ${G.gris}`, fontSize: "0.78rem", marginBottom: 6 }} />
+                        {advisors.filter(v => v.name?.toLowerCase().includes(assignSearch.toLowerCase())).map(v => (
+                          <div key={v.id} onClick={() => assignAppt(a, v.id, v.name)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 6px", borderRadius: 8, cursor: "pointer" }}
+                            onMouseOver={e => { (e.currentTarget as HTMLElement).style.background = G.creme; }}
+                            onMouseOut={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
+                            <div style={{ width: 24, height: 24, borderRadius: "50%", overflow: "hidden", background: G.creme, flexShrink: 0 }}>{v.photo_url && <img src={v.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}</div>
+                            <span style={{ fontSize: "0.8rem", color: "#333" }}>{v.name}</span>
+                          </div>
+                        ))}
+                        {advisors.filter(v => v.name?.toLowerCase().includes(assignSearch.toLowerCase())).length === 0 && <div style={{ fontSize: "0.76rem", color: "#aaa", padding: "8px 6px", textAlign: "center" }}>Aucun conseiller trouvé</div>}
+                      </div>
+                    )}
+                  </div>
+                  {a.assigned_to
+                    ? <button onClick={() => unassignAppt(a)} style={btnOutline}>Se désister</button>
+                    : <button onClick={() => setAssignMenuFor(assignMenuFor === a.id ? null : a.id)} style={btnOutline}>Assigner à quelqu'un d'autre</button>}
                 </div>
               </div>
             </div>
@@ -1537,7 +1519,7 @@ export function AdminDesktopPage() {
 
 function AdminNotifPrefs({ auth }: { auth: Auth }) {
   type Admin = { id: string; name: string };
-  type Prefs = { paiements: boolean; signalements: boolean; matchs: boolean; mises_relation: boolean; groupe_demandes: boolean; ambassadeurs: boolean; versements: boolean };
+  type Prefs = { paiements: boolean; signalements: boolean; matchs: boolean; mises_relation: boolean; groupe_demandes: boolean; ambassadeurs: boolean; versements: boolean; rendez_vous: boolean };
   const [admins, setAdmins] = React.useState<Admin[]>([]);
   const [prefs, setPrefs] = React.useState<Record<string, Prefs>>({});
   const [loading, setLoading] = React.useState(true);
@@ -1550,11 +1532,11 @@ function AdminNotifPrefs({ auth }: { auth: Auth }) {
       try {
         const [ar, pr] = await Promise.all([
           fetch(`${SUPABASE_URL}/rest/v1/profiles?is_admin=eq.true&select=id,name&order=name.asc`, { headers: H }).then(r => r.json()).catch(() => []),
-          fetch(`${SUPABASE_URL}/rest/v1/admin_notif_prefs?select=admin_id,paiements,signalements,matchs,mises_relation,groupe_demandes,ambassadeurs,versements`, { headers: H }).then(r => r.json()).catch(() => []),
+          fetch(`${SUPABASE_URL}/rest/v1/admin_notif_prefs?select=admin_id,paiements,signalements,matchs,mises_relation,groupe_demandes,ambassadeurs,versements,rendez_vous`, { headers: H }).then(r => r.json()).catch(() => []),
         ]);
         if (Array.isArray(ar)) setAdmins(ar.filter((a: any) => a.id !== SUPPORT_TEAM_ID));
         const map: Record<string, Prefs> = {};
-        if (Array.isArray(pr)) pr.forEach((p: any) => { map[p.admin_id] = { paiements: !!p.paiements, signalements: !!p.signalements, matchs: !!p.matchs, mises_relation: !!p.mises_relation, groupe_demandes: !!p.groupe_demandes, ambassadeurs: !!p.ambassadeurs, versements: !!p.versements }; });
+        if (Array.isArray(pr)) pr.forEach((p: any) => { map[p.admin_id] = { paiements: !!p.paiements, signalements: !!p.signalements, matchs: !!p.matchs, mises_relation: !!p.mises_relation, groupe_demandes: !!p.groupe_demandes, ambassadeurs: !!p.ambassadeurs, versements: !!p.versements, rendez_vous: !!p.rendez_vous }; });
         setPrefs(map);
       } catch {}
       setLoading(false);
@@ -1562,7 +1544,7 @@ function AdminNotifPrefs({ auth }: { auth: Auth }) {
   }, [auth.token]);
 
   const toggle = async (adminId: string, key: keyof Prefs) => {
-    const current = prefs[adminId] || { paiements: false, signalements: false, matchs: false, mises_relation: false, groupe_demandes: false, ambassadeurs: false, versements: false };
+    const current = prefs[adminId] || { paiements: false, signalements: false, matchs: false, mises_relation: false, groupe_demandes: false, ambassadeurs: false, versements: false, rendez_vous: false };
     const updated = { ...current, [key]: !current[key] };
     setPrefs(p => ({ ...p, [adminId]: updated }));
     try {
@@ -1592,11 +1574,11 @@ function AdminNotifPrefs({ auth }: { auth: Auth }) {
       ) : admins.length === 0 ? (
         <div style={{ textAlign: "center", padding: 20, color: "#aaa", fontSize: "0.8rem", fontStyle: "italic" }}>Aucun admin trouvé.</div>
       ) : admins.map(a => {
-        const p = prefs[a.id] || { paiements: false, signalements: false, matchs: false, mises_relation: false, groupe_demandes: false, ambassadeurs: false, versements: false };
+        const p = prefs[a.id] || { paiements: false, signalements: false, matchs: false, mises_relation: false, groupe_demandes: false, ambassadeurs: false, versements: false, rendez_vous: false };
         return (
           <div key={a.id} style={{ background: G.creme, borderRadius: 12, padding: "12px 14px", marginBottom: 10 }}>
             <div style={{ fontSize: "0.85rem", fontWeight: 800, color: G.brun, marginBottom: 8 }}>{a.name}{a.id === auth.userId ? " (vous)" : ""}</div>
-            {([["signalements", "🚩 Signalements"], ["matchs", "💞 Matchs"], ["mises_relation", "💌 Mises en relation"], ["groupe_demandes", "⭐ Demandes Groupe Premium"], ["ambassadeurs", "🎖 Ambassadeurs"], ["versements", "💰 Versements Ambassadeurs"], ["paiements", "💳 Paiements"]] as [keyof Prefs, string][]).map(([k, label]) => (
+            {([["signalements", "🚩 Signalements"], ["matchs", "💞 Matchs"], ["mises_relation", "💌 Mises en relation"], ["groupe_demandes", "⭐ Demandes Groupe Premium"], ["ambassadeurs", "🎖 Ambassadeurs"], ["versements", "💰 Versements Ambassadeurs"], ["paiements", "💳 Paiements"], ["rendez_vous", "🗓️ Rendez-vous"]] as [keyof Prefs, string][]).map(([k, label]) => (
               <div key={k} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "6px 0" }}>
                 <div style={{ fontSize: "0.82rem", fontWeight: 600, color: "#444" }}>{label}</div>
                 <SwitchBtn on={p[k]} onToggle={() => toggle(a.id, k)} />
@@ -5998,7 +5980,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
   };
   const openAdminProfile = async (userId: string) => {
     try {
-      const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${userId}&select=id,name,age,city,gender,bio,photo_url,is_premium,is_verified,is_admin,religion,profession,hobbies,created_at,last_seen,phone`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${userId}&select=id,name,age,city,gender,bio,photo_url,is_premium,is_verified,is_admin,religion,profession,hobbies,created_at,last_seen,phone,email`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
       const data = await r.json().catch(() => []);
       if (Array.isArray(data) && data[0]) setAdminViewedProfile(data[0]);
     } catch {}
@@ -10850,9 +10832,12 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
             `}</style>
             <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 860, maxHeight: "85vh", display: "flex", flexDirection: "column", boxShadow: "0 24px 64px rgba(0,0,0,0.3)", overflow: "hidden" }}>
               <div style={{ padding: "18px 20px", borderBottom: `1px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 9, fontWeight: 900, fontSize: "1.05rem", color: G.brun }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
                   <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                  Gérer {u.name}
+                  <div>
+                    <div style={{ fontWeight: 900, fontSize: "1.05rem", color: G.brun, lineHeight: 1.3 }}>Gérer {u.name}</div>
+                    <div style={{ fontSize: "0.74rem", color: "#999", fontWeight: 500, marginTop: 1 }}>{[u.phone, u.email].filter(Boolean).join(" · ") || "—"}</div>
+                  </div>
                 </div>
                 <button onClick={close} style={{ border: "none", background: G.creme, borderRadius: "50%", width: 30, height: 30, cursor: "pointer", color: "#666" }}>✕</button>
               </div>
@@ -11620,6 +11605,14 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                       </div>
                     )}
                   </div>
+                  {(adminViewedProfile as any).email && (
+                    <div style={{ marginTop: 12 }}>
+                      <div style={{ fontSize: "0.7rem", fontWeight: 700, color: "#aaa", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>Email</div>
+                      <div style={{ background: "#F8F8F8", borderRadius: 10, padding: "8px 12px" }}>
+                        <span style={{ fontSize: "0.83rem", fontWeight: 600, color: "#333" }}>{(adminViewedProfile as any).email}</span>
+                      </div>
+                    </div>
+                  )}
                   {(adminViewedProfile as any).created_at && <div style={{ marginTop: 12, fontSize: "0.72rem", color: "#bbb", textAlign: "center" }}>Inscrit le {formatDate((adminViewedProfile as any).created_at)}</div>}
                   <AdminNotes auth={auth} targetType="user" targetId={adminViewedProfile.id} />
                 </div>

@@ -1081,6 +1081,16 @@ function AppointmentsButton({ auth, onShowPremium }: { auth: any; onShowPremium:
       const r = await fetch(`${SUPABASE_URL}/rest/v1/appointments`, { method: "POST", headers: { "Content-Type": "application/json", apikey: SUPABASE_KEY, Authorization: `Bearer ${auth.token}`, Prefer: "return=representation" }, body: JSON.stringify({ user_id: auth.userId, type, topic: topic.trim(), phone: phone.trim(), preferred_slots: slots.filter(s => s.date && s.hour).map(s => new Date(`${s.date}T${s.hour}:${s.minute || "00"}:00`).toISOString()), message: message.trim(), status: "en_attente", ...extra }) });
       const body = await r.json().catch(() => null); const row = Array.isArray(body) ? body[0] : body;
       if (!r.ok || !row?.id) { setErr(row?.message || "Échec de l'envoi. Votre demande n'a pas été enregistrée."); return null; }
+      // Prévient les admins ayant activé « 🗓️ Rendez-vous » dans Équipe & Alertes. Best-effort :
+      // une erreur ici ne bloque jamais la création du rendez-vous côté membre.
+      (async () => {
+        try {
+          const H = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` };
+          const prefsRes = await fetch(`${SUPABASE_URL}/rest/v1/admin_notif_prefs?rendez_vous=eq.true&select=admin_id`, { headers: H }).then(r2 => r2.json()).catch(() => []);
+          const adminIds: string[] = (Array.isArray(prefsRes) ? prefsRes : []).map((p: any) => p.admin_id).filter(Boolean);
+          await Promise.all(adminIds.map(id => fetch(`${SUPABASE_URL}/functions/v1/push-notify`, { method: "POST", headers: { "Content-Type": "application/json", ...H }, body: JSON.stringify({ mode: "user_push", user_id: id, title: "🗓️ Nouvelle demande de rendez-vous", body: `${auth.name || "Un membre"} souhaite prendre rendez-vous.` }) }).catch(() => {})));
+        } catch {}
+      })();
       return row;
     } catch (e: any) { setErr("Échec : " + (e?.message || "réseau")); return null; }
   };
