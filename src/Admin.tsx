@@ -1523,7 +1523,7 @@ export function AdminDesktopPage() {
 
 function AdminNotifPrefs({ auth }: { auth: Auth }) {
   type Admin = { id: string; name: string };
-  type Prefs = { paiements: boolean; signalements: boolean; matchs: boolean; mises_relation: boolean; groupe_demandes: boolean; ambassadeurs: boolean; versements: boolean; rendez_vous: boolean };
+  type Prefs = { paiements: boolean; signalements: boolean; matchs: boolean; mises_relation: boolean; groupe_demandes: boolean; ambassadeurs: boolean; versements: boolean; rendez_vous: boolean; mise_en_avant: boolean };
   const [admins, setAdmins] = React.useState<Admin[]>([]);
   const [prefs, setPrefs] = React.useState<Record<string, Prefs>>({});
   const [loading, setLoading] = React.useState(true);
@@ -1536,11 +1536,11 @@ function AdminNotifPrefs({ auth }: { auth: Auth }) {
       try {
         const [ar, pr] = await Promise.all([
           fetch(`${SUPABASE_URL}/rest/v1/profiles?is_admin=eq.true&select=id,name&order=name.asc`, { headers: H }).then(r => r.json()).catch(() => []),
-          fetch(`${SUPABASE_URL}/rest/v1/admin_notif_prefs?select=admin_id,paiements,signalements,matchs,mises_relation,groupe_demandes,ambassadeurs,versements,rendez_vous`, { headers: H }).then(r => r.json()).catch(() => []),
+          fetch(`${SUPABASE_URL}/rest/v1/admin_notif_prefs?select=admin_id,paiements,signalements,matchs,mises_relation,groupe_demandes,ambassadeurs,versements,rendez_vous,mise_en_avant`, { headers: H }).then(r => r.json()).catch(() => []),
         ]);
         if (Array.isArray(ar)) setAdmins(ar.filter((a: any) => a.id !== SUPPORT_TEAM_ID));
         const map: Record<string, Prefs> = {};
-        if (Array.isArray(pr)) pr.forEach((p: any) => { map[p.admin_id] = { paiements: !!p.paiements, signalements: !!p.signalements, matchs: !!p.matchs, mises_relation: !!p.mises_relation, groupe_demandes: !!p.groupe_demandes, ambassadeurs: !!p.ambassadeurs, versements: !!p.versements, rendez_vous: !!p.rendez_vous }; });
+        if (Array.isArray(pr)) pr.forEach((p: any) => { map[p.admin_id] = { paiements: !!p.paiements, signalements: !!p.signalements, matchs: !!p.matchs, mises_relation: !!p.mises_relation, groupe_demandes: !!p.groupe_demandes, ambassadeurs: !!p.ambassadeurs, versements: !!p.versements, rendez_vous: !!p.rendez_vous, mise_en_avant: !!p.mise_en_avant }; });
         setPrefs(map);
       } catch {}
       setLoading(false);
@@ -1548,7 +1548,7 @@ function AdminNotifPrefs({ auth }: { auth: Auth }) {
   }, [auth.token]);
 
   const toggle = async (adminId: string, key: keyof Prefs) => {
-    const current = prefs[adminId] || { paiements: false, signalements: false, matchs: false, mises_relation: false, groupe_demandes: false, ambassadeurs: false, versements: false, rendez_vous: false };
+    const current = prefs[adminId] || { paiements: false, signalements: false, matchs: false, mises_relation: false, groupe_demandes: false, ambassadeurs: false, versements: false, rendez_vous: false, mise_en_avant: false };
     const updated = { ...current, [key]: !current[key] };
     setPrefs(p => ({ ...p, [adminId]: updated }));
     try {
@@ -1578,11 +1578,11 @@ function AdminNotifPrefs({ auth }: { auth: Auth }) {
       ) : admins.length === 0 ? (
         <div style={{ textAlign: "center", padding: 20, color: "#aaa", fontSize: "0.8rem", fontStyle: "italic" }}>Aucun admin trouvé.</div>
       ) : admins.map(a => {
-        const p = prefs[a.id] || { paiements: false, signalements: false, matchs: false, mises_relation: false, groupe_demandes: false, ambassadeurs: false, versements: false, rendez_vous: false };
+        const p = prefs[a.id] || { paiements: false, signalements: false, matchs: false, mises_relation: false, groupe_demandes: false, ambassadeurs: false, versements: false, rendez_vous: false, mise_en_avant: false };
         return (
           <div key={a.id} style={{ background: G.creme, borderRadius: 12, padding: "12px 14px", marginBottom: 10 }}>
             <div style={{ fontSize: "0.85rem", fontWeight: 800, color: G.brun, marginBottom: 8 }}>{a.name}{a.id === auth.userId ? " (vous)" : ""}</div>
-            {([["signalements", "🚩 Signalements"], ["matchs", "💞 Matchs"], ["mises_relation", "💌 Mises en relation"], ["groupe_demandes", "⭐ Demandes Groupe Premium"], ["ambassadeurs", "🎖 Ambassadeurs"], ["versements", "💰 Versements Ambassadeurs"], ["paiements", "💳 Paiements"], ["rendez_vous", "🗓️ Rendez-vous"]] as [keyof Prefs, string][]).map(([k, label]) => (
+            {([["signalements", "🚩 Signalements"], ["matchs", "💞 Matchs"], ["mises_relation", "💌 Mises en relation"], ["groupe_demandes", "⭐ Demandes Groupe Premium"], ["ambassadeurs", "🎖 Ambassadeurs"], ["versements", "💰 Versements Ambassadeurs"], ["paiements", "💳 Paiements"], ["rendez_vous", "🗓️ Rendez-vous"], ["mise_en_avant", "⭐ Mise en avant"]] as [keyof Prefs, string][]).map(([k, label]) => (
               <div key={k} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "6px 0" }}>
                 <div style={{ fontSize: "0.82rem", fontWeight: 600, color: "#444" }}>{label}</div>
                 <SwitchBtn on={p[k]} onToggle={() => toggle(a.id, k)} />
@@ -6933,6 +6933,46 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
   const [proposalsOriginFilter, setProposalsOriginFilter] = useState<"auto" | "manual" | null>(null);
   const [proposalsPage, setProposalsPage] = useState(0);
   const [proposalsSearchName, setProposalsSearchName] = useState("");
+  const [proposalsSearchResults, setProposalsSearchResults] = useState<any[] | null>(null);
+  const [proposalsSearchLoading, setProposalsSearchLoading] = useState(false);
+  // ── Recherche globale (toute la base, pas seulement la page affichée) : d'abord les profils
+  //    dont le nom correspond, puis toutes leurs propositions (avec les mêmes filtres statut/
+  //    origine que la vue paginée). Débouncée pour ne pas spammer la base à chaque frappe.
+  useEffect(() => {
+    const q = proposalsSearchName.trim();
+    if (!q) { setProposalsSearchResults(null); return; }
+    const H = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` };
+    const t = setTimeout(async () => {
+      setProposalsSearchLoading(true);
+      try {
+        const people = await fetch(`${SUPABASE_URL}/rest/v1/profiles?name=ilike.*${encodeURIComponent(q)}*&select=id,name,age,city,gender,photo_url&limit=100`, { headers: H }).then(r => r.json()).catch(() => []);
+        const matched: AdminProfile[] = Array.isArray(people) ? people : [];
+        if (matched.length === 0) { setProposalsSearchResults([]); setProposalsSearchLoading(false); return; }
+        const ids = matched.map(p => p.id);
+        let qs = `archived=not.eq.true&order=created_at.desc&limit=200&or=(user1_id.in.(${ids.join(",")}),user2_id.in.(${ids.join(",")}))`;
+        if (proposalsStatusFilter === "accepted") qs += `&status=eq.accepted`;
+        else if (proposalsStatusFilter === "refused") qs += `&status=eq.refused`;
+        else if (proposalsStatusFilter === "expired") qs += `&status=eq.expired`;
+        else if (proposalsStatusFilter === "pending" || proposalsStatusFilter === "pending_response") qs += `&status=eq.pending`;
+        const raw = await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?${qs}`, { headers: H }).then(r => r.json()).catch(() => []);
+        let data = Array.isArray(raw) ? raw.filter((p: any) => p.origin !== "matchmaking") : [];
+        if (proposalsOriginFilter === "auto") data = data.filter((p: any) => p.origin === "matchmaking_auto" || p.origin === "spontaneous_auto");
+        else if (proposalsOriginFilter === "manual") data = data.filter((p: any) => !p.origin || (p.origin !== "matchmaking_auto" && p.origin !== "spontaneous_auto"));
+        const profileMap: Record<string, AdminProfile> = {}; matched.forEach(p => { profileMap[p.id] = p; });
+        const missingIds = [...new Set(data.flatMap((p: any) => [p.user1_id, p.user2_id]))].filter(id => id && !profileMap[id]);
+        for (let i = 0; i < missingIds.length; i += 50) {
+          const batch = missingIds.slice(i, i + 50);
+          const pdata = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=in.(${batch.join(",")})&select=id,name,age,city,gender,photo_url`, { headers: H }).then(r => r.json()).catch(() => []);
+          if (Array.isArray(pdata)) pdata.forEach((p: AdminProfile) => { profileMap[p.id] = p; });
+        }
+        setProposalsSearchResults(data.map((p: any) => ({ ...p, profile1: profileMap[p.user1_id], profile2: profileMap[p.user2_id] })));
+      } catch { setProposalsSearchResults([]); }
+      setProposalsSearchLoading(false);
+    }, 400);
+    return () => clearTimeout(t);
+  }, [proposalsSearchName, proposalsStatusFilter, proposalsOriginFilter, auth.token]);
+  const displayedProposals = proposalsSearchResults !== null ? proposalsSearchResults : proposals;
+
   const propFilterCategory = (p: any): "pending" | "pending_response" | "accepted" | "refused" | "expired" => {
     if (p.status === "accepted") return "accepted";
     if (p.status === "refused") return "refused";
@@ -8800,6 +8840,13 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
 
       // ── Likes par jour (30 derniers jours) ──
       const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      // Les 14 derniers jours calendaires, dans l'ordre, y compris ceux à 0 — pour que le
+      // graphique affiche toujours exactement 14 barres consécutives comme annoncé dans le titre.
+      const last14Days: string[] = Array.from({ length: 14 }, (_, i) => {
+        const d = new Date(); d.setDate(d.getDate() - (13 - i));
+        return d.toISOString().slice(0, 10);
+      });
+
       const likesRaw = await fetch(`${SUPABASE_URL}/rest/v1/likes?created_at=gte.${thirtyDaysAgo}&select=created_at&order=created_at.asc&limit=5000`, {
         headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
       }).then(r => r.json()).catch(() => []);
@@ -8809,7 +8856,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
         const d = l.created_at?.slice(0, 10);
         if (d) likesByDay[d] = (likesByDay[d] || 0) + 1;
       });
-      const likesPerDay = Object.entries(likesByDay).map(([date, count]) => ({ date, count })).slice(-14);
+      const likesPerDay = last14Days.map(date => ({ date, count: likesByDay[date] || 0 }));
 
       // ── Nouveaux inscrits par jour (30 derniers jours) ──
       const signupsRaw = await fetch(`${SUPABASE_URL}/rest/v1/profiles?created_at=gte.${thirtyDaysAgo}&select=created_at&order=created_at.asc&limit=5000`, {
@@ -8820,7 +8867,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
         const d = u.created_at?.slice(0, 10);
         if (d) signupsByDay[d] = (signupsByDay[d] || 0) + 1;
       });
-      const signupsPerDay = Object.entries(signupsByDay).map(([date, count]) => ({ date, count })).slice(-14);
+      const signupsPerDay = last14Days.map(date => ({ date, count: signupsByDay[date] || 0 }));
 
       // ── Nouveaux matchs par jour (30 derniers jours) ──
       const matchesRaw = await fetch(`${SUPABASE_URL}/rest/v1/matches?created_at=gte.${thirtyDaysAgo}&select=created_at&order=created_at.asc&limit=5000`, {
@@ -8831,7 +8878,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
         const d = m.created_at?.slice(0, 10);
         if (d) matchesByDay[d] = (matchesByDay[d] || 0) + 1;
       });
-      const matchesPerDay = Object.entries(matchesByDay).map(([date, count]) => ({ date, count })).slice(-14);
+      const matchesPerDay = last14Days.map(date => ({ date, count: matchesByDay[date] || 0 }));
 
       // ── Top 5 profils les plus likés ──
       const topLikesRaw = await fetch(`${SUPABASE_URL}/rest/v1/likes?select=to_user&limit=5000`, {
@@ -15932,23 +15979,23 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 {(proposalsStatusFilter || proposalsOriginFilter) && <div onClick={() => { setProposalsStatusFilter(null); setProposalsOriginFilter(null); setProposalsPage(0); loadProposals(0, null, null); }} style={{ fontSize: "0.68rem", color: "#999", fontWeight: 600, cursor: "pointer", padding: "4px 9px", textDecoration: "underline" }}>Tout afficher</div>}
               </div>
               <div style={{ marginBottom: 14 }}>
-                <input value={proposalsSearchName} onChange={e => setProposalsSearchName(e.target.value)} placeholder="Rechercher une personne (prénom, page actuelle)…" style={{ width: "100%", maxWidth: 520, boxSizing: "border-box", padding: "9px 13px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", outline: "none" }} />
-                {proposalsSearchName.trim() && (() => {
-                  const q = proposalsSearchName.trim().toLowerCase();
-                  const n = proposals.filter(p => (p.profile1?.name || "").toLowerCase().includes(q) || (p.profile2?.name || "").toLowerCase().includes(q)).length;
-                  return <div style={{ fontSize: "0.74rem", color: "#888", marginTop: 6 }}>{n} proposition{n > 1 ? "s" : ""} sur cette page pour « {proposalsSearchName.trim()} » — change de page pour chercher ailleurs.</div>;
-                })()}
+                <input value={proposalsSearchName} onChange={e => setProposalsSearchName(e.target.value)} placeholder="Rechercher une personne (prénom)…" style={{ width: "100%", maxWidth: 520, boxSizing: "border-box", padding: "9px 13px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", outline: "none" }} />
+                {proposalsSearchName.trim() && (
+                  proposalsSearchLoading
+                    ? <div style={{ fontSize: "0.74rem", color: "#888", marginTop: 6 }}>Recherche...</div>
+                    : <div style={{ fontSize: "0.74rem", color: "#888", marginTop: 6 }}>{(proposalsSearchResults || []).length} proposition{(proposalsSearchResults || []).length > 1 ? "s" : ""} pour « {proposalsSearchName.trim()} » (toute la base).</div>
+                )}
               </div>
-              {proposalsLoading ? (
+              {(proposalsSearchName.trim() ? proposalsSearchLoading : proposalsLoading) ? (
                 <div style={{ textAlign: "center", padding: 40 }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2" strokeLinecap="round" style={{ animation: "pulse 0.8s ease-in-out infinite" }}><circle cx="12" cy="12" r="10"/></svg></div>
-              ) : proposals.length === 0 ? (
+              ) : displayedProposals.length === 0 ? (
                 <div style={{ textAlign: "center", padding: "40px 20px" }}>
                   <div style={{ marginBottom: 12, color: "#8e44ad" }}><svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div>
                   <div style={{ color: "#aaa", fontSize: "0.88rem" }}>Aucune proposition</div>
                 </div>
               ) : (() => {
-                const nameFiltered = proposalsStatusFilter ? proposals.filter(p => propFilterCategory(p) === proposalsStatusFilter) : proposals;
-                const q = proposalsSearchName.trim().toLowerCase();
+                const nameFiltered = proposalsStatusFilter ? displayedProposals.filter(p => propFilterCategory(p) === proposalsStatusFilter) : displayedProposals;
+                const q = proposalsSearchResults !== null ? "" : proposalsSearchName.trim().toLowerCase();
                 const visibleProposals = q ? nameFiltered.filter(p => (p.profile1?.name || "").toLowerCase().includes(q) || (p.profile2?.name || "").toLowerCase().includes(q)) : nameFiltered;
                 if (visibleProposals.length === 0) return <div style={{ textAlign: "center", padding: "40px 20px", color: "#aaa", fontSize: "0.88rem" }}>Aucune proposition dans cette catégorie</div>;
                 const visibleIds = visibleProposals.map(p => p.id);
@@ -16072,7 +16119,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 </>
                 );
               })()}
-              {!proposalsLoading && (
+              {!proposalsLoading && proposalsSearchResults === null && (
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginTop: 18 }}>
                   <Btn variant="ghost" onClick={() => { const p = Math.max(0, proposalsPage - 1); setProposalsPage(p); loadProposals(p, proposalsStatusFilter, proposalsOriginFilter); }} disabled={proposalsPage === 0} style={{ padding: "8px 16px", fontSize: "0.78rem" }}>← Précédent</Btn>
                   <div style={{ fontSize: "0.78rem", color: "#888", fontWeight: 600 }}>Page {proposalsPage + 1}</div>

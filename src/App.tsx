@@ -6060,6 +6060,7 @@ function NotifBell({ auth, setTab }: { auth: Auth; setTab: (t: string) => void }
   const [loading, setLoading] = useState(true);
   const [emailVerified, setEmailVerified] = useState(true);
   const [phoneShared, setPhoneShared] = useState(true);
+  const [hasRelProfile, setHasRelProfile] = useState(true);
   const [items, setItems] = useState<{ id: string; type: string; title: string; body: string; is_read: boolean; created_at: string; nav_tab?: string | null; nav_sub?: string | null }[]>([]);
   const [dismissedTodos, setDismissedTodos] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem(`moyo_dismissed_todos_${auth.userId}`) || "[]"); } catch { return []; }
@@ -6069,11 +6070,11 @@ function NotifBell({ auth, setTab }: { auth: Auth; setTab: (t: string) => void }
     if (!auth) return;
     try {
       const [pRes, nRes] = await Promise.all([
-        fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${auth.userId}&select=email_verified,share_phone_with_matches`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } }),
+        fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${auth.userId}&select=email_verified,share_phone_with_matches,relational_profile`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } }),
         fetch(`${SUPABASE_URL}/rest/v1/user_notifications?user_id=eq.${auth.userId}&order=created_at.desc&limit=30`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } }),
       ]);
       const pData = await pRes.json().catch(() => []);
-      if (Array.isArray(pData) && pData[0]) { setEmailVerified(!!pData[0].email_verified); setPhoneShared(!!pData[0].share_phone_with_matches); }
+      if (Array.isArray(pData) && pData[0]) { setEmailVerified(!!pData[0].email_verified); setPhoneShared(!!pData[0].share_phone_with_matches); setHasRelProfile(!!pData[0].relational_profile); }
       const nData = await nRes.json().catch(() => []);
       if (Array.isArray(nData)) setItems(nData);
     } catch {}
@@ -6084,9 +6085,10 @@ function NotifBell({ auth, setTab }: { auth: Auth; setTab: (t: string) => void }
 
   const showEmailTodo = !emailVerified && !dismissedTodos.includes("email");
   const showPhoneTodo = !phoneShared && !dismissedTodos.includes("phone");
-  const unreadCount = items.filter(i => !i.is_read).length + (showEmailTodo ? 1 : 0) + (showPhoneTodo ? 1 : 0);
+  const showRelTodo = !hasRelProfile && !dismissedTodos.includes("rel");
+  const unreadCount = items.filter(i => !i.is_read).length + (showEmailTodo ? 1 : 0) + (showPhoneTodo ? 1 : 0) + (showRelTodo ? 1 : 0);
 
-  const dismissTodo = (key: "email" | "phone") => {
+  const dismissTodo = (key: "email" | "phone" | "rel") => {
     setDismissedTodos(prev => {
       const next = prev.includes(key) ? prev : [...prev, key];
       try { localStorage.setItem(`moyo_dismissed_todos_${auth.userId}`, JSON.stringify(next)); } catch {}
@@ -6112,6 +6114,7 @@ function NotifBell({ auth, setTab }: { auth: Auth; setTab: (t: string) => void }
   };
   const goToPhoneTodo = () => { setOpen(false); try { sessionStorage.setItem("moyo_scroll_to", "phone"); } catch {} setTab("profile"); };
   const goToEmailTodo = () => { setOpen(false); try { sessionStorage.setItem("moyo_scroll_to", "email"); } catch {} setTab("profile"); };
+  const goToRelTodo = () => { setOpen(false); try { sessionStorage.setItem("moyo_open_rel_wizard", "1"); } catch {} setTab("profile"); };
 
   // Redirection ciblée selon le type/nav_sub de la notification : le contrat Ambassadeur et les
   // versements ouvrent directement le tableau de bord Ambassadeur (même mécanisme que la
@@ -6123,6 +6126,9 @@ function NotifBell({ auth, setTab }: { auth: Auth; setTab: (t: string) => void }
     if (i.type === "contract_validated" || i.type === "payout_processed" || i.nav_sub === "ambassador") {
       try { sessionStorage.setItem("moyo_open_ambassador_dashboard", "1"); } catch {}
       setTab("profile");
+    } else if (i.type === "feature_accepted" || i.nav_tab === "statuses") {
+      setTab("messages");
+      setTimeout(() => window.dispatchEvent(new CustomEvent("moyo-open-my-status")), 400);
     } else {
       setTab(i.nav_tab === "messages" || i.nav_tab === "matches" ? i.nav_tab : "profile");
     }
@@ -6170,7 +6176,7 @@ function NotifBell({ auth, setTab }: { auth: Auth; setTab: (t: string) => void }
                 <div style={{ padding: "24px 16px", textAlign: "center", fontSize: "0.8rem", color: "#aaa" }}>Chargement...</div>
               ) : (
                 <>
-                  {(showEmailTodo || showPhoneTodo) && (
+                  {(showEmailTodo || showPhoneTodo || showRelTodo) && (
                     <div style={{ padding: "12px 16px", borderBottom: "1px solid #eee", background: "#FFFBF0" }}>
                       <div style={{ fontSize: "0.68rem", fontWeight: 800, color: "#B8860B", marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.4 }}>À faire</div>
                       {showEmailTodo && (
@@ -6191,6 +6197,17 @@ function NotifBell({ auth, setTab }: { auth: Auth; setTab: (t: string) => void }
                             <span style={{ fontSize: "0.8rem", color: "#555", fontWeight: 600 }}>Rends ton numéro visible pour tes matchs</span>
                           </div>
                           <div onClick={() => dismissTodo("phone")} title="Ignorer" style={{ cursor: "pointer", color: "#bbb", padding: 4, flexShrink: 0 }}>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                          </div>
+                        </div>
+                      )}
+                      {showRelTodo && (
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 2px" }}>
+                          <div onClick={goToRelTodo} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", flex: 1, minWidth: 0 }}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#B8860B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                            <span style={{ fontSize: "0.8rem", color: "#555", fontWeight: 600 }}>Remplis ton profil relationnel</span>
+                          </div>
+                          <div onClick={() => dismissTodo("rel")} title="Ignorer" style={{ cursor: "pointer", color: "#bbb", padding: 4, flexShrink: 0 }}>
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                           </div>
                         </div>
@@ -12403,6 +12420,23 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
     return () => window.removeEventListener("moyo-open-status-sheet", handler);
   }, [statusGroups, myStatuses.length]);
 
+  // Écoute la demande d'ouverture directe du statut de mise en avant (venant de la notification
+  // « Mise en avant validée » dans la cloche). La mise en avant est publiée sous le compte
+  // officiel Moyo Dating (feature_user_id = moi), pas dans mes statuts personnels — on la
+  // retrouve dans ce groupe puis on ouvre le visualiseur directement dessus.
+  useEffect(() => {
+    const handler = () => {
+      const officialGroup = statusGroups.find(g => g.userId === "moyo-official");
+      if (!officialGroup) return;
+      const raw = officialGroup.items.filter(st => !!st.image_url);
+      const idx = raw.findIndex(st => st.is_feature && st.feature_user_id === auth.userId);
+      if (idx === -1) return;
+      openStatusViewer(raw, idx);
+    };
+    window.addEventListener("moyo-open-my-status", handler);
+    return () => window.removeEventListener("moyo-open-my-status", handler);
+  }, [statusGroups, auth.userId]);
+
   // ── Bandeau (statuts + onglets) en position:fixed sur mobile — jamais affecté par un scroll,
   //    contrairement à sticky, qui avait posé problème avant que les vrais soucis de structure de
   //    scroll (double zone de défilement) ne soient corrigés. Maintenant que c'est réglé, sticky
@@ -15363,7 +15397,19 @@ function FeatureRequestButton({ auth }: { auth: Auth }) {
       const profs = await sb.query<{ gender: string }>(auth.token, "profiles", `?id=eq.${auth.userId}&select=gender&limit=1`).catch(() => [] as { gender: string }[]);
       const gender = profs?.[0]?.gender || "";
       const res = await sb.insert<{ id?: string }>(auth.token, "feature_requests", { user_id: auth.userId, gender, status: "en_attente" });
-      if (Array.isArray(res) && res[0] && res[0].id) { setSent(true); }
+      if (Array.isArray(res) && res[0] && res[0].id) {
+        setSent(true);
+        // Prévient les admins ayant activé « ⭐ Mise en avant » dans Équipe & Alertes. Best-effort :
+        // une erreur ici ne bloque jamais la demande côté membre.
+        (async () => {
+          try {
+            const H = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` };
+            const prefsRes = await fetch(`${SUPABASE_URL}/rest/v1/admin_notif_prefs?mise_en_avant=eq.true&select=admin_id`, { headers: H }).then(r2 => r2.json()).catch(() => []);
+            const adminIds: string[] = (Array.isArray(prefsRes) ? prefsRes : []).map((p: any) => p.admin_id).filter(Boolean);
+            await Promise.all(adminIds.map(id => fetch(`${SUPABASE_URL}/functions/v1/push-notify`, { method: "POST", headers: { "Content-Type": "application/json", ...H }, body: JSON.stringify({ mode: "user_push", user_id: id, title: "⭐ Nouvelle demande de mise en avant", body: `${auth.name || "Un membre"} souhaite passer sur les Statuts Moyo.` }) }).catch(() => {})));
+          } catch {}
+        })();
+      }
       else { setErrorModal("Impossible d'envoyer la demande pour le moment. Réessayez plus tard."); }
     } catch {
       setErrorModal("Impossible d'envoyer la demande pour le moment. Réessayez plus tard.");
