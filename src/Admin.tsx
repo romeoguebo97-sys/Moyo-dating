@@ -246,8 +246,8 @@ function AdminAppointments({ auth, showToast, onOpenProfile }: { auth: any; show
     }
   };
   const relArr = (v: any) => Array.isArray(v) ? v.filter(Boolean) : [];
-  const pillBase: React.CSSProperties = { fontSize: "0.66rem", fontWeight: 700, padding: "4px 10px", borderRadius: 50 };
-  const btnBase: React.CSSProperties = { borderRadius: 50, padding: "9px 16px", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 };
+  const pillBase: React.CSSProperties = { fontSize: "0.66rem", fontWeight: 700, padding: "4px 10px", borderRadius: 50, whiteSpace: "nowrap", flexShrink: 0 };
+  const btnBase: React.CSSProperties = { borderRadius: 50, padding: "9px 16px", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap", flexShrink: 0 };
   const btnPrimary: React.CSSProperties = { ...btnBase, background: G.vert, border: "none", color: "#fff", boxShadow: "0 2px 8px rgba(39,174,96,0.3)" };
   const btnOutline: React.CSSProperties = { ...btnBase, background: G.blanc, border: `1.5px solid ${G.gris}`, color: "#555" };
   const btnDangerOutline: React.CSSProperties = { ...btnBase, background: "rgba(231,76,60,0.06)", border: "1.5px solid rgba(231,76,60,0.35)", color: "#e74c3c" };
@@ -266,7 +266,7 @@ function AdminAppointments({ auth, showToast, onOpenProfile }: { auth: any; show
       {loading ? <div style={{ textAlign: "center", padding: 40, color: "#999" }}>Chargement…</div>
         : filtered.length === 0 ? <div style={{ textAlign: "center", padding: "40px 20px", color: "#aaa", fontSize: "0.88rem" }}>Aucun rendez-vous dans cette catégorie.</div>
         : <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {filtered.map(a => { const si = apptStatusInfo(a.status); return (
+          {filtered.map(a => { const si = apptStatusInfo(a.status); const canManageAssign = !a.assigned_to || a.assigned_to === auth.userId || (auth as any)?.adminLevel === "superadmin" || auth?.userId === SUPER_ADMIN_ID; return (
             <div key={a.id} style={{ background: G.blanc, borderRadius: 20, padding: 20, boxShadow: "0 2px 10px rgba(0,0,0,0.05)", border: `1.5px solid ${si.color}22` }}>
               <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 14 }}>
                 <div onClick={() => a.user_id && onOpenProfile(a.user_id)} style={{ width: 44, height: 44, borderRadius: "50%", overflow: "hidden", background: G.creme, flexShrink: 0, cursor: "pointer" }}>{a.user?.photo_url && <img src={a.user.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}</div>
@@ -325,9 +325,11 @@ function AdminAppointments({ auth, showToast, onOpenProfile }: { auth: any; show
                   {isPastOrDone(a) && <button onClick={() => setDelTarget(a)} style={btnDangerOutline}>🗑 Supprimer</button>}
                   {a.status !== "annule" && a.status !== "effectue" && <button onClick={() => openCancel(a)} style={btnDangerOutline}>🚫 Annuler</button>}
                   <div style={{ position: "relative" }}>
-                    {a.assigned_to
+                    {!a.assigned_to
+                      ? <button onClick={() => assignAppt(a, auth.userId, auth.name || "moi")} style={btnOutline}>M'attribuer ce rendez-vous</button>
+                      : a.assigned_to === auth.userId
                       ? <button onClick={() => setAssignMenuFor(assignMenuFor === a.id ? null : a.id)} style={btnOutline}>Céder à quelqu'un d'autre</button>
-                      : <button onClick={() => assignAppt(a, auth.userId, auth.name || "moi")} style={btnOutline}>M'attribuer ce rendez-vous</button>}
+                      : <button onClick={() => assignAppt(a, auth.userId, auth.name || "moi")} style={btnOutline}>Me l'attribuer</button>}
                     {assignMenuFor === a.id && (
                       <div onClick={e => e.stopPropagation()} style={{ position: "absolute", top: "100%", right: 0, marginTop: 6, width: 240, maxHeight: 260, overflowY: "auto", background: G.blanc, border: `1.5px solid ${G.gris}`, borderRadius: 12, boxShadow: "0 8px 24px rgba(0,0,0,0.15)", zIndex: 50, padding: 8 }}>
                         <input autoFocus value={assignSearch} onChange={e => setAssignSearch(e.target.value)} placeholder="Chercher un conseiller..." style={{ width: "100%", boxSizing: "border-box", padding: "7px 10px", borderRadius: 8, border: `1.5px solid ${G.gris}`, fontSize: "0.78rem", marginBottom: 6 }} />
@@ -343,9 +345,11 @@ function AdminAppointments({ auth, showToast, onOpenProfile }: { auth: any; show
                       </div>
                     )}
                   </div>
-                  {a.assigned_to
+                  {!a.assigned_to
+                    ? <button onClick={() => setAssignMenuFor(assignMenuFor === a.id ? null : a.id)} style={btnOutline}>Assigner à quelqu'un d'autre</button>
+                    : a.assigned_to === auth.userId
                     ? <button onClick={() => unassignAppt(a)} style={btnOutline}>Se désister</button>
-                    : <button onClick={() => setAssignMenuFor(assignMenuFor === a.id ? null : a.id)} style={btnOutline}>Assigner à quelqu'un d'autre</button>}
+                    : <button onClick={() => setAssignMenuFor(assignMenuFor === a.id ? null : a.id)} style={btnOutline}>Réattribuer à quelqu'un d'autre</button>}
                 </div>
               </div>
             </div>
@@ -8012,6 +8016,8 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
     recentUsers: [] as AdminProfile[],
     totalLikes: 0, likesToday: 0,
     likesPerDay: [] as { date: string; count: number }[],
+    signupsPerDay: [] as { date: string; count: number }[],
+    matchesPerDay: [] as { date: string; count: number }[],
     topLikedProfiles: [] as { name: string; city: string; count: number }[],
     completionRate: null as number | null,
     incompleteCount: 0,
@@ -8805,6 +8811,28 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
       });
       const likesPerDay = Object.entries(likesByDay).map(([date, count]) => ({ date, count })).slice(-14);
 
+      // ── Nouveaux inscrits par jour (30 derniers jours) ──
+      const signupsRaw = await fetch(`${SUPABASE_URL}/rest/v1/profiles?created_at=gte.${thirtyDaysAgo}&select=created_at&order=created_at.asc&limit=5000`, {
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+      }).then(r => r.json()).catch(() => []);
+      const signupsByDay: Record<string, number> = {};
+      (signupsRaw as { created_at: string }[]).forEach(u => {
+        const d = u.created_at?.slice(0, 10);
+        if (d) signupsByDay[d] = (signupsByDay[d] || 0) + 1;
+      });
+      const signupsPerDay = Object.entries(signupsByDay).map(([date, count]) => ({ date, count })).slice(-14);
+
+      // ── Nouveaux matchs par jour (30 derniers jours) ──
+      const matchesRaw = await fetch(`${SUPABASE_URL}/rest/v1/matches?created_at=gte.${thirtyDaysAgo}&select=created_at&order=created_at.asc&limit=5000`, {
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+      }).then(r => r.json()).catch(() => []);
+      const matchesByDay: Record<string, number> = {};
+      (matchesRaw as { created_at: string }[]).forEach(m => {
+        const d = m.created_at?.slice(0, 10);
+        if (d) matchesByDay[d] = (matchesByDay[d] || 0) + 1;
+      });
+      const matchesPerDay = Object.entries(matchesByDay).map(([date, count]) => ({ date, count })).slice(-14);
+
       // ── Top 5 profils les plus likés ──
       const topLikesRaw = await fetch(`${SUPABASE_URL}/rest/v1/likes?select=to_user&limit=5000`, {
         headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
@@ -8869,6 +8897,8 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
         totalLikes: parseCount(rTotalLikes),
         likesToday: parseCount(rLikesToday),
         likesPerDay,
+        signupsPerDay,
+        matchesPerDay,
         topLikedProfiles,
         completionRate,
         incompleteCount,
@@ -11497,6 +11527,42 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                       return stats.likesPerDay.map((d, i) => (
                         <div key={i} style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
                           <div style={{ width: "100%", background: G.rouge, borderRadius: "4px 4px 0 0", height: `${Math.round((d.count / max) * 64)}px`, minHeight: 3, opacity: 0.8 }} />
+                          <div style={{ fontSize: "0.52rem", color: "#aaa", transform: "rotate(-30deg)", whiteSpace: "nowrap" }}>{d.date.slice(5)}</div>
+                        </div>
+                      ));
+                    })()}
+                  </div>
+                </div>
+              )}
+
+              {/* Nouveaux inscrits par jour (14 derniers jours) */}
+              {stats.signupsPerDay.length > 0 && (
+                <div style={{ background: G.blanc, borderRadius: 16, padding: "16px", marginBottom: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+                  <h3 style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun, marginBottom: 12 }}>Nouveaux inscrits par jour (14 derniers jours)</h3>
+                  <div style={{ display: "flex", alignItems: "flex-end", gap: 4, height: 80 }}>
+                    {(() => {
+                      const max = Math.max(...stats.signupsPerDay.map(d => d.count), 1);
+                      return stats.signupsPerDay.map((d, i) => (
+                        <div key={i} style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
+                          <div style={{ width: "100%", background: "#2980b9", borderRadius: "4px 4px 0 0", height: `${Math.round((d.count / max) * 64)}px`, minHeight: 3, opacity: 0.8 }} />
+                          <div style={{ fontSize: "0.52rem", color: "#aaa", transform: "rotate(-30deg)", whiteSpace: "nowrap" }}>{d.date.slice(5)}</div>
+                        </div>
+                      ));
+                    })()}
+                  </div>
+                </div>
+              )}
+
+              {/* Nouveaux matchs par jour (14 derniers jours) */}
+              {stats.matchesPerDay.length > 0 && (
+                <div style={{ background: G.blanc, borderRadius: 16, padding: "16px", marginBottom: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+                  <h3 style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun, marginBottom: 12 }}>Nouveaux matchs par jour (14 derniers jours)</h3>
+                  <div style={{ display: "flex", alignItems: "flex-end", gap: 4, height: 80 }}>
+                    {(() => {
+                      const max = Math.max(...stats.matchesPerDay.map(d => d.count), 1);
+                      return stats.matchesPerDay.map((d, i) => (
+                        <div key={i} style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
+                          <div style={{ width: "100%", background: "#c2185b", borderRadius: "4px 4px 0 0", height: `${Math.round((d.count / max) * 64)}px`, minHeight: 3, opacity: 0.8 }} />
                           <div style={{ fontSize: "0.52rem", color: "#aaa", transform: "rotate(-30deg)", whiteSpace: "nowrap" }}>{d.date.slice(5)}</div>
                         </div>
                       ));
