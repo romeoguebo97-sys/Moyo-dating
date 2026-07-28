@@ -185,23 +185,25 @@ function AdminAppointments({ auth, showToast, onOpenProfile }: { auth: any; show
   });
   const isPastOrDone = (a: any) => a.status === "annule" || a.status === "effectue" || a.status === "absent" || (a.scheduled_at && new Date(a.scheduled_at).getTime() < now && a.status !== "en_attente");
 
-  // Compteurs matchs/propositions, calculés uniquement pour les rendez-vous visibles à l'écran
-  // (pas les 400 chargés en mémoire) — pour ne pas multiplier les requêtes réseau inutilement.
-  const [userCounts, setUserCounts] = useState<Record<string, { matches: number; proposals: number }>>({});
+  // Compteurs matchs/propositions/likes envoyés, calculés uniquement pour les rendez-vous
+  // visibles à l'écran (pas les 400 chargés en mémoire) — pour ne pas multiplier les requêtes
+  // réseau inutilement.
+  const [userCounts, setUserCounts] = useState<Record<string, { matches: number; proposals: number; likes: number }>>({});
   useEffect(() => {
     const missing = ([...new Set(filtered.map(a => a.user_id))] as string[]).filter(uid => uid && !(uid in userCounts));
     if (missing.length === 0) return;
     (async () => {
-      const next: Record<string, { matches: number; proposals: number }> = {};
+      const next: Record<string, { matches: number; proposals: number; likes: number }> = {};
       await Promise.all(missing.map(async (uid: string) => {
         try {
-          const [mR, pR] = await Promise.all([
+          const [mR, pR, lR] = await Promise.all([
             fetch(`${SUPABASE_URL}/rest/v1/matches?or=(user1.eq.${uid},user2.eq.${uid})&select=id`, { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${auth.token}`, Prefer: "count=exact", Range: "0-0" } }),
             fetch(`${SUPABASE_URL}/rest/v1/match_proposals?status=eq.pending&or=(user1_id.eq.${uid},user2_id.eq.${uid})&select=id`, { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${auth.token}`, Prefer: "count=exact", Range: "0-0" } }),
+            fetch(`${SUPABASE_URL}/rest/v1/likes?from_user=eq.${uid}&select=id`, { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${auth.token}`, Prefer: "count=exact", Range: "0-0" } }),
           ]);
-          const mC = mR.headers.get("content-range"); const pC = pR.headers.get("content-range");
-          next[uid] = { matches: mC ? parseInt(mC.split("/")[1] || "0") || 0 : 0, proposals: pC ? parseInt(pC.split("/")[1] || "0") || 0 : 0 };
-        } catch { next[uid] = { matches: 0, proposals: 0 }; }
+          const mC = mR.headers.get("content-range"); const pC = pR.headers.get("content-range"); const lC = lR.headers.get("content-range");
+          next[uid] = { matches: mC ? parseInt(mC.split("/")[1] || "0") || 0 : 0, proposals: pC ? parseInt(pC.split("/")[1] || "0") || 0 : 0, likes: lC ? parseInt(lC.split("/")[1] || "0") || 0 : 0 };
+        } catch { next[uid] = { matches: 0, proposals: 0, likes: 0 }; }
       }));
       setUserCounts(prev => ({ ...prev, ...next }));
     })();
@@ -210,6 +212,50 @@ function AdminAppointments({ auth, showToast, onOpenProfile }: { auth: any; show
     en_attente: list.filter(a => !a.archived && a.status === "en_attente").length,
     today: list.filter(a => !a.archived && a.scheduled_at && new Date(a.scheduled_at).toDateString() === new Date().toDateString() && a.status !== "annule").length,
   };
+
+  // ── Repli de la zone d'assignation (Céder à.../Se désister/M'attribuer), masquée par défaut
+  //    derrière le lien « (Modifier) » pour garder la carte aérée. ──
+  const [editingAssignFor, setEditingAssignFor] = useState<string | null>(null);
+
+  // ── Vue rapide déclenchée par les badges cliquables : profil relationnel (déjà en mémoire,
+  //    pas de requête), ou liste nominative (matchs / propositions en attente / profils likés). ──
+  const [quickView, setQuickView] = useState<{ type: "rel" | "matches" | "proposals" | "likes"; user: { id: string; name?: string; photo_url?: string }; loading: boolean; rel?: any; people?: any[] } | null>(null);
+  const openRelView = (a: any) => {
+    if (!a.user_id) return;
+    setQuickView({ type: "rel", user: { id: a.user_id, name: a.user?.name, photo_url: a.user?.photo_url }, loading: false, rel: a.user?.relational_profile || null });
+  };
+  const openListView = async (a: any, type: "matches" | "proposals" | "likes") => {
+    if (!a.user_id) return;
+    const uid = a.user_id;
+    setQuickView({ type, user: { id: uid, name: a.user?.name, photo_url: a.user?.photo_url }, loading: true, people: [] });
+    const H = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` };
+    try {
+      let otherIds: string[] = [];
+      if (type === "matches") {
+        const raw = await fetch(`${SUPABASE_URL}/rest/v1/matches?or=(user1.eq.${uid},user2.eq.${uid})&select=user1,user2&limit=500`, { headers: H }).then(r => r.json()).catch(() => []);
+        otherIds = (Array.isArray(raw) ? raw : []).map((m: any) => m.user1 === uid ? m.user2 : m.user1).filter(Boolean);
+      } else if (type === "proposals") {
+        const raw = await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?status=eq.pending&or=(user1_id.eq.${uid},user2_id.eq.${uid})&select=user1_id,user2_id&limit=500`, { headers: H }).then(r => r.json()).catch(() => []);
+        otherIds = (Array.isArray(raw) ? raw : []).map((p: any) => p.user1_id === uid ? p.user2_id : p.user1_id).filter(Boolean);
+      } else {
+        const raw = await fetch(`${SUPABASE_URL}/rest/v1/likes?from_user=eq.${uid}&select=to_user&limit=500`, { headers: H }).then(r => r.json()).catch(() => []);
+        otherIds = (Array.isArray(raw) ? raw : []).map((l: any) => l.to_user).filter(Boolean);
+      }
+      otherIds = Array.from(new Set(otherIds));
+      if (otherIds.length === 0) { setQuickView(qv => qv ? { ...qv, loading: false, people: [] } : qv); return; }
+      const profs = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=in.(${otherIds.join(",")})&select=id,name,age,city,photo_url,gender`, { headers: H }).then(r => r.json()).catch(() => []);
+      setQuickView(qv => qv ? { ...qv, loading: false, people: Array.isArray(profs) ? profs : [] } : qv);
+    } catch {
+      setQuickView(qv => qv ? { ...qv, loading: false, people: [] } : qv);
+    }
+  };
+  const relArr = (v: any) => Array.isArray(v) ? v.filter(Boolean) : [];
+  const pillBase: React.CSSProperties = { fontSize: "0.66rem", fontWeight: 700, padding: "4px 10px", borderRadius: 50 };
+  const btnBase: React.CSSProperties = { borderRadius: 50, padding: "9px 16px", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 };
+  const btnPrimary: React.CSSProperties = { ...btnBase, background: G.vert, border: "none", color: "#fff", boxShadow: "0 2px 8px rgba(39,174,96,0.3)" };
+  const btnOutline: React.CSSProperties = { ...btnBase, background: G.blanc, border: `1.5px solid ${G.gris}`, color: "#555" };
+  const btnDangerOutline: React.CSSProperties = { ...btnBase, background: "rgba(231,76,60,0.06)", border: "1.5px solid rgba(231,76,60,0.35)", color: "#e74c3c" };
+  const btnWarnOutline: React.CSSProperties = { ...btnBase, background: "rgba(230,126,34,0.08)", border: "1.5px solid rgba(230,126,34,0.3)", color: "#cf7012" };
 
   return (
     <div>
@@ -225,74 +271,168 @@ function AdminAppointments({ auth, showToast, onOpenProfile }: { auth: any; show
         : filtered.length === 0 ? <div style={{ textAlign: "center", padding: "40px 20px", color: "#aaa", fontSize: "0.88rem" }}>Aucun rendez-vous dans cette catégorie.</div>
         : <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {filtered.map(a => { const si = apptStatusInfo(a.status); return (
-            <div key={a.id} style={{ background: G.blanc, borderRadius: 16, padding: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.06)", border: `1.5px solid ${si.color}22` }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-                <div onClick={() => a.user_id && onOpenProfile(a.user_id)} style={{ width: 38, height: 38, borderRadius: "50%", overflow: "hidden", background: G.creme, flexShrink: 0, cursor: "pointer" }}>{a.user?.photo_url && <img src={a.user.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}</div>
+            <div key={a.id} style={{ background: G.blanc, borderRadius: 20, padding: 20, boxShadow: "0 2px 10px rgba(0,0,0,0.05)", border: `1.5px solid ${si.color}22` }}>
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 14 }}>
+                <div onClick={() => a.user_id && onOpenProfile(a.user_id)} style={{ width: 44, height: 44, borderRadius: "50%", overflow: "hidden", background: G.creme, flexShrink: 0, cursor: "pointer" }}>{a.user?.photo_url && <img src={a.user.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}</div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div onClick={() => a.user_id && onOpenProfile(a.user_id)} style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun, cursor: "pointer" }}>{a.user?.name || "Utilisateur"}</div>
-                  <div style={{ fontSize: "0.7rem", color: "#888" }}>{a.type === "physique" ? "🏢 À l'agence" : "📞 Téléphonique"}{a.phone ? ` · ${a.phone}` : ""}{a.city ? ` · ${a.city}` : ""}</div>
-                  <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 4 }}>
-                    <span style={{ fontSize: "0.62rem", fontWeight: 700, padding: "2px 7px", borderRadius: 50, background: a.user?.is_verified ? "rgba(39,174,96,0.12)" : "rgba(153,153,153,0.12)", color: a.user?.is_verified ? "#1a8c4a" : "#999" }}>{a.user?.is_verified ? "✓ Vérifié" : "Non vérifié"}</span>
-                    <span style={{ fontSize: "0.62rem", fontWeight: 700, padding: "2px 7px", borderRadius: 50, background: a.user?.phone ? "rgba(39,174,96,0.12)" : "rgba(153,153,153,0.12)", color: a.user?.phone ? "#1a8c4a" : "#999" }}>{a.user?.phone ? "✓ Téléphone activé" : "Pas de téléphone"}</span>
-                    <span style={{ fontSize: "0.62rem", fontWeight: 700, padding: "2px 7px", borderRadius: 50, background: a.user?.relational_profile ? "rgba(39,174,96,0.12)" : "rgba(153,153,153,0.12)", color: a.user?.relational_profile ? "#1a8c4a" : "#999" }}>{a.user?.relational_profile ? "✓ Profil relationnel" : "Profil relationnel vide"}</span>
+                  <div style={{ display: "flex", alignItems: "baseline", gap: 6, flexWrap: "wrap" }}>
+                    <span onClick={() => a.user_id && onOpenProfile(a.user_id)} style={{ fontWeight: 800, fontSize: "0.96rem", color: G.brun, cursor: "pointer" }}>{a.user?.name || "Utilisateur"}</span>
+                    {a.phone && <span style={{ fontSize: "0.78rem", color: "#999", fontWeight: 500 }}>(Tél : {a.phone})</span>}
+                  </div>
+                  <div style={{ fontSize: "0.72rem", color: "#999", marginTop: 2 }}>{a.type === "physique" ? "🏢 À l'agence" : "📞 Téléphonique"}{a.city ? ` · ${a.city}` : ""}</div>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
+                    {a.user?.is_verified && a.user?.phone ? (
+                      <span style={{ ...pillBase, background: "rgba(39,174,96,0.12)", color: "#1a8c4a" }}>✓ Profil & Tél Vérifiés</span>
+                    ) : (
+                      <>
+                        <span style={{ ...pillBase, background: a.user?.is_verified ? "rgba(39,174,96,0.12)" : "rgba(153,153,153,0.12)", color: a.user?.is_verified ? "#1a8c4a" : "#999" }}>{a.user?.is_verified ? "✓ Vérifié" : "Non vérifié"}</span>
+                        <span style={{ ...pillBase, background: a.user?.phone ? "rgba(39,174,96,0.12)" : "rgba(153,153,153,0.12)", color: a.user?.phone ? "#1a8c4a" : "#999" }}>{a.user?.phone ? "✓ Téléphone activé" : "Pas de téléphone"}</span>
+                      </>
+                    )}
+                    <span onClick={() => openRelView(a)} title="Voir le profil relationnel" style={{ ...pillBase, cursor: "pointer", background: a.user?.relational_profile ? "rgba(142,68,173,0.1)" : "rgba(153,153,153,0.12)", color: a.user?.relational_profile ? "#7d3c98" : "#999" }}>{a.user?.relational_profile ? "✓ Profil relationnel" : "Profil relationnel vide"}</span>
                     {a.user_id && userCounts[a.user_id] && (
                       <>
-                        <span style={{ fontSize: "0.62rem", fontWeight: 700, padding: "2px 7px", borderRadius: 50, background: "rgba(233,30,140,0.1)", color: "#c2185b" }}>{userCounts[a.user_id].matches} match{userCounts[a.user_id].matches > 1 ? "s" : ""}</span>
-                        <span style={{ fontSize: "0.62rem", fontWeight: 700, padding: "2px 7px", borderRadius: 50, background: "rgba(41,128,185,0.1)", color: "#2471a3" }}>{userCounts[a.user_id].proposals} proposition{userCounts[a.user_id].proposals > 1 ? "s" : ""}</span>
+                        <span onClick={() => openListView(a, "matches")} title="Voir ses matchs" style={{ ...pillBase, cursor: "pointer", background: "rgba(233,30,140,0.1)", color: "#c2185b" }}>♥ {userCounts[a.user_id].matches} Match{userCounts[a.user_id].matches > 1 ? "s" : ""}</span>
+                        <span onClick={() => openListView(a, "proposals")} title="Voir ses propositions en attente" style={{ ...pillBase, cursor: "pointer", background: "rgba(41,128,185,0.1)", color: "#2471a3" }}>➤ {userCounts[a.user_id].proposals} Proposition{userCounts[a.user_id].proposals > 1 ? "s" : ""}</span>
+                        <span onClick={() => openListView(a, "likes")} title="Voir les profils qu'il/elle a likés" style={{ ...pillBase, cursor: "pointer", background: "rgba(230,126,34,0.1)", color: "#cf7012" }}>👍 {userCounts[a.user_id].likes} Liké{userCounts[a.user_id].likes > 1 ? "s" : ""}</span>
                       </>
                     )}
                   </div>
                 </div>
-                <span style={{ background: si.color + "1a", color: si.color, borderRadius: 50, padding: "3px 10px", fontSize: "0.68rem", fontWeight: 700, flexShrink: 0 }}>{si.label}</span>
+                <span style={{ background: si.color + "1a", color: si.color, borderRadius: 50, padding: "6px 14px", fontSize: "0.72rem", fontWeight: 800, flexShrink: 0, display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap" }}>🗓️ Rendez-vous {si.label}</span>
               </div>
-              <div style={{ fontSize: "0.82rem", color: "#555", marginBottom: 6 }}>{a.topic}</div>
-              {a.type === "physique" && a.price && <div style={{ fontSize: "0.74rem", color: "#b9770e", fontWeight: 700, marginBottom: 6 }}>💳 {Number(a.price).toLocaleString("fr-FR")} FCFA{a.tx_ref ? ` · réf ${a.tx_ref}` : ""}, à valider dans l'onglet Budget</div>}
-              {a.message && <div style={{ fontSize: "0.74rem", color: "#777", fontStyle: "italic", marginBottom: 6 }}>« {a.message} »</div>}
-              {a.scheduled_at && <div style={{ fontSize: "0.78rem", color: G.vert, fontWeight: 700, marginBottom: 6 }}>📅 {fmtApptDT(a.scheduled_at)}</div>}
-              {!a.scheduled_at && Array.isArray(a.preferred_slots) && a.preferred_slots.length > 0 && <div style={{ fontSize: "0.72rem", color: "#999", marginBottom: 6 }}>Créneaux souhaités : {a.preferred_slots.map(fmtApptDT).join(" · ")}</div>}
-              {a.admin_note && <div style={{ fontSize: "0.72rem", color: "#8a6d2a", background: "rgba(212,168,67,0.1)", borderRadius: 8, padding: "5px 8px", marginBottom: 6 }}>Note : {a.admin_note}</div>}
-              <div style={{ position: "relative", marginBottom: 6 }}>
-                {a.assigned_to ? (
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                    <span style={{ fontSize: "0.72rem", color: "#555" }}>👤 Assigné à <b>{advisors.find(v => v.id === a.assigned_to)?.name || "un conseiller"}</b></span>
-                    <span onClick={() => setAssignMenuFor(assignMenuFor === a.id ? null : a.id)} style={{ fontSize: "0.68rem", color: "#2980b9", fontWeight: 700, cursor: "pointer", textDecoration: "underline" }}>Céder à...</span>
-                    <span onClick={() => unassignAppt(a)} style={{ fontSize: "0.68rem", color: "#aaa", fontWeight: 700, cursor: "pointer", textDecoration: "underline" }}>Se désister</span>
-                  </div>
-                ) : (
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <button onClick={() => assignAppt(a, auth.userId, auth.name || "moi")} style={{ background: "rgba(41,128,185,0.08)", border: "1.5px solid rgba(41,128,185,0.25)", borderRadius: 50, padding: "4px 12px", fontSize: "0.68rem", fontWeight: 700, color: "#2471a3", cursor: "pointer" }}>M'attribuer ce rendez-vous</button>
-                    <span onClick={() => setAssignMenuFor(assignMenuFor === a.id ? null : a.id)} style={{ fontSize: "0.68rem", color: "#999", fontWeight: 600, cursor: "pointer", textDecoration: "underline" }}>Assigner à quelqu'un d'autre</span>
-                  </div>
-                )}
-                {assignMenuFor === a.id && (
-                  <div onClick={e => e.stopPropagation()} style={{ position: "absolute", top: "100%", left: 0, marginTop: 6, width: 240, maxHeight: 260, overflowY: "auto", background: G.blanc, border: `1.5px solid ${G.gris}`, borderRadius: 12, boxShadow: "0 8px 24px rgba(0,0,0,0.15)", zIndex: 50, padding: 8 }}>
-                    <input autoFocus value={assignSearch} onChange={e => setAssignSearch(e.target.value)} placeholder="Chercher un conseiller..." style={{ width: "100%", boxSizing: "border-box", padding: "7px 10px", borderRadius: 8, border: `1.5px solid ${G.gris}`, fontSize: "0.78rem", marginBottom: 6 }} />
-                    {advisors.filter(v => v.name?.toLowerCase().includes(assignSearch.toLowerCase())).map(v => (
-                      <div key={v.id} onClick={() => assignAppt(a, v.id, v.name)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 6px", borderRadius: 8, cursor: "pointer" }}
-                        onMouseOver={e => { (e.currentTarget as HTMLElement).style.background = G.creme; }}
-                        onMouseOut={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
-                        <div style={{ width: 24, height: 24, borderRadius: "50%", overflow: "hidden", background: G.creme, flexShrink: 0 }}>{v.photo_url && <img src={v.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}</div>
-                        <span style={{ fontSize: "0.8rem", color: "#333" }}>{v.name}</span>
-                      </div>
-                    ))}
-                    {advisors.filter(v => v.name?.toLowerCase().includes(assignSearch.toLowerCase())).length === 0 && <div style={{ fontSize: "0.76rem", color: "#aaa", padding: "8px 6px", textAlign: "center" }}>Aucun conseiller trouvé</div>}
-                  </div>
-                )}
+
+              {(a.topic || a.message) && (
+                <div style={{ background: G.creme, borderLeft: `3px solid ${G.rouge}`, borderRadius: 10, padding: "10px 14px", marginBottom: 12 }}>
+                  {a.topic && <div style={{ fontSize: "0.82rem", color: "#555" }}><b style={{ color: G.brun }}>Motif :</b> "{a.topic}"</div>}
+                  {a.message && <div style={{ fontSize: "0.78rem", color: "#888", fontStyle: "italic", marginTop: a.topic ? 4 : 0 }}>« {a.message} »</div>}
+                </div>
+              )}
+
+              {a.type === "physique" && a.price && <div style={{ fontSize: "0.78rem", color: "#b9770e", fontWeight: 700, marginBottom: 10 }}>💳 {Number(a.price).toLocaleString("fr-FR")} FCFA{a.tx_ref ? ` · réf ${a.tx_ref}` : ""}, à valider dans l'onglet Budget</div>}
+              {!a.scheduled_at && Array.isArray(a.preferred_slots) && a.preferred_slots.length > 0 && <div style={{ fontSize: "0.76rem", color: "#999", marginBottom: 10 }}>Créneaux souhaités : {a.preferred_slots.map(fmtApptDT).join(" · ")}</div>}
+              {a.admin_note && <div style={{ fontSize: "0.76rem", color: "#8a6d2a", background: "rgba(212,168,67,0.1)", borderRadius: 10, padding: "8px 12px", marginBottom: 10 }}>Note : {a.admin_note}</div>}
+
+              <div style={{ background: G.creme, borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
+                <span style={{ fontSize: "0.82rem", fontWeight: 700, color: a.scheduled_at ? G.vert : "#999", display: "flex", alignItems: "center", gap: 6 }}>
+                  {a.scheduled_at ? <>🕐 {fmtApptDT(a.scheduled_at)}</> : "Créneau non confirmé"}
+                </span>
+                <span style={{ fontSize: "0.78rem", color: "#777" }}>
+                  {a.assigned_to ? <>Assigné à : <b style={{ color: G.brun }}>{advisors.find(v => v.id === a.assigned_to)?.name || "un conseiller"}</b></> : <span style={{ color: "#999" }}>Non assigné</span>}
+                  {" "}<span onClick={() => setEditingAssignFor(editingAssignFor === a.id ? null : a.id)} style={{ color: "#2980b9", fontWeight: 700, cursor: "pointer", textDecoration: "underline" }}>(Modifier)</span>
+                </span>
               </div>
-              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
-                {(a.status === "en_attente" || a.status === "reporte") && <button onClick={() => confirmAppt(a)} style={{ background: "rgba(39,174,96,0.1)", border: "1.5px solid rgba(39,174,96,0.3)", borderRadius: 50, padding: "5px 12px", fontSize: "0.68rem", fontWeight: 700, color: "#1a8c4a", cursor: "pointer" }}>Confirmer</button>}
-                {a.status !== "annule" && a.status !== "effectue" && <button onClick={() => rescheduleAppt(a)} style={{ background: "rgba(41,128,185,0.1)", border: "1.5px solid rgba(41,128,185,0.3)", borderRadius: 50, padding: "5px 12px", fontSize: "0.68rem", fontWeight: 700, color: "#2471a3", cursor: "pointer" }}>Autre créneau</button>}
-                {(a.status === "confirme" || a.status === "reporte") && <button onClick={() => patch(a.id, { status: "effectue" }, "✅ Marqué effectué")} style={{ background: "rgba(142,68,173,0.1)", border: "1.5px solid rgba(142,68,173,0.3)", borderRadius: 50, padding: "5px 12px", fontSize: "0.68rem", fontWeight: 700, color: "#7d3c98", cursor: "pointer" }}>Effectué</button>}
-                {(a.status === "confirme" || a.status === "reporte") && <button onClick={() => patch(a.id, { status: "absent" }, "Marqué absent")} style={{ background: "rgba(85,85,85,0.08)", border: "1.5px solid rgba(85,85,85,0.25)", borderRadius: 50, padding: "5px 12px", fontSize: "0.68rem", fontWeight: 700, color: "#555", cursor: "pointer" }}>Absent</button>}
-                {a.status !== "annule" && a.status !== "effectue" && <button onClick={() => openCancel(a)} style={{ background: "rgba(231,76,60,0.08)", border: "1.5px solid rgba(231,76,60,0.25)", borderRadius: 50, padding: "5px 12px", fontSize: "0.68rem", fontWeight: 700, color: "#e74c3c", cursor: "pointer" }}>Annuler</button>}
-                <button onClick={() => openNote(a)} style={{ background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "5px 12px", fontSize: "0.68rem", fontWeight: 700, color: "#555", cursor: "pointer" }}>Note interne</button>
-                {isPastOrDone(a) && !a.archived && <button onClick={() => archiveAppt(a)} style={{ background: "rgba(230,126,34,0.1)", border: "1.5px solid rgba(230,126,34,0.3)", borderRadius: 50, padding: "5px 12px", fontSize: "0.68rem", fontWeight: 700, color: "#cf7012", cursor: "pointer" }}>📦 Archiver</button>}
-                {a.archived && <button onClick={() => unarchiveAppt(a)} style={{ background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "5px 12px", fontSize: "0.68rem", fontWeight: 700, color: "#555", cursor: "pointer" }}>↩ Désarchiver</button>}
-                {isPastOrDone(a) && <button onClick={() => setDelTarget(a)} style={{ background: "rgba(192,57,43,0.08)", border: "1.5px solid rgba(192,57,43,0.3)", borderRadius: 50, padding: "5px 12px", fontSize: "0.68rem", fontWeight: 700, color: "#c0392b", cursor: "pointer" }}>🗑 Supprimer</button>}
+
+              {editingAssignFor === a.id && (
+                <div style={{ position: "relative", marginBottom: 12 }}>
+                  {a.assigned_to ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                      <span onClick={() => setAssignMenuFor(assignMenuFor === a.id ? null : a.id)} style={{ fontSize: "0.74rem", color: "#2980b9", fontWeight: 700, cursor: "pointer", textDecoration: "underline" }}>Céder à...</span>
+                      <span onClick={() => unassignAppt(a)} style={{ fontSize: "0.74rem", color: "#aaa", fontWeight: 700, cursor: "pointer", textDecoration: "underline" }}>Se désister</span>
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                      <button onClick={() => assignAppt(a, auth.userId, auth.name || "moi")} style={{ background: "rgba(41,128,185,0.08)", border: "1.5px solid rgba(41,128,185,0.25)", borderRadius: 50, padding: "5px 14px", fontSize: "0.74rem", fontWeight: 700, color: "#2471a3", cursor: "pointer" }}>M'attribuer ce rendez-vous</button>
+                      <span onClick={() => setAssignMenuFor(assignMenuFor === a.id ? null : a.id)} style={{ fontSize: "0.74rem", color: "#999", fontWeight: 600, cursor: "pointer", textDecoration: "underline" }}>Assigner à quelqu'un d'autre</span>
+                    </div>
+                  )}
+                  {assignMenuFor === a.id && (
+                    <div onClick={e => e.stopPropagation()} style={{ position: "absolute", top: "100%", left: 0, marginTop: 6, width: 240, maxHeight: 260, overflowY: "auto", background: G.blanc, border: `1.5px solid ${G.gris}`, borderRadius: 12, boxShadow: "0 8px 24px rgba(0,0,0,0.15)", zIndex: 50, padding: 8 }}>
+                      <input autoFocus value={assignSearch} onChange={e => setAssignSearch(e.target.value)} placeholder="Chercher un conseiller..." style={{ width: "100%", boxSizing: "border-box", padding: "7px 10px", borderRadius: 8, border: `1.5px solid ${G.gris}`, fontSize: "0.78rem", marginBottom: 6 }} />
+                      {advisors.filter(v => v.name?.toLowerCase().includes(assignSearch.toLowerCase())).map(v => (
+                        <div key={v.id} onClick={() => assignAppt(a, v.id, v.name)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 6px", borderRadius: 8, cursor: "pointer" }}
+                          onMouseOver={e => { (e.currentTarget as HTMLElement).style.background = G.creme; }}
+                          onMouseOut={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
+                          <div style={{ width: 24, height: 24, borderRadius: "50%", overflow: "hidden", background: G.creme, flexShrink: 0 }}>{v.photo_url && <img src={v.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}</div>
+                          <span style={{ fontSize: "0.8rem", color: "#333" }}>{v.name}</span>
+                        </div>
+                      ))}
+                      {advisors.filter(v => v.name?.toLowerCase().includes(assignSearch.toLowerCase())).length === 0 && <div style={{ fontSize: "0.76rem", color: "#aaa", padding: "8px 6px", textAlign: "center" }}>Aucun conseiller trouvé</div>}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                {(a.status === "en_attente" || a.status === "reporte") && <button onClick={() => confirmAppt(a)} style={btnPrimary}>✓ Confirmer</button>}
+                {(a.status === "confirme" || a.status === "reporte") && <button onClick={() => patch(a.id, { status: "effectue" }, "✅ Marqué effectué")} style={btnPrimary}>✓ Marquer Effectué</button>}
+                {a.status !== "annule" && a.status !== "effectue" && <button onClick={() => rescheduleAppt(a)} style={btnOutline}>🗓️ Reporter créneau</button>}
+                {(a.status === "confirme" || a.status === "reporte") && <button onClick={() => patch(a.id, { status: "absent" }, "Marqué absent")} style={btnOutline}>Absent</button>}
+                <button onClick={() => openNote(a)} style={btnOutline}>✎ Note interne</button>
+                {isPastOrDone(a) && !a.archived && <button onClick={() => archiveAppt(a)} style={btnWarnOutline}>📦 Archiver</button>}
+                {a.archived && <button onClick={() => unarchiveAppt(a)} style={btnOutline}>↩ Désarchiver</button>}
+                <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
+                  {isPastOrDone(a) && <button onClick={() => setDelTarget(a)} style={btnDangerOutline}>🗑 Supprimer</button>}
+                  {a.status !== "annule" && a.status !== "effectue" && <button onClick={() => openCancel(a)} style={btnDangerOutline}>🚫 Annuler</button>}
+                </div>
               </div>
             </div>
           ); })}
         </div>}
+
+      {quickView && (() => {
+        const rp = quickView.rel || {};
+        const self = rp.self || rp; const search = rp.search || rp;
+        const rows: [string, string][] = [];
+        if (self.project || rp.project) rows.push(["Projet de vie", self.project || rp.project]);
+        if (self.religion || rp.religion) rows.push(["Religion", self.religion || rp.religion]);
+        if (self.wants_children) rows.push(["Veut des enfants", self.wants_children]);
+        if (relArr(self.values || rp.qualities).length) rows.push(["Valeurs / qualités", relArr(self.values || rp.qualities).join(", ")]);
+        if (relArr(self.interests || rp.interests).length) rows.push(["Centres d'intérêt", relArr(self.interests || rp.interests).join(", ")]);
+        if (relArr(self.lifestyle).length) rows.push(["Style de vie", relArr(self.lifestyle).join(", ")]);
+        const srows: [string, string][] = [];
+        if (search.gender) srows.push(["Genre recherché", search.gender]);
+        if (search.city || rp.city) srows.push(["Ville", search.city || rp.city]);
+        if ((search.age_min ?? rp.age_min) || (search.age_max ?? rp.age_max)) srows.push(["Âge", `${search.age_min ?? rp.age_min ?? "?"} – ${search.age_max ?? rp.age_max ?? "?"} ans`]);
+        if (search.religion) srows.push(["Religion souhaitée", search.religion]);
+        if (relArr(search.values).length) srows.push(["Valeurs recherchées", relArr(search.values).join(", ")]);
+        if (relArr(search.interests).length) srows.push(["Intérêts recherchés", relArr(search.interests).join(", ")]);
+        const titleByType: Record<string, string> = { rel: "Profil relationnel", matches: "Matchs", proposals: "Propositions en attente", likes: "Profils likés" };
+        return (
+          <div onClick={() => setQuickView(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10005, display: "flex", alignItems: "center", justifyContent: "center", padding: "calc(env(safe-area-inset-top) + 18px) 18px calc(env(safe-area-inset-bottom) + 18px)" }}>
+            <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 18, width: "100%", maxWidth: 560, maxHeight: "85vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
+              <div style={{ background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, padding: "18px 20px", display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{ width: 44, height: 44, borderRadius: "50%", overflow: "hidden", background: "rgba(255,255,255,0.2)", flexShrink: 0 }}>{quickView.user.photo_url && <img src={quickView.user.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 800, fontSize: "1.02rem", color: "#fff" }}>{quickView.user.name || "Utilisateur"}</div>
+                  <div style={{ fontSize: "0.76rem", color: "rgba(255,255,255,0.85)" }}>{titleByType[quickView.type]}</div>
+                </div>
+                <button onClick={() => setQuickView(null)} style={{ background: "rgba(255,255,255,0.2)", border: "none", borderRadius: "50%", width: 30, height: 30, cursor: "pointer", color: "#fff", flexShrink: 0, fontSize: "1rem" }}>✕</button>
+              </div>
+              <div style={{ padding: "16px 20px 22px" }}>
+                {quickView.type === "rel" ? (
+                  !quickView.rel ? <div style={{ fontSize: "0.85rem", color: "#999", textAlign: "center", padding: "20px 0" }}>Profil relationnel non rempli.</div> : (
+                    <>
+                      <div style={{ fontWeight: 800, fontSize: "0.82rem", color: G.rouge, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.4 }}>Qui je suis</div>
+                      {rows.length ? rows.map(([k, v]) => <div key={k} style={{ fontSize: "0.83rem", color: G.brunLight, lineHeight: 1.6, marginBottom: 3 }}>{k} : <b style={{ color: G.brun }}>{v}</b></div>) : <div style={{ fontSize: "0.8rem", color: "#999" }}>Non renseigné</div>}
+                      <div style={{ fontWeight: 800, fontSize: "0.82rem", color: G.rouge, margin: "16px 0 8px", textTransform: "uppercase", letterSpacing: 0.4 }}>Ce que je recherche</div>
+                      {srows.length ? srows.map(([k, v]) => <div key={k} style={{ fontSize: "0.83rem", color: G.brunLight, lineHeight: 1.6, marginBottom: 3 }}>{k} : <b style={{ color: G.brun }}>{v}</b></div>) : <div style={{ fontSize: "0.8rem", color: "#999" }}>Non renseigné</div>}
+                      {rp.note && <><div style={{ fontWeight: 800, fontSize: "0.82rem", color: G.rouge, margin: "16px 0 8px", textTransform: "uppercase", letterSpacing: 0.4 }}>Note</div><div style={{ fontSize: "0.83rem", color: G.brun, lineHeight: 1.6, fontStyle: "italic" }}>{rp.note}</div></>}
+                    </>
+                  )
+                ) : quickView.loading ? (
+                  <div style={{ textAlign: "center", padding: "30px 0", color: "#999", fontSize: "0.85rem" }}>Chargement...</div>
+                ) : !quickView.people || quickView.people.length === 0 ? (
+                  <div style={{ textAlign: "center", padding: "30px 0", color: "#999", fontSize: "0.85rem" }}>Aucun résultat pour l'instant.</div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {quickView.people.map(p => (
+                      <div key={p.id} onClick={() => { setQuickView(null); onOpenProfile(p.id); }} style={{ display: "flex", alignItems: "center", gap: 10, border: `1px solid ${G.gris}`, borderRadius: 12, padding: "8px 12px", cursor: "pointer" }}>
+                        <div style={{ width: 38, height: 38, borderRadius: "50%", overflow: "hidden", background: G.creme, flexShrink: 0 }}>{p.photo_url && <img src={p.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}</div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: 700, fontSize: "0.85rem", color: G.brun }}>{p.name}{p.age ? `, ${p.age}` : ""}</div>
+                          <div style={{ fontSize: "0.72rem", color: "#999" }}>{[p.gender, p.city].filter(Boolean).join(" · ") || "—"}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {scheduling && <DateTimeModal
         title={scheduling.mode === "confirme" ? "Confirmer le rendez-vous" : "Proposer un nouveau créneau"}
         initialISO={scheduling.a.scheduled_at || undefined}

@@ -6050,7 +6050,10 @@ function NotifBell({ auth, setTab }: { auth: Auth; setTab: (t: string) => void }
   const [loading, setLoading] = useState(true);
   const [emailVerified, setEmailVerified] = useState(true);
   const [phoneShared, setPhoneShared] = useState(true);
-  const [items, setItems] = useState<{ id: string; type: string; title: string; body: string; is_read: boolean; created_at: string }[]>([]);
+  const [items, setItems] = useState<{ id: string; type: string; title: string; body: string; is_read: boolean; created_at: string; nav_tab?: string | null; nav_sub?: string | null }[]>([]);
+  const [dismissedTodos, setDismissedTodos] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem(`moyo_dismissed_todos_${auth.userId}`) || "[]"); } catch { return []; }
+  });
 
   const load = React.useCallback(async () => {
     if (!auth) return;
@@ -6069,7 +6072,17 @@ function NotifBell({ auth, setTab }: { auth: Auth; setTab: (t: string) => void }
 
   useEffect(() => { load(); const iv = setInterval(load, 30000); return () => clearInterval(iv); }, [load]);
 
-  const unreadCount = items.filter(i => !i.is_read).length + (emailVerified ? 0 : 1) + (phoneShared ? 0 : 1);
+  const showEmailTodo = !emailVerified && !dismissedTodos.includes("email");
+  const showPhoneTodo = !phoneShared && !dismissedTodos.includes("phone");
+  const unreadCount = items.filter(i => !i.is_read).length + (showEmailTodo ? 1 : 0) + (showPhoneTodo ? 1 : 0);
+
+  const dismissTodo = (key: "email" | "phone") => {
+    setDismissedTodos(prev => {
+      const next = prev.includes(key) ? prev : [...prev, key];
+      try { localStorage.setItem(`moyo_dismissed_todos_${auth.userId}`, JSON.stringify(next)); } catch {}
+      return next;
+    });
+  };
 
   const markRead = async (id: string) => {
     setItems(prev => prev.map(i => i.id === id ? { ...i, is_read: true } : i));
@@ -6082,7 +6095,28 @@ function NotifBell({ auth, setTab }: { auth: Auth; setTab: (t: string) => void }
     const inList = unread.map(id => `"${id}"`).join(",");
     fetch(`${SUPABASE_URL}/rest/v1/user_notifications?id=in.(${inList})`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ is_read: true }) }).catch(() => {});
   };
-  const goToProfile = (id?: string) => { if (id) markRead(id); setOpen(false); setTab("profile"); };
+  const deleteItem = (id: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setItems(prev => prev.filter(i => i.id !== id));
+    fetch(`${SUPABASE_URL}/rest/v1/user_notifications?id=eq.${id}`, { method: "DELETE", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } }).catch(() => {});
+  };
+  const goToPhoneTodo = () => { setOpen(false); try { sessionStorage.setItem("moyo_scroll_to", "phone"); } catch {} setTab("profile"); };
+  const goToEmailTodo = () => { setOpen(false); try { sessionStorage.setItem("moyo_scroll_to", "email"); } catch {} setTab("profile"); };
+
+  // Redirection ciblée selon le type/nav_sub de la notification : le contrat Ambassadeur et les
+  // versements ouvrent directement le tableau de bord Ambassadeur (même mécanisme que la
+  // campagne "Deviens Ambassadeur" et l'écran de bienvenue global). Les autres types sans
+  // destination précise retombent sur le Profil.
+  const openItem = (i: { id: string; type: string; nav_tab?: string | null; nav_sub?: string | null }) => {
+    markRead(i.id);
+    setOpen(false);
+    if (i.type === "contract_validated" || i.type === "payout_processed" || i.nav_sub === "ambassador") {
+      try { sessionStorage.setItem("moyo_open_ambassador_dashboard", "1"); } catch {}
+      setTab("profile");
+    } else {
+      setTab(i.nav_tab === "messages" || i.nav_tab === "matches" ? i.nav_tab : "profile");
+    }
+  };
 
   const timeAgo = (iso: string) => {
     const diff = Date.now() - new Date(iso).getTime();
@@ -6105,7 +6139,7 @@ function NotifBell({ auth, setTab }: { auth: Auth; setTab: (t: string) => void }
           {unreadCount > 9 ? "9+" : unreadCount}
         </div>
       )}
-      {open && (
+      {open && createPortal(
         <div className="moyo-backdrop" onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9998, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
           <div className="moyo-sheet-in" onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: "24px 24px 0 0", width: "100%", maxWidth: 500, maxHeight: "80vh", overflow: "hidden", display: "flex", flexDirection: "column", paddingBottom: "env(safe-area-inset-bottom)", boxShadow: "0 -8px 40px rgba(0,0,0,0.25)" }}>
             <div style={{ display: "flex", justifyContent: "center", paddingTop: 12, paddingBottom: 4, flexShrink: 0 }}>
@@ -6126,19 +6160,29 @@ function NotifBell({ auth, setTab }: { auth: Auth; setTab: (t: string) => void }
                 <div style={{ padding: "24px 16px", textAlign: "center", fontSize: "0.8rem", color: "#aaa" }}>Chargement...</div>
               ) : (
                 <>
-                  {(!emailVerified || !phoneShared) && (
+                  {(showEmailTodo || showPhoneTodo) && (
                     <div style={{ padding: "12px 16px", borderBottom: "1px solid #eee", background: "#FFFBF0" }}>
                       <div style={{ fontSize: "0.68rem", fontWeight: 800, color: "#B8860B", marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.4 }}>À faire</div>
-                      {!emailVerified && (
-                        <div onClick={() => goToProfile()} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 2px", cursor: "pointer" }}>
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#B8860B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-                          <span style={{ fontSize: "0.8rem", color: "#555", fontWeight: 600 }}>Vérifie ton adresse e-mail</span>
+                      {showEmailTodo && (
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 2px" }}>
+                          <div onClick={goToEmailTodo} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", flex: 1, minWidth: 0 }}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#B8860B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                            <span style={{ fontSize: "0.8rem", color: "#555", fontWeight: 600 }}>Vérifie ton adresse e-mail</span>
+                          </div>
+                          <div onClick={() => dismissTodo("email")} title="Ignorer" style={{ cursor: "pointer", color: "#bbb", padding: 4, flexShrink: 0 }}>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                          </div>
                         </div>
                       )}
-                      {!phoneShared && (
-                        <div onClick={() => goToProfile()} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 2px", cursor: "pointer" }}>
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#B8860B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.53a16 16 0 0 0 6.06 6.06l1.09-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-                          <span style={{ fontSize: "0.8rem", color: "#555", fontWeight: 600 }}>Rends ton numéro visible pour tes matchs</span>
+                      {showPhoneTodo && (
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 2px" }}>
+                          <div onClick={goToPhoneTodo} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", flex: 1, minWidth: 0 }}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#B8860B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.53a16 16 0 0 0 6.06 6.06l1.09-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                            <span style={{ fontSize: "0.8rem", color: "#555", fontWeight: 600 }}>Rends ton numéro visible pour tes matchs</span>
+                          </div>
+                          <div onClick={() => dismissTodo("phone")} title="Ignorer" style={{ cursor: "pointer", color: "#bbb", padding: 4, flexShrink: 0 }}>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                          </div>
                         </div>
                       )}
                     </div>
@@ -6148,12 +6192,15 @@ function NotifBell({ auth, setTab }: { auth: Auth; setTab: (t: string) => void }
                       <div style={{ padding: "24px 16px", textAlign: "center", fontSize: "0.8rem", color: "#aaa" }}>Rien pour l'instant.</div>
                     ) : (
                       items.map(i => (
-                        <div key={i.id} onClick={() => goToProfile(i.id)} style={{ display: "flex", gap: 10, padding: "11px 16px", cursor: "pointer", background: i.is_read ? "transparent" : "rgba(192,57,43,0.04)" }}>
+                        <div key={i.id} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "11px 16px", background: i.is_read ? "transparent" : "rgba(192,57,43,0.04)" }}>
                           {!i.is_read && <div style={{ width: 7, height: 7, borderRadius: "50%", background: G.rouge, flexShrink: 0, marginTop: 6 }} />}
-                          <div style={{ flex: 1, minWidth: 0, marginLeft: i.is_read ? 17 : 0 }}>
+                          <div onClick={() => openItem(i)} style={{ flex: 1, minWidth: 0, marginLeft: i.is_read ? 17 : 0, cursor: "pointer" }}>
                             <div style={{ fontSize: "0.83rem", fontWeight: i.is_read ? 600 : 800, color: "#333" }}>{i.title}</div>
                             <div style={{ fontSize: "0.76rem", color: "#888", marginTop: 2, lineHeight: 1.4 }}>{i.body}</div>
                             <div style={{ fontSize: "0.68rem", color: "#bbb", marginTop: 3 }}>{timeAgo(i.created_at)}</div>
+                          </div>
+                          <div onClick={(e) => deleteItem(i.id, e)} title="Supprimer" style={{ cursor: "pointer", color: "#ccc", padding: 4, flexShrink: 0 }}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
                           </div>
                         </div>
                       ))
@@ -6163,7 +6210,8 @@ function NotifBell({ auth, setTab }: { auth: Auth; setTab: (t: string) => void }
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
@@ -15848,6 +15896,23 @@ function MatchRequestButton({ auth, onShowPremium }: { auth: Auth; onShowPremium
 
 export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpenAdmin, adminBadgeCount, assistantEnabled = true, onToggleAssistant, promoAvailable, onOpenSuperPromo }: { auth: Auth; onLogout: () => void; onShowPremium: (r: string) => void; darkMode?: boolean; onToggleDark?: () => void; onOpenAdmin?: () => void; adminBadgeCount?: number; assistantEnabled?: boolean; onToggleAssistant?: () => void; promoAvailable?: { price: number; expiresAt: string; message: string } | null; onOpenSuperPromo?: () => void }) {
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [scrollHighlight, setScrollHighlight] = useState<"phone" | "email" | null>(null);
+  useEffect(() => {
+    try {
+      const target = sessionStorage.getItem("moyo_scroll_to");
+      if (target === "phone" || target === "email") {
+        sessionStorage.removeItem("moyo_scroll_to");
+        setTimeout(() => {
+          const el = document.getElementById(target === "phone" ? "moyo-phone-toggle" : "moyo-email-card");
+          if (el) {
+            el.scrollIntoView({ behavior: "smooth", block: "center" });
+            setScrollHighlight(target);
+            setTimeout(() => setScrollHighlight(h => h === target ? null : h), 1800);
+          }
+        }, 400);
+      }
+    } catch {}
+  }, []);
   // ── Statut Ambassadeur, remonté ici (plutôt que gardé isolé dans un sous-composant) pour
   //    piloter à la fois la bannière dorée Premium et la carte de raccourci en haut de page. ──
   const [ambStatus, setAmbStatus] = useState<"loading" | "none" | "pending" | "ambassador">("loading");
@@ -17020,7 +17085,7 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
             message contradictoire ("privé" écrit en dur alors que le réglage peut le rendre
             visible aux matchs Premium). */}
         {(!isWideProfile || activeSection === "main") && (
-          <div style={{ background: G.blanc, borderRadius: 18, border: profile?.phone ? "1.5px solid rgba(37,211,102,0.3)" : "1.5px solid rgba(192,57,43,0.35)", boxShadow: "0 2px 10px rgba(0,0,0,0.06)", overflow: "hidden", marginTop: 0 }}>
+          <div id="moyo-phone-toggle" style={{ background: G.blanc, borderRadius: 18, border: profile?.phone ? "1.5px solid rgba(37,211,102,0.3)" : "1.5px solid rgba(192,57,43,0.35)", overflow: "hidden", marginTop: 0, transition: "box-shadow 0.4s ease", boxShadow: scrollHighlight === "phone" ? "0 0 0 3px rgba(212,168,67,0.5)" : "0 2px 10px rgba(0,0,0,0.06)" }}>
             {editingPhoneCard ? (
               <div style={{ padding: "15px 18px" }}>
                 <div style={{ fontWeight: 700, fontSize: "0.95rem", color: G.brun, marginBottom: 10 }}>Mon numéro WhatsApp</div>
@@ -17052,7 +17117,7 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
                 await sb.update(auth.token, "profiles", auth.userId, { share_phone_with_matches: newShared });
                 setProfile(p => p ? { ...p, share_phone_with_matches: newShared } : null);
                 setToast({ msg: newShared ? "Numéro visible par tes matchs" : "Numéro masqué", type: "success" });
-              }} style={{ padding: "13px 18px", borderTop: "1px solid #F5F5F5", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, cursor: "pointer" }}>
+              }} style={{ padding: "13px 18px", borderTop: "1px solid #F5F5F5", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, cursor: "pointer", transition: "background 0.4s ease", background: scrollHighlight === "phone" ? "rgba(212,168,67,0.22)" : "transparent" }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: "0.95rem", fontWeight: 700, color: profile.share_phone_with_matches ? "#1a8a4a" : G.brun, lineHeight: 1.4 }}>{profile.share_phone_with_matches ? "Ton numéro est visible par tes matchs." : "Active pour que tes matchs puissent te contacter directement."}</div>
                 </div>
@@ -17155,7 +17220,7 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
         {(!isWideProfile || activeSection === "main") && FEATURE_AMBASSADOR_PROGRAM && (ambStatus === "none" || ambStatus === "pending") && <AmbassadorCard auth={auth} status={ambStatus} onRequested={() => setAmbStatus("pending")} />}
         {/* Email de connexion + Vérification */}
         {(!isWideProfile || activeSection === "main") && <div style={{ background: G.blanc, borderRadius: 18, border: emailVerified ? "1.5px solid rgba(39,174,96,0.3)" : "1.5px solid rgba(192,57,43,0.2)", boxShadow: "0 2px 10px rgba(0,0,0,0.06)", overflow: "hidden", marginTop: 0 }}>
-          <div style={{ padding: "15px 18px", display: "flex", alignItems: "center", gap: 14 }}>
+          <div id="moyo-email-card" style={{ padding: "15px 18px", display: "flex", alignItems: "center", gap: 14, transition: "background 0.4s ease", background: scrollHighlight === "email" ? "rgba(212,168,67,0.22)" : "transparent" }}>
             <div style={{ width: 44, height: 44, borderRadius: "50%", background: emailVerified ? "rgba(39,174,96,0.1)" : "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={emailVerified ? "#27ae60" : G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
             </div>
