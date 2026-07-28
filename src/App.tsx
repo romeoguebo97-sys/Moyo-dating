@@ -74,6 +74,7 @@ export function setSOCIAL_YOUTUBE(v: any) { SOCIAL_YOUTUBE = v; }
 export function setSOCIAL_LINKEDIN(v: any) { SOCIAL_LINKEDIN = v; }
 export function setSTORE_LINK_ANDROID(v: any) { STORE_LINK_ANDROID = v; }
 export function setSTORE_LINK_IOS(v: any) { STORE_LINK_IOS = v; }
+export function setAMBASSADOR_RESOURCES_LINK(v: any) { AMBASSADOR_RESOURCES_LINK = v; }
 
 // Enregistrement fiable d'un réglage dans app_settings : met à jour la ligne existante (PATCH),
 // et ne l'insère (POST) que si elle n'existe pas. Ne dépend d'aucun "upsert" / contrainte spéciale.
@@ -466,6 +467,9 @@ export let SOCIAL_LINKEDIN = "https://www.linkedin.com/company/moyo-dating/about
 // Liens de téléchargement (vide = affiche les instructions d'installation PWA à la place)
 export let STORE_LINK_ANDROID = "";
 export let STORE_LINK_IOS = "";
+// Programme Ambassadeur — lien externe unique (Drive/Dropbox...) vers les supports de
+// communication (visuels, vidéos, argumentaires), le même pour tous les Ambassadeurs.
+export let AMBASSADOR_RESOURCES_LINK = "";
 // Page d'accueil (landing)
 export let LANDING_MEMBERS = "12 000+ membres";
 // Statistiques "vitrine" de la modale Premium — saisies à la main dans l'admin (vide = compte automatique réel)
@@ -503,7 +507,7 @@ export function dedupeMatchesByCouple<T extends { user1?: string; user2?: string
 }
 
 // Charger les settings dynamiques depuis Supabase au démarrage
-fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_messages_free_femme,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,pay_wero_enabled,pay_paypal_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,feature_show_likes_views_free,feature_group_premium,feature_group_photos,feature_photo_retouch,feature_moderation_insults,feature_moderation_contact,premium_screen_variant,custom_banned_words,contact_banned_words,disabled_builtin_words,disabled_builtin_contact_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,pay_wero_number,pay_paypal_number,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,social_linkedin,store_link_android,store_link_ios,plan_week_enabled,plan_month_enabled,plan_2month_enabled,discover_default_mode,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,auto_warn_ban_contact_enabled,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price,privacy_notice_enabled,premium_boost_enabled,assistant_photo_url,broadcast_enabled,modal_match_title,modal_match_subtitle,referral_bonus_week_days,referral_bonus_month_days,referral_bonus_2month_days,affiliate_commission_percent,affiliate_payable_delay_days,privacy_notice_step1_text,privacy_notice_step2_text,ban_screen_text,pay_link_enabled,feature_ambassador_program,affiliate_payout_min_fcfa,affiliate_promo_bonus_days,support_reply_push_enabled)&select=key,value`, {
+fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_messages_free_femme,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,pay_wero_enabled,pay_paypal_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,feature_show_likes_views_free,feature_group_premium,feature_group_photos,feature_photo_retouch,feature_moderation_insults,feature_moderation_contact,premium_screen_variant,custom_banned_words,contact_banned_words,disabled_builtin_words,disabled_builtin_contact_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,pay_wero_number,pay_paypal_number,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,social_linkedin,store_link_android,store_link_ios,plan_week_enabled,plan_month_enabled,plan_2month_enabled,discover_default_mode,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,auto_warn_ban_contact_enabled,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price,privacy_notice_enabled,premium_boost_enabled,assistant_photo_url,broadcast_enabled,modal_match_title,modal_match_subtitle,referral_bonus_week_days,referral_bonus_month_days,referral_bonus_2month_days,affiliate_commission_percent,affiliate_payable_delay_days,privacy_notice_step1_text,privacy_notice_step2_text,ban_screen_text,pay_link_enabled,feature_ambassador_program,affiliate_payout_min_fcfa,affiliate_promo_bonus_days,support_reply_push_enabled,ambassador_resources_link)&select=key,value`, {
   headers: { "apikey": SUPABASE_KEY },
 }).then(r => r.json()).then((data: { key: string; value: string }[]) => {
   if (!Array.isArray(data)) return;
@@ -555,6 +559,7 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
   if (map["social_linkedin"] !== undefined) SOCIAL_LINKEDIN = map["social_linkedin"];
   if (map["store_link_android"] !== undefined) STORE_LINK_ANDROID = map["store_link_android"];
   if (map["store_link_ios"] !== undefined) STORE_LINK_IOS = map["store_link_ios"];
+  if (map["ambassador_resources_link"] !== undefined) AMBASSADOR_RESOURCES_LINK = map["ambassador_resources_link"];
   if (map["plan_week_enabled"] !== undefined) PLAN_WEEK_ENABLED = map["plan_week_enabled"] !== "false";
   if (map["plan_month_enabled"] !== undefined) PLAN_MONTH_ENABLED = map["plan_month_enabled"] !== "false";
   if (map["plan_2month_enabled"] !== undefined) PLAN_2MONTH_ENABLED = map["plan_2month_enabled"] !== "false";
@@ -15737,6 +15742,7 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
         method: "POST",
         headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` },
         body: JSON.stringify({
+          user_id: auth.userId,
           full_name: ambContractName.trim(),
           birth_date_place: ambContractBirth.trim(),
           address: ambContractAddress.trim(),
@@ -16569,11 +16575,21 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
                   <div style={{ fontSize: "0.68rem", color: "rgba(255,255,255,0.65)", marginTop: 10, textAlign: "center" }}>Minimum de versement : {AFFILIATE_PAYOUT_MIN_FCFA.toLocaleString()} FCFA</div>
                 </div>
 
-                {ambContractPdfUrl && (
-                  <a href={ambContractPdfUrl} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", boxSizing: "border-box", background: "#fafafa", color: "#8B0D2F", border: "1.5px solid #eee", borderRadius: 50, padding: "11px", fontSize: "0.82rem", fontWeight: 700, textDecoration: "none", marginBottom: 22 }}>
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8B0D2F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                    Voir mon contrat signé
-                  </a>
+                {(ambContractPdfUrl || AMBASSADOR_RESOURCES_LINK) && (
+                  <div style={{ display: "flex", gap: 10, marginBottom: 22 }}>
+                    {ambContractPdfUrl && (
+                      <a href={ambContractPdfUrl} target="_blank" rel="noopener noreferrer" style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, boxSizing: "border-box", background: "#fafafa", color: "#8B0D2F", border: "1.5px solid #eee", borderRadius: 50, padding: "11px", fontSize: "0.82rem", fontWeight: 700, textDecoration: "none" }}>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8B0D2F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        Voir mon contrat
+                      </a>
+                    )}
+                    {AMBASSADOR_RESOURCES_LINK && (
+                      <a href={AMBASSADOR_RESOURCES_LINK} target="_blank" rel="noopener noreferrer" style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, boxSizing: "border-box", background: "#fafafa", color: "#8B0D2F", border: "1.5px solid #eee", borderRadius: 50, padding: "11px", fontSize: "0.82rem", fontWeight: 700, textDecoration: "none" }}>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8B0D2F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        Supports de com'
+                      </a>
+                    )}
+                  </div>
                 )}
 
                 {/* Performances */}
@@ -19215,7 +19231,7 @@ export default function App() {
         chemin qui crée un match (Découvrir, Vues/Likes reçus, Statuts officiels...) l'affiche
         systématiquement, même après un délike + relike répété de la même personne. ── */}
     {matchPop && (
-      <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.9)", zIndex: 700, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", padding: 24 }}>
+      <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)", zIndex: 700, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", padding: 24 }}>
         <div className="moyo-card-in" style={{ textAlign: "center", color: "#fff", maxWidth: 320, width: "100%" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 28 }}>
             <span style={{ fontSize: "1.9rem", fontWeight: 800, color: "#fff" }}>C'est un</span>
@@ -19562,7 +19578,7 @@ export default function App() {
     {/* ── MODAL PROPOSITION DE MATCH ── */}
     {/* Flux A : proposition suite à une demande de mise en relation */}
     {pendingProposal && pendingProposal.source === "request" && !pendingWarning && !pendingBroadcast && (
-      <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.9)", zIndex: 10001, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)", zIndex: 10001, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
         <div className="moyo-card-in" style={{ background: "linear-gradient(180deg,#0a1a12,#050d09)", border: "1px solid rgba(26,92,58,0.4)", maxHeight: "90vh", overflowY: "auto", borderRadius: 24, width: "100%", maxWidth: 380, boxShadow: "0 24px 64px rgba(0,0,0,0.5)", padding: "30px 26px 26px", textAlign: "center" }}>
           {/* Coche + étincelles décoratives */}
           <div style={{ position: "relative", height: 46, marginBottom: 6 }}>
@@ -19605,7 +19621,7 @@ export default function App() {
     )}
     {/* Flux B : suggestion spontanée Moyo Dating (modal existant "On pense à toi") */}
     {pendingProposal && pendingProposal.source !== "request" && !pendingWarning && !pendingBroadcast && (
-      <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.9)", zIndex: 10001, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)", zIndex: 10001, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
         <div className="moyo-card-in" style={{ maxHeight: "90vh", overflowY: "auto", width: "100%", maxWidth: 340, padding: "10px 6px", textAlign: "center", color: "#fff" }}>
           {/* Cœur + étincelles décoratives */}
           <div style={{ position: "relative", height: 46, marginBottom: 6 }}>

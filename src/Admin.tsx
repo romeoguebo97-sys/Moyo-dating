@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback, memo } from "react";
 import type { Auth, Match, Message, PaymentRequest, Profile, StatusPost, ToastState } from "./App";
 import {
-  APPOINTMENT_PHYSICAL_PRICE, APPT_HOUR_MAX, APPT_HOUR_MIN, AUTO_MOD_CONTACT_REPLY, Avatar, BLOCK_SAME_GENDER, Badge, Btn, CONTACT_ADDRESS, CONTACT_EMAIL, CONTACT_WHATSAPP, ConfirmModal, DISCOVER_DEFAULT_MODE, DateTimePicker, EUR_TO_FCFA, EXPENSE_CATEGORIES, EXPENSE_CAT_COLORS, FREE_LIMITS, G, LANDING_MEMBERS, LANDING_SLOGAN, LANDING_STAT_CITIES, LANDING_STAT_COUPLES, LANDING_STAT_MEMBERS, LANDING_TITLE_END, LANDING_TITLE_HIGHLIGHT, LANDING_TITLE_START, LIFETIME_PREMIUM_UNTIL, Messages, PAY_AIRTEL_ENABLED, PAY_AIRTEL_NUMBER, PAY_AIRTEL_RESPONSABLE, PAY_CB_ENABLED, PAY_MTN_ENABLED, PAY_MTN_NUMBER, PAY_MTN_RESPONSABLE, PAY_WERO_ENABLED, PAY_WERO_NUMBER, PAY_PAYPAL_ENABLED, PAY_PAYPAL_NUMBER, PLAN_2MONTH_ENABLED, PLAN_MONTH_ENABLED, PLAN_WEEK_ENABLED, POLL_ADMIN_BADGE_MS, POLL_BADGES_MS, POLL_BROADCAST_MS, POLL_STATS_MS, POLL_SUPPORT_MS, PREMIUM_30_DAYS_MS, PREMIUM_DAYS_2MONTH, PREMIUM_DAYS_WEEK, PREMIUM_PRICE_2MONTH_FCFA, PREMIUM_PRICE_EUR, PREMIUM_PRICE_FCFA, PREMIUM_PRICE_WEEK_FCFA, PREMIUM_STAT_COUPLES, PREMIUM_STAT_MEMBERS, PremiumBadge, REFERRAL_BONUS_2MONTH, REFERRAL_BONUS_MONTH, REFERRAL_BONUS_WEEK, AFFILIATE_COMMISSION_PERCENT, AFFILIATE_PAYABLE_DELAY_DAYS, AFFILIATE_PAYOUT_MIN_FCFA, AFFILIATE_PROMO_BONUS_DAYS, PRIVACY_NOTICE_STEP1_TEXT, PRIVACY_NOTICE_STEP2_TEXT, BAN_SCREEN_TEXT, SOCIAL_FACEBOOK, SOCIAL_INSTAGRAM, SOCIAL_TIKTOK, SOCIAL_YOUTUBE, SOCIAL_LINKEDIN, STORE_LINK_ANDROID, STORE_LINK_IOS, SUPABASE_KEY, SUPABASE_URL, SUPER_ADMIN_ID, SUPPORT_PREFIX_REPLY, SUPPORT_PREFIX_USER, SUPPORT_TEAM_ID, SUPPORT_TEAM_NAME, SUPPORT_TEAM_PHOTO, SUPPORT_REPLY_PUSH_ENABLED, Toast, VerifiedBadge, apptStatusInfo, buildContactBannedRegex, buildCustomBannedRegex, setExemptedBuiltinWords, setExemptedContactWords, cleanSupportReason, dedupeMatchesByCouple, fmtApptDT, fmtDate, formatMoney, isSupportReason, logAdminAction, mmLevel, mmScore, paymentCurrency, resolveStatusImageUrl, sb, sendMatchWelcomeMessage,
-  setAPPOINTMENT_PHYSICAL_PRICE, setAUTO_MOD_CONTACT_REPLY, setBLOCK_SAME_GENDER, setCONTACT_ADDRESS, setCONTACT_EMAIL, setCONTACT_WHATSAPP, setDISCOVER_DEFAULT_MODE, setEUR_TO_FCFA, setLANDING_MEMBERS, setLANDING_SLOGAN, setLANDING_STAT_CITIES, setLANDING_STAT_COUPLES, setLANDING_STAT_MEMBERS, setLANDING_TITLE_END, setLANDING_TITLE_HIGHLIGHT, setLANDING_TITLE_START, setPAY_AIRTEL_ENABLED, setPAY_AIRTEL_NUMBER, setPAY_AIRTEL_RESPONSABLE, setPAY_CB_ENABLED, setPAY_MTN_ENABLED, setPAY_MTN_NUMBER, setPAY_MTN_RESPONSABLE, setPAY_WERO_ENABLED, setPAY_WERO_NUMBER, setPAY_PAYPAL_ENABLED, setPAY_PAYPAL_NUMBER, setPLAN_2MONTH_ENABLED, setPLAN_MONTH_ENABLED, setPLAN_WEEK_ENABLED, setPOLL_ADMIN_BADGE_MS, setPOLL_BADGES_MS, setPOLL_BROADCAST_MS, setPOLL_STATS_MS, setPOLL_SUPPORT_MS, setPREMIUM_30_DAYS_MS, setPREMIUM_DAYS_2MONTH, setPREMIUM_DAYS_WEEK, setPREMIUM_PRICE_2MONTH_FCFA, setPREMIUM_PRICE_EUR, setPREMIUM_PRICE_FCFA, setPREMIUM_PRICE_WEEK_FCFA, setPREMIUM_STAT_COUPLES, setPREMIUM_STAT_MEMBERS, setPREMIUM_BOOST_ENABLED, setPREMIUM_SCREEN_VARIANT, setFEATURE_SHOW_LIKES_VIEWS_FREE, setPRIVACY_NOTICE_ENABLED, setSOCIAL_FACEBOOK, setSOCIAL_INSTAGRAM, setSOCIAL_TIKTOK, setSOCIAL_YOUTUBE, setSOCIAL_LINKEDIN, setSTORE_LINK_ANDROID, setSTORE_LINK_IOS, setSUPPORT_TEAM_PHOTO, setAFFILIATE_COMMISSION_PERCENT, setAFFILIATE_PAYABLE_DELAY_DAYS, setAFFILIATE_PAYOUT_MIN_FCFA, setAFFILIATE_PROMO_BONUS_DAYS, setPRIVACY_NOTICE_STEP1_TEXT, setPRIVACY_NOTICE_STEP2_TEXT, setBAN_SCREEN_TEXT, setPAY_LINK_ENABLED,
+  APPOINTMENT_PHYSICAL_PRICE, APPT_HOUR_MAX, APPT_HOUR_MIN, AUTO_MOD_CONTACT_REPLY, Avatar, BLOCK_SAME_GENDER, Badge, Btn, CONTACT_ADDRESS, CONTACT_EMAIL, CONTACT_WHATSAPP, ConfirmModal, DISCOVER_DEFAULT_MODE, DateTimePicker, EUR_TO_FCFA, EXPENSE_CATEGORIES, EXPENSE_CAT_COLORS, FREE_LIMITS, G, LANDING_MEMBERS, LANDING_SLOGAN, LANDING_STAT_CITIES, LANDING_STAT_COUPLES, LANDING_STAT_MEMBERS, LANDING_TITLE_END, LANDING_TITLE_HIGHLIGHT, LANDING_TITLE_START, LIFETIME_PREMIUM_UNTIL, Messages, PAY_AIRTEL_ENABLED, PAY_AIRTEL_NUMBER, PAY_AIRTEL_RESPONSABLE, PAY_CB_ENABLED, PAY_MTN_ENABLED, PAY_MTN_NUMBER, PAY_MTN_RESPONSABLE, PAY_WERO_ENABLED, PAY_WERO_NUMBER, PAY_PAYPAL_ENABLED, PAY_PAYPAL_NUMBER, PLAN_2MONTH_ENABLED, PLAN_MONTH_ENABLED, PLAN_WEEK_ENABLED, POLL_ADMIN_BADGE_MS, POLL_BADGES_MS, POLL_BROADCAST_MS, POLL_STATS_MS, POLL_SUPPORT_MS, PREMIUM_30_DAYS_MS, PREMIUM_DAYS_2MONTH, PREMIUM_DAYS_WEEK, PREMIUM_PRICE_2MONTH_FCFA, PREMIUM_PRICE_EUR, PREMIUM_PRICE_FCFA, PREMIUM_PRICE_WEEK_FCFA, PREMIUM_STAT_COUPLES, PREMIUM_STAT_MEMBERS, PremiumBadge, REFERRAL_BONUS_2MONTH, REFERRAL_BONUS_MONTH, REFERRAL_BONUS_WEEK, AFFILIATE_COMMISSION_PERCENT, AFFILIATE_PAYABLE_DELAY_DAYS, AFFILIATE_PAYOUT_MIN_FCFA, AFFILIATE_PROMO_BONUS_DAYS, PRIVACY_NOTICE_STEP1_TEXT, PRIVACY_NOTICE_STEP2_TEXT, BAN_SCREEN_TEXT, SOCIAL_FACEBOOK, SOCIAL_INSTAGRAM, SOCIAL_TIKTOK, SOCIAL_YOUTUBE, SOCIAL_LINKEDIN, STORE_LINK_ANDROID, STORE_LINK_IOS, AMBASSADOR_RESOURCES_LINK, SUPABASE_KEY, SUPABASE_URL, SUPER_ADMIN_ID, SUPPORT_PREFIX_REPLY, SUPPORT_PREFIX_USER, SUPPORT_TEAM_ID, SUPPORT_TEAM_NAME, SUPPORT_TEAM_PHOTO, SUPPORT_REPLY_PUSH_ENABLED, Toast, VerifiedBadge, apptStatusInfo, buildContactBannedRegex, buildCustomBannedRegex, setExemptedBuiltinWords, setExemptedContactWords, cleanSupportReason, dedupeMatchesByCouple, fmtApptDT, fmtDate, formatMoney, isSupportReason, logAdminAction, mmLevel, mmScore, paymentCurrency, resolveStatusImageUrl, sb, sendMatchWelcomeMessage,
+  setAPPOINTMENT_PHYSICAL_PRICE, setAUTO_MOD_CONTACT_REPLY, setBLOCK_SAME_GENDER, setCONTACT_ADDRESS, setCONTACT_EMAIL, setCONTACT_WHATSAPP, setDISCOVER_DEFAULT_MODE, setEUR_TO_FCFA, setLANDING_MEMBERS, setLANDING_SLOGAN, setLANDING_STAT_CITIES, setLANDING_STAT_COUPLES, setLANDING_STAT_MEMBERS, setLANDING_TITLE_END, setLANDING_TITLE_HIGHLIGHT, setLANDING_TITLE_START, setPAY_AIRTEL_ENABLED, setPAY_AIRTEL_NUMBER, setPAY_AIRTEL_RESPONSABLE, setPAY_CB_ENABLED, setPAY_MTN_ENABLED, setPAY_MTN_NUMBER, setPAY_MTN_RESPONSABLE, setPAY_WERO_ENABLED, setPAY_WERO_NUMBER, setPAY_PAYPAL_ENABLED, setPAY_PAYPAL_NUMBER, setPLAN_2MONTH_ENABLED, setPLAN_MONTH_ENABLED, setPLAN_WEEK_ENABLED, setPOLL_ADMIN_BADGE_MS, setPOLL_BADGES_MS, setPOLL_BROADCAST_MS, setPOLL_STATS_MS, setPOLL_SUPPORT_MS, setPREMIUM_30_DAYS_MS, setPREMIUM_DAYS_2MONTH, setPREMIUM_DAYS_WEEK, setPREMIUM_PRICE_2MONTH_FCFA, setPREMIUM_PRICE_EUR, setPREMIUM_PRICE_FCFA, setPREMIUM_PRICE_WEEK_FCFA, setPREMIUM_STAT_COUPLES, setPREMIUM_STAT_MEMBERS, setPREMIUM_BOOST_ENABLED, setPREMIUM_SCREEN_VARIANT, setFEATURE_SHOW_LIKES_VIEWS_FREE, setPRIVACY_NOTICE_ENABLED, setSOCIAL_FACEBOOK, setSOCIAL_INSTAGRAM, setSOCIAL_TIKTOK, setSOCIAL_YOUTUBE, setSOCIAL_LINKEDIN, setSTORE_LINK_ANDROID, setSTORE_LINK_IOS, setAMBASSADOR_RESOURCES_LINK, setSUPPORT_TEAM_PHOTO, setAFFILIATE_COMMISSION_PERCENT, setAFFILIATE_PAYABLE_DELAY_DAYS, setAFFILIATE_PAYOUT_MIN_FCFA, setAFFILIATE_PROMO_BONUS_DAYS, setPRIVACY_NOTICE_STEP1_TEXT, setPRIVACY_NOTICE_STEP2_TEXT, setBAN_SCREEN_TEXT, setPAY_LINK_ENABLED,
 } from "./App";
 
 async function saveSetting(key: string, value: string, token: string): Promise<boolean> {
@@ -916,6 +916,8 @@ export function AdminDesktopPage() {
                     setEditingConfig(null);
                   }} />
               ))}
+              <div style={{ borderTop: `1px solid ${G.gris}`, margin: "14px 0" }} />
+              <SiteInfoConfig auth={auth!} group="ambassador" />
             </OffCanvasSection>}
 
             {configTab === "general" && <OffCanvasSection title="Règles">
@@ -1582,7 +1584,7 @@ function AdminPinConfig({ auth }: { auth: Auth }) {
   );
 }
 
-function SiteInfoConfig({ auth, group }: { auth: Auth; group: "contacts" | "socials" | "landing" | "app" }) {
+function SiteInfoConfig({ auth, group }: { auth: Auth; group: "contacts" | "socials" | "landing" | "app" | "ambassador" }) {
   const fields: Record<string, [string, string][]> = {
     contacts: [
       ["contact_email", "Email de contact"],
@@ -1592,6 +1594,9 @@ function SiteInfoConfig({ auth, group }: { auth: Auth; group: "contacts" | "soci
     app: [
       ["store_link_android", "Lien Google Play (vide = affiche les instructions d'installation PWA)"],
       ["store_link_ios", "Lien App Store (vide = affiche les instructions d'installation PWA)"],
+    ],
+    ambassador: [
+      ["ambassador_resources_link", "Lien des supports de communication (Drive/Dropbox — visuels, vidéos, argumentaires) — vide = bouton masqué, le même lien pour tous les Ambassadeurs"],
     ],
     socials: [
       ["social_facebook", "Lien Facebook (vide = masqué)"],
@@ -1620,6 +1625,7 @@ function SiteInfoConfig({ auth, group }: { auth: Auth; group: "contacts" | "soci
     premium_stat_couples: PREMIUM_STAT_COUPLES, premium_stat_members: PREMIUM_STAT_MEMBERS,
     landing_stat_members: LANDING_STAT_MEMBERS, landing_stat_couples: LANDING_STAT_COUPLES, landing_stat_cities: LANDING_STAT_CITIES,
     store_link_android: STORE_LINK_ANDROID, store_link_ios: STORE_LINK_IOS,
+    ambassador_resources_link: AMBASSADOR_RESOURCES_LINK,
   };
   const list = fields[group];
   const [vals, setVals] = React.useState<Record<string, string>>(() => { const o: Record<string, string> = {}; list.forEach(([k]) => { o[k] = defaults[k]; }); return o; });
@@ -1661,6 +1667,7 @@ function SiteInfoConfig({ auth, group }: { auth: Auth; group: "contacts" | "soci
     if (key === "landing_stat_cities") setLANDING_STAT_CITIES(value);
     if (key === "store_link_android") setSTORE_LINK_ANDROID(value);
     if (key === "store_link_ios") setSTORE_LINK_IOS(value);
+    if (key === "ambassador_resources_link") setAMBASSADOR_RESOURCES_LINK(value);
   };
   const doSave = async (key: string) => {
     setConfirmKey(null);
@@ -2686,7 +2693,9 @@ export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () =
         {([["affiliate_commission_percent","affiliateCommissionPercent" as keyof typeof appConfig,"Commission par défaut (% du prix payé)",appConfig.affiliateCommissionPercent,setAFFILIATE_COMMISSION_PERCENT],["affiliate_payable_delay_days","affiliatePayableDelayDays" as keyof typeof appConfig,"Délai avant commission payable (jours)",appConfig.affiliatePayableDelayDays,setAFFILIATE_PAYABLE_DELAY_DAYS],["affiliate_payout_min_fcfa","affiliatePayoutMinFcfa" as keyof typeof appConfig,"Minimum de versement (FCFA)",appConfig.affiliatePayoutMinFcfa,setAFFILIATE_PAYOUT_MIN_FCFA],["affiliate_promo_bonus_days","affiliatePromoBonusDays" as keyof typeof appConfig,"Jours bonus offerts (lien & code promo)",appConfig.affiliatePromoBonusDays,setAFFILIATE_PROMO_BONUS_DAYS]] as [string, keyof typeof appConfig, string, string, (v: any) => void][]).map(([key,ck,label,value,setter]) => (
           <EditableRow key={key} label={label} value={value} type="number" open={editingConfig === key} onOpen={() => { setEditingConfig(editingConfig === key ? null : key); setEditingConfigValue(value); }} editValue={editingConfigValue} onEdit={setEditingConfigValue} onSave={async () => { await upsertSetting(key, editingConfigValue); setAppConfig(c => ({ ...c, [ck]: editingConfigValue })); setter(editingConfigValue); setEditingConfig(null); }} />
         ))}
-        <div style={{ fontSize: "0.72rem", color: "#999", padding: "4px 4px 0", lineHeight: 1.5 }}>La gestion des ambassadeurs eux-mêmes (ajout, historique, versements) se fait depuis Ambassadeurs → Affiliés actifs.</div>
+        <div style={{ fontSize: "0.72rem", color: "#999", padding: "4px 4px 10px", lineHeight: 1.5 }}>La gestion des ambassadeurs eux-mêmes (ajout, historique, versements) se fait depuis Ambassadeurs → Affiliés actifs.</div>
+        <div style={{ borderTop: `1px solid ${G.gris}`, margin: "4px 0 14px" }} />
+        <SiteInfoConfig auth={auth} group="ambassador" />
       </OffCanvasSection>
       <OffCanvasSection title="Profil & Vérification">
         <div style={{ fontSize: "0.72rem", color: "#999", marginBottom: 10, lineHeight: 1.5 }}>Raccourcis — modifier ici change le même réglage que dans Marketing → Profil incomplet.</div>
@@ -4001,6 +4010,74 @@ function AdminHelpModal({ onClose }: { onClose: () => void }) {
 }
 
 type AutoShortcutKeyShared = "phone_completion_prompt_enabled" | "verification_prompt_enabled" | "premium_nudge_enabled" | "ambassador_nudge_enabled" | "mm_auto_propose_enabled" | "spontaneous_auto_propose_enabled" | "auto_warn_ban_contact_enabled" | "promo_active" | "broadcast_enabled" | "premium_event_active";
+// ── Panneau de la cloche de notifications : agrège tout ce qui est en attente sur la
+//    plateforme (chaque ligne disparaît d'elle-même dès que réglée, puisque ce n'est que le
+//    reflet de vraies données en attente ailleurs) + des suggestions basées sur des seuils. ──
+function NotifBellPanel({ auth, stats, autoShortcuts, onToggleAutoShortcut, pendingItems, onNavigate, onClose }: {
+  auth: Auth;
+  stats: { users: number; verifiedUsers: number; premiumUsers: number };
+  autoShortcuts: Record<AutoShortcutKeyShared, boolean>;
+  onToggleAutoShortcut: (key: AutoShortcutKeyShared) => void;
+  pendingItems: { label: string; count: number; tab: string }[];
+  onNavigate: (tab: any) => void;
+  onClose: () => void;
+}) {
+  const [phoneMissingCount, setPhoneMissingCount] = useState<number | null>(null);
+  useEffect(() => {
+    if (!auth) return;
+    fetch(`${SUPABASE_URL}/rest/v1/profiles?or=(phone.is.null,phone.eq.)&is_banned=eq.false&select=id`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "count=exact" } })
+      .then(r => { const c = r.headers.get("content-range"); setPhoneMissingCount(c ? parseInt(c.split("/")[1] || "0") : null); })
+      .catch(() => {});
+  }, [auth?.userId]);
+
+  const activeItems = pendingItems.filter(i => i.count > 0);
+  const totalPending = activeItems.reduce((s, i) => s + i.count, 0);
+
+  const verifRate = stats.users > 0 ? Math.round(((stats.users - stats.verifiedUsers) / stats.users) * 100) : 0;
+  const phoneMissingRate = (stats.users > 0 && phoneMissingCount !== null) ? Math.round((phoneMissingCount / stats.users) * 100) : 0;
+  const freeRate = stats.users > 0 ? Math.round(((stats.users - stats.premiumUsers) / stats.users) * 100) : 0;
+
+  const suggestions: { key: AutoShortcutKeyShared; text: string }[] = [];
+  if (verifRate >= 40 && !autoShortcuts.verification_prompt_enabled) suggestions.push({ key: "verification_prompt_enabled", text: `${verifRate}% de tes membres ne sont pas vérifiés — active la relance de certification.` });
+  if (phoneMissingCount !== null && phoneMissingRate >= 30 && !autoShortcuts.phone_completion_prompt_enabled) suggestions.push({ key: "phone_completion_prompt_enabled", text: `${phoneMissingRate}% de tes membres n'ont pas de téléphone renseigné — active la relance.` });
+  if (freeRate >= 70 && !autoShortcuts.premium_nudge_enabled) suggestions.push({ key: "premium_nudge_enabled", text: `${freeRate}% de tes membres sont encore gratuits — active l'incitation Premium.` });
+
+  return (
+    <div onClick={e => e.stopPropagation()} style={{ position: "absolute", top: 42, right: 0, width: 360, maxWidth: "90vw", maxHeight: "70vh", overflowY: "auto", background: G.blanc, borderRadius: 16, boxShadow: "0 12px 36px rgba(0,0,0,0.18)", border: `1px solid ${G.gris}`, zIndex: 500 }}>
+      <div style={{ padding: "14px 16px", borderBottom: `1px solid ${G.gris}`, fontWeight: 800, fontSize: "0.92rem", color: G.brun }}>Notifications</div>
+
+      {suggestions.length > 0 && (
+        <div style={{ padding: "12px 16px", borderBottom: `1px solid ${G.gris}`, background: "#FFFBF0" }}>
+          <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#B8860B", marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.4 }}>Suggestions</div>
+          {suggestions.map(s => (
+            <div key={s.key} style={{ marginBottom: 10, display: "flex", flexDirection: "column", gap: 6 }}>
+              <div style={{ fontSize: "0.78rem", color: "#555", lineHeight: 1.4 }}>{s.text}</div>
+              <button onClick={() => onToggleAutoShortcut(s.key)} style={{ alignSelf: "flex-start", background: "#B8860B", color: "#fff", border: "none", borderRadius: 50, padding: "5px 14px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}>Activer</button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div style={{ padding: "12px 16px" }}>
+        <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#999", marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.4 }}>En attente{totalPending > 0 ? ` (${totalPending})` : ""}</div>
+        {activeItems.length === 0 ? (
+          <div style={{ fontSize: "0.8rem", color: "#aaa", textAlign: "center", padding: "16px 0" }}>Rien en attente, tout est à jour 👍</div>
+        ) : (
+          activeItems.map(i => (
+            <div key={i.label} onClick={() => onNavigate(i.tab)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 4px", cursor: "pointer", borderRadius: 8 }}
+              onMouseOver={e => { (e.currentTarget as HTMLElement).style.background = G.creme; }}
+              onMouseOut={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
+              <span style={{ fontSize: "0.83rem", color: "#444", fontWeight: 600 }}>{i.label}</span>
+              <span style={{ background: G.rouge, color: "#fff", borderRadius: 50, fontSize: "0.68rem", fontWeight: 800, padding: "2px 8px", minWidth: 20, textAlign: "center" }}>{i.count > 99 ? "99+" : i.count}</span>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+
 function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut, onSetAutoShortcut }: { auth: Auth; onBack: () => void; onBadgeCount?: (n: number) => void; autoShortcuts: Record<AutoShortcutKeyShared, boolean>; onToggleAutoShortcut: (key: AutoShortcutKeyShared) => void; onSetAutoShortcut: (key: AutoShortcutKeyShared, value: boolean) => void }) {
   // ── Sécurité : redirection si non-admin ──
   useEffect(() => {
@@ -4054,6 +4131,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
 
   // ── Onglet actif ──
   const [activeTab, setActiveTab] = useState<"stats" | "users" | "reports" | "reviews" | "payments" | "logs" | "matches" | "messagerie" | "marketing" | "ambassadors" | "appointments" | "groupe">("stats");
+  const [showNotifBell, setShowNotifBell] = useState(false);
   const [reviewsSubTab, setReviewsSubTab] = useState<"avis" | "sondage">("avis");
   // ── SONDAGES ──
   const DEFAULT_SURVEY_QUESTIONS = [
@@ -6958,18 +7036,28 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
     // ── Statut réel (is_ambassador, Premium) de chaque affilié sur son profil. Nécessaire car
     //    un affilié peut avoir été ajouté directement (Désigner un nouvel affilié) sans jamais
     //    passer par une demande approuvée, donc sans badge ni Premium. ──
-    const [affiliateProfileStatus, setAffiliateProfileStatus] = useState<Record<string, { is_ambassador: boolean; premium_until?: string; premium_is_gift?: boolean }>>({});
+    const [affiliateProfileStatus, setAffiliateProfileStatus] = useState<Record<string, { is_ambassador: boolean; premium_until?: string; premium_is_gift?: boolean; photo_url?: string | null }>>({});
     const loadAffiliateProfileStatus = async (userIds: string[]) => {
       if (!auth || userIds.length === 0) return;
       try {
         const inList = userIds.map(id => `"${id}"`).join(",");
-        const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=in.(${inList})&select=id,is_ambassador,premium_until,premium_is_gift`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=in.(${inList})&select=id,is_ambassador,premium_until,premium_is_gift,photo_url`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
         const data = await r.json().catch(() => []);
         if (Array.isArray(data)) {
-          const map: Record<string, { is_ambassador: boolean; premium_until?: string; premium_is_gift?: boolean }> = {};
-          data.forEach((p: any) => { map[p.id] = { is_ambassador: !!p.is_ambassador, premium_until: p.premium_until, premium_is_gift: !!p.premium_is_gift }; });
+          const map: Record<string, { is_ambassador: boolean; premium_until?: string; premium_is_gift?: boolean; photo_url?: string | null }> = {};
+          data.forEach((p: any) => { map[p.id] = { is_ambassador: !!p.is_ambassador, premium_until: p.premium_until, premium_is_gift: !!p.premium_is_gift, photo_url: p.photo_url }; });
           setAffiliateProfileStatus(map);
         }
+      } catch {}
+    };
+    // Ouvre la même fiche complète que dans "Utilisateurs" (photo, infos, actions) — pas besoin
+    // d'aller chercher la personne séparément dans cet autre onglet pour la voir.
+    const openAffiliateProfile = async (userId: string) => {
+      if (!auth) return;
+      try {
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${userId}&select=id,name,age,city,gender,is_premium,is_admin,is_verified,is_banned,is_ambassador,created_at,last_seen,premium_until,premium_is_gift,email,phone,admin_level,photo_url,bio&limit=1`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+        const data = await r.json().catch(() => []);
+        if (Array.isArray(data) && data[0]) { setManageUserModal(data[0]); setManageTab("statuts"); }
       } catch {}
     };
     const isLifetimePremiumAff = (userId: string) => { const s = affiliateProfileStatus[userId]; return !!s?.premium_until && new Date(s.premium_until).getFullYear() >= 2090; };
@@ -10488,10 +10576,42 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
             <IcoGear />
             <span style={{ fontSize: "1.2rem", fontWeight: 800, color: G.brun }}>Admin Dashboard</span>
           </div>
+          <div style={{ position: "relative", marginLeft: "auto", flexShrink: 0 }}>
+            <button
+              onClick={() => setShowNotifBell(v => !v)}
+              style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 34, height: 34, background: G.creme, border: `1.5px solid ${G.cremeDark}`, borderRadius: "50%", cursor: "pointer", color: G.brunLight }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            </button>
+            {adminBadgeCount > 0 && (
+              <div style={{ position: "absolute", top: -3, right: -3, background: G.rouge, color: "#fff", borderRadius: 50, minWidth: 17, height: 17, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.6rem", fontWeight: 800, padding: "0 3px", border: `2px solid ${G.blanc}` }}>
+                {adminBadgeCount > 99 ? "99+" : adminBadgeCount}
+              </div>
+            )}
+            {showNotifBell && (
+              <>
+                <div onClick={() => setShowNotifBell(false)} style={{ position: "fixed", inset: 0, zIndex: 499 }} />
+                <NotifBellPanel onClose={() => setShowNotifBell(false)} onNavigate={(tab) => { setActiveTab(tab); setShowNotifBell(false); }} auth={auth} stats={stats} autoShortcuts={autoShortcuts} onToggleAutoShortcut={onToggleAutoShortcut}
+                  pendingItems={[
+                    { label: "Signalements", count: pendingCount, tab: "reports" },
+                    { label: "Messages Assistance", count: messagingPendingCount, tab: "messagerie" },
+                    { label: "Avis non lus", count: unreadReviewsCount, tab: "reviews" },
+                    { label: "Paiements à vérifier", count: pendingPaymentsCount, tab: "payments" },
+                    { label: "Mises en avant à traiter", count: featurePendingCount, tab: "marketing" },
+                    { label: "Rendez-vous à confirmer", count: appointmentsPendingCount, tab: "appointments" },
+                    { label: "Demandes Groupe Premium", count: groupPendingCount, tab: "groupe" },
+                    { label: "Mises en relation", count: matchRequestsBadge, tab: "matches" },
+                    { label: "Demandes Ambassadeur", count: ambassadorRequestsBadge, tab: "ambassadors" },
+                    { label: "Versements Ambassadeur", count: payoutRequestsBadge, tab: "ambassadors" },
+                  ]}
+                />
+              </>
+            )}
+          </div>
           <button
             data-admhelp=""
             onClick={() => setShowHelp(true)}
-            style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", background: G.creme, border: `1.5px solid ${G.cremeDark}`, borderRadius: 20, cursor: "pointer", fontSize: "0.78rem", fontWeight: 600, color: G.brunLight, transition: "all 0.18s ease", flexShrink: 0 }}
+            style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", background: G.creme, border: `1.5px solid ${G.cremeDark}`, borderRadius: 20, cursor: "pointer", fontSize: "0.78rem", fontWeight: 600, color: G.brunLight, transition: "all 0.18s ease", flexShrink: 0 }}
             onMouseOver={e => { (e.currentTarget as HTMLElement).style.background = G.cremeDark; }}
             onMouseOut={e => { (e.currentTarget as HTMLElement).style.background = G.creme; }}
           >
@@ -13488,9 +13608,14 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                         const ownPending = own.filter(c => c.status === "pending").reduce((s, c) => s + c.commission_amount, 0);
                         return (
                           <div key={a.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "10px 14px", background: G.creme, borderRadius: 12, flexWrap: "wrap" }}>
-                            <div>
-                              <div style={{ fontSize: "0.85rem", fontWeight: 700, color: G.brun }}>{a.name}{a.phone ? ` · ${a.phone}` : ""}</div>
-                              <div style={{ fontSize: "0.85rem", color: "#555", fontWeight: 700 }}>{own.length} conversion{own.length > 1 ? "s" : ""} · {ownPending.toLocaleString()} FCFA en attente</div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                              <div onClick={() => openAffiliateProfile(a.user_id)} style={{ width: 40, height: 40, borderRadius: "50%", overflow: "hidden", background: G.gris, flexShrink: 0, cursor: "pointer" }}>
+                                {affiliateProfileStatus[a.user_id]?.photo_url ? <img src={affiliateProfileStatus[a.user_id]!.photo_url!} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#aaa" }}><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>}
+                              </div>
+                              <div>
+                                <div onClick={() => openAffiliateProfile(a.user_id)} style={{ fontSize: "0.85rem", fontWeight: 700, color: G.brun, cursor: "pointer" }}>{a.name}{a.phone ? ` · ${a.phone}` : ""}</div>
+                                <div style={{ fontSize: "0.85rem", color: "#555", fontWeight: 700 }}>{own.length} conversion{own.length > 1 ? "s" : ""} · {ownPending.toLocaleString()} FCFA en attente</div>
+                              </div>
                             </div>
                             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                               <span style={{ fontSize: "0.7rem", fontWeight: 800, color: a.status === "active" ? "#1A5C3A" : a.status === "paused" ? "#999" : G.rouge }}>{a.status === "active" ? "● Actif" : a.status === "paused" ? "○ En pause" : "Retiré"}</span>
