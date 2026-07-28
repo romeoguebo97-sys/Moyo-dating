@@ -464,10 +464,11 @@ export function AdminDesktopPage() {
     promo_active: false,
     broadcast_enabled: false,
     premium_event_active: false,
+    proposal_reminder_enabled: false,
   });
   React.useEffect(() => {
     if (!auth) return;
-    const keys: AutoShortcutKey[] = ["phone_completion_prompt_enabled", "verification_prompt_enabled", "premium_nudge_enabled", "ambassador_nudge_enabled", "mm_auto_propose_enabled", "spontaneous_auto_propose_enabled", "auto_warn_ban_contact_enabled", "promo_active", "broadcast_enabled", "premium_event_active"];
+    const keys: AutoShortcutKey[] = ["phone_completion_prompt_enabled", "verification_prompt_enabled", "premium_nudge_enabled", "ambassador_nudge_enabled", "mm_auto_propose_enabled", "spontaneous_auto_propose_enabled", "auto_warn_ban_contact_enabled", "promo_active", "broadcast_enabled", "premium_event_active", "proposal_reminder_enabled"];
     fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(${keys.join(",")})&select=key,value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } })
       .then(r => r.json()).then(rows => {
         if (!Array.isArray(rows)) return;
@@ -863,6 +864,13 @@ export function AdminDesktopPage() {
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 4px" }}>
                 <span style={{ fontSize: "0.82rem", fontWeight: 600, color: "#333" }}>Propositions spontanées</span>
                 <SwitchBtn on={autoShortcuts.spontaneous_auto_propose_enabled} onToggle={() => toggleAutoShortcut("spontaneous_auto_propose_enabled")} />
+              </div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 4px" }}>
+                <div>
+                  <span style={{ fontSize: "0.82rem", fontWeight: 600, color: "#333" }}>Rappel des propositions sans réponse</span>
+                  <div style={{ fontSize: "0.7rem", color: "#999" }}>Push automatique au membre qui n'a pas répondu depuis 24h, une seule fois par proposition.</div>
+                </div>
+                <SwitchBtn on={autoShortcuts.proposal_reminder_enabled} onToggle={() => toggleAutoShortcut("proposal_reminder_enabled")} />
               </div>
               <RelationalNudgeConfig auth={auth} />
             </OffCanvasSection>}
@@ -2586,10 +2594,11 @@ export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () =
     promo_active: false,
     broadcast_enabled: false,
     premium_event_active: false,
+    proposal_reminder_enabled: false,
   });
   React.useEffect(() => {
     if (!auth) return;
-    const keys: AutoShortcutKeyM[] = ["phone_completion_prompt_enabled", "verification_prompt_enabled", "premium_nudge_enabled", "ambassador_nudge_enabled", "mm_auto_propose_enabled", "spontaneous_auto_propose_enabled", "auto_warn_ban_contact_enabled", "promo_active", "broadcast_enabled", "premium_event_active"];
+    const keys: AutoShortcutKeyM[] = ["phone_completion_prompt_enabled", "verification_prompt_enabled", "premium_nudge_enabled", "ambassador_nudge_enabled", "mm_auto_propose_enabled", "spontaneous_auto_propose_enabled", "auto_warn_ban_contact_enabled", "promo_active", "broadcast_enabled", "premium_event_active", "proposal_reminder_enabled"];
     fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(${keys.join(",")})&select=key,value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } })
       .then(r => r.json()).then(rows => {
         if (!Array.isArray(rows)) return;
@@ -2733,6 +2742,13 @@ export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () =
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 4px" }}>
           <span style={{ fontSize: "0.82rem", fontWeight: 600, color: "#333" }}>Propositions spontanées</span>
           <SwitchBtn on={autoShortcuts.spontaneous_auto_propose_enabled} onToggle={() => toggleAutoShortcut("spontaneous_auto_propose_enabled")} />
+        </div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 4px" }}>
+          <div>
+            <span style={{ fontSize: "0.82rem", fontWeight: 600, color: "#333" }}>Rappel des propositions sans réponse</span>
+            <div style={{ fontSize: "0.7rem", color: "#999" }}>Push automatique au membre qui n'a pas répondu depuis 24h.</div>
+          </div>
+          <SwitchBtn on={autoShortcuts.proposal_reminder_enabled} onToggle={() => toggleAutoShortcut("proposal_reminder_enabled")} />
         </div>
         <RelationalNudgeConfig auth={auth} />
       </OffCanvasSection>
@@ -3303,10 +3319,11 @@ export function AdminPinGate({ auth, onBack, onBadgeCount, autoShortcuts: autoSh
     promo_active: false,
     broadcast_enabled: false,
     premium_event_active: false,
+    proposal_reminder_enabled: false,
   });
   useEffect(() => {
     if (autoShortcutsProp || !auth) return;
-    const keys: AutoShortcutKeyShared[] = ["phone_completion_prompt_enabled", "verification_prompt_enabled", "premium_nudge_enabled", "ambassador_nudge_enabled", "mm_auto_propose_enabled", "spontaneous_auto_propose_enabled", "auto_warn_ban_contact_enabled", "promo_active", "broadcast_enabled", "premium_event_active"];
+    const keys: AutoShortcutKeyShared[] = ["phone_completion_prompt_enabled", "verification_prompt_enabled", "premium_nudge_enabled", "ambassador_nudge_enabled", "mm_auto_propose_enabled", "spontaneous_auto_propose_enabled", "auto_warn_ban_contact_enabled", "promo_active", "broadcast_enabled", "premium_event_active", "proposal_reminder_enabled"];
     fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(${keys.join(",")})&select=key,value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } })
       .then(r => r.json()).then(rows => {
         if (!Array.isArray(rows)) return;
@@ -4010,7 +4027,7 @@ function AdminHelpModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-type AutoShortcutKeyShared = "phone_completion_prompt_enabled" | "verification_prompt_enabled" | "premium_nudge_enabled" | "ambassador_nudge_enabled" | "mm_auto_propose_enabled" | "spontaneous_auto_propose_enabled" | "auto_warn_ban_contact_enabled" | "promo_active" | "broadcast_enabled" | "premium_event_active";
+type AutoShortcutKeyShared = "phone_completion_prompt_enabled" | "verification_prompt_enabled" | "premium_nudge_enabled" | "ambassador_nudge_enabled" | "mm_auto_propose_enabled" | "spontaneous_auto_propose_enabled" | "auto_warn_ban_contact_enabled" | "promo_active" | "broadcast_enabled" | "premium_event_active" | "proposal_reminder_enabled";
 // ── Panneau de la cloche de notifications : agrège tout ce qui est en attente sur la
 //    plateforme (chaque ligne disparaît d'elle-même dès que réglée, puisque ce n'est que le
 //    reflet de vraies données en attente ailleurs) + des suggestions basées sur des règles
@@ -4024,14 +4041,14 @@ type NotifSuggestion = {
   id: string;
   text: string;
   actionLabel: string;
-  action: { type: "toggle"; key: AutoShortcutKeyShared } | { type: "setting"; key: string; value: string } | { type: "navigate"; tab: string };
+  action: { type: "toggle"; key: AutoShortcutKeyShared } | { type: "setting"; key: string; value: string } | { type: "navigate"; tab: string; sub?: string };
 };
 
 function NotifBellPanel({ auth, autoShortcuts, onToggleAutoShortcut, onNavigate, onClose }: {
   auth: Auth;
   autoShortcuts: Record<AutoShortcutKeyShared, boolean>;
   onToggleAutoShortcut: (key: AutoShortcutKeyShared) => void;
-  onNavigate: (tab: string) => void;
+  onNavigate: (tab: string, sub?: string) => void;
   onClose: () => void;
 }) {
   const [loading, setLoading] = useState(true);
@@ -4072,7 +4089,7 @@ function NotifBellPanel({ auth, autoShortcuts, onToggleAutoShortcut, onNavigate,
       countOf(`reports?status=not.in.(reviewed,rejected,banned,archived,auto_log_archived)&reason=not.ilike.*SUPPORT*&select=id`),
       countOf(`reports?status=not.in.(reviewed,rejected,banned,archived,auto_log_archived)&reason=ilike.*SUPPORT*&select=id`),
       countOf(`reviews?is_read=eq.false&select=id`),
-      countOf(`payment_requests?status=eq.pending&select=id`),
+      countOf(`payment_requests?status=eq.pending&archived=eq.false&select=id`),
       countOf(`feature_requests?status=eq.en_attente&select=id`),
       countOf(`appointments?status=eq.en_attente&select=id`),
       countOf(`group_members?status=eq.pending&select=id`),
@@ -4092,7 +4109,7 @@ function NotifBellPanel({ auth, autoShortcuts, onToggleAutoShortcut, onNavigate,
       countOf(`profiles?created_at=gte.${d(14)}&created_at=lt.${d(7)}&select=id`),
       fetch(`${SUPABASE_URL}/rest/v1/broadcasts?select=created_at&order=created_at.desc&limit=1`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } }).then(r => r.json()).catch(() => []),
       countOf(`matches?created_at=gte.${d(7)}&select=id`),
-      countOf(`match_proposals?status=eq.pending&created_at=lt.${d(0.75)}&select=id`),
+      countOf(`match_proposals?status=eq.pending&created_at=lt.${d(0.75)}&expires_at=gt.${new Date().toISOString()}&select=id`),
       countOf(`appointments?status=eq.en_attente&created_at=lt.${d(0.75)}&select=id`),
       countOf(`reports?status=not.in.(reviewed,rejected,banned,archived,auto_log_archived)&reason=ilike.*SUPPORT*&created_at=lt.${d(0.75)}&select=id`),
       countOf(`profiles?is_banned=eq.false&last_seen=lt.${d(14)}&select=id`),
@@ -4147,12 +4164,12 @@ function NotifBellPanel({ auth, autoShortcuts, onToggleAutoShortcut, onNavigate,
     { label: "Messages Assistance", sub: "en attente", count: counts.support || 0, tab: "messagerie", icon: msgIcon, color: "#2980B9" },
     { label: "Avis non lus", sub: "à consulter", count: counts.reviews || 0, tab: "reviews", icon: starIcon, color: "#B8860B" },
     { label: "Paiements à vérifier", sub: "en attente", count: counts.payments || 0, tab: "payments", icon: cardIcon, color: "#27AE60" },
-    { label: "Mises en avant à traiter", sub: "à traiter", count: counts.features || 0, tab: "marketing", icon: starIcon, color: "#8E44AD" },
+    { label: "Mises en avant à traiter", sub: "à traiter", count: counts.features || 0, tab: "marketing", subTab: "features", icon: starIcon, color: "#8E44AD" },
     { label: "Rendez-vous à confirmer", sub: "à confirmer", count: counts.appointments || 0, tab: "appointments", icon: calIcon, color: "#2980B9" },
     { label: "Demandes Groupe Premium", sub: "nouvelles", count: counts.groupe || 0, tab: "groupe", icon: usersIcon, color: "#8E44AD" },
     { label: "Mises en relation", sub: "en attente", count: counts.matches || 0, tab: "matches", icon: heartIcon, color: "#E91E8C" },
-    { label: "Demandes Ambassadeur", sub: "nouvelles", count: counts.ambReq || 0, tab: "ambassadors", icon: medalIcon, color: "#8B0D2F" },
-    { label: "Versements Ambassadeur", sub: "en attente", count: counts.payouts || 0, tab: "ambassadors", icon: walletIcon, color: "#27AE60" },
+    { label: "Demandes Ambassadeur", sub: "nouvelles", count: counts.ambReq || 0, tab: "ambassadors", subTab: "requests", icon: medalIcon, color: "#8B0D2F" },
+    { label: "Versements Ambassadeur", sub: "en attente", count: counts.payouts || 0, tab: "ambassadors", subTab: "payouts", icon: walletIcon, color: "#27AE60" },
   ];
   const activeItems = pendingItems.filter(i => i.count > 0);
   const totalPending = activeItems.reduce((s, i) => s + i.count, 0);
@@ -4175,7 +4192,7 @@ function NotifBellPanel({ auth, autoShortcuts, onToggleAutoShortcut, onNavigate,
     if (freeRate >= 70 && !autoShortcuts.premium_nudge_enabled)
       suggestions.push({ id: "premnudge", text: `${freeRate}% de tes membres sont encore gratuits. Active l'incitation Premium.`, actionLabel: "Activer", action: { type: "toggle", key: "premium_nudge_enabled" } });
     if (extra.paymentsPrevious >= 5 && extra.paymentsRecent < extra.paymentsPrevious * 0.7)
-      suggestions.push({ id: "salesdown", text: `Les achats Premium ont baissé (${extra.paymentsRecent} cette semaine contre ${extra.paymentsPrevious} la semaine d'avant). Une Super promo pourrait relancer les ventes.`, actionLabel: "Aller y voir", action: { type: "navigate", tab: "marketing" } });
+      suggestions.push({ id: "salesdown", text: `Les achats Premium ont baissé (${extra.paymentsRecent} cette semaine contre ${extra.paymentsPrevious} la semaine d'avant). Une Super promo pourrait relancer les ventes.`, actionLabel: "Aller y voir", action: { type: "navigate", tab: "marketing", sub: "promo" } });
     if (extra.signupsPrevious >= 5 && extra.signupsRecent < extra.signupsPrevious * 0.6)
       suggestions.push({ id: "signupsdown", text: `Peu de nouveaux inscrits cette semaine (${extra.signupsRecent} contre ${extra.signupsPrevious} la semaine d'avant). Une campagne de communication pourrait aider.`, actionLabel: "Aller y voir", action: { type: "navigate", tab: "marketing" } });
 
@@ -4185,13 +4202,13 @@ function NotifBellPanel({ auth, autoShortcuts, onToggleAutoShortcut, onNavigate,
     if (extra.featureAmbassador && extra.activeAffiliates === 0 && !autoShortcuts.ambassador_nudge_enabled)
       suggestions.push({ id: "ambnudge", text: `Le programme Ambassadeur est actif mais aucun ambassadeur pour l'instant. Lance la campagne "Deviens Ambassadeur".`, actionLabel: "Activer", action: { type: "toggle", key: "ambassador_nudge_enabled" } });
     if (extra.contractsPendingValidation > 0)
-      suggestions.push({ id: "contracts", text: `${extra.contractsPendingValidation} contrat(s) Ambassadeur signé(s) attendent ta validation depuis plus de 18h.`, actionLabel: "Aller y voir", action: { type: "navigate", tab: "ambassadors" } });
+      suggestions.push({ id: "contracts", text: `${extra.contractsPendingValidation} contrat(s) Ambassadeur signé(s) attendent ta validation depuis plus de 18h.`, actionLabel: "Aller y voir", action: { type: "navigate", tab: "ambassadors", sub: "affiliates" } });
 
     // ── Engagement ──
     if (extra.inactiveUsers >= 10)
-      suggestions.push({ id: "inactive", text: `${extra.inactiveUsers} membres sont inactifs depuis plus de 14 jours. Une relance pourrait les faire revenir.`, actionLabel: "Aller y voir", action: { type: "navigate", tab: "marketing" } });
-    if (extra.staleProposals > 0)
-      suggestions.push({ id: "staleprop", text: `${extra.staleProposals} proposition(s) de match attendent une réponse depuis plus de 18h. Une relance pourrait aider.`, actionLabel: "Aller y voir", action: { type: "navigate", tab: "matches" } });
+      suggestions.push({ id: "inactive", text: `${extra.inactiveUsers} membres sont inactifs depuis plus de 14 jours. Une relance pourrait les faire revenir.`, actionLabel: "Aller y voir", action: { type: "navigate", tab: "marketing", sub: "inactive" } });
+    if (extra.staleProposals > 0 && !autoShortcuts.proposal_reminder_enabled)
+      suggestions.push({ id: "staleprop", text: `${extra.staleProposals} proposition(s) de match sont en attente d'une réponse du membre depuis plus de 18h. Active le rappel automatique pour relancer ces membres par push.`, actionLabel: "Activer", action: { type: "toggle", key: "proposal_reminder_enabled" } });
     if (extra.lastBroadcastDays === null || extra.lastBroadcastDays >= 14)
       suggestions.push({ id: "broadcast", text: extra.lastBroadcastDays === null ? "Aucune diffusion générale n'a encore été envoyée." : `Ça fait ${extra.lastBroadcastDays} jours depuis la dernière diffusion générale.`, actionLabel: "Aller y voir", action: { type: "navigate", tab: "marketing" } });
     if (extra.matchesRecent < 3 && !autoShortcuts.mm_auto_propose_enabled && !autoShortcuts.spontaneous_auto_propose_enabled)
@@ -4218,7 +4235,7 @@ function NotifBellPanel({ auth, autoShortcuts, onToggleAutoShortcut, onNavigate,
   const runAction = (s: NotifSuggestion) => {
     if (s.action.type === "toggle") onToggleAutoShortcut(s.action.key);
     else if (s.action.type === "setting") setAppSetting(s.action.key, s.action.value);
-    else { onNavigate(s.action.tab); setDismissed(prev => new Set(prev).add(s.id)); }
+    else { onNavigate(s.action.tab, s.action.sub); setDismissed(prev => new Set(prev).add(s.id)); }
   };
 
   return (
@@ -4262,7 +4279,7 @@ function NotifBellPanel({ auth, autoShortcuts, onToggleAutoShortcut, onNavigate,
             ) : (
               <div style={{ display: "flex", flexDirection: "column" }}>
                 {activeItems.map((i, idx) => (
-                  <div key={i.label} onClick={() => onNavigate(i.tab)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 4px", cursor: "pointer", borderRadius: 10, borderTop: idx > 0 ? `1px solid ${G.creme}` : "none" }}
+                  <div key={i.label} onClick={() => onNavigate(i.tab, (i as any).subTab)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 4px", cursor: "pointer", borderRadius: 10, borderTop: idx > 0 ? `1px solid ${G.creme}` : "none" }}
                     onMouseOver={e => { (e.currentTarget as HTMLElement).style.background = G.creme; }}
                     onMouseOut={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
                     <div style={{ width: 36, height: 36, borderRadius: "50%", background: `${i.color}18`, color: i.color, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{i.icon}</div>
@@ -4318,7 +4335,7 @@ function NotifBellButton({ auth, autoShortcuts, onToggleAutoShortcut }: {
           <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 499 }} />
           <NotifBellPanel
             onClose={() => setOpen(false)}
-            onNavigate={(tab) => { window.dispatchEvent(new CustomEvent("moyo-admin-navigate", { detail: tab })); setOpen(false); }}
+            onNavigate={(tab, sub) => { window.dispatchEvent(new CustomEvent("moyo-admin-navigate", { detail: { tab, sub } })); setOpen(false); }}
             auth={auth}
             autoShortcuts={autoShortcuts}
             onToggleAutoShortcut={onToggleAutoShortcut}
@@ -9306,7 +9323,13 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
     window.dispatchEvent(new CustomEvent("moyo-admin-badge-count", { detail: adminBadgeCount }));
   }, [adminBadgeCount]);
   useEffect(() => {
-    const onNav = (e: Event) => setActiveTab((e as CustomEvent).detail);
+    const onNav = (e: Event) => {
+      const { tab, sub } = (e as CustomEvent).detail || {};
+      setActiveTab(tab);
+      if (tab === "marketing" && sub) setMktTab(sub as typeof mktTab);
+      if (tab === "ambassadors" && sub) setAmbTab(sub as typeof ambTab);
+      if (tab === "payments" && sub) setPaymentSubTab(sub as typeof paymentSubTab);
+    };
     window.addEventListener("moyo-admin-navigate", onNav as EventListener);
     return () => window.removeEventListener("moyo-admin-navigate", onNav as EventListener);
   }, []);
