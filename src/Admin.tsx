@@ -138,6 +138,8 @@ function AdminAppointments({ auth, showToast, onOpenProfile }: { auth: any; show
           const push = pushByStatus[fields.status];
           if (push) {
             fetch(`${SUPABASE_URL}/functions/v1/push-notify`, { method: "POST", headers: { "Content-Type": "application/json", apikey: SUPABASE_KEY, Authorization: `Bearer ${auth.token}` }, body: JSON.stringify({ mode: "user_push", user_id: appt.user_id, title: push.title, body: push.body }) }).catch(() => {});
+            const typeByStatus: Record<string, string> = { confirme: "appointment_confirmed", reporte: "appointment_rescheduled", annule: "appointment_cancelled" };
+            fetch(`${SUPABASE_URL}/rest/v1/user_notifications`, { method: "POST", headers: { "Content-Type": "application/json", apikey: SUPABASE_KEY, Authorization: `Bearer ${auth.token}`, Prefer: "return=minimal" }, body: JSON.stringify({ user_id: appt.user_id, type: typeByStatus[fields.status] || "appointment_update", title: push.title, body: push.body, nav_tab: "profile", nav_sub: "appointments" }) }).catch(() => {});
           }
         }
       }
@@ -6066,12 +6068,14 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
     if (!auth) return;
     const r = await fetch(`${SUPABASE_URL}/rest/v1/group_members?user_id=eq.${userId}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ status: "approved", decided_at: new Date().toISOString(), decided_by: auth.userId }) });
     if (!r.ok) { const t = await r.text().catch(() => ""); console.error("[Groupe] Échec validation:", r.status, t); showToast(`Échec de la validation (${r.status}) : ${t.slice(0, 150)}`, "error"); return; }
+    notifyUser(userId, "group_approved", "👥 Groupe Premium débloqué", "Ta demande d'adhésion a été validée, tu peux maintenant y accéder.", "group");
     loadGroupMembers();
   };
   const rejectGroupRequest = async (userId: string) => {
     if (!auth) return;
     const r = await fetch(`${SUPABASE_URL}/rest/v1/group_members?user_id=eq.${userId}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ status: "rejected", decided_at: new Date().toISOString(), decided_by: auth.userId }) });
     if (!r.ok) { const t = await r.text().catch(() => ""); console.error("[Groupe] Échec refus:", r.status, t); showToast(`Échec du refus (${r.status}) : ${t.slice(0, 150)}`, "error"); return; }
+    notifyUser(userId, "group_rejected", "Groupe Premium", "Ta demande d'adhésion au Groupe Premium n'a pas été retenue cette fois-ci.");
     loadGroupMembers();
   };
   const removeGroupMember = async (userId: string) => {
@@ -7485,6 +7489,9 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
         if (next && SUPPORT_REPLY_PUSH_ENABLED) {
           fetch(`${SUPABASE_URL}/functions/v1/push-notify`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ mode: "user_push", user_id: a.user_id, title: "✅ Contrat signé", body: "Ton contrat Ambassadeur est confirmé, ton tableau de bord est débloqué." }) }).catch(() => {});
         }
+        if (next) {
+          fetch(`${SUPABASE_URL}/rest/v1/user_notifications`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ user_id: a.user_id, type: "contract_validated", title: "✅ Contrat Ambassadeur validé", body: "Ton tableau de bord est débloqué.", nav_tab: "profile", nav_sub: "ambassador" }) }).catch(() => {});
+        }
         showToast(next ? `Contrat de ${a.name} marqué comme signé.` : `Contrat de ${a.name} repassé en attente.`, "success");
       } catch { showToast("Erreur lors de la mise à jour du contrat.", "error"); }
     };
@@ -7524,6 +7531,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
         : { is_premium: true, premium_until: LIFETIME_PREMIUM_UNTIL, premium_is_gift: true };
       await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${a.user_id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify(body) });
       logAdminAction(auth.token, auth.userId, auth.name, currentlyLifetime ? `Premium à vie retiré à ${a.name}.` : `Premium à vie offert à ${a.name}.`, a.user_id);
+      if (!currentlyLifetime) notifyUser(a.user_id, "lifetime_premium", "👑 Premium à vie offert !", "Merci pour ton engagement en tant qu'Ambassadeur, tu profites maintenant du Premium à vie.");
       setAffiliateProfileStatus(s => ({ ...s, [a.user_id]: { ...s[a.user_id], premium_until: body.premium_until || undefined, premium_is_gift: body.premium_is_gift } }));
       showToast(currentlyLifetime ? `${a.name} n'a plus le Premium à vie.` : `${a.name} a maintenant le Premium à vie.`, "success");
     };
@@ -7567,7 +7575,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
     // ── Traite une demande de versement : marque toutes les commissions en attente de cet
     //    affilié comme payées, journalise une dépense unique dans Budget (traçabilité), et
     //    referme la demande. ──
-    const markPayoutPaid = async (pr: { id: string; affiliate_id: string; affiliate_name?: string; amount: number }) => {
+    const markPayoutPaid = async (pr: { id: string; affiliate_id: string; user_id?: string; affiliate_name?: string; amount: number }) => {
       if (!auth) return;
       setPayoutActionLoading(pr.id);
       try {
@@ -7593,6 +7601,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
           });
         } catch {}
         logAdminAction(auth.token, auth.userId, auth.name, `Versement de ${pr.amount.toLocaleString()} FCFA payé à ${pr.affiliate_name || "un ambassadeur"}.`, pr.affiliate_id);
+        if (pr.user_id) notifyUser(pr.user_id, "payout_processed", "💰 Versement traité", `Ton versement de ${pr.amount.toLocaleString()} FCFA a été payé.`, "profile", "ambassador");
         setPayoutRequests(list => list.filter(x => x.id !== pr.id));
         showToast(`Versement marqué comme payé.`, "success");
       } catch { showToast("Erreur lors du traitement du versement.", "error"); }
@@ -8334,6 +8343,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
       const st = Array.isArray(arr) ? arr[0] : null;
       if (!st || !st.id) { showToast("Échec de la publication du statut.", "error"); setFrProcessing(null); return; }
       await sb.update(auth.token, "feature_requests", req.id, { status: "accepte", published_at, expires_at, status_id: st.id });
+      notifyUser(req.user_id, "feature_accepted", "⭐ Mise en avant validée", "Ton statut est publié pour 24h, visible par toute la communauté.", "statuses");
       showToast("Mise en avant publiée pour 24h.", "success");
       loadFeatureRequests();
       loadFeatureStatuses();
@@ -8345,6 +8355,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
     setFrProcessing(req.id);
     try {
       await sb.update(auth.token, "feature_requests", req.id, { status: "refuse" });
+      notifyUser(req.user_id, "feature_rejected", "Mise en avant refusée", "Ta demande de mise en avant n'a pas été retenue cette fois-ci.");
       showToast("Demande refusée.", "success");
       loadFeatureRequests();
     } catch { showToast("Impossible de refuser la demande.", "error"); }
@@ -8470,6 +8481,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
         });
         logAdminAction(auth.token, auth.userId, auth.name, "Photo de profil remplacée manuellement par l'admin", u.id);
         setUsers(list => list.map(x => x.id === u.id ? { ...x, photo_url: newUrl } : x));
+        notifyUser(u.id, "photo_improved", "📸 Photo améliorée", "Notre équipe a mis à jour ta photo de profil.");
         showToast("Photo remplacée avec succès.", "success");
       } else {
         showToast("Échec de l'envoi de la photo.", "error");
@@ -8912,6 +8924,13 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
     if (activeTab === "users") { setUserPage(0); loadUsers(userSearch, 0, usersSort, userSearchEmail, usersFilters, userSearchPhone); }
   }, [activeTab, usersViewMode]);
 
+  // ── Notification persistante pour l'utilisateur (table user_notifications) + push best-effort.
+  //    Un seul point d'entrée, réutilisé pour tous les événements "zone aveugle" détectés. ──
+  const notifyUser = (userId: string, type: string, title: string, body: string, navTab?: string, navSub?: string) => {
+    fetch(`${SUPABASE_URL}/rest/v1/user_notifications`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ user_id: userId, type, title, body, nav_tab: navTab || null, nav_sub: navSub || null }) }).catch(() => {});
+    fetch(`${SUPABASE_URL}/functions/v1/push-notify`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ mode: "user_push", user_id: userId, title, body }) }).catch(() => {});
+  };
+
   // ── Action admin générique sur un profil ──
   const adminAction = async (
     userId: string,
@@ -9204,6 +9223,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
       setUsers(prev => prev.map(u => u.id === user.id ? { ...u, warning_count: newCount, last_notice_acknowledged: false, last_notice_at: nowIso } : u));
       showToast(`Avertissement ${newCount}/3 envoyé à ${user.name}.`, "success");
       logAdminAction(auth.token, auth.userId, auth.name, `Avertissement ${newCount}/3 envoyé à ${user.name} - Motif : ${finalReason}`, user.id);
+      fetch(`${SUPABASE_URL}/rest/v1/user_notifications`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ user_id: user.id, type: "warning", title: `⚠️ Avertissement ${newCount}/3`, body: finalReason }) }).catch(() => {});
       setWarnModal(null);
       setWarnReason(WARN_REASONS[0]);
       setWarnCustom("");
@@ -10757,7 +10777,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                       })()}
                       {!u.is_verified ? (
                         <Row label="✓ Vérifier" color={G.vert} desc="Vérifier manuellement le compte de ce membre." disabled={isLoading}
-                          onClick={() => confirm(`Vérifier le profil de ${u.name} ?`, () => adminAction(u.id, { is_verified: true }, `Profil de ${u.name} vérifié.`))} />
+                          onClick={() => confirm(`Vérifier le profil de ${u.name} ?`, () => { adminAction(u.id, { is_verified: true }, `Profil de ${u.name} vérifié.`); notifyUser(u.id, "verified", "✓ Compte vérifié", "Ton compte est maintenant certifié, un badge s'affiche sur ton profil."); })} />
                       ) : (
                         <Row label="- Vérifier" color="#555" desc="Retirer la vérification de ce membre." disabled={isLoading}
                           onClick={() => confirm(`Retirer la vérification de ${u.name} ?`, () => adminAction(u.id, { is_verified: false }, `Vérification retirée pour ${u.name}.`))} />
@@ -11685,7 +11705,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                           )}
                           {/* Vérification */}
                           {!u.is_verified
-                            ? <ActionBtn label="+ Vérifier" color={G.vert} disabled={isLoading} onClick={() => confirm(`Vérifier le profil de ${u.name} ?`, () => adminAction(u.id, { is_verified: true }, `Profil de ${u.name} vérifié.`))} />
+                            ? <ActionBtn label="+ Vérifier" color={G.vert} disabled={isLoading} onClick={() => confirm(`Vérifier le profil de ${u.name} ?`, () => { adminAction(u.id, { is_verified: true }, `Profil de ${u.name} vérifié.`); notifyUser(u.id, "verified", "✓ Compte vérifié", "Ton compte est maintenant certifié, un badge s'affiche sur ton profil."); })} />
                             : <ActionBtn label="- Vérifier" color="#555" disabled={isLoading} onClick={() => confirm(`Retirer la vérification de ${u.name} ?`, () => adminAction(u.id, { is_verified: false }, `Vérification retirée pour ${u.name}.`))} />
                           }
                           {/* Modération */}

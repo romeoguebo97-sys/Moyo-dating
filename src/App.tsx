@@ -6040,6 +6040,126 @@ function InstallButtons({ variant = "light" }: { variant?: "light" | "dark" }) {
 // Un seul mode actif à la fois (comportement type radio, via 3 switches).
 
 
+// ── Cloche de notifications utilisateur : deux sections, comme côté admin.
+//    "Suggestions" : recalculées en direct à chaque ouverture (email non vérifié, numéro non
+//    partagé), pas stockées — reflètent l'état réel du compte à l'instant présent.
+//    "Notifications" : vrai fil d'événements horodatés, stocké dans user_notifications, pour
+//    les zones qui n'ont aucun badge ailleurs dans l'app (RDV, Ambassadeur, vérification...). ──
+function NotifBell({ auth, setTab }: { auth: Auth; setTab: (t: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [emailVerified, setEmailVerified] = useState(true);
+  const [phoneShared, setPhoneShared] = useState(true);
+  const [items, setItems] = useState<{ id: string; type: string; title: string; body: string; is_read: boolean; created_at: string }[]>([]);
+
+  const load = React.useCallback(async () => {
+    if (!auth) return;
+    try {
+      const [pRes, nRes] = await Promise.all([
+        fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${auth.userId}&select=email_verified,share_phone_with_matches`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } }),
+        fetch(`${SUPABASE_URL}/rest/v1/user_notifications?user_id=eq.${auth.userId}&order=created_at.desc&limit=30`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } }),
+      ]);
+      const pData = await pRes.json().catch(() => []);
+      if (Array.isArray(pData) && pData[0]) { setEmailVerified(!!pData[0].email_verified); setPhoneShared(!!pData[0].share_phone_with_matches); }
+      const nData = await nRes.json().catch(() => []);
+      if (Array.isArray(nData)) setItems(nData);
+    } catch {}
+    setLoading(false);
+  }, [auth?.userId]);
+
+  useEffect(() => { load(); const iv = setInterval(load, 30000); return () => clearInterval(iv); }, [load]);
+
+  const unreadCount = items.filter(i => !i.is_read).length + (emailVerified ? 0 : 1) + (phoneShared ? 0 : 1);
+
+  const markRead = async (id: string) => {
+    setItems(prev => prev.map(i => i.id === id ? { ...i, is_read: true } : i));
+    fetch(`${SUPABASE_URL}/rest/v1/user_notifications?id=eq.${id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ is_read: true }) }).catch(() => {});
+  };
+  const markAllRead = () => {
+    const unread = items.filter(i => !i.is_read).map(i => i.id);
+    if (unread.length === 0) return;
+    setItems(prev => prev.map(i => ({ ...i, is_read: true })));
+    const inList = unread.map(id => `"${id}"`).join(",");
+    fetch(`${SUPABASE_URL}/rest/v1/user_notifications?id=in.(${inList})`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ is_read: true }) }).catch(() => {});
+  };
+  const goToProfile = (id?: string) => { if (id) markRead(id); setOpen(false); setTab("profile"); };
+
+  const timeAgo = (iso: string) => {
+    const diff = Date.now() - new Date(iso).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return "à l'instant";
+    if (mins < 60) return `il y a ${mins} min`;
+    const h = Math.floor(mins / 60);
+    if (h < 24) return `il y a ${h}h`;
+    const d = Math.floor(h / 24);
+    return `il y a ${d}j`;
+  };
+
+  return (
+    <div style={{ position: "relative" }}>
+      <div onClick={() => setOpen(v => !v)} style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 32, height: 32, background: "#fff", borderRadius: 10, cursor: "pointer", border: "1px solid #e5e0da", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#3a2e1f" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      </div>
+      {unreadCount > 0 && (
+        <div style={{ position: "absolute", top: -4, right: -4, background: G.rouge, color: "#fff", borderRadius: 50, minWidth: 15, height: 15, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.55rem", fontWeight: 800, padding: "0 3px", border: "1.5px solid #fff" }}>
+          {unreadCount > 9 ? "9+" : unreadCount}
+        </div>
+      )}
+      {open && (
+        <>
+          <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 9998 }} />
+          <div onClick={e => e.stopPropagation()} style={{ position: "fixed", top: "calc(env(safe-area-inset-top) + 58px)", right: 12, left: 12, marginLeft: "auto", width: 360, maxWidth: "calc(100vw - 24px)", maxHeight: "72vh", overflowY: "auto", background: "#fff", borderRadius: 16, boxShadow: "0 16px 44px rgba(0,0,0,0.2)", border: "1px solid #eee", zIndex: 9999 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", borderBottom: "1px solid #eee" }}>
+              <span style={{ fontWeight: 800, fontSize: "0.95rem", color: G.brun }}>Notifications</span>
+              {items.some(i => !i.is_read) && <span onClick={markAllRead} style={{ fontSize: "0.72rem", color: G.rouge, fontWeight: 700, cursor: "pointer" }}>Tout marquer lu</span>}
+            </div>
+
+            {loading ? (
+              <div style={{ padding: "24px 16px", textAlign: "center", fontSize: "0.8rem", color: "#aaa" }}>Chargement...</div>
+            ) : (
+              <>
+                {(!emailVerified || !phoneShared) && (
+                  <div style={{ padding: "12px 16px", borderBottom: "1px solid #eee", background: "#FFFBF0" }}>
+                    <div style={{ fontSize: "0.68rem", fontWeight: 800, color: "#B8860B", marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.4 }}>À faire</div>
+                    {!emailVerified && (
+                      <div onClick={() => goToProfile()} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 2px", cursor: "pointer" }}>
+                        <span style={{ fontSize: "1rem" }}>✉️</span>
+                        <span style={{ fontSize: "0.8rem", color: "#555", fontWeight: 600 }}>Vérifie ton adresse e-mail</span>
+                      </div>
+                    )}
+                    {!phoneShared && (
+                      <div onClick={() => goToProfile()} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 2px", cursor: "pointer" }}>
+                        <span style={{ fontSize: "1rem" }}>📞</span>
+                        <span style={{ fontSize: "0.8rem", color: "#555", fontWeight: 600 }}>Rends ton numéro visible pour tes matchs</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+                <div style={{ padding: "6px 0" }}>
+                  {items.length === 0 ? (
+                    <div style={{ padding: "24px 16px", textAlign: "center", fontSize: "0.8rem", color: "#aaa" }}>Rien pour l'instant.</div>
+                  ) : (
+                    items.map(i => (
+                      <div key={i.id} onClick={() => goToProfile(i.id)} style={{ display: "flex", gap: 10, padding: "11px 16px", cursor: "pointer", background: i.is_read ? "transparent" : "rgba(192,57,43,0.04)" }}>
+                        {!i.is_read && <div style={{ width: 7, height: 7, borderRadius: "50%", background: G.rouge, flexShrink: 0, marginTop: 6 }} />}
+                        <div style={{ flex: 1, minWidth: 0, marginLeft: i.is_read ? 17 : 0 }}>
+                          <div style={{ fontSize: "0.83rem", fontWeight: i.is_read ? 600 : 800, color: "#333" }}>{i.title}</div>
+                          <div style={{ fontSize: "0.76rem", color: "#888", marginTop: 2, lineHeight: 1.4 }}>{i.body}</div>
+                          <div style={{ fontSize: "0.68rem", color: "#bbb", marginTop: 3 }}>{timeAgo(i.created_at)}</div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceived, viewsReceived, auth, adminBadgeCount, showAdminConfig, setShowAdminConfig, inConv, assistantEnabled = true, statusStackData }: { children: React.ReactNode; tab: string; setTab: (t: string) => void; unreadCount: number; notifCount: number; likesReceived: number; viewsReceived: number; auth: Auth; adminBadgeCount?: number; showAdminConfig: boolean; setShowAdminConfig: (v: boolean) => void; inConv: boolean; assistantEnabled?: boolean; statusStackData?: { count: number; groups: { userId: string; photo_url?: string; gender?: string }[]; newCount: number } | null; }) {
   const [showGuide, setShowGuide] = useState(false);
   const [openGuideSection, setOpenGuideSection] = useState<number | null>(null);
@@ -6274,7 +6394,13 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
                 </div>
               ) : <div />
             ) : (
-              <div onClick={() => setShowGuide(true)} style={{ fontSize: "0.72rem", fontWeight: 700, color: "#333", background: "white", borderRadius: 50, padding: "5px 14px", cursor: "pointer", border: "1.5px solid #ddd", letterSpacing: "0.02em" }}>Guide</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <div onClick={() => setShowGuide(true)} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.72rem", fontWeight: 700, color: "#3a2e1f", background: "#fff", borderRadius: 10, padding: "8px 14px", cursor: "pointer", border: "1px solid #e5e0da", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", letterSpacing: "0.02em" }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+                  Guide
+                </div>
+                <NotifBell auth={auth} setTab={setTab} />
+              </div>
             )}
           </div>
         </div>
