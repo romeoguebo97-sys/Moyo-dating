@@ -6106,55 +6106,64 @@ function NotifBell({ auth, setTab }: { auth: Auth; setTab: (t: string) => void }
         </div>
       )}
       {open && (
-        <>
-          <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 9998 }} />
-          <div onClick={e => e.stopPropagation()} style={{ position: "fixed", top: "calc(env(safe-area-inset-top) + 58px)", right: 12, left: 12, marginLeft: "auto", width: 360, maxWidth: "calc(100vw - 24px)", maxHeight: "72vh", overflowY: "auto", background: "#fff", borderRadius: 16, boxShadow: "0 16px 44px rgba(0,0,0,0.2)", border: "1px solid #eee", zIndex: 9999 }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", borderBottom: "1px solid #eee" }}>
+        <div className="moyo-backdrop" onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9998, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+          <div className="moyo-sheet-in" onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: "24px 24px 0 0", width: "100%", maxWidth: 500, maxHeight: "80vh", overflow: "hidden", display: "flex", flexDirection: "column", paddingBottom: "env(safe-area-inset-bottom)", boxShadow: "0 -8px 40px rgba(0,0,0,0.25)" }}>
+            <div style={{ display: "flex", justifyContent: "center", paddingTop: 12, paddingBottom: 4, flexShrink: 0 }}>
+              <div style={{ width: 40, height: 4, borderRadius: 99, background: "#E0D5CC" }} />
+            </div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 20px 14px", borderBottom: "1px solid #F5F5F5", flexShrink: 0 }}>
               <span style={{ fontWeight: 800, fontSize: "0.95rem", color: G.brun }}>Notifications</span>
-              {items.some(i => !i.is_read) && <span onClick={markAllRead} style={{ fontSize: "0.72rem", color: G.rouge, fontWeight: 700, cursor: "pointer" }}>Tout marquer lu</span>}
+              <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                {items.some(i => !i.is_read) && <span onClick={markAllRead} style={{ fontSize: "0.72rem", color: G.rouge, fontWeight: 700, cursor: "pointer" }}>Tout marquer lu</span>}
+                <div onClick={() => setOpen(false)} style={{ width: 30, height: 30, borderRadius: "50%", background: "rgba(44,26,14,0.06)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={G.brun} strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </div>
+              </div>
             </div>
 
-            {loading ? (
-              <div style={{ padding: "24px 16px", textAlign: "center", fontSize: "0.8rem", color: "#aaa" }}>Chargement...</div>
-            ) : (
-              <>
-                {(!emailVerified || !phoneShared) && (
-                  <div style={{ padding: "12px 16px", borderBottom: "1px solid #eee", background: "#FFFBF0" }}>
-                    <div style={{ fontSize: "0.68rem", fontWeight: 800, color: "#B8860B", marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.4 }}>À faire</div>
-                    {!emailVerified && (
-                      <div onClick={() => goToProfile()} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 2px", cursor: "pointer" }}>
-                        <span style={{ fontSize: "1rem" }}>✉️</span>
-                        <span style={{ fontSize: "0.8rem", color: "#555", fontWeight: 600 }}>Vérifie ton adresse e-mail</span>
-                      </div>
-                    )}
-                    {!phoneShared && (
-                      <div onClick={() => goToProfile()} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 2px", cursor: "pointer" }}>
-                        <span style={{ fontSize: "1rem" }}>📞</span>
-                        <span style={{ fontSize: "0.8rem", color: "#555", fontWeight: 600 }}>Rends ton numéro visible pour tes matchs</span>
-                      </div>
+            <div style={{ overflowY: "auto", flex: "1 1 auto", minHeight: 0, WebkitOverflowScrolling: "touch" }}>
+              {loading ? (
+                <div style={{ padding: "24px 16px", textAlign: "center", fontSize: "0.8rem", color: "#aaa" }}>Chargement...</div>
+              ) : (
+                <>
+                  {(!emailVerified || !phoneShared) && (
+                    <div style={{ padding: "12px 16px", borderBottom: "1px solid #eee", background: "#FFFBF0" }}>
+                      <div style={{ fontSize: "0.68rem", fontWeight: 800, color: "#B8860B", marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.4 }}>À faire</div>
+                      {!emailVerified && (
+                        <div onClick={() => goToProfile()} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 2px", cursor: "pointer" }}>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#B8860B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                          <span style={{ fontSize: "0.8rem", color: "#555", fontWeight: 600 }}>Vérifie ton adresse e-mail</span>
+                        </div>
+                      )}
+                      {!phoneShared && (
+                        <div onClick={() => goToProfile()} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 2px", cursor: "pointer" }}>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#B8860B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.53a16 16 0 0 0 6.06 6.06l1.09-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                          <span style={{ fontSize: "0.8rem", color: "#555", fontWeight: 600 }}>Rends ton numéro visible pour tes matchs</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  <div style={{ padding: "6px 0" }}>
+                    {items.length === 0 ? (
+                      <div style={{ padding: "24px 16px", textAlign: "center", fontSize: "0.8rem", color: "#aaa" }}>Rien pour l'instant.</div>
+                    ) : (
+                      items.map(i => (
+                        <div key={i.id} onClick={() => goToProfile(i.id)} style={{ display: "flex", gap: 10, padding: "11px 16px", cursor: "pointer", background: i.is_read ? "transparent" : "rgba(192,57,43,0.04)" }}>
+                          {!i.is_read && <div style={{ width: 7, height: 7, borderRadius: "50%", background: G.rouge, flexShrink: 0, marginTop: 6 }} />}
+                          <div style={{ flex: 1, minWidth: 0, marginLeft: i.is_read ? 17 : 0 }}>
+                            <div style={{ fontSize: "0.83rem", fontWeight: i.is_read ? 600 : 800, color: "#333" }}>{i.title}</div>
+                            <div style={{ fontSize: "0.76rem", color: "#888", marginTop: 2, lineHeight: 1.4 }}>{i.body}</div>
+                            <div style={{ fontSize: "0.68rem", color: "#bbb", marginTop: 3 }}>{timeAgo(i.created_at)}</div>
+                          </div>
+                        </div>
+                      ))
                     )}
                   </div>
-                )}
-                <div style={{ padding: "6px 0" }}>
-                  {items.length === 0 ? (
-                    <div style={{ padding: "24px 16px", textAlign: "center", fontSize: "0.8rem", color: "#aaa" }}>Rien pour l'instant.</div>
-                  ) : (
-                    items.map(i => (
-                      <div key={i.id} onClick={() => goToProfile(i.id)} style={{ display: "flex", gap: 10, padding: "11px 16px", cursor: "pointer", background: i.is_read ? "transparent" : "rgba(192,57,43,0.04)" }}>
-                        {!i.is_read && <div style={{ width: 7, height: 7, borderRadius: "50%", background: G.rouge, flexShrink: 0, marginTop: 6 }} />}
-                        <div style={{ flex: 1, minWidth: 0, marginLeft: i.is_read ? 17 : 0 }}>
-                          <div style={{ fontSize: "0.83rem", fontWeight: i.is_read ? 600 : 800, color: "#333" }}>{i.title}</div>
-                          <div style={{ fontSize: "0.76rem", color: "#888", marginTop: 2, lineHeight: 1.4 }}>{i.body}</div>
-                          <div style={{ fontSize: "0.68rem", color: "#bbb", marginTop: 3 }}>{timeAgo(i.created_at)}</div>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </>
-            )}
+                </>
+              )}
+            </div>
           </div>
-        </>
+        </div>
       )}
     </div>
   );
@@ -6436,8 +6445,8 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
         l'écran de chat (la flèche "descendre" prend sa place). L'Assistant reste accessible
         depuis le bouton dédié dans le header/menu Découvrir. */}
     {assistantEnabled && !isWide && !inConv && <BotFloat onOpen={() => setShowBot(true)} G={G} />}
-    {showGuide && <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 9999, display: "flex", alignItems: "flex-start", justifyContent: "center", overflowY: "auto", padding: "calc(env(safe-area-inset-top) + 20px) 12px 20px" }}>
-      <div className="moyo-sheet-in" style={{ background: G.blanc, maxHeight: "85vh", borderRadius: 20, width: "100%", maxWidth: 480, margin: "0 auto", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+    {showGuide && <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 9999, display: "flex", alignItems: "flex-end", justifyContent: "center", overflowY: "auto" }} onClick={() => setShowGuide(false)}>
+      <div className="moyo-sheet-in" onClick={e => e.stopPropagation()} style={{ background: G.blanc, maxHeight: "85vh", borderRadius: "24px 24px 0 0", width: "100%", maxWidth: 480, margin: "0 auto", overflow: "hidden", display: "flex", flexDirection: "column", paddingBottom: "env(safe-area-inset-bottom)" }}>
         {/* Header (fixe, ne défile pas) */}
         <div style={{ background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, padding: "24px 20px", position: "relative", flexShrink: 0 }}>
           <div onClick={() => setShowGuide(false)} style={{ position: "absolute", top: 14, right: 16, cursor: "pointer", opacity: 0.8 }}>
