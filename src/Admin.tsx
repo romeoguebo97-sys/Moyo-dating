@@ -726,6 +726,7 @@ export function AdminDesktopPage() {
           </div>
           <div style={{ fontSize: "0.85rem", fontWeight: 700, color: G.brun }}>{auth.name}</div>
         </div>
+        <NotifBellButton auth={auth} autoShortcuts={autoShortcuts} onToggleAutoShortcut={toggleAutoShortcut} />
         <button
           onClick={() => {
             // Déclencher le modal d'aide dans le composant Admin via un event custom
@@ -4012,70 +4013,322 @@ function AdminHelpModal({ onClose }: { onClose: () => void }) {
 type AutoShortcutKeyShared = "phone_completion_prompt_enabled" | "verification_prompt_enabled" | "premium_nudge_enabled" | "ambassador_nudge_enabled" | "mm_auto_propose_enabled" | "spontaneous_auto_propose_enabled" | "auto_warn_ban_contact_enabled" | "promo_active" | "broadcast_enabled" | "premium_event_active";
 // ── Panneau de la cloche de notifications : agrège tout ce qui est en attente sur la
 //    plateforme (chaque ligne disparaît d'elle-même dès que réglée, puisque ce n'est que le
-//    reflet de vraies données en attente ailleurs) + des suggestions basées sur des seuils. ──
-function NotifBellPanel({ auth, stats, autoShortcuts, onToggleAutoShortcut, pendingItems, onNavigate, onClose }: {
+//    reflet de vraies données en attente ailleurs) + des suggestions basées sur des règles
+//    (seuils, comparaisons de périodes, délais) qui couvrent l'ensemble des fonctionnalités
+//    construites : profils/sécurité, monétisation, Ambassadeurs, engagement, système.
+//    Composant AUTONOME : récupère lui-même toutes ses données via auth seul, donc utilisable
+//    aussi bien dans l'en-tête mobile (composant Admin) que dans la topbar desktop
+//    (composant AdminDesktopPage), deux arbres de composants distincts qui ne partagent pas
+//    d'état local entre eux. ──
+type NotifSuggestion = {
+  id: string;
+  text: string;
+  actionLabel: string;
+  action: { type: "toggle"; key: AutoShortcutKeyShared } | { type: "setting"; key: string; value: string } | { type: "navigate"; tab: string };
+};
+
+function NotifBellPanel({ auth, autoShortcuts, onToggleAutoShortcut, onNavigate, onClose }: {
   auth: Auth;
-  stats: { users: number; verifiedUsers: number; premiumUsers: number };
   autoShortcuts: Record<AutoShortcutKeyShared, boolean>;
   onToggleAutoShortcut: (key: AutoShortcutKeyShared) => void;
-  pendingItems: { label: string; count: number; tab: string }[];
-  onNavigate: (tab: any) => void;
+  onNavigate: (tab: string) => void;
   onClose: () => void;
 }) {
-  const [phoneMissingCount, setPhoneMissingCount] = useState<number | null>(null);
-  useEffect(() => {
+  const [loading, setLoading] = useState(true);
+  const [counts, setCounts] = useState<Record<string, number>>({});
+  const [rates, setRates] = useState<{ users: number; verified: number; premium: number; phoneMissing: number } | null>(null);
+  const [extra, setExtra] = useState<{
+    featureAmbassador: boolean; featureGroupPremium: boolean; maintenanceMode: boolean;
+    activeAffiliates: number; contractsPendingValidation: number;
+    paymentsRecent: number; paymentsPrevious: number; signupsRecent: number; signupsPrevious: number;
+    lastBroadcastDays: number | null; matchesRecent: number;
+    staleProposals: number; staleAppointments: number; staleSupport: number; inactiveUsers: number;
+    warnedUsers: number;
+  } | null>(null);
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
+
+  const load = React.useCallback(async () => {
     if (!auth) return;
-    fetch(`${SUPABASE_URL}/rest/v1/profiles?or=(phone.is.null,phone.eq.)&is_banned=eq.false&select=id`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "count=exact" } })
-      .then(r => { const c = r.headers.get("content-range"); setPhoneMissingCount(c ? parseInt(c.split("/")[1] || "0") : null); })
-      .catch(() => {});
+    const h = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "count=exact", "Range": "0-0" };
+    const countOf = async (path: string) => {
+      try {
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, { headers: h });
+        const c = r.headers.get("content-range");
+        return c ? parseInt(c.split("/")[1] || "0") || 0 : 0;
+      } catch { return 0; }
+    };
+    const now = Date.now();
+    const d = (days: number) => new Date(now - days * 86400000).toISOString();
+
+    const [
+      reports, support, reviews, payments, features, appointments, groupe, matches, ambReq, payouts,
+      users, verified, premium, phoneMissing,
+      settingsRows,
+      activeAffiliates, contractsPendingValidation,
+      paymentsRecent, paymentsPrevious, signupsRecent, signupsPrevious,
+      lastBroadcastRows, matchesRecent,
+      staleProposals, staleAppointments, staleSupport, inactiveUsers, warnedUsers,
+    ] = await Promise.all([
+      countOf(`reports?status=not.in.(reviewed,rejected,banned,archived,auto_log_archived)&reason=not.ilike.*SUPPORT*&select=id`),
+      countOf(`reports?status=not.in.(reviewed,rejected,banned,archived,auto_log_archived)&reason=ilike.*SUPPORT*&select=id`),
+      countOf(`reviews?is_read=eq.false&select=id`),
+      countOf(`payment_requests?status=eq.pending&select=id`),
+      countOf(`feature_requests?status=eq.en_attente&select=id`),
+      countOf(`appointments?status=eq.en_attente&select=id`),
+      countOf(`group_members?status=eq.pending&select=id`),
+      countOf(`match_requests?status=eq.pending&select=id`),
+      countOf(`ambassador_requests?status=eq.pending&select=id`),
+      countOf(`affiliate_payout_requests?status=eq.pending&select=id`),
+      countOf(`profiles?is_banned=eq.false&select=id`),
+      countOf(`profiles?is_banned=eq.false&is_verified=eq.true&select=id`),
+      countOf(`profiles?is_banned=eq.false&is_premium=eq.true&select=id`),
+      countOf(`profiles?is_banned=eq.false&or=(phone.is.null,phone.eq.)&select=id`),
+      fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(feature_ambassador_program,feature_group_premium,maintenance_mode)&select=key,value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } }).then(r => r.json()).catch(() => []),
+      countOf(`affiliates?status=eq.active&select=id`),
+      countOf(`affiliates?contract_signed=eq.false&contract_signed_at=not.is.null&contract_signed_at=lt.${d(0.75)}&select=id`),
+      countOf(`payment_requests?status=eq.approved&created_at=gte.${d(7)}&select=id`),
+      countOf(`payment_requests?status=eq.approved&created_at=gte.${d(14)}&created_at=lt.${d(7)}&select=id`),
+      countOf(`profiles?created_at=gte.${d(7)}&select=id`),
+      countOf(`profiles?created_at=gte.${d(14)}&created_at=lt.${d(7)}&select=id`),
+      fetch(`${SUPABASE_URL}/rest/v1/broadcasts?select=created_at&order=created_at.desc&limit=1`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } }).then(r => r.json()).catch(() => []),
+      countOf(`matches?created_at=gte.${d(7)}&select=id`),
+      countOf(`match_proposals?status=eq.pending&created_at=lt.${d(0.75)}&select=id`),
+      countOf(`appointments?status=eq.en_attente&created_at=lt.${d(0.75)}&select=id`),
+      countOf(`reports?status=not.in.(reviewed,rejected,banned,archived,auto_log_archived)&reason=ilike.*SUPPORT*&created_at=lt.${d(0.75)}&select=id`),
+      countOf(`profiles?is_banned=eq.false&last_seen=lt.${d(14)}&select=id`),
+      countOf(`profiles?warning_count=gte.1&select=id`),
+    ]);
+
+    const settingsMap: Record<string, string> = {};
+    (Array.isArray(settingsRows) ? settingsRows : []).forEach((r: any) => { settingsMap[r.key] = r.value; });
+    const lastBroadcastDays = Array.isArray(lastBroadcastRows) && lastBroadcastRows[0]
+      ? Math.floor((now - new Date(lastBroadcastRows[0].created_at).getTime()) / 86400000)
+      : null;
+
+    setCounts({ reports, support, reviews, payments, features, appointments, groupe, matches, ambReq, payouts });
+    setRates({ users, verified, premium, phoneMissing });
+    setExtra({
+      featureAmbassador: settingsMap["feature_ambassador_program"] !== "false",
+      featureGroupPremium: settingsMap["feature_group_premium"] !== "false",
+      maintenanceMode: settingsMap["maintenance_mode"] === "true",
+      activeAffiliates, contractsPendingValidation,
+      paymentsRecent, paymentsPrevious, signupsRecent, signupsPrevious,
+      lastBroadcastDays, matchesRecent,
+      staleProposals, staleAppointments, staleSupport, inactiveUsers, warnedUsers,
+    });
+    setLoading(false);
   }, [auth?.userId]);
 
+  useEffect(() => { load(); }, [load]);
+
+  const setAppSetting = async (key: string, value: string) => {
+    if (!auth) return;
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ key, value }) });
+      load();
+    } catch {}
+  };
+
+  const flagIcon = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>;
+  const msgIcon = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>;
+  const starIcon = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>;
+  const cardIcon = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>;
+  const calIcon = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>;
+  const usersIcon = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>;
+  const heartIcon = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>;
+  const medalIcon = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>;
+  const walletIcon = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></svg>;
+  const shieldIcon = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>;
+  const trendIcon = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>;
+  const gearIcon = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>;
+
+  const pendingItems = [
+    { label: "Signalements", sub: "à traiter", count: counts.reports || 0, tab: "reports", icon: flagIcon, color: "#E74C3C" },
+    { label: "Messages Assistance", sub: "en attente", count: counts.support || 0, tab: "messagerie", icon: msgIcon, color: "#2980B9" },
+    { label: "Avis non lus", sub: "à consulter", count: counts.reviews || 0, tab: "reviews", icon: starIcon, color: "#B8860B" },
+    { label: "Paiements à vérifier", sub: "en attente", count: counts.payments || 0, tab: "payments", icon: cardIcon, color: "#27AE60" },
+    { label: "Mises en avant à traiter", sub: "à traiter", count: counts.features || 0, tab: "marketing", icon: starIcon, color: "#8E44AD" },
+    { label: "Rendez-vous à confirmer", sub: "à confirmer", count: counts.appointments || 0, tab: "appointments", icon: calIcon, color: "#2980B9" },
+    { label: "Demandes Groupe Premium", sub: "nouvelles", count: counts.groupe || 0, tab: "groupe", icon: usersIcon, color: "#8E44AD" },
+    { label: "Mises en relation", sub: "en attente", count: counts.matches || 0, tab: "matches", icon: heartIcon, color: "#E91E8C" },
+    { label: "Demandes Ambassadeur", sub: "nouvelles", count: counts.ambReq || 0, tab: "ambassadors", icon: medalIcon, color: "#8B0D2F" },
+    { label: "Versements Ambassadeur", sub: "en attente", count: counts.payouts || 0, tab: "ambassadors", icon: walletIcon, color: "#27AE60" },
+  ];
   const activeItems = pendingItems.filter(i => i.count > 0);
   const totalPending = activeItems.reduce((s, i) => s + i.count, 0);
 
-  const verifRate = stats.users > 0 ? Math.round(((stats.users - stats.verifiedUsers) / stats.users) * 100) : 0;
-  const phoneMissingRate = (stats.users > 0 && phoneMissingCount !== null) ? Math.round((phoneMissingCount / stats.users) * 100) : 0;
-  const freeRate = stats.users > 0 ? Math.round(((stats.users - stats.premiumUsers) / stats.users) * 100) : 0;
+  const verifRate = rates && rates.users > 0 ? Math.round(((rates.users - rates.verified) / rates.users) * 100) : 0;
+  const phoneMissingRate = rates && rates.users > 0 ? Math.round((rates.phoneMissing / rates.users) * 100) : 0;
+  const freeRate = rates && rates.users > 0 ? Math.round(((rates.users - rates.premium) / rates.users) * 100) : 0;
 
-  const suggestions: { key: AutoShortcutKeyShared; text: string }[] = [];
-  if (verifRate >= 40 && !autoShortcuts.verification_prompt_enabled) suggestions.push({ key: "verification_prompt_enabled", text: `${verifRate}% de tes membres ne sont pas vérifiés — active la relance de certification.` });
-  if (phoneMissingCount !== null && phoneMissingRate >= 30 && !autoShortcuts.phone_completion_prompt_enabled) suggestions.push({ key: "phone_completion_prompt_enabled", text: `${phoneMissingRate}% de tes membres n'ont pas de téléphone renseigné — active la relance.` });
-  if (freeRate >= 70 && !autoShortcuts.premium_nudge_enabled) suggestions.push({ key: "premium_nudge_enabled", text: `${freeRate}% de tes membres sont encore gratuits — active l'incitation Premium.` });
+  const suggestions: NotifSuggestion[] = [];
+  if (rates && extra) {
+    // ── Profils & sécurité ──
+    if (verifRate >= 40 && !autoShortcuts.verification_prompt_enabled)
+      suggestions.push({ id: "verif", text: `${verifRate}% de tes membres ne sont pas vérifiés. Active la relance de certification.`, actionLabel: "Activer", action: { type: "toggle", key: "verification_prompt_enabled" } });
+    if (phoneMissingRate >= 30 && !autoShortcuts.phone_completion_prompt_enabled)
+      suggestions.push({ id: "phone", text: `${phoneMissingRate}% de tes membres n'ont pas de téléphone renseigné. Active la relance.`, actionLabel: "Activer", action: { type: "toggle", key: "phone_completion_prompt_enabled" } });
+    if (extra.warnedUsers >= 5 && !autoShortcuts.auto_warn_ban_contact_enabled)
+      suggestions.push({ id: "contact", text: `${extra.warnedUsers} membres ont déjà reçu un avertissement de partage de contact. Active le blocage automatique.`, actionLabel: "Activer", action: { type: "toggle", key: "auto_warn_ban_contact_enabled" } });
+
+    // ── Monétisation ──
+    if (freeRate >= 70 && !autoShortcuts.premium_nudge_enabled)
+      suggestions.push({ id: "premnudge", text: `${freeRate}% de tes membres sont encore gratuits. Active l'incitation Premium.`, actionLabel: "Activer", action: { type: "toggle", key: "premium_nudge_enabled" } });
+    if (extra.paymentsPrevious >= 5 && extra.paymentsRecent < extra.paymentsPrevious * 0.7)
+      suggestions.push({ id: "salesdown", text: `Les achats Premium ont baissé (${extra.paymentsRecent} cette semaine contre ${extra.paymentsPrevious} la semaine d'avant). Une Super promo pourrait relancer les ventes.`, actionLabel: "Aller y voir", action: { type: "navigate", tab: "marketing" } });
+    if (extra.signupsPrevious >= 5 && extra.signupsRecent < extra.signupsPrevious * 0.6)
+      suggestions.push({ id: "signupsdown", text: `Peu de nouveaux inscrits cette semaine (${extra.signupsRecent} contre ${extra.signupsPrevious} la semaine d'avant). Une campagne de communication pourrait aider.`, actionLabel: "Aller y voir", action: { type: "navigate", tab: "marketing" } });
+
+    // ── Ambassadeurs ──
+    if (!extra.featureAmbassador && counts.ambReq > 0)
+      suggestions.push({ id: "ambprog", text: `Le programme Ambassadeur est désactivé alors que ${counts.ambReq} demande(s) attendent. Réactive-le pour pouvoir les traiter.`, actionLabel: "Réactiver", action: { type: "setting", key: "feature_ambassador_program", value: "true" } });
+    if (extra.featureAmbassador && extra.activeAffiliates === 0 && !autoShortcuts.ambassador_nudge_enabled)
+      suggestions.push({ id: "ambnudge", text: `Le programme Ambassadeur est actif mais aucun ambassadeur pour l'instant. Lance la campagne "Deviens Ambassadeur".`, actionLabel: "Activer", action: { type: "toggle", key: "ambassador_nudge_enabled" } });
+    if (extra.contractsPendingValidation > 0)
+      suggestions.push({ id: "contracts", text: `${extra.contractsPendingValidation} contrat(s) Ambassadeur signé(s) attendent ta validation depuis plus de 18h.`, actionLabel: "Aller y voir", action: { type: "navigate", tab: "ambassadors" } });
+
+    // ── Engagement ──
+    if (extra.inactiveUsers >= 10)
+      suggestions.push({ id: "inactive", text: `${extra.inactiveUsers} membres sont inactifs depuis plus de 14 jours. Une relance pourrait les faire revenir.`, actionLabel: "Aller y voir", action: { type: "navigate", tab: "marketing" } });
+    if (extra.staleProposals > 0)
+      suggestions.push({ id: "staleprop", text: `${extra.staleProposals} proposition(s) de match attendent une réponse depuis plus de 18h. Une relance pourrait aider.`, actionLabel: "Aller y voir", action: { type: "navigate", tab: "matches" } });
+    if (extra.lastBroadcastDays === null || extra.lastBroadcastDays >= 14)
+      suggestions.push({ id: "broadcast", text: extra.lastBroadcastDays === null ? "Aucune diffusion générale n'a encore été envoyée." : `Ça fait ${extra.lastBroadcastDays} jours depuis la dernière diffusion générale.`, actionLabel: "Aller y voir", action: { type: "navigate", tab: "marketing" } });
+    if (extra.matchesRecent < 3 && !autoShortcuts.mm_auto_propose_enabled && !autoShortcuts.spontaneous_auto_propose_enabled)
+      suggestions.push({ id: "autopropose", text: `Peu de matchs cette semaine (${extra.matchesRecent}) et les auto-propositions sont désactivées. Les activer peut relancer les rencontres.`, actionLabel: "Activer", action: { type: "toggle", key: "mm_auto_propose_enabled" } });
+
+    // ── Système ──
+    if (extra.maintenanceMode)
+      suggestions.push({ id: "maintenance", text: "Le mode maintenance est actif. Vérifie que ce n'est pas un oubli.", actionLabel: "Désactiver", action: { type: "setting", key: "maintenance_mode", value: "false" } });
+    if (!extra.featureGroupPremium && rates.premium > 0)
+      suggestions.push({ id: "groupprem", text: `Le Groupe Premium est désactivé alors que tu as ${rates.premium} membre(s) Premium qui pourraient en profiter.`, actionLabel: "Activer", action: { type: "setting", key: "feature_group_premium", value: "true" } });
+    if (extra.staleAppointments > 0)
+      suggestions.push({ id: "staleappt", text: `${extra.staleAppointments} rendez-vous non traité(s) depuis plus de 18h.`, actionLabel: "Aller y voir", action: { type: "navigate", tab: "appointments" } });
+    if (extra.staleSupport > 0)
+      suggestions.push({ id: "stalesupport", text: `${extra.staleSupport} message(s) Assistance sans réponse depuis plus de 18h.`, actionLabel: "Aller y voir", action: { type: "navigate", tab: "messagerie" } });
+  }
+  const visibleSuggestions = suggestions.filter(s => !dismissed.has(s.id));
+  const suggestionIcon = (id: string) => {
+    if (["verif", "phone", "contact"].includes(id)) return shieldIcon;
+    if (["ambprog", "ambnudge", "contracts"].includes(id)) return medalIcon;
+    if (["maintenance", "groupprem", "staleappt", "stalesupport"].includes(id)) return gearIcon;
+    return trendIcon; // monétisation + engagement
+  };
+
+  const runAction = (s: NotifSuggestion) => {
+    if (s.action.type === "toggle") onToggleAutoShortcut(s.action.key);
+    else if (s.action.type === "setting") setAppSetting(s.action.key, s.action.value);
+    else { onNavigate(s.action.tab); setDismissed(prev => new Set(prev).add(s.id)); }
+  };
 
   return (
-    <div onClick={e => e.stopPropagation()} style={{ position: "absolute", top: 42, right: 0, width: 360, maxWidth: "90vw", maxHeight: "70vh", overflowY: "auto", background: G.blanc, borderRadius: 16, boxShadow: "0 12px 36px rgba(0,0,0,0.18)", border: `1px solid ${G.gris}`, zIndex: 500 }}>
-      <div style={{ padding: "14px 16px", borderBottom: `1px solid ${G.gris}`, fontWeight: 800, fontSize: "0.92rem", color: G.brun }}>Notifications</div>
+    <div onClick={e => e.stopPropagation()} style={{ position: "fixed", top: 64, right: 12, left: 12, marginLeft: "auto", width: 400, maxWidth: "calc(100vw - 24px)", maxHeight: "78vh", overflowY: "auto", background: G.blanc, borderRadius: 18, boxShadow: "0 16px 44px rgba(0,0,0,0.2)", border: `1px solid ${G.gris}`, zIndex: 9500 }}>
+      <div style={{ padding: "16px 18px", borderBottom: `1px solid ${G.gris}`, fontWeight: 800, fontSize: "1rem", color: G.brun }}>Notifications</div>
 
-      {suggestions.length > 0 && (
-        <div style={{ padding: "12px 16px", borderBottom: `1px solid ${G.gris}`, background: "#FFFBF0" }}>
-          <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#B8860B", marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.4 }}>Suggestions</div>
-          {suggestions.map(s => (
-            <div key={s.key} style={{ marginBottom: 10, display: "flex", flexDirection: "column", gap: 6 }}>
-              <div style={{ fontSize: "0.78rem", color: "#555", lineHeight: 1.4 }}>{s.text}</div>
-              <button onClick={() => onToggleAutoShortcut(s.key)} style={{ alignSelf: "flex-start", background: "#B8860B", color: "#fff", border: "none", borderRadius: 50, padding: "5px 14px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}>Activer</button>
+      {loading ? (
+        <div style={{ padding: "24px 16px", textAlign: "center", fontSize: "0.8rem", color: "#aaa" }}>Chargement...</div>
+      ) : (
+        <>
+          {visibleSuggestions.length > 0 && (
+            <div style={{ padding: "14px 16px", borderBottom: `1px solid ${G.gris}`, background: "#FFF9EC" }}>
+              <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#B8860B", marginBottom: 10, textTransform: "uppercase", letterSpacing: 0.5 }}>Suggestions ({visibleSuggestions.length})</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {visibleSuggestions.map(s => (
+                  <div key={s.id} style={{ display: "flex", gap: 12, background: G.blanc, border: `1px solid rgba(184,134,11,0.2)`, borderRadius: 14, padding: "12px 14px", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
+                    <div style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(184,134,11,0.12)", color: "#B8860B", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{suggestionIcon(s.id)}</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: "0.82rem", color: "#3a2e14", fontWeight: 600, lineHeight: 1.4, marginBottom: 8 }}>{s.text}</div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        <button onClick={() => runAction(s)} style={{ background: "#B8860B", color: "#fff", border: "none", borderRadius: 50, padding: "6px 16px", fontSize: "0.74rem", fontWeight: 700, cursor: "pointer" }}>{s.actionLabel}</button>
+                        <span onClick={() => setDismissed(prev => new Set(prev).add(s.id))} style={{ color: "#bbb", fontSize: "0.74rem", fontWeight: 600, cursor: "pointer", textDecoration: "underline" }}>Ignorer</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-          ))}
-        </div>
+          )}
+
+          <div style={{ padding: "14px 16px" }}>
+            <div style={{ fontSize: "0.72rem", fontWeight: 800, color: G.rouge, marginBottom: 10, textTransform: "uppercase", letterSpacing: 0.5 }}>En attente{totalPending > 0 ? ` (${totalPending})` : ""}</div>
+            {activeItems.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "22px 0" }}>
+                <div style={{ width: 44, height: 44, borderRadius: "50%", background: G.creme, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px" }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#B8860B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                </div>
+                <div style={{ fontSize: "0.85rem", color: "#555", fontWeight: 700, marginBottom: 3 }}>Rien en attente, tout est à jour</div>
+                <div style={{ fontSize: "0.74rem", color: "#aaa" }}>Reviens plus tard pour voir les nouvelles activités.</div>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column" }}>
+                {activeItems.map((i, idx) => (
+                  <div key={i.label} onClick={() => onNavigate(i.tab)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 4px", cursor: "pointer", borderRadius: 10, borderTop: idx > 0 ? `1px solid ${G.creme}` : "none" }}
+                    onMouseOver={e => { (e.currentTarget as HTMLElement).style.background = G.creme; }}
+                    onMouseOut={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
+                    <div style={{ width: 36, height: 36, borderRadius: "50%", background: `${i.color}18`, color: i.color, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{i.icon}</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: "0.85rem", color: "#333", fontWeight: 700 }}>{i.label}</div>
+                      <div style={{ fontSize: "0.72rem", color: "#999" }}>{i.count} {i.sub}</div>
+                    </div>
+                    <span style={{ background: G.rouge, color: "#fff", borderRadius: 50, fontSize: "0.7rem", fontWeight: 800, padding: "2px 9px", minWidth: 22, textAlign: "center", flexShrink: 0 }}>{i.count > 99 ? "99+" : i.count}</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M9 18l6-6-6-6"/></svg>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <div onClick={onClose} style={{ padding: "12px 16px", borderTop: `1px solid ${G.gris}`, textAlign: "center", fontSize: "0.78rem", color: "#999", fontWeight: 600, cursor: "pointer", textDecoration: "underline" }}>Fermer les notifications</div>
+        </>
       )}
-
-      <div style={{ padding: "12px 16px" }}>
-        <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#999", marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.4 }}>En attente{totalPending > 0 ? ` (${totalPending})` : ""}</div>
-        {activeItems.length === 0 ? (
-          <div style={{ fontSize: "0.8rem", color: "#aaa", textAlign: "center", padding: "16px 0" }}>Rien en attente, tout est à jour 👍</div>
-        ) : (
-          activeItems.map(i => (
-            <div key={i.label} onClick={() => onNavigate(i.tab)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 4px", cursor: "pointer", borderRadius: 8 }}
-              onMouseOver={e => { (e.currentTarget as HTMLElement).style.background = G.creme; }}
-              onMouseOut={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
-              <span style={{ fontSize: "0.83rem", color: "#444", fontWeight: 600 }}>{i.label}</span>
-              <span style={{ background: G.rouge, color: "#fff", borderRadius: 50, fontSize: "0.68rem", fontWeight: 800, padding: "2px 8px", minWidth: 20, textAlign: "center" }}>{i.count > 99 ? "99+" : i.count}</span>
-            </div>
-          ))
-        )}
-      </div>
     </div>
   );
 }
+
+// ── Bouton cloche complet (icône + badge + panneau), réutilisable à l'identique dans l'en-tête
+//    mobile (composant Admin) et la topbar desktop (composant AdminDesktopPage). La navigation
+//    passe par un événement custom plutôt qu'un callback direct, car ces deux emplacements
+//    vivent dans des arbres de composants différents qui ne partagent pas d'état local. ──
+function NotifBellButton({ auth, autoShortcuts, onToggleAutoShortcut }: {
+  auth: Auth;
+  autoShortcuts: Record<AutoShortcutKeyShared, boolean>;
+  onToggleAutoShortcut: (key: AutoShortcutKeyShared) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [badgeCount, setBadgeCount] = useState(0);
+  useEffect(() => {
+    const onCount = (e: Event) => setBadgeCount((e as CustomEvent).detail || 0);
+    window.addEventListener("moyo-admin-badge-count", onCount as EventListener);
+    return () => window.removeEventListener("moyo-admin-badge-count", onCount as EventListener);
+  }, []);
+  return (
+    <div style={{ position: "relative", marginLeft: "auto", flexShrink: 0 }}>
+      <button
+        onClick={() => setOpen(v => !v)}
+        style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 34, height: 34, background: G.creme, border: `1.5px solid ${G.cremeDark}`, borderRadius: "50%", cursor: "pointer", color: G.brunLight }}
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      </button>
+      {badgeCount > 0 && (
+        <div style={{ position: "absolute", top: -3, right: -3, background: G.rouge, color: "#fff", borderRadius: 50, minWidth: 17, height: 17, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.6rem", fontWeight: 800, padding: "0 3px", border: `2px solid ${G.blanc}` }}>
+          {badgeCount > 99 ? "99+" : badgeCount}
+        </div>
+      )}
+      {open && (
+        <>
+          <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 499 }} />
+          <NotifBellPanel
+            onClose={() => setOpen(false)}
+            onNavigate={(tab) => { window.dispatchEvent(new CustomEvent("moyo-admin-navigate", { detail: tab })); setOpen(false); }}
+            auth={auth}
+            autoShortcuts={autoShortcuts}
+            onToggleAutoShortcut={onToggleAutoShortcut}
+          />
+        </>
+      )}
+    </div>
+  );
+}
+
 
 
 function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut, onSetAutoShortcut }: { auth: Auth; onBack: () => void; onBadgeCount?: (n: number) => void; autoShortcuts: Record<AutoShortcutKeyShared, boolean>; onToggleAutoShortcut: (key: AutoShortcutKeyShared) => void; onSetAutoShortcut: (key: AutoShortcutKeyShared, value: boolean) => void }) {
@@ -4131,7 +4384,6 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
 
   // ── Onglet actif ──
   const [activeTab, setActiveTab] = useState<"stats" | "users" | "reports" | "reviews" | "payments" | "logs" | "matches" | "messagerie" | "marketing" | "ambassadors" | "appointments" | "groupe">("stats");
-  const [showNotifBell, setShowNotifBell] = useState(false);
   const [reviewsSubTab, setReviewsSubTab] = useState<"avis" | "sondage">("avis");
   // ── SONDAGES ──
   const DEFAULT_SURVEY_QUESTIONS = [
@@ -9050,6 +9302,14 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
   const unreadReviewsCount = reviews.filter(r => !r.is_read).length;
   // ── Badge global = signalements en attente + avis non lus + paiements en attente + nouvelles demandes de mise en relation ──
   const adminBadgeCount = pendingCount + messagingPendingCount + unreadReviewsCount + pendingPaymentsCount + matchRequestsBadge + featurePendingCount + appointmentsPendingCount + groupPendingCount + ambassadorRequestsBadge + payoutRequestsBadge;
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent("moyo-admin-badge-count", { detail: adminBadgeCount }));
+  }, [adminBadgeCount]);
+  useEffect(() => {
+    const onNav = (e: Event) => setActiveTab((e as CustomEvent).detail);
+    window.addEventListener("moyo-admin-navigate", onNav as EventListener);
+    return () => window.removeEventListener("moyo-admin-navigate", onNav as EventListener);
+  }, []);
   const matchesBadgeCount = proposalsBadgeCount + matchRequestsBadge;
   // Sync badge vers App parent
   useEffect(() => { onBadgeCount?.(adminBadgeCount); }, [adminBadgeCount]);
@@ -10576,38 +10836,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
             <IcoGear />
             <span style={{ fontSize: "1.2rem", fontWeight: 800, color: G.brun }}>Admin Dashboard</span>
           </div>
-          <div style={{ position: "relative", marginLeft: "auto", flexShrink: 0 }}>
-            <button
-              onClick={() => setShowNotifBell(v => !v)}
-              style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 34, height: 34, background: G.creme, border: `1.5px solid ${G.cremeDark}`, borderRadius: "50%", cursor: "pointer", color: G.brunLight }}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-            </button>
-            {adminBadgeCount > 0 && (
-              <div style={{ position: "absolute", top: -3, right: -3, background: G.rouge, color: "#fff", borderRadius: 50, minWidth: 17, height: 17, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.6rem", fontWeight: 800, padding: "0 3px", border: `2px solid ${G.blanc}` }}>
-                {adminBadgeCount > 99 ? "99+" : adminBadgeCount}
-              </div>
-            )}
-            {showNotifBell && (
-              <>
-                <div onClick={() => setShowNotifBell(false)} style={{ position: "fixed", inset: 0, zIndex: 499 }} />
-                <NotifBellPanel onClose={() => setShowNotifBell(false)} onNavigate={(tab) => { setActiveTab(tab); setShowNotifBell(false); }} auth={auth} stats={stats} autoShortcuts={autoShortcuts} onToggleAutoShortcut={onToggleAutoShortcut}
-                  pendingItems={[
-                    { label: "Signalements", count: pendingCount, tab: "reports" },
-                    { label: "Messages Assistance", count: messagingPendingCount, tab: "messagerie" },
-                    { label: "Avis non lus", count: unreadReviewsCount, tab: "reviews" },
-                    { label: "Paiements à vérifier", count: pendingPaymentsCount, tab: "payments" },
-                    { label: "Mises en avant à traiter", count: featurePendingCount, tab: "marketing" },
-                    { label: "Rendez-vous à confirmer", count: appointmentsPendingCount, tab: "appointments" },
-                    { label: "Demandes Groupe Premium", count: groupPendingCount, tab: "groupe" },
-                    { label: "Mises en relation", count: matchRequestsBadge, tab: "matches" },
-                    { label: "Demandes Ambassadeur", count: ambassadorRequestsBadge, tab: "ambassadors" },
-                    { label: "Versements Ambassadeur", count: payoutRequestsBadge, tab: "ambassadors" },
-                  ]}
-                />
-              </>
-            )}
-          </div>
+          <NotifBellButton auth={auth} autoShortcuts={autoShortcuts} onToggleAutoShortcut={onToggleAutoShortcut} />
           <button
             data-admhelp=""
             onClick={() => setShowHelp(true)}
