@@ -10424,36 +10424,26 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
   // ── Voir le numéro d'un match : gratuit → mur Premium direct (aucun état local nécessaire).
   //    Premium → on va chercher le profil à jour (phone + consentement), puisque `open.partner`
   //    peut être une version mise en cache qui ne reflète pas un changement récent de réglage. ──
-  const [phoneReveal, setPhoneReveal] = useState<{ name: string; status: "loading" | "revealed" | "unavailable"; number?: string } | null>(null);
-  const openPhoneReveal = (partner?: Profile | null) => {
+  // ── Tiroir unique "Numéro + Réseaux sociaux" — un seul déclencheur (icône téléphone ou entrée
+  //    du menu ⋮), toujours réservé Premium comme l'était la révélation du numéro seul. Chaque
+  //    bloc (numéro / réseaux) dépend indépendamment du réglage de visibilité de l'autre membre. ──
+  const [contactReveal, setContactReveal] = useState<{ name: string; status: "loading" | "revealed"; phone: string | null; nets: { net: SocialNet; label: string; value: string }[] } | null>(null);
+  const openContactReveal = (partner?: Profile | null) => {
     if (!partner) return;
-    if (!auth.isPremium) { onShowPremium(`Passe Premium pour voir le numéro de ${partner.name}`); return; }
-    setPhoneReveal({ name: partner.name, status: "loading" });
-    sb.query<{ phone: string | null; share_phone_with_matches?: boolean }>(auth.token, "profiles", `?id=eq.${partner.id}&select=phone,share_phone_with_matches`)
+    if (!auth.isPremium) { onShowPremium(`Passe Premium pour voir les coordonnées de ${partner.name}`); return; }
+    setContactReveal({ name: partner.name, status: "loading", phone: null, nets: [] });
+    sb.query<{ phone: string | null; share_phone_with_matches?: boolean; soc_facebook: string | null; soc_tiktok: string | null; soc_instagram: string | null; soc_snapchat: string | null; share_socials_with_matches?: boolean }>(
+      auth.token, "profiles", `?id=eq.${partner.id}&select=phone,share_phone_with_matches,soc_facebook,soc_tiktok,soc_instagram,soc_snapchat,share_socials_with_matches`
+    )
       .then(res => {
         const p = res?.[0];
-        if (p?.share_phone_with_matches && p.phone) setPhoneReveal({ name: partner.name, status: "revealed", number: p.phone });
-        else setPhoneReveal({ name: partner.name, status: "unavailable" });
+        const phone = (p?.share_phone_with_matches && p.phone) ? p.phone : null;
+        const nets = (FEATURE_SOCIALS && p?.share_socials_with_matches)
+          ? SOCIAL_LIST.map(s => ({ net: s.net, label: s.label, value: (p as any)[s.key] as string | null })).filter(n => n.value) as { net: SocialNet; label: string; value: string }[]
+          : [];
+        setContactReveal({ name: partner.name, status: "revealed", phone, nets });
       })
-      .catch(() => setPhoneReveal({ name: partner.name, status: "unavailable" }));
-  };
-  // ── Révélation des réseaux sociaux d'un match — même principe que le numéro (carte séparée,
-  //    dépend du réglage de visibilité de l'autre), dans son propre modal indépendant. ──
-  const [socialsReveal, setSocialsReveal] = useState<{ name: string; status: "loading" | "revealed" | "unavailable"; nets?: { net: SocialNet; label: string; value: string }[] } | null>(null);
-  const openSocialsReveal = (partner?: Profile | null) => {
-    if (!partner) return;
-    setSocialsReveal({ name: partner.name, status: "loading" });
-    sb.query<{ soc_facebook: string | null; soc_tiktok: string | null; soc_instagram: string | null; soc_snapchat: string | null; share_socials_with_matches?: boolean }>(auth.token, "profiles", `?id=eq.${partner.id}&select=soc_facebook,soc_tiktok,soc_instagram,soc_snapchat,share_socials_with_matches`)
-      .then(res => {
-        const p = res?.[0];
-        if (!p?.share_socials_with_matches) { setSocialsReveal({ name: partner.name, status: "unavailable" }); return; }
-        const nets = SOCIAL_LIST
-          .map(s => ({ net: s.net, label: s.label, value: (p as any)[s.key] as string | null }))
-          .filter(n => n.value) as { net: SocialNet; label: string; value: string }[];
-        if (nets.length === 0) { setSocialsReveal({ name: partner.name, status: "unavailable" }); return; }
-        setSocialsReveal({ name: partner.name, status: "revealed", nets });
-      })
-      .catch(() => setSocialsReveal({ name: partner.name, status: "unavailable" }));
+      .catch(() => setContactReveal({ name: partner.name, status: "revealed", phone: null, nets: [] }));
   };
   const [imgLoading, setImgLoading] = useState(false);
   const [previewImg, setPreviewImg] = useState<string | null>(null);
@@ -12751,7 +12741,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
             Premium → révèle le numéro si le match l'a autorisé et l'a renseigné, sinon message
             clair expliquant pourquoi ce n'est pas possible. */}
         {open.partner?.id !== SUPPORT_TEAM_ID && (
-          <div onClick={() => openPhoneReveal(open.partner)} title="Voir le numéro" style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(39,174,96,0.12)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+          <div onClick={() => openContactReveal(open.partner)} title="Voir le numéro" style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(39,174,96,0.12)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a8a4a" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.53a16 16 0 0 0 6.06 6.06l1.09-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
           </div>
         )}
@@ -13750,65 +13740,60 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
           </div>
         </div>
       )}
-      {phoneReveal && (
-        <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 400, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }} onClick={() => setPhoneReveal(null)}>
-          <div className="moyo-card-in" onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 300, textAlign: "center", boxShadow: "0 20px 60px rgba(44,26,14,0.2)" }}>
-            {phoneReveal.status === "loading" ? (
-              <div style={{ padding: "16px 0", color: "#999", fontSize: "0.86rem" }}>Chargement…</div>
-            ) : phoneReveal.status === "revealed" ? (
-              <>
-                <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(39,174,96,0.12)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a8a4a" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.53a16 16 0 0 0 6.06 6.06l1.09-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" /></svg>
-                </div>
-                <div style={{ fontSize: "0.78rem", color: "#999", marginBottom: 4 }}>Numéro de {phoneReveal.name}</div>
-                <div style={{ fontSize: "1.15rem", fontWeight: 800, color: G.brun, fontFamily: "monospace", marginBottom: 18 }}>{phoneReveal.number}</div>
-                <Btn variant="ghost" onClick={() => setPhoneReveal(null)} style={{ width: "100%" }}>Fermer</Btn>
-              </>
-            ) : (
-              <>
-                <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(180,60,60,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
-                </div>
-                <h3 style={{ fontSize: "1rem", fontWeight: 700, marginBottom: 8, color: G.brun }}>Numéro non disponible</h3>
-                <p style={{ fontSize: "0.84rem", color: "#666", marginBottom: 18, lineHeight: 1.6 }}>{phoneReveal.name} n'a pas encore renseigné de numéro, ou n'a pas autorisé ses matchs à le voir.</p>
-                <Btn variant="ghost" onClick={() => setPhoneReveal(null)} style={{ width: "100%" }}>Fermer</Btn>
-              </>
-            )}
-          </div>
-        </div>
-      )}
+      {contactReveal && (
+        <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 400, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={() => setContactReveal(null)}>
+          <div className="moyo-sheet-in" onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 500, maxHeight: "80vh", overflowY: "auto", paddingBottom: "calc(env(safe-area-inset-bottom) + 20px)" }}>
+            <div style={{ display: "flex", justifyContent: "center", paddingTop: 10, paddingBottom: 4 }}>
+              <div style={{ width: 36, height: 4, background: G.gris, borderRadius: 50 }} />
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "0 20px 16px", borderBottom: "1px solid #F5F5F5", marginBottom: 16 }}>
+              <Avatar url={open.partner?.photo_url} gender={open.partner?.gender} size={40} premium={open.partner?.is_premium} />
+              <div style={{ fontWeight: 800, fontSize: "0.98rem", color: G.brun, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{contactReveal.name}</div>
+              <div onClick={() => setContactReveal(null)} style={{ width: 30, height: 30, borderRadius: "50%", background: G.creme, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+              </div>
+            </div>
 
-      {socialsReveal && (
-        <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 400, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }} onClick={() => setSocialsReveal(null)}>
-          <div className="moyo-card-in" onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 300, textAlign: "center", boxShadow: "0 20px 60px rgba(44,26,14,0.2)" }}>
-            {socialsReveal.status === "loading" ? (
-              <div style={{ padding: "16px 0", color: "#999", fontSize: "0.86rem" }}>Chargement…</div>
-            ) : socialsReveal.status === "revealed" ? (
-              <>
-                <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(102,102,102,0.14)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-                </div>
-                <div style={{ fontSize: "0.78rem", color: "#999", marginBottom: 16 }}>Réseaux sociaux de {socialsReveal.name}</div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 18 }}>
-                  {socialsReveal.nets?.map(n => (
-                    <a key={n.net} href={buildSocialUrl(n.net, n.value)} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", border: `1px solid ${G.gris}`, borderRadius: 12, textDecoration: "none" }}>
-                      <div style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(102,102,102,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><SocialIcon net={n.net} size={16} /></div>
-                      <span style={{ flex: 1, textAlign: "left", fontSize: "0.85rem", color: "#333", fontWeight: 600 }}>{n.label}</span>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-                    </a>
-                  ))}
-                </div>
-                <Btn variant="ghost" onClick={() => setSocialsReveal(null)} style={{ width: "100%" }}>Fermer</Btn>
-              </>
+            {contactReveal.status === "loading" ? (
+              <div style={{ padding: "16px 20px 24px", textAlign: "center", color: "#999", fontSize: "0.86rem" }}>Chargement…</div>
             ) : (
-              <>
-                <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(180,60,60,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
+              <div style={{ padding: "0 20px 4px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+                  <div style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(39,174,96,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a8a4a" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.53a16 16 0 0 0 6.06 6.06l1.09-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" /></svg>
+                  </div>
+                  <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "#555" }}>Numéro de téléphone</span>
                 </div>
-                <h3 style={{ fontSize: "1rem", fontWeight: 700, marginBottom: 8, color: G.brun }}>Réseaux non disponibles</h3>
-                <p style={{ fontSize: "0.84rem", color: "#666", marginBottom: 18, lineHeight: 1.6 }}>{socialsReveal.name} n'a pas encore renseigné de réseaux, ou n'a pas autorisé ses matchs à les voir.</p>
-                <Btn variant="ghost" onClick={() => setSocialsReveal(null)} style={{ width: "100%" }}>Fermer</Btn>
-              </>
+                {contactReveal.phone ? (
+                  <div style={{ background: G.creme, borderRadius: 12, padding: "12px 14px", marginBottom: 22, fontSize: "0.95rem", fontWeight: 800, color: G.brun, fontFamily: "monospace", textAlign: "center" }}>{contactReveal.phone}</div>
+                ) : (
+                  <div style={{ fontSize: "0.8rem", color: "#999", marginBottom: 22, lineHeight: 1.5 }}>{contactReveal.name} n'a pas encore renseigné de numéro, ou n'a pas autorisé ses matchs à le voir.</div>
+                )}
+
+                {FEATURE_SOCIALS && (
+                  <>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+                      <div style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(102,102,102,0.14)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                      </div>
+                      <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "#555" }}>Réseaux sociaux</span>
+                    </div>
+                    {contactReveal.nets.length > 0 ? (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                        {contactReveal.nets.map(n => (
+                          <a key={n.net} href={buildSocialUrl(n.net, n.value)} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", border: `1px solid ${G.gris}`, borderRadius: 12, textDecoration: "none" }}>
+                            <div style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(102,102,102,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><SocialIcon net={n.net} size={16} /></div>
+                            <span style={{ flex: 1, textAlign: "left", fontSize: "0.85rem", color: "#333", fontWeight: 600 }}>{n.label}</span>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                          </a>
+                        ))}
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: "0.8rem", color: "#999", lineHeight: 1.5 }}>{contactReveal.name} n'a pas encore renseigné de réseaux, ou n'a pas autorisé ses matchs à les voir.</div>
+                    )}
+                  </>
+                )}
+              </div>
             )}
           </div>
         </div>
@@ -13837,20 +13822,12 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
               </div>
             </div>
             <div style={{ padding: "8px 0 8px" }}>
-              <div onPointerDown={() => { setConvMenuOpen(false); setTimeout(() => openPhoneReveal(open.partner), 50); }} style={{ padding: "15px 20px", display: "flex", alignItems: "center", gap: 14, cursor: "pointer", borderBottom: "1px solid #F8F8F8", WebkitTapHighlightColor: "transparent" }}>
+              <div onPointerDown={() => { setConvMenuOpen(false); setTimeout(() => openContactReveal(open.partner), 50); }} style={{ padding: "15px 20px", display: "flex", alignItems: "center", gap: 14, cursor: "pointer", borderBottom: "1px solid #F8F8F8", WebkitTapHighlightColor: "transparent" }}>
                 <div style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(39,174,96,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                   <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#1a8a4a" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.53a16 16 0 0 0 6.06 6.06l1.09-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" /></svg>
                 </div>
-                <div style={{ fontWeight: 700, fontSize: "0.93rem", color: G.brun, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, minWidth: 0 }}>Voir le numéro de téléphone de {open.partner.name}</div>
+                <div style={{ fontWeight: 700, fontSize: "0.93rem", color: G.brun, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, minWidth: 0 }}>{FEATURE_SOCIALS ? `Voir le numéro et les réseaux de ${open.partner.name}` : `Voir le numéro de téléphone de ${open.partner.name}`}</div>
               </div>
-              {FEATURE_SOCIALS && (
-                <div onPointerDown={() => { setConvMenuOpen(false); setTimeout(() => openSocialsReveal(open.partner), 50); }} style={{ padding: "15px 20px", display: "flex", alignItems: "center", gap: 14, cursor: "pointer", borderBottom: "1px solid #F8F8F8", WebkitTapHighlightColor: "transparent" }}>
-                  <div style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(102,102,102,0.14)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-                  </div>
-                  <div style={{ fontWeight: 700, fontSize: "0.93rem", color: G.brun, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, minWidth: 0 }}>Voir les réseaux sociaux de {open.partner.name}</div>
-                </div>
-              )}
               {FEATURE_GIFT_PREMIUM && auth.isPremium && !open.partner.is_premium && (
                 <div onPointerDown={() => { setConvMenuOpen(false); setTimeout(() => open.partner && onShowGiftPremium?.({ id: open.partner.id, name: open.partner.name }), 50); }} style={{ padding: "15px 20px", display: "flex", alignItems: "center", gap: 14, cursor: "pointer", borderBottom: "1px solid #F8F8F8", WebkitTapHighlightColor: "transparent" }}>
                   <div style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(212,168,67,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -17281,7 +17258,7 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
             résumé, formulaire d'édition à 4 champs optionnels, réglage de visibilité séparé.
             Coupe-circuit admin : disparaît entièrement si FEATURE_SOCIALS est désactivé. */}
         {FEATURE_SOCIALS && (!isWideProfile || activeSection === "main") && (
-          <div style={{ background: G.blanc, borderRadius: 18, border: "1.5px solid rgba(102,102,102,0.18)", overflow: "hidden", marginTop: 12, boxShadow: "0 2px 10px rgba(0,0,0,0.06)" }}>
+          <div style={{ background: G.blanc, borderRadius: 18, border: "1.5px solid rgba(102,102,102,0.18)", overflow: "hidden", marginTop: 0, boxShadow: "0 2px 10px rgba(0,0,0,0.06)" }}>
             {editingSocialsCard ? (
               <div style={{ padding: "15px 18px" }}>
                 <div style={{ fontWeight: 700, fontSize: "0.95rem", color: G.brun, marginBottom: 12 }}>Mes réseaux sociaux</div>
