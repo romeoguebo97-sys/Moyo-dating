@@ -1081,16 +1081,6 @@ function AppointmentsButton({ auth, onShowPremium }: { auth: any; onShowPremium:
       const r = await fetch(`${SUPABASE_URL}/rest/v1/appointments`, { method: "POST", headers: { "Content-Type": "application/json", apikey: SUPABASE_KEY, Authorization: `Bearer ${auth.token}`, Prefer: "return=representation" }, body: JSON.stringify({ user_id: auth.userId, type, topic: topic.trim(), phone: phone.trim(), preferred_slots: slots.filter(s => s.date && s.hour).map(s => new Date(`${s.date}T${s.hour}:${s.minute || "00"}:00`).toISOString()), message: message.trim(), status: "en_attente", ...extra }) });
       const body = await r.json().catch(() => null); const row = Array.isArray(body) ? body[0] : body;
       if (!r.ok || !row?.id) { setErr(row?.message || "Échec de l'envoi. Votre demande n'a pas été enregistrée."); return null; }
-      // Prévient les admins ayant activé « 🗓️ Rendez-vous » dans Équipe & Alertes. Best-effort :
-      // une erreur ici ne bloque jamais la création du rendez-vous côté membre.
-      (async () => {
-        try {
-          const H = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` };
-          const prefsRes = await fetch(`${SUPABASE_URL}/rest/v1/admin_notif_prefs?rendez_vous=eq.true&select=admin_id`, { headers: H }).then(r2 => r2.json()).catch(() => []);
-          const adminIds: string[] = (Array.isArray(prefsRes) ? prefsRes : []).map((p: any) => p.admin_id).filter(Boolean);
-          await Promise.all(adminIds.map(id => fetch(`${SUPABASE_URL}/functions/v1/push-notify`, { method: "POST", headers: { "Content-Type": "application/json", ...H }, body: JSON.stringify({ mode: "user_push", user_id: id, title: "🗓️ Nouvelle demande de rendez-vous", body: `${auth.name || "Un membre"} souhaite prendre rendez-vous.` }) }).catch(() => {})));
-        } catch {}
-      })();
       return row;
     } catch (e: any) { setErr("Échec : " + (e?.message || "réseau")); return null; }
   };
@@ -6128,7 +6118,7 @@ function NotifBell({ auth, setTab }: { auth: Auth; setTab: (t: string) => void }
       setTab("profile");
     } else if (i.type === "feature_accepted" || i.nav_tab === "statuses") {
       setTab("messages");
-      setTimeout(() => window.dispatchEvent(new CustomEvent("moyo-open-my-status")), 400);
+      try { sessionStorage.setItem("moyo_open_feature_status", "1"); } catch {}
     } else {
       setTab(i.nav_tab === "messages" || i.nav_tab === "matches" ? i.nav_tab : "profile");
     }
@@ -12420,21 +12410,22 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
     return () => window.removeEventListener("moyo-open-status-sheet", handler);
   }, [statusGroups, myStatuses.length]);
 
-  // Écoute la demande d'ouverture directe du statut de mise en avant (venant de la notification
-  // « Mise en avant validée » dans la cloche). La mise en avant est publiée sous le compte
-  // officiel Moyo Dating (feature_user_id = moi), pas dans mes statuts personnels — on la
-  // retrouve dans ce groupe puis on ouvre le visualiseur directement dessus.
+  // Ouvre directement le statut de mise en avant si la notification « Mise en avant validée »
+  // a demandé cette redirection (drapeau posé par la cloche dans App). On attend que
+  // statusGroups soit réellement chargé (il est vide au montage, le temps que loadStatuses
+  // réponde) avant de chercher et d'ouvrir la bonne carte — un délai fixe arrivait trop tôt
+  // et n'ouvrait rien, laissant l'utilisateur simplement sur l'onglet Messagerie.
   useEffect(() => {
-    const handler = () => {
-      const officialGroup = statusGroups.find(g => g.userId === "moyo-official");
-      if (!officialGroup) return;
-      const raw = officialGroup.items.filter(st => !!st.image_url);
-      const idx = raw.findIndex(st => st.is_feature && st.feature_user_id === auth.userId);
-      if (idx === -1) return;
-      openStatusViewer(raw, idx);
-    };
-    window.addEventListener("moyo-open-my-status", handler);
-    return () => window.removeEventListener("moyo-open-my-status", handler);
+    let flag: string | null = null;
+    try { flag = sessionStorage.getItem("moyo_open_feature_status"); } catch {}
+    if (flag !== "1" || statusGroups.length === 0) return;
+    try { sessionStorage.removeItem("moyo_open_feature_status"); } catch {}
+    const officialGroup = statusGroups.find(g => g.userId === "moyo-official");
+    if (!officialGroup) return;
+    const raw = officialGroup.items.filter(st => !!st.image_url);
+    const idx = raw.findIndex(st => st.is_feature && st.feature_user_id === auth.userId);
+    if (idx === -1) return;
+    openStatusViewer(raw, idx);
   }, [statusGroups, auth.userId]);
 
   // ── Bandeau (statuts + onglets) en position:fixed sur mobile — jamais affecté par un scroll,
@@ -15397,19 +15388,7 @@ function FeatureRequestButton({ auth }: { auth: Auth }) {
       const profs = await sb.query<{ gender: string }>(auth.token, "profiles", `?id=eq.${auth.userId}&select=gender&limit=1`).catch(() => [] as { gender: string }[]);
       const gender = profs?.[0]?.gender || "";
       const res = await sb.insert<{ id?: string }>(auth.token, "feature_requests", { user_id: auth.userId, gender, status: "en_attente" });
-      if (Array.isArray(res) && res[0] && res[0].id) {
-        setSent(true);
-        // Prévient les admins ayant activé « ⭐ Mise en avant » dans Équipe & Alertes. Best-effort :
-        // une erreur ici ne bloque jamais la demande côté membre.
-        (async () => {
-          try {
-            const H = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` };
-            const prefsRes = await fetch(`${SUPABASE_URL}/rest/v1/admin_notif_prefs?mise_en_avant=eq.true&select=admin_id`, { headers: H }).then(r2 => r2.json()).catch(() => []);
-            const adminIds: string[] = (Array.isArray(prefsRes) ? prefsRes : []).map((p: any) => p.admin_id).filter(Boolean);
-            await Promise.all(adminIds.map(id => fetch(`${SUPABASE_URL}/functions/v1/push-notify`, { method: "POST", headers: { "Content-Type": "application/json", ...H }, body: JSON.stringify({ mode: "user_push", user_id: id, title: "⭐ Nouvelle demande de mise en avant", body: `${auth.name || "Un membre"} souhaite passer sur les Statuts Moyo.` }) }).catch(() => {})));
-          } catch {}
-        })();
-      }
+      if (Array.isArray(res) && res[0] && res[0].id) { setSent(true); }
       else { setErrorModal("Impossible d'envoyer la demande pour le moment. Réessayez plus tard."); }
     } catch {
       setErrorModal("Impossible d'envoyer la demande pour le moment. Réessayez plus tard.");
