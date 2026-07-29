@@ -413,6 +413,9 @@ let PREMIUM_SCREEN_VARIANT: "a" | "b" = "a";
 export function setPREMIUM_SCREEN_VARIANT(v: any) { PREMIUM_SCREEN_VARIANT = v === "b" ? "b" : "a"; }
 let FEATURE_GROUP_PREMIUM = true;
 let FEATURE_SOCIALS = true;
+// Abonnement obligatoire à l'inscription : désactivé par défaut, le parcours actuel (inscription
+// gratuite, upgrade Premium plus tard si souhaité) reste inchangé tant que ce n'est pas activé.
+export let REQUIRE_SIGNUP_PAYMENT = false;
 let FEATURE_AMBASSADOR_PROGRAM = true;
 let FEATURE_GROUP_PHOTOS = true;
 let FEATURE_PHOTO_RETOUCH = true;
@@ -508,7 +511,7 @@ export function dedupeMatchesByCouple<T extends { user1?: string; user2?: string
 }
 
 // Charger les settings dynamiques depuis Supabase au démarrage
-fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_messages_free_femme,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,pay_wero_enabled,pay_paypal_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,feature_show_likes_views_free,feature_group_premium,feature_socials,feature_group_photos,feature_photo_retouch,feature_moderation_insults,feature_moderation_contact,premium_screen_variant,custom_banned_words,contact_banned_words,disabled_builtin_words,disabled_builtin_contact_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,pay_wero_number,pay_paypal_number,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,social_linkedin,store_link_android,store_link_ios,plan_week_enabled,plan_month_enabled,plan_2month_enabled,discover_default_mode,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,auto_warn_ban_contact_enabled,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price,privacy_notice_enabled,premium_boost_enabled,assistant_photo_url,broadcast_enabled,modal_match_title,modal_match_subtitle,referral_bonus_week_days,referral_bonus_month_days,referral_bonus_2month_days,affiliate_commission_percent,affiliate_payable_delay_days,privacy_notice_step1_text,privacy_notice_step2_text,ban_screen_text,pay_link_enabled,feature_ambassador_program,affiliate_payout_min_fcfa,affiliate_promo_bonus_days,support_reply_push_enabled,ambassador_resources_link)&select=key,value`, {
+fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_messages_free_femme,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,pay_wero_enabled,pay_paypal_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,feature_show_likes_views_free,feature_group_premium,feature_socials,require_signup_payment,feature_group_photos,feature_photo_retouch,feature_moderation_insults,feature_moderation_contact,premium_screen_variant,custom_banned_words,contact_banned_words,disabled_builtin_words,disabled_builtin_contact_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,pay_wero_number,pay_paypal_number,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,social_linkedin,store_link_android,store_link_ios,plan_week_enabled,plan_month_enabled,plan_2month_enabled,discover_default_mode,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,auto_warn_ban_contact_enabled,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price,privacy_notice_enabled,premium_boost_enabled,assistant_photo_url,broadcast_enabled,modal_match_title,modal_match_subtitle,referral_bonus_week_days,referral_bonus_month_days,referral_bonus_2month_days,affiliate_commission_percent,affiliate_payable_delay_days,privacy_notice_step1_text,privacy_notice_step2_text,ban_screen_text,pay_link_enabled,feature_ambassador_program,affiliate_payout_min_fcfa,affiliate_promo_bonus_days,support_reply_push_enabled,ambassador_resources_link)&select=key,value`, {
   headers: { "apikey": SUPABASE_KEY },
 }).then(r => r.json()).then((data: { key: string; value: string }[]) => {
   if (!Array.isArray(data)) return;
@@ -524,6 +527,7 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
   if (map["feature_gift_premium"] !== undefined) FEATURE_GIFT_PREMIUM = map["feature_gift_premium"] !== "false";
   if (map["feature_group_premium"] !== undefined) FEATURE_GROUP_PREMIUM = map["feature_group_premium"] !== "false";
   if (map["feature_socials"] !== undefined) FEATURE_SOCIALS = map["feature_socials"] !== "false";
+  if (map["require_signup_payment"] !== undefined) REQUIRE_SIGNUP_PAYMENT = map["require_signup_payment"] === "true";
   if (map["feature_ambassador_program"] !== undefined) FEATURE_AMBASSADOR_PROGRAM = map["feature_ambassador_program"] !== "false";
   if (map["feature_photo_retouch"] !== undefined) FEATURE_PHOTO_RETOUCH = map["feature_photo_retouch"] !== "false";
   if (map["feature_group_photos"] !== undefined) FEATURE_GROUP_PHOTOS = map["feature_group_photos"] !== "false";
@@ -840,7 +844,7 @@ export type Auth = {
   refreshToken?: string;
   expiresAt?: number;
 };
-export type Profile = { id: string; name: string; age: number; city: string; gender: string; bio: string; religion?: string; profession?: string; hobbies?: string; phone?: string | null; photo_url?: string | null; is_premium: boolean; is_admin?: boolean; is_visible?: boolean; is_verified?: boolean; is_certified?: boolean; last_seen?: string; hide_online_status?: boolean; warning_count?: number; is_banned?: boolean; ban_until?: string | null; ban_reason?: string | null; last_notice_acknowledged?: boolean; last_notice_at?: string | null; has_installed_pwa?: boolean; account_deleted?: boolean; share_phone_with_matches?: boolean; soc_facebook?: string | null; soc_tiktok?: string | null; soc_instagram?: string | null; soc_snapchat?: string | null; share_socials_with_matches?: boolean };
+export type Profile = { id: string; name: string; age: number; city: string; gender: string; bio: string; religion?: string; profession?: string; hobbies?: string; phone?: string | null; photo_url?: string | null; is_premium: boolean; is_admin?: boolean; is_visible?: boolean; is_verified?: boolean; is_certified?: boolean; last_seen?: string; hide_online_status?: boolean; warning_count?: number; is_banned?: boolean; ban_until?: string | null; ban_reason?: string | null; last_notice_acknowledged?: boolean; last_notice_at?: string | null; has_installed_pwa?: boolean; account_deleted?: boolean; share_phone_with_matches?: boolean; soc_facebook?: string | null; soc_tiktok?: string | null; soc_instagram?: string | null; soc_snapchat?: string | null; share_socials_with_matches?: boolean; signup_payment_required?: boolean };
 export type Match = { id: string; user1: string; user2: string; partner?: Profile; lastMsg?: Message; unreadCount?: number; created_at?: string };
 export type Message = { id?: string; match_id: string; sender_id: string; content: string; is_read: boolean; is_delivered?: boolean; is_edited?: boolean; created_at?: string; reactions?: Record<string, string[]>; is_view_once?: boolean; viewed_at?: string | null; is_destroyed?: boolean; destroyed_at?: string | null };
 // Ciblage des diffusions générales : décide si une diffusion (target) concerne un utilisateur donné.
@@ -3283,6 +3287,37 @@ function PremiumModal({ onClose, reason, userId, token, userEmail, giftFor, prom
   );
 }
 
+// ── Écran d'abonnement obligatoire à l'inscription — réutilise PremiumModal tel quel (mêmes
+//    formules, mêmes moyens de paiement), juste en plein écran sans sortie possible (onClose est
+//    un no-op : les croix/boutons "retour" à l'intérieur de PremiumModal ne font rien tant que le
+//    paiement n'est pas confirmé). Vérifie périodiquement si le compte est devenu Premium ; dès que
+//    c'est le cas, déconnecte et renvoie vers l'écran de connexion (jamais directement dans l'app,
+//    cohérent avec la fin normale de l'inscription). ──
+function ForcedSubscriptionGate({ auth, onUnlocked }: { auth: Auth; onUnlocked: () => void }) {
+  useEffect(() => {
+    const check = async () => {
+      try {
+        const rows = await sb.query<{ is_premium: boolean }>(auth.token, "profiles", `?id=eq.${auth.userId}&select=is_premium`);
+        if (rows?.[0]?.is_premium) onUnlocked();
+      } catch {}
+    };
+    const iv = setInterval(check, 8000);
+    return () => clearInterval(iv);
+  }, [auth.userId, auth.token]);
+
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 5000, background: G.blanc, overflowY: "auto" }}>
+      <PremiumModal
+        onClose={() => {}}
+        reason="Active ton abonnement pour accéder à Moyo Dating"
+        userId={auth.userId}
+        token={auth.token}
+        userEmail={auth.email}
+      />
+    </div>
+  );
+}
+
 function ResetPassword({ onNav }: { onNav: (p: string) => void }) {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -5173,7 +5208,7 @@ function Login({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth
   return <AuthLayout onBack={() => onNav("landing")} title="Bon retour !" subtitle="Retrouve tes matchs"><ErrorModal msg={errorMsg} onClose={() => setErrorMsg("")} />{toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}<Input label="Email" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="ton@email.com" icon="email" variant="line" /><Input label="Mot de passe" type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="••••••••" icon="lock" variant="line" /><div style={{ textAlign: "right", marginBottom: 20, marginTop: 14 }}><span onClick={() => setShowForgot(true)} style={{ fontSize: "0.82rem", color: G.rouge, cursor: "pointer", fontWeight: 500 }}>Mot de passe oublié ?</span></div><Btn variant="authPrimary" onClick={handleLogin} loading={loading} style={{ width: "100%" }} disabled={!form.email || !form.password}>Se connecter →</Btn><p style={{ textAlign: "center", marginTop: 20, fontSize: "0.85rem", color: "#555" }}>Pas encore de compte ? <span style={{ color: G.rouge, cursor: "pointer", fontWeight: 600 }} onClick={() => onNav("signup")}>S'inscrire</span></p></AuthLayout>;
 }
 
-function SignUp({ onNav }: { onNav: (p: string) => void }) {
+function SignUp({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth) => void }) {
   const isWideScreen = typeof window !== "undefined" && window.innerWidth >= 768;
   // Reprendre l'inscription si redirigé depuis la connexion avec un profil incomplet
   const resumeToken = sessionStorage.getItem("moyo_signup_token");
@@ -5428,6 +5463,7 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
           photo_url: photoUrl,
           is_complete: true,
           privacy_notice_seen: false,
+          signup_payment_required: REQUIRE_SIGNUP_PAYMENT,
           ...((() => { const ref = new URLSearchParams(window.location.search).get("ref"); return ref ? { referred_by: ref } : {}; })()),
         }),
       });
@@ -5440,9 +5476,34 @@ function SignUp({ onNav }: { onNav: (p: string) => void }) {
         });
       } catch {}
       setLoading(false);
-      setSuccessMsg("Compte créé !");
       sessionStorage.removeItem("moyo_signup_token");
       sessionStorage.removeItem("moyo_signup_uid");
+      if (REQUIRE_SIGNUP_PAYMENT) {
+        // Le compte est créé mais doit d'abord activer son abonnement. On connecte directement
+        // (session complète, avec refresh token) au lieu de renvoyer vers l'écran de connexion —
+        // le portail applicatif détecte signup_payment_required et affiche automatiquement
+        // l'écran d'abonnement obligatoire à la place de l'app, jusqu'au paiement.
+        try {
+          const fresh = await sb.signIn((form.email || "").trim(), form.password);
+          if (fresh?.access_token && fresh?.user?.id) {
+            onAuth({
+              token: fresh.access_token,
+              userId: fresh.user.id,
+              name: form.name.trim(),
+              email: fresh.user.email || (form.email || "").trim(),
+              photoUrl: photoUrl || null,
+              isPremium: false,
+              isAdmin: false,
+              refreshToken: fresh.refresh_token || undefined,
+              expiresAt: fresh.expires_in ? Date.now() + fresh.expires_in * 1000 : undefined,
+            });
+            return;
+          }
+        } catch {}
+        // Filet de sécurité si la reconnexion silencieuse échoue : l'écran de connexion classique
+        // affichera de toute façon l'écran d'abonnement juste après une connexion manuelle.
+      }
+      setSuccessMsg("Compte créé !");
       setTimeout(() => { onNav("login"); }, 2000);
     } catch {
       setErrorMsg("Erreur technique. Veuillez réessayer.");
@@ -18839,6 +18900,31 @@ export default function App() {
     //  pour couvrir aussi les sessions restaurées et pas seulement le login.)
   };
 
+  // ── Abonnement obligatoire à l'inscription : bloque l'accès à l'app (pas juste un écran qui
+  //    passe par-dessus) tant que le compte a signup_payment_required=true et n'est pas encore
+  //    Premium. null = vérification en cours (on ne montre rien tant qu'on ne sait pas, pour
+  //    éviter un flash de l'app avant blocage). Se base uniquement sur le drapeau déjà posé sur
+  //    CE compte à son inscription — pas sur la position actuelle du toggle, qui ne détermine que
+  //    les nouvelles inscriptions à venir. ──
+  const [pendingSignupPayment, setPendingSignupPayment] = useState<boolean | null>(null);
+  useEffect(() => {
+    if (!auth?.userId) { setPendingSignupPayment(null); return; }
+    fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${auth.userId}&select=signup_payment_required,is_premium`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } })
+      .then(r => r.ok ? r.json() : [])
+      .then((d: any) => {
+        const p = Array.isArray(d) ? d[0] : null;
+        setPendingSignupPayment(!!(p?.signup_payment_required && !p?.is_premium));
+      })
+      .catch(() => setPendingSignupPayment(false));
+  }, [auth?.userId]);
+  const unlockAfterSignupPayment = () => {
+    try { localStorage.removeItem("moyo_session"); } catch {}
+    authRef.current = null;
+    setAuth(null);
+    setPendingSignupPayment(null);
+    setPage("login");
+  };
+
   // ── Notice de confidentialité : affichée UNE SEULE FOIS aux nouveaux comptes (jamais aux anciens),
   //    via une vraie colonne en base (privacy_notice_seen) — fiable même en changeant d'appareil,
   //    contrairement à un simple stockage local qui ne fait pas la différence "ancien"/"nouveau" compte.
@@ -19615,10 +19701,15 @@ export default function App() {
   }
   if (page === "landing") return <>{<Landing onNav={setPage} />}{InstallBanner}</>;
   if (page === "about") return <About onBack={() => setPage("landing")} />;
-  if (page === "signup") return <SignUp onNav={setPage} />;
+  if (page === "signup") return <SignUp onNav={setPage} onAuth={handleAuth} />;
   if (page === "login") return <Login onNav={setPage} onAuth={handleAuth} />;
   if (page === "reset-password") return <ResetPassword onNav={setPage} />;
   if (!auth) return <Landing onNav={setPage} />;
+  // ── Abonnement obligatoire à l'inscription : bloque tout accès à l'app tant que ce n'est pas
+  //    payé. pendingSignupPayment === null = vérification en cours, on ne montre rien encore
+  //    (le spinner) pour ne jamais laisser passer un flash de l'app avant blocage. ──
+  if (pendingSignupPayment === null) return <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: G.blanc }}><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "pulse 1s ease-in-out infinite" }}><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div>;
+  if (pendingSignupPayment) return <ForcedSubscriptionGate auth={auth} onUnlocked={unlockAfterSignupPayment} />;
   return <div data-theme={darkMode ? "dark" : undefined}>
     <AppShell tab={tab} setTab={(t) => {
       setTab(t);

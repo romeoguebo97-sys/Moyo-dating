@@ -762,6 +762,7 @@ export function AdminDesktopPage() {
     featureAssistant: "true",
     featureGroupPremium: "true",
     featureSocials: "true",
+    requireSignupPayment: "false",
     featureGroupPhotos: "true",
     featurePhotoRetouch: "true",
     appointmentsEnabled: "true",
@@ -811,7 +812,7 @@ export function AdminDesktopPage() {
       "modal_same_gender_homme","modal_same_gender_femme","modal_match_title","modal_match_subtitle","modal_premium_default","modal_likes_epuises",
       "limit_likes_free","limit_messages_free","limit_messages_free_femme","limit_match_requests","limit_status_boosts","limit_photo_size_mb","match_welcome_message",
       "premium_price_fcfa","premium_price_week_fcfa","premium_price_2month_fcfa","premium_days_week","premium_days_2month","premium_duration_days",
-      "feature_statuses","feature_gift_premium","feature_assistant","feature_group_premium","feature_socials","feature_photo_retouch",
+      "feature_statuses","feature_gift_premium","feature_assistant","feature_group_premium","feature_socials","require_signup_payment","feature_photo_retouch",
       "feature_moderation_insults","feature_moderation_contact","support_reply_push_enabled",
       "appointments_enabled","phone_appointments_enabled","physical_appointments_enabled",
       "appointment_physical_price",
@@ -859,6 +860,7 @@ export function AdminDesktopPage() {
         featureAssistant: map["feature_assistant"] || c.featureAssistant,
         featureGroupPremium: map["feature_group_premium"] || c.featureGroupPremium,
         featureSocials: map["feature_socials"] || c.featureSocials,
+        requireSignupPayment: map["require_signup_payment"] || c.requireSignupPayment,
         featureGroupPhotos: map["feature_group_photos"] || c.featureGroupPhotos,
         featurePhotoRetouch: map["feature_photo_retouch"] || c.featurePhotoRetouch,
         featureModerationInsults: map["feature_moderation_insults"] || c.featureModerationInsults,
@@ -1299,6 +1301,7 @@ export function AdminDesktopPage() {
                 ["feature_assistant", "featureAssistant" as keyof typeof appConfig, "Assistant IA"],
                 ["feature_group_premium", "featureGroupPremium" as keyof typeof appConfig, "Groupe Premium"],
                 ["feature_socials", "featureSocials" as keyof typeof appConfig, "Réseaux sociaux (Facebook, TikTok, Insta, Snap)"],
+                ["require_signup_payment", "requireSignupPayment" as keyof typeof appConfig, "Paiement obligatoire à l'inscription"],
                 ["feature_group_photos", "featureGroupPhotos" as keyof typeof appConfig, "Photos dans le Groupe"],
                 ["feature_photo_retouch", "featurePhotoRetouch" as keyof typeof appConfig, "Retouche photo Premium"],
                 ["feature_ambassador_program", "featureAmbassadorProgram" as keyof typeof appConfig, "Programme Ambassadeur (bouton \"Devenir Ambassadeur\")"],
@@ -2849,7 +2852,7 @@ function AssistantPhotoConfig({ auth }: { auth: Auth }) {
 export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () => void }) {
   const [rules, setRules] = React.useState({ blockSameGenderLike: true });
   const [modalTexts, setModalTexts] = React.useState({ sameGenderHomme: "Eh frère, reste du bon côté ! 😂", sameGenderFemme: "Eh soeur, reste du bon côté ! 😂", sameGenderSub: "Moyo Dating c'est pour les rencontres hétérosexuelles 😄", signupSuccess: "Ton compte est prêt ! Connecte-toi maintenant.", matchTitle: "C'est un Match !", matchSubtitle: "Toi et {name} vous plaisez mutuellement !", premiumDefault: "Passe Premium pour débloquer toutes les fonctionnalités de Moyo Dating !", likesEpuises: "Tu as utilisé tes {n} likes gratuits aujourd'hui. Passe Premium pour liker sans limite !" });
-  const [appConfig, setAppConfig] = React.useState({ limitLikes: "5", limitMessages: "3", limitMessagesFemme: "100", limitMatchRequests: "2", limitStatusBoosts: "2", limitPhotoSizeMb: "5", matchWelcomeMessage: "Vous avez un nouveau match ! Dites bonjour 👋", premiumPriceFcfa: "3500", premiumPriceEur: "10", eurToFcfaRate: "655.957", premiumDurationDays: "31", premiumPriceWeekFcfa: "1200", premiumPrice2monthFcfa: "5900", premiumDaysWeek: "7", premiumDays2month: "62", likesNotifDelayHours: "24", featureStatuses: "true", featureGiftPremium: "true", featureAssistant: "true", featureGroupPremium: "true", featureSocials: "true", featureGroupPhotos: "true", featurePhotoRetouch: "true", maintenanceMode: "false", maintenanceMessage: "Moyo Dating est en maintenance. Nous revenons très vite ! 🔧", customBannedWords: "", contactBannedWords: "", autoModContactReply: AUTO_MOD_CONTACT_REPLY, featureModerationInsults: "true", featureModerationContact: "true", disabledBuiltinWords: "", disabledBuiltinContactWords: "", affiliateCommissionPercent: "15", affiliatePayableDelayDays: "15", featureAmbassadorProgram: "true", affiliatePayoutMinFcfa: "10000", affiliatePromoBonusDays: "3", supportReplyPushEnabled: "true" });
+  const [appConfig, setAppConfig] = React.useState({ limitLikes: "5", limitMessages: "3", limitMessagesFemme: "100", limitMatchRequests: "2", limitStatusBoosts: "2", limitPhotoSizeMb: "5", matchWelcomeMessage: "Vous avez un nouveau match ! Dites bonjour 👋", premiumPriceFcfa: "3500", premiumPriceEur: "10", eurToFcfaRate: "655.957", premiumDurationDays: "31", premiumPriceWeekFcfa: "1200", premiumPrice2monthFcfa: "5900", premiumDaysWeek: "7", premiumDays2month: "62", likesNotifDelayHours: "24", featureStatuses: "true", featureGiftPremium: "true", featureAssistant: "true", featureGroupPremium: "true", featureSocials: "true", requireSignupPayment: "false", featureGroupPhotos: "true", featurePhotoRetouch: "true", maintenanceMode: "false", maintenanceMessage: "Moyo Dating est en maintenance. Nous revenons très vite ! 🔧", customBannedWords: "", contactBannedWords: "", autoModContactReply: AUTO_MOD_CONTACT_REPLY, featureModerationInsults: "true", featureModerationContact: "true", disabledBuiltinWords: "", disabledBuiltinContactWords: "", affiliateCommissionPercent: "15", affiliatePayableDelayDays: "15", featureAmbassadorProgram: "true", affiliatePayoutMinFcfa: "10000", affiliatePromoBonusDays: "3", supportReplyPushEnabled: "true" });
   const [editingModal, setEditingModal] = React.useState<string | null>(null);
   const [editingValue, setEditingValue] = React.useState("");
   const [editingConfig, setEditingConfig] = React.useState<string | null>(null);
@@ -2908,7 +2911,7 @@ export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () =
   };
 
   React.useEffect(() => {
-    const allKeys = ["rule_block_same_gender_like","modal_same_gender_homme","modal_same_gender_femme","modal_same_gender_sub","modal_signup_success","modal_match_title","modal_match_subtitle","modal_premium_default","modal_likes_epuises","limit_likes_free","limit_messages_free","limit_messages_free_femme","limit_match_requests","limit_status_boosts","limit_photo_size_mb","match_welcome_message","match_proposal_expiry_days","premium_price_fcfa","premium_price_week_fcfa","premium_price_2month_fcfa","premium_days_week","premium_days_2month","premium_duration_days","feature_statuses","feature_gift_premium","feature_assistant","feature_group_premium","feature_socials","feature_photo_retouch","feature_moderation_insults","feature_moderation_contact","support_reply_push_enabled","maintenance_mode","maintenance_message","custom_banned_words","contact_banned_words","disabled_builtin_words","disabled_builtin_contact_words","auto_mod_contact_reply","poll_badges_ms","poll_admin_badge_ms","poll_stats_ms","poll_broadcast_ms","poll_support_ms","affiliate_commission_percent","affiliate_payable_delay_days","feature_ambassador_program","affiliate_payout_min_fcfa","affiliate_promo_bonus_days"];
+    const allKeys = ["rule_block_same_gender_like","modal_same_gender_homme","modal_same_gender_femme","modal_same_gender_sub","modal_signup_success","modal_match_title","modal_match_subtitle","modal_premium_default","modal_likes_epuises","limit_likes_free","limit_messages_free","limit_messages_free_femme","limit_match_requests","limit_status_boosts","limit_photo_size_mb","match_welcome_message","match_proposal_expiry_days","premium_price_fcfa","premium_price_week_fcfa","premium_price_2month_fcfa","premium_days_week","premium_days_2month","premium_duration_days","feature_statuses","feature_gift_premium","feature_assistant","feature_group_premium","feature_socials","require_signup_payment","feature_photo_retouch","feature_moderation_insults","feature_moderation_contact","support_reply_push_enabled","maintenance_mode","maintenance_message","custom_banned_words","contact_banned_words","disabled_builtin_words","disabled_builtin_contact_words","auto_mod_contact_reply","poll_badges_ms","poll_admin_badge_ms","poll_stats_ms","poll_broadcast_ms","poll_support_ms","affiliate_commission_percent","affiliate_payable_delay_days","feature_ambassador_program","affiliate_payout_min_fcfa","affiliate_promo_bonus_days"];
     fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(${allKeys.join(",")})&select=key,value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } })
       .then(r => r.json()).then(data => {
         if (!Array.isArray(data)) return;
@@ -2917,7 +2920,7 @@ export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () =
         if (map["match_proposal_expiry_days"]) setMatchProposalExpiryDaysM(map["match_proposal_expiry_days"]);
         if (map["rule_block_same_gender_like"]) setRules(r => ({ ...r, blockSameGenderLike: map["rule_block_same_gender_like"] === "true" }));
         setModalTexts(t => ({ sameGenderHomme: map["modal_same_gender_homme"] || t.sameGenderHomme, sameGenderFemme: map["modal_same_gender_femme"] || t.sameGenderFemme, sameGenderSub: map["modal_same_gender_sub"] || t.sameGenderSub, signupSuccess: map["modal_signup_success"] || t.signupSuccess, matchTitle: map["modal_match_title"] || t.matchTitle, matchSubtitle: map["modal_match_subtitle"] || t.matchSubtitle, premiumDefault: map["modal_premium_default"] || t.premiumDefault, likesEpuises: map["modal_likes_epuises"] || t.likesEpuises }));
-        setAppConfig(c => ({ limitLikes: map["limit_likes_free"] || c.limitLikes, limitMessages: map["limit_messages_free"] || c.limitMessages, limitMessagesFemme: map["limit_messages_free_femme"] || c.limitMessagesFemme, limitMatchRequests: map["limit_match_requests"] || c.limitMatchRequests, limitStatusBoosts: map["limit_status_boosts"] || c.limitStatusBoosts, limitPhotoSizeMb: map["limit_photo_size_mb"] || c.limitPhotoSizeMb, matchWelcomeMessage: map["match_welcome_message"] || c.matchWelcomeMessage, premiumPriceFcfa: map["premium_price_fcfa"] || c.premiumPriceFcfa, premiumPriceWeekFcfa: map["premium_price_week_fcfa"] || c.premiumPriceWeekFcfa, premiumPrice2monthFcfa: map["premium_price_2month_fcfa"] || c.premiumPrice2monthFcfa, premiumDaysWeek: map["premium_days_week"] || c.premiumDaysWeek, premiumDays2month: map["premium_days_2month"] || c.premiumDays2month, premiumPriceEur: map["premium_price_eur"] || c.premiumPriceEur, eurToFcfaRate: map["eur_to_fcfa_rate"] || c.eurToFcfaRate, premiumDurationDays: map["premium_duration_days"] || c.premiumDurationDays, likesNotifDelayHours: map["likes_notification_delay_hours"] || c.likesNotifDelayHours, featureStatuses: map["feature_statuses"] || c.featureStatuses, featureGiftPremium: map["feature_gift_premium"] || c.featureGiftPremium, featureAssistant: map["feature_assistant"] || c.featureAssistant, featureGroupPremium: map["feature_group_premium"] || c.featureGroupPremium, featureSocials: map["feature_socials"] || c.featureSocials,
+        setAppConfig(c => ({ limitLikes: map["limit_likes_free"] || c.limitLikes, limitMessages: map["limit_messages_free"] || c.limitMessages, limitMessagesFemme: map["limit_messages_free_femme"] || c.limitMessagesFemme, limitMatchRequests: map["limit_match_requests"] || c.limitMatchRequests, limitStatusBoosts: map["limit_status_boosts"] || c.limitStatusBoosts, limitPhotoSizeMb: map["limit_photo_size_mb"] || c.limitPhotoSizeMb, matchWelcomeMessage: map["match_welcome_message"] || c.matchWelcomeMessage, premiumPriceFcfa: map["premium_price_fcfa"] || c.premiumPriceFcfa, premiumPriceWeekFcfa: map["premium_price_week_fcfa"] || c.premiumPriceWeekFcfa, premiumPrice2monthFcfa: map["premium_price_2month_fcfa"] || c.premiumPrice2monthFcfa, premiumDaysWeek: map["premium_days_week"] || c.premiumDaysWeek, premiumDays2month: map["premium_days_2month"] || c.premiumDays2month, premiumPriceEur: map["premium_price_eur"] || c.premiumPriceEur, eurToFcfaRate: map["eur_to_fcfa_rate"] || c.eurToFcfaRate, premiumDurationDays: map["premium_duration_days"] || c.premiumDurationDays, likesNotifDelayHours: map["likes_notification_delay_hours"] || c.likesNotifDelayHours, featureStatuses: map["feature_statuses"] || c.featureStatuses, featureGiftPremium: map["feature_gift_premium"] || c.featureGiftPremium, featureAssistant: map["feature_assistant"] || c.featureAssistant, featureGroupPremium: map["feature_group_premium"] || c.featureGroupPremium, featureSocials: map["feature_socials"] || c.featureSocials, requireSignupPayment: map["require_signup_payment"] || c.requireSignupPayment,
         featureGroupPhotos: map["feature_group_photos"] || c.featureGroupPhotos, featurePhotoRetouch: map["feature_photo_retouch"] || c.featurePhotoRetouch, maintenanceMode: map["maintenance_mode"] || c.maintenanceMode, maintenanceMessage: map["maintenance_message"] || c.maintenanceMessage, customBannedWords: map["custom_banned_words"] || c.customBannedWords, contactBannedWords: map["contact_banned_words"] || c.contactBannedWords, autoModContactReply: map["auto_mod_contact_reply"] || c.autoModContactReply, featureModerationInsults: map["feature_moderation_insults"] || c.featureModerationInsults, featureModerationContact: map["feature_moderation_contact"] || c.featureModerationContact, disabledBuiltinWords: map["disabled_builtin_words"] !== undefined ? map["disabled_builtin_words"] : c.disabledBuiltinWords, disabledBuiltinContactWords: map["disabled_builtin_contact_words"] !== undefined ? map["disabled_builtin_contact_words"] : c.disabledBuiltinContactWords, affiliateCommissionPercent: map["affiliate_commission_percent"] || c.affiliateCommissionPercent, affiliatePayableDelayDays: map["affiliate_payable_delay_days"] || c.affiliatePayableDelayDays, featureAmbassadorProgram: map["feature_ambassador_program"] || c.featureAmbassadorProgram, affiliatePayoutMinFcfa: map["affiliate_payout_min_fcfa"] || c.affiliatePayoutMinFcfa, affiliatePromoBonusDays: map["affiliate_promo_bonus_days"] || c.affiliatePromoBonusDays, supportReplyPushEnabled: map["support_reply_push_enabled"] || c.supportReplyPushEnabled }));
         if (map["custom_banned_words"] !== undefined) buildCustomBannedRegex(map["custom_banned_words"]);
         if (map["contact_banned_words"] !== undefined) buildContactBannedRegex(map["contact_banned_words"]);
@@ -3065,7 +3068,7 @@ export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () =
         </div>
       </OffCanvasSection>
       <OffCanvasSection title="Fonctionnalités">
-        {([["feature_statuses","featureStatuses" as keyof typeof appConfig,"Statuts (Stories)"],["feature_gift_premium","featureGiftPremium" as keyof typeof appConfig,"Cadeau Premium"],["feature_assistant","featureAssistant" as keyof typeof appConfig,"Assistant IA"],["feature_group_premium","featureGroupPremium" as keyof typeof appConfig,"Groupe Premium"],["feature_socials","featureSocials" as keyof typeof appConfig,"Réseaux sociaux (Facebook, TikTok, Insta, Snap)"],["feature_group_photos","featureGroupPhotos" as keyof typeof appConfig,"Photos dans le Groupe"],["feature_photo_retouch","featurePhotoRetouch" as keyof typeof appConfig,"Retouche photo Premium"],["feature_ambassador_program","featureAmbassadorProgram" as keyof typeof appConfig,"Programme Ambassadeur (bouton \"Devenir Ambassadeur\")"],["feature_moderation_insults","featureModerationInsults" as keyof typeof appConfig,"Modération auto (insultes, menaces, arnaques, sexuel)"],["feature_moderation_contact","featureModerationContact" as keyof typeof appConfig,"Blocage partage de contact (comptes gratuits)"],["support_reply_push_enabled","supportReplyPushEnabled" as keyof typeof appConfig,"Notifications push Assistance (1er avertissement + réponses admin)"],["maintenance_mode","maintenanceMode" as keyof typeof appConfig,"Mode maintenance"]] as [string, keyof typeof appConfig, string][]).map(([key,ck,label]) => (
+        {([["feature_statuses","featureStatuses" as keyof typeof appConfig,"Statuts (Stories)"],["feature_gift_premium","featureGiftPremium" as keyof typeof appConfig,"Cadeau Premium"],["feature_assistant","featureAssistant" as keyof typeof appConfig,"Assistant IA"],["feature_group_premium","featureGroupPremium" as keyof typeof appConfig,"Groupe Premium"],["feature_socials","featureSocials" as keyof typeof appConfig,"Réseaux sociaux (Facebook, TikTok, Insta, Snap)"],["require_signup_payment","requireSignupPayment" as keyof typeof appConfig,"Paiement obligatoire à l'inscription"],["feature_group_photos","featureGroupPhotos" as keyof typeof appConfig,"Photos dans le Groupe"],["feature_photo_retouch","featurePhotoRetouch" as keyof typeof appConfig,"Retouche photo Premium"],["feature_ambassador_program","featureAmbassadorProgram" as keyof typeof appConfig,"Programme Ambassadeur (bouton \"Devenir Ambassadeur\")"],["feature_moderation_insults","featureModerationInsults" as keyof typeof appConfig,"Modération auto (insultes, menaces, arnaques, sexuel)"],["feature_moderation_contact","featureModerationContact" as keyof typeof appConfig,"Blocage partage de contact (comptes gratuits)"],["support_reply_push_enabled","supportReplyPushEnabled" as keyof typeof appConfig,"Notifications push Assistance (1er avertissement + réponses admin)"],["maintenance_mode","maintenanceMode" as keyof typeof appConfig,"Mode maintenance"]] as [string, keyof typeof appConfig, string][]).map(([key,ck,label]) => (
           <div key={key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: G.creme, borderRadius: 12 }}>
             <div style={{ fontSize: "0.83rem", fontWeight: 600, color: key === "maintenance_mode" ? G.rouge : "#1a1a1a" }}>{label}</div>
             <SwitchBtn on={appConfig[ck] === "true"} onToggle={async () => { const v = appConfig[ck] !== "true" ? "true" : "false"; setAppConfig(c => ({ ...c, [ck]: v })); await patch(key, v); }} />
@@ -6913,6 +6916,30 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
 
   // ── Liste des matchs ──
   const [showMatchList, setShowMatchList] = useState(false);
+  // ── Liste des propositions de match en attente (carte "Statistiques avancées") ──
+  const [showPendingProposalsList, setShowPendingProposalsList] = useState(false);
+  const [pendingProposalsList, setPendingProposalsList] = useState<{ id: string; created_at: string; profile1?: AdminProfile; profile2?: AdminProfile }[]>([]);
+  const [pendingProposalsLoading, setPendingProposalsLoading] = useState(false);
+  useEffect(() => {
+    if (!showPendingProposalsList) return;
+    setPendingProposalsLoading(true);
+    (async () => {
+      try {
+        const H = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` };
+        const raw = await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?status=eq.pending&order=created_at.desc&limit=200&select=id,created_at,user1_id,user2_id`, { headers: H }).then(r => r.json()).catch(() => []);
+        const rows = Array.isArray(raw) ? raw : [];
+        const ids = [...new Set(rows.flatMap((p: any) => [p.user1_id, p.user2_id]))].filter(Boolean);
+        const profileMap: Record<string, AdminProfile> = {};
+        for (let i = 0; i < ids.length; i += 50) {
+          const batch = ids.slice(i, i + 50);
+          const pdata = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=in.(${batch.join(",")})&select=id,name,age,city,gender,photo_url`, { headers: H }).then(r => r.json()).catch(() => []);
+          if (Array.isArray(pdata)) pdata.forEach((p: AdminProfile) => { profileMap[p.id] = p; });
+        }
+        setPendingProposalsList(rows.map((p: any) => ({ id: p.id, created_at: p.created_at, profile1: profileMap[p.user1_id], profile2: profileMap[p.user2_id] })));
+      } catch { setPendingProposalsList([]); }
+      setPendingProposalsLoading(false);
+    })();
+  }, [showPendingProposalsList]);
   const [matchList, setMatchList] = useState<{ id: string; created_at: string; user1?: string; user2?: string; profile1?: AdminProfile; profile2?: AdminProfile; message_count?: number }[]>([]);
   const [matchListSearch, setMatchListSearch] = useState("");
   // ── Recherche débattue (400ms) : redéclenche loadMatchListData avec le texte tapé,
@@ -8070,6 +8097,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
     retentionSample: 0,
     pwaInstalls: 0,
     phoneVisibleCount: 0,
+    pendingProposals: 0,
   });
 
   // ── Reports ──
@@ -8573,6 +8601,89 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
   //    d'insertion que sendSupportReply (préfixe SUPPORT_PREFIX_REPLY), donc le message apparaît
   //    chez l'utilisateur exactement comme une réponse normale de l'Assistance. ──
   const [newMsgOpen, setNewMsgOpen] = useState(false);
+  // ── Créer un profil directement (accompagnement WhatsApp) : l'admin saisit les infos
+  //    recueillies en discutant avec la personne, un compte réel est créé (email fourni par
+  //    l'admin, mot de passe généré automatiquement), à transmettre ensuite à la personne. ──
+  const [showCreateProfileModal, setShowCreateProfileModal] = useState(false);
+  const blankCreateProfileForm = { email: "", name: "", age: "", city: "", gender: "Femme", bio: "", religion: "", profession: "", hobbies: "", phone: "", maritalStatus: "", hasChildren: "" as "" | "oui" | "non" };
+  const [createProfileForm, setCreateProfileForm] = useState(blankCreateProfileForm);
+  const [createProfilePhoto, setCreateProfilePhoto] = useState<File | null>(null);
+  const [createProfilePhotoPreview, setCreateProfilePhotoPreview] = useState<string | null>(null);
+  const [createProfileLoading, setCreateProfileLoading] = useState(false);
+  const [createProfileError, setCreateProfileError] = useState<string | null>(null);
+  const [createProfileResult, setCreateProfileResult] = useState<{ email: string; password: string; name: string } | null>(null);
+  const genRandomPassword = () => {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+    let out = "";
+    for (let i = 0; i < 10; i++) out += chars[Math.floor(Math.random() * chars.length)];
+    return out;
+  };
+  const submitCreateProfile = async () => {
+    setCreateProfileError(null);
+    const f = createProfileForm;
+    const ageNum = parseInt(f.age);
+    if (!f.email.trim() || !f.name.trim() || !f.city.trim() || !f.age || isNaN(ageNum) || ageNum < 18 || ageNum > 99) {
+      setCreateProfileError("Email, prénom, ville et âge (18-99) sont obligatoires.");
+      return;
+    }
+    setCreateProfileLoading(true);
+    try {
+      const password = genRandomPassword();
+      const signupRes = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY },
+        body: JSON.stringify({ email: f.email.trim(), password, data: { name: f.name.trim() } }),
+      }).then(r => r.json());
+      const newUserId = signupRes?.user?.id || signupRes?.id;
+      if (!newUserId) {
+        setCreateProfileError(signupRes?.msg || signupRes?.error_description || "Impossible de créer le compte (email déjà utilisé ?).");
+        setCreateProfileLoading(false);
+        return;
+      }
+      let photoUrl: string | null = null;
+      if (createProfilePhoto) {
+        try {
+          const ext = createProfilePhoto.name.split(".").pop()?.toLowerCase() || "jpg";
+          const path = `${newUserId}/avatar.${ext}`;
+          const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/avatars/${path}`, {
+            method: "POST",
+            headers: { "Authorization": `Bearer ${auth.token}`, "apikey": SUPABASE_KEY, "Content-Type": createProfilePhoto.type || "image/jpeg", "x-upsert": "true" },
+            body: createProfilePhoto,
+          });
+          if (uploadRes.ok) photoUrl = `${SUPABASE_URL}/storage/v1/object/public/avatars/${path}`;
+        } catch {}
+      }
+      await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${newUserId}`, {
+        method: "PATCH",
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
+        body: JSON.stringify({
+          name: f.name.trim(),
+          age: ageNum,
+          city: f.city.trim(),
+          gender: f.gender,
+          bio: f.bio.trim(),
+          religion: f.religion || null,
+          profession: f.profession.trim() || null,
+          hobbies: f.hobbies.trim() || null,
+          phone: f.phone.trim() || null,
+          photo_url: photoUrl,
+          marital_status: f.maritalStatus || null,
+          has_children: f.hasChildren === "oui" ? true : f.hasChildren === "non" ? false : null,
+          is_complete: true,
+          privacy_notice_seen: false,
+        }),
+      });
+      setCreateProfileResult({ email: f.email.trim(), password, name: f.name.trim() });
+      setCreateProfileForm(blankCreateProfileForm);
+      setCreateProfilePhoto(null);
+      setCreateProfilePhotoPreview(null);
+      showToast("✅ Profil créé", "success");
+      loadUsers(userSearch, 0, usersSort, userSearchEmail, usersFilters, userSearchPhone);
+    } catch {
+      setCreateProfileError("Erreur technique. Réessaie.");
+    }
+    setCreateProfileLoading(false);
+  };
   const [newMsgSearch, setNewMsgSearch] = useState("");
   const [newMsgResults, setNewMsgResults] = useState<{ id: string; name: string; age?: number; city?: string; photo_url?: string }[]>([]);
   const [newMsgSearching, setNewMsgSearching] = useState(false);
@@ -8789,6 +8900,13 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
   const [grantTab, setGrantTab] = useState<"paid" | "promo" | "free">("paid");
   const [grantSelectedPlan, setGrantSelectedPlan] = useState<{ label: string; days: number; amount: number } | null>(null);
   const [grantTxRef, setGrantTxRef] = useState("");
+  // ── Preuve de paiement manuelle (côté admin) : ID de transaction OU capture d'écran, même
+  //    principe que côté client. La capture est uploadée dans le même bucket "payment-proofs" et
+  //    encodée dans tx_ref avec le préfixe "[capture] " déjà reconnu par l'écran Budget/Paiements. ──
+  const [grantProofMode, setGrantProofMode] = useState<"id" | "screenshot">("id");
+  const [grantScreenshotFile, setGrantScreenshotFile] = useState<File | null>(null);
+  const [grantScreenshotPreview, setGrantScreenshotPreview] = useState<string | null>(null);
+  const [grantScreenshotUploading, setGrantScreenshotUploading] = useState(false);
   const [banHours, setBanHours] = useState("24");
   const [banReason, setBanReason] = useState("");
   const [banAllowPayment, setBanAllowPayment] = useState(false);
@@ -8831,7 +8949,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
 
       const [rTotalUsers, rMatches, rMessages, rTotalReports,
              rPremium, rVerified, rBanned, rMale, rFemale, rTodayUsers,
-             rTotalLikes, rLikesToday, rPwaInstalls, rPhoneVisible] = await Promise.all([
+             rTotalLikes, rLikesToday, rPwaInstalls, rPhoneVisible, rPendingProposals] = await Promise.all([
         fetch(`${SUPABASE_URL}/rest/v1/profiles?select=id`, { headers: countHeader }),
         fetch(`${SUPABASE_URL}/rest/v1/matches?select=id`, { headers: countHeader }),
         fetch(`${SUPABASE_URL}/rest/v1/messages?select=id`, { headers: countHeader }),
@@ -8846,6 +8964,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
         fetch(`${SUPABASE_URL}/rest/v1/likes?created_at=gte.${todayIso}&select=id`, { headers: countHeader }),
         fetch(`${SUPABASE_URL}/rest/v1/profiles?has_installed_pwa=eq.true&select=id`, { headers: countHeader }),
         fetch(`${SUPABASE_URL}/rest/v1/profiles?share_phone_with_matches=eq.true&select=id`, { headers: countHeader }),
+        fetch(`${SUPABASE_URL}/rest/v1/match_proposals?status=eq.pending&select=id`, { headers: countHeader }),
       ]);
 
       // ── Likes par jour (30 derniers jours) ──
@@ -8965,6 +9084,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
         retentionSample: sample.length,
         pwaInstalls: parseCount(rPwaInstalls),
         phoneVisibleCount: parseCount(rPhoneVisible),
+        pendingProposals: parseCount(rPendingProposals),
       });
       setReports(reps);
       loadAutoLogCount();
@@ -9194,13 +9314,29 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
   // Seul un Super Admin (accès Budget/Paiements) peut ensuite vérifier et activer.
   const sendPremiumPaymentRequest = async () => {
     const user = premiumGrantModal;
-    if (!user || !grantOperator || !grantTxRef.trim() || !grantSelectedPlan) return;
+    if (!user || !grantOperator || !grantSelectedPlan) return;
+    if (grantProofMode === "id" && !grantTxRef.trim()) return;
+    if (grantProofMode === "screenshot" && !grantScreenshotFile) return;
     setActionLoading(user.id);
     try {
+      let finalTxRef = grantTxRef.trim();
+      if (grantProofMode === "screenshot" && grantScreenshotFile) {
+        setGrantScreenshotUploading(true);
+        const ext = (grantScreenshotFile.name.split(".").pop() || "jpg").toLowerCase();
+        const path = `${user.id}/${Date.now()}.${ext}`;
+        const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/payment-proofs/${path}`, {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${auth.token}`, "apikey": SUPABASE_KEY, "Content-Type": grantScreenshotFile.type || "image/jpeg", "x-upsert": "true" },
+          body: grantScreenshotFile,
+        });
+        setGrantScreenshotUploading(false);
+        if (!uploadRes.ok) throw new Error("Échec de l'envoi de la capture d'écran.");
+        finalTxRef = `[capture] ${SUPABASE_URL}/storage/v1/object/public/payment-proofs/${path}`;
+      }
       const r = await fetch(`${SUPABASE_URL}/rest/v1/payment_requests`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" },
-        body: JSON.stringify({ user_id: user.id, operator: grantOperator, tx_ref: grantTxRef.trim(), amount: grantSelectedPlan.amount, status: "pending" }),
+        body: JSON.stringify({ user_id: user.id, operator: grantOperator, tx_ref: finalTxRef, amount: grantSelectedPlan.amount, status: "pending" }),
       });
       const data = await r.json().catch(() => null);
       const created = Array.isArray(data) ? data[0] : data;
@@ -9218,15 +9354,18 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
         fetch(`${SUPABASE_URL}/rest/v1/payment_verification_requests`, {
           method: "POST",
           headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` },
-          body: JSON.stringify({ user_id: user.id, transaction_id: grantTxRef.trim(), phone_number: null, subscription_selected: PROMO_LABEL, status: "pending" }),
+          body: JSON.stringify({ user_id: user.id, transaction_id: grantProofMode === "id" ? finalTxRef : null, screenshot_url: grantProofMode === "screenshot" ? finalTxRef.replace("[capture] ", "") : null, phone_number: null, subscription_selected: PROMO_LABEL, status: "pending" }),
         }).catch(() => {});
       }
-      logAdminAction(auth.token, auth.userId, auth.name, `Demande de paiement manuelle envoyée pour ${user.name}, formule ${grantSelectedPlan.label} (${grantSelectedPlan.amount.toLocaleString()} FCFA, ${grantOperator}, réf. ${grantTxRef.trim()}), en attente de validation Super Admin.`, user.id);
+      logAdminAction(auth.token, auth.userId, auth.name, `Demande de paiement manuelle envoyée pour ${user.name}, formule ${grantSelectedPlan.label} (${grantSelectedPlan.amount.toLocaleString()} FCFA, ${grantOperator}, ${grantProofMode === "screenshot" ? "preuve : capture d'écran" : `réf. ${finalTxRef}`}), en attente de validation Super Admin.`, user.id);
       showToast(`Demande envoyée pour ${user.name}. Un Super Admin doit la valider dans Budget/Paiements.`, "success");
       setPremiumGrantModal(null);
       setGrantOperator(null);
       setGrantTxRef("");
       setGrantSelectedPlan(null);
+      setGrantProofMode("id");
+      setGrantScreenshotFile(null);
+      setGrantScreenshotPreview(null);
     } catch (e: any) { showToast(`❌ Échec de l'envoi : ${e?.message || "inconnue"}`, "error"); }
     setActionLoading(null);
   };
@@ -10456,6 +10595,45 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
         </div>
       )}
 
+      {/* ── Modal liste Propositions en attente ── */}
+      {showPendingProposalsList && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: "calc(env(safe-area-inset-top) + 16px) 16px calc(env(safe-area-inset-bottom) + 16px)" }}>
+          <div style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 660, maxHeight: "80vh", display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}>
+            <div style={{ background: "linear-gradient(135deg,#2980b9,#1f5f8b)", padding: "18px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: "1rem", color: "#fff" }}>➤ Propositions en attente</div>
+                <div style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.8)", marginTop: 2 }}>{pendingProposalsList.length} proposition{pendingProposalsList.length > 1 ? "s" : ""} pas encore acceptée{pendingProposalsList.length > 1 ? "s" : ""} ou refusée{pendingProposalsList.length > 1 ? "s" : ""}</div>
+              </div>
+              <button onClick={() => setShowPendingProposalsList(false)} style={{ background: "rgba(255,255,255,0.2)", border: "none", borderRadius: "50%", width: 32, height: 32, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+            <div style={{ flex: 1, overflowY: "auto", padding: "12px 16px" }}>
+              {pendingProposalsLoading ? (
+                <div style={{ textAlign: "center", padding: 40, color: "#aaa" }}>Chargement...</div>
+              ) : pendingProposalsList.length === 0 ? (
+                <div style={{ textAlign: "center", padding: 40, color: "#aaa" }}>Aucune proposition en attente</div>
+              ) : pendingProposalsList.map(p => (
+                <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: `1px solid ${G.gris}` }}>
+                  <div style={{ display: "flex", alignItems: "center" }}>
+                    <div style={{ width: 38, height: 38, borderRadius: "50%", background: G.creme, overflow: "hidden", border: `2px solid ${G.blanc}`, boxShadow: "0 0 0 1px #eee" }}>
+                      {p.profile1?.photo_url && <img src={p.profile1.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+                    </div>
+                    <div style={{ width: 38, height: 38, borderRadius: "50%", background: G.creme, overflow: "hidden", border: `2px solid ${G.blanc}`, boxShadow: "0 0 0 1px #eee", marginLeft: -12 }}>
+                      {p.profile2?.photo_url && <img src={p.profile2.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+                    </div>
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#333" }}>{p.profile1?.name || "?"} & {p.profile2?.name || "?"}</div>
+                    <div style={{ fontSize: "0.7rem", color: "#999" }}>Proposée {new Date(p.created_at).toLocaleDateString("fr-FR")}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {userListModal && (() => {
         const meta = userListMeta(userListModal);
         return (
@@ -10662,7 +10840,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
       )}
       {premiumGrantModal && (() => {
         const u = premiumGrantModal;
-        const close = () => { setPremiumGrantModal(null); setGrantFreeDate(""); setGrantOperator(null); setGrantTxRef(""); setGrantTab("paid"); setGrantSelectedPlan(null); };
+        const close = () => { setPremiumGrantModal(null); setGrantFreeDate(""); setGrantOperator(null); setGrantTxRef(""); setGrantTab("paid"); setGrantSelectedPlan(null); setGrantProofMode("id"); setGrantScreenshotFile(null); setGrantScreenshotPreview(null); };
         const plans = [
           PLAN_WEEK_ENABLED && { label: "Semaine", days: PREMIUM_DAYS_WEEK, amount: PREMIUM_PRICE_WEEK_FCFA },
           PLAN_MONTH_ENABLED && { label: "Mois", days: Math.round(PREMIUM_30_DAYS_MS / 86400000) || 31, amount: PREMIUM_PRICE_FCFA },
@@ -10724,8 +10902,26 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     <button onClick={() => setGrantOperator("MTN")} style={{ flex: 1, background: grantOperator === "MTN" ? "#FFCC00" : G.creme, border: `1.5px solid ${grantOperator === "MTN" ? "#FFCC00" : G.gris}`, borderRadius: 10, padding: "9px", fontSize: "0.8rem", fontWeight: 800, color: "#1a1a1a", cursor: "pointer" }}>MTN MoMo</button>
                     <button onClick={() => setGrantOperator("Airtel")} style={{ flex: 1, background: grantOperator === "Airtel" ? "#E40000" : G.creme, border: `1.5px solid ${grantOperator === "Airtel" ? "#E40000" : G.gris}`, borderRadius: 10, padding: "9px", fontSize: "0.8rem", fontWeight: 800, color: grantOperator === "Airtel" ? "#fff" : G.brun, cursor: "pointer" }}>Airtel Money</button>
                   </div>
-                  <input value={grantTxRef} onChange={e => setGrantTxRef(e.target.value)} placeholder="Référence de transaction (ID reçu par SMS)"
-                    style={{ width: "100%", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.82rem", outline: "none", fontFamily: "inherit", marginBottom: 12 }} />
+                  <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+                    <button onClick={() => setGrantProofMode("id")} style={{ flex: 1, background: grantProofMode === "id" ? G.blanc : G.creme, boxShadow: grantProofMode === "id" ? "0 1px 4px rgba(0,0,0,0.12)" : "none", border: `1.5px solid ${grantProofMode === "id" ? "#2980b9" : G.gris}`, borderRadius: 10, padding: "8px", fontSize: "0.78rem", fontWeight: 700, color: grantProofMode === "id" ? "#2471a3" : "#888", cursor: "pointer" }}>🔢 ID de transaction</button>
+                    <button onClick={() => setGrantProofMode("screenshot")} style={{ flex: 1, background: grantProofMode === "screenshot" ? G.blanc : G.creme, boxShadow: grantProofMode === "screenshot" ? "0 1px 4px rgba(0,0,0,0.12)" : "none", border: `1.5px solid ${grantProofMode === "screenshot" ? "#2980b9" : G.gris}`, borderRadius: 10, padding: "8px", fontSize: "0.78rem", fontWeight: 700, color: grantProofMode === "screenshot" ? "#2471a3" : "#888", cursor: "pointer" }}>📷 Capture d'écran</button>
+                  </div>
+                  {grantProofMode === "id" ? (
+                    <input value={grantTxRef} onChange={e => setGrantTxRef(e.target.value)} placeholder="Référence de transaction (ID reçu par SMS)"
+                      style={{ width: "100%", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.82rem", outline: "none", fontFamily: "inherit", marginBottom: 12 }} />
+                  ) : (
+                    <label style={{ display: "flex", alignItems: "center", gap: 12, border: `1.5px dashed ${G.gris}`, borderRadius: 10, padding: "10px 12px", marginBottom: 12, cursor: "pointer" }}>
+                      {grantScreenshotPreview ? (
+                        <img src={grantScreenshotPreview} alt="" style={{ width: 44, height: 44, borderRadius: 8, objectFit: "cover", flexShrink: 0 }} />
+                      ) : (
+                        <div style={{ width: 44, height: 44, borderRadius: 8, background: G.creme, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                        </div>
+                      )}
+                      <span style={{ fontSize: "0.8rem", color: "#666" }}>{grantScreenshotFile ? grantScreenshotFile.name : "Importer la capture reçue sur WhatsApp"}</span>
+                      <input type="file" accept="image/*" style={{ display: "none" }} onChange={e => { const file = e.target.files?.[0]; if (file) { setGrantScreenshotFile(file); setGrantScreenshotPreview(URL.createObjectURL(file)); } }} />
+                    </label>
+                  )}
 
                   <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 }}>
                     {plans.map(plan => {
@@ -10743,11 +10939,11 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     })}
                   </div>
 
-                  <button disabled={!grantOperator || !grantTxRef.trim() || !grantSelectedPlan || actionLoading === u.id} onClick={sendPremiumPaymentRequest}
-                    style={{ width: "100%", background: (!grantOperator || !grantTxRef.trim() || !grantSelectedPlan) ? "#ccc" : `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: "#fff", border: "none", borderRadius: 12, padding: "12px", fontSize: "0.85rem", fontWeight: 800, cursor: (!grantOperator || !grantTxRef.trim() || !grantSelectedPlan) ? "not-allowed" : "pointer" }}>
-                    Envoyer la demande →
+                  <button disabled={!grantOperator || (grantProofMode === "id" ? !grantTxRef.trim() : !grantScreenshotFile) || !grantSelectedPlan || actionLoading === u.id || grantScreenshotUploading} onClick={sendPremiumPaymentRequest}
+                    style={{ width: "100%", background: (!grantOperator || (grantProofMode === "id" ? !grantTxRef.trim() : !grantScreenshotFile) || !grantSelectedPlan) ? "#ccc" : `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: "#fff", border: "none", borderRadius: 12, padding: "12px", fontSize: "0.85rem", fontWeight: 800, cursor: (!grantOperator || (grantProofMode === "id" ? !grantTxRef.trim() : !grantScreenshotFile) || !grantSelectedPlan) ? "not-allowed" : "pointer" }}>
+                    {grantScreenshotUploading ? "Envoi de la capture..." : "Envoyer la demande →"}
                   </button>
-                  {(!grantOperator || !grantTxRef.trim() || !grantSelectedPlan) && <div style={{ fontSize: "0.66rem", color: "#bbb", marginTop: 6 }}>Renseignez l'opérateur, la référence et la formule pour envoyer.</div>}
+                  {(!grantOperator || (grantProofMode === "id" ? !grantTxRef.trim() : !grantScreenshotFile) || !grantSelectedPlan) && <div style={{ fontSize: "0.66rem", color: "#bbb", marginTop: 6 }}>Renseignez l'opérateur, la preuve et la formule pour envoyer.</div>}
                 </div>
               )}
 
@@ -10768,14 +10964,32 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     <button onClick={() => setGrantOperator("MTN")} style={{ flex: 1, background: grantOperator === "MTN" ? "#FFCC00" : G.creme, border: `1.5px solid ${grantOperator === "MTN" ? "#FFCC00" : G.gris}`, borderRadius: 10, padding: "9px", fontSize: "0.8rem", fontWeight: 800, color: "#1a1a1a", cursor: "pointer" }}>MTN MoMo</button>
                     <button onClick={() => setGrantOperator("Airtel")} style={{ flex: 1, background: grantOperator === "Airtel" ? "#E40000" : G.creme, border: `1.5px solid ${grantOperator === "Airtel" ? "#E40000" : G.gris}`, borderRadius: 10, padding: "9px", fontSize: "0.8rem", fontWeight: 800, color: grantOperator === "Airtel" ? "#fff" : G.brun, cursor: "pointer" }}>Airtel Money</button>
                   </div>
-                  <input value={grantTxRef} onChange={e => setGrantTxRef(e.target.value)} placeholder="Référence de transaction (ID reçu par SMS)"
-                    style={{ width: "100%", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.82rem", outline: "none", fontFamily: "inherit", marginBottom: 12 }} />
+                  <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+                    <button onClick={() => setGrantProofMode("id")} style={{ flex: 1, background: grantProofMode === "id" ? G.blanc : G.creme, boxShadow: grantProofMode === "id" ? "0 1px 4px rgba(0,0,0,0.12)" : "none", border: `1.5px solid ${grantProofMode === "id" ? "#2980b9" : G.gris}`, borderRadius: 10, padding: "8px", fontSize: "0.78rem", fontWeight: 700, color: grantProofMode === "id" ? "#2471a3" : "#888", cursor: "pointer" }}>🔢 ID de transaction</button>
+                    <button onClick={() => setGrantProofMode("screenshot")} style={{ flex: 1, background: grantProofMode === "screenshot" ? G.blanc : G.creme, boxShadow: grantProofMode === "screenshot" ? "0 1px 4px rgba(0,0,0,0.12)" : "none", border: `1.5px solid ${grantProofMode === "screenshot" ? "#2980b9" : G.gris}`, borderRadius: 10, padding: "8px", fontSize: "0.78rem", fontWeight: 700, color: grantProofMode === "screenshot" ? "#2471a3" : "#888", cursor: "pointer" }}>📷 Capture d'écran</button>
+                  </div>
+                  {grantProofMode === "id" ? (
+                    <input value={grantTxRef} onChange={e => setGrantTxRef(e.target.value)} placeholder="Référence de transaction (ID reçu par SMS)"
+                      style={{ width: "100%", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.82rem", outline: "none", fontFamily: "inherit", marginBottom: 12 }} />
+                  ) : (
+                    <label style={{ display: "flex", alignItems: "center", gap: 12, border: `1.5px dashed ${G.gris}`, borderRadius: 10, padding: "10px 12px", marginBottom: 12, cursor: "pointer" }}>
+                      {grantScreenshotPreview ? (
+                        <img src={grantScreenshotPreview} alt="" style={{ width: 44, height: 44, borderRadius: 8, objectFit: "cover", flexShrink: 0 }} />
+                      ) : (
+                        <div style={{ width: 44, height: 44, borderRadius: 8, background: G.creme, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                        </div>
+                      )}
+                      <span style={{ fontSize: "0.8rem", color: "#666" }}>{grantScreenshotFile ? grantScreenshotFile.name : "Importer la capture reçue sur WhatsApp"}</span>
+                      <input type="file" accept="image/*" style={{ display: "none" }} onChange={e => { const file = e.target.files?.[0]; if (file) { setGrantScreenshotFile(file); setGrantScreenshotPreview(URL.createObjectURL(file)); } }} />
+                    </label>
+                  )}
 
-                  <button disabled={!grantOperator || !grantTxRef.trim() || !grantSelectedPlan || actionLoading === u.id} onClick={sendPremiumPaymentRequest}
-                    style={{ width: "100%", background: (!grantOperator || !grantTxRef.trim() || !grantSelectedPlan) ? "#ccc" : `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: "#fff", border: "none", borderRadius: 12, padding: "12px", fontSize: "0.85rem", fontWeight: 800, cursor: (!grantOperator || !grantTxRef.trim() || !grantSelectedPlan) ? "not-allowed" : "pointer" }}>
-                    Envoyer la demande →
+                  <button disabled={!grantOperator || (grantProofMode === "id" ? !grantTxRef.trim() : !grantScreenshotFile) || !grantSelectedPlan || actionLoading === u.id || grantScreenshotUploading} onClick={sendPremiumPaymentRequest}
+                    style={{ width: "100%", background: (!grantOperator || (grantProofMode === "id" ? !grantTxRef.trim() : !grantScreenshotFile) || !grantSelectedPlan) ? "#ccc" : `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: "#fff", border: "none", borderRadius: 12, padding: "12px", fontSize: "0.85rem", fontWeight: 800, cursor: (!grantOperator || (grantProofMode === "id" ? !grantTxRef.trim() : !grantScreenshotFile) || !grantSelectedPlan) ? "not-allowed" : "pointer" }}>
+                    {grantScreenshotUploading ? "Envoi de la capture..." : "Envoyer la demande →"}
                   </button>
-                  {(!grantOperator || !grantTxRef.trim()) && <div style={{ fontSize: "0.66rem", color: "#bbb", marginTop: 6 }}>Renseignez l'opérateur et la référence pour envoyer.</div>}
+                  {(!grantOperator || (grantProofMode === "id" ? !grantTxRef.trim() : !grantScreenshotFile)) && <div style={{ fontSize: "0.66rem", color: "#bbb", marginTop: 6 }}>Renseignez l'opérateur et la preuve pour envoyer.</div>}
                 </div>
               )}
 
@@ -11454,10 +11668,12 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     ["Profils bannis", stats.bannedUsers, "#e74c3c", "banned"],
                     ["App installée (PWA)", stats.pwaInstalls, "#8e44ad", "pwa"],
                     ["Numéro visible", stats.phoneVisibleCount, "#16a085", "phone_visible"],
+                    ["Propositions en attente", stats.pendingProposals, "#2980b9", "pending_proposals"],
                   ] as [string, number, string, string | null][]).map(([label, val, color, action]) => (
                     <div key={label} onClick={() => {
                       if (action === "premium") setShowPremiumList(true);
                       else if (action === "matches") setShowMatchList(true);
+                      else if (action === "pending_proposals") setShowPendingProposalsList(true);
                       else if (action === "today" || action === "verified" || action === "banned" || action === "pwa" || action === "phone_visible") setUserListModal(action as SimpleUserListType);
                     }} style={{ background: `${color}0d`, borderRadius: 12, padding: "12px", border: `1px solid ${color}25`, cursor: action ? "pointer" : "default", position: "relative" }}>
                       <div style={{ fontSize: "1.4rem", fontWeight: 800, color }}>{val}</div>
@@ -11742,7 +11958,109 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               </div>
             </div>
           )}
+          {/* Modal Créer un profil (accompagnement WhatsApp) */}
+          {showCreateProfileModal && (
+            <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 10010, display: "flex", alignItems: "center", justifyContent: "center", padding: "calc(env(safe-area-inset-top) + 16px) 16px calc(env(safe-area-inset-bottom) + 16px)" }} onClick={() => setShowCreateProfileModal(false)}>
+              <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 520, maxHeight: "85vh", overflowY: "auto", boxShadow: "0 20px 60px rgba(44,26,14,0.2)" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 20px", borderBottom: `1px solid ${G.gris}` }}>
+                  <div style={{ fontWeight: 800, fontSize: "1rem", color: G.brun }}>Créer un profil</div>
+                  <button onClick={() => setShowCreateProfileModal(false)} style={{ border: "none", background: G.creme, borderRadius: "50%", width: 30, height: 30, cursor: "pointer", color: "#666" }}>✕</button>
+                </div>
+
+                {createProfileResult ? (
+                  <div style={{ padding: "24px 20px", textAlign: "center" }}>
+                    <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(39,174,96,0.12)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1a8a4a" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                    </div>
+                    <div style={{ fontWeight: 800, fontSize: "1rem", color: G.brun, marginBottom: 6 }}>Profil de {createProfileResult.name} créé !</div>
+                    <div style={{ fontSize: "0.82rem", color: "#888", marginBottom: 18 }}>Transmets ces identifiants à la personne pour qu'elle puisse se connecter.</div>
+                    <div style={{ background: G.creme, borderRadius: 12, padding: "14px 16px", textAlign: "left", marginBottom: 16 }}>
+                      <div style={{ fontSize: "0.68rem", fontWeight: 700, color: "#999", textTransform: "uppercase", marginBottom: 2 }}>Email</div>
+                      <div style={{ fontSize: "0.9rem", fontWeight: 700, color: "#333", marginBottom: 10, fontFamily: "monospace" }}>{createProfileResult.email}</div>
+                      <div style={{ fontSize: "0.68rem", fontWeight: 700, color: "#999", textTransform: "uppercase", marginBottom: 2 }}>Mot de passe</div>
+                      <div style={{ fontSize: "0.9rem", fontWeight: 700, color: "#333", fontFamily: "monospace" }}>{createProfileResult.password}</div>
+                    </div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button onClick={() => { navigator.clipboard?.writeText(`Email : ${createProfileResult.email}\nMot de passe : ${createProfileResult.password}`); showToast("Copié", "success"); }} style={{ flex: 1, background: G.creme, color: "#555", border: "none", borderRadius: 50, padding: "11px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer" }}>Copier</button>
+                      <button onClick={() => setShowCreateProfileModal(false)} style={{ flex: 1, background: "linear-gradient(135deg,#C0392B,#922B21)", color: "#fff", border: "none", borderRadius: 50, padding: "11px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer" }}>Terminer</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ padding: "18px 20px" }}>
+                    {createProfileError && <div style={{ background: "rgba(231,76,60,0.08)", color: "#c0392b", borderRadius: 10, padding: "10px 12px", fontSize: "0.8rem", marginBottom: 14 }}>{createProfileError}</div>}
+
+                    <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 16 }}>
+                      <label style={{ width: 64, height: 64, borderRadius: "50%", background: G.creme, flexShrink: 0, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", border: `1.5px dashed ${G.gris}` }}>
+                        {createProfilePhotoPreview ? <img src={createProfilePhotoPreview} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>}
+                        <input type="file" accept="image/*" style={{ display: "none" }} onChange={e => { const file = e.target.files?.[0]; if (file) { setCreateProfilePhoto(file); setCreateProfilePhotoPreview(URL.createObjectURL(file)); } }} />
+                      </label>
+                      <div style={{ fontSize: "0.78rem", color: "#888" }}>Photo reçue sur WhatsApp (facultatif, ajoutable plus tard)</div>
+                    </div>
+
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
+                      <input value={createProfileForm.email} onChange={e => setCreateProfileForm(f => ({ ...f, email: e.target.value }))} placeholder="Email *" style={{ gridColumn: "1 / -1", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.85rem", outline: "none" }} />
+                      <input value={createProfileForm.name} onChange={e => setCreateProfileForm(f => ({ ...f, name: e.target.value }))} placeholder="Prénom *" style={{ boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.85rem", outline: "none" }} />
+                      <input value={createProfileForm.age} onChange={e => setCreateProfileForm(f => ({ ...f, age: e.target.value.replace(/\D/g, "") }))} placeholder="Âge *" style={{ boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.85rem", outline: "none" }} />
+                      <input value={createProfileForm.city} onChange={e => setCreateProfileForm(f => ({ ...f, city: e.target.value }))} placeholder="Ville *" style={{ boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.85rem", outline: "none" }} />
+                      <select value={createProfileForm.gender} onChange={e => {
+                        const g = e.target.value;
+                        setCreateProfileForm(f => {
+                          const validForHomme = ["", "Célibataire", "Divorcé", "Veuf", "Veuf avec enfant(s)", "Veuf sans enfant"];
+                          const validForFemme = ["", "Célibataire", "Divorcée", "Veuve", "Veuve avec enfant(s)", "Veuve sans enfant"];
+                          const stillValid = (g === "Homme" ? validForHomme : validForFemme).includes(f.maritalStatus);
+                          return { ...f, gender: g, maritalStatus: stillValid ? f.maritalStatus : "" };
+                        });
+                      }} style={{ boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.85rem", outline: "none", background: "#fff" }}>
+                        <option value="Femme">Femme</option>
+                        <option value="Homme">Homme</option>
+                      </select>
+                      <input value={createProfileForm.phone} onChange={e => setCreateProfileForm(f => ({ ...f, phone: e.target.value }))} placeholder="Téléphone" style={{ gridColumn: "1 / -1", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.85rem", outline: "none" }} />
+                      <input value={createProfileForm.religion} onChange={e => setCreateProfileForm(f => ({ ...f, religion: e.target.value }))} placeholder="Religion" style={{ boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.85rem", outline: "none" }} />
+                      <input value={createProfileForm.profession} onChange={e => setCreateProfileForm(f => ({ ...f, profession: e.target.value }))} placeholder="Profession" style={{ boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.85rem", outline: "none" }} />
+                      <select value={createProfileForm.maritalStatus} onChange={e => setCreateProfileForm(f => ({ ...f, maritalStatus: e.target.value }))} style={{ boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.85rem", outline: "none", background: "#fff" }}>
+                        <option value="">Statut marital</option>
+                        <option value="Célibataire">Célibataire</option>
+                        {createProfileForm.gender === "Homme" ? (
+                          <>
+                            <option value="Divorcé">Divorcé</option>
+                            <option value="Veuf">Veuf</option>
+                            <option value="Veuf avec enfant(s)">Veuf avec enfant(s)</option>
+                            <option value="Veuf sans enfant">Veuf sans enfant</option>
+                          </>
+                        ) : (
+                          <>
+                            <option value="Divorcée">Divorcée</option>
+                            <option value="Veuve">Veuve</option>
+                            <option value="Veuve avec enfant(s)">Veuve avec enfant(s)</option>
+                            <option value="Veuve sans enfant">Veuve sans enfant</option>
+                          </>
+                        )}
+                      </select>
+                      <select value={createProfileForm.hasChildren} onChange={e => setCreateProfileForm(f => ({ ...f, hasChildren: e.target.value as "" | "oui" | "non" }))} style={{ boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.85rem", outline: "none", background: "#fff" }}>
+                        <option value="">A des enfants ?</option>
+                        <option value="oui">Oui</option>
+                        <option value="non">Non</option>
+                      </select>
+                      <textarea value={createProfileForm.hobbies} onChange={e => setCreateProfileForm(f => ({ ...f, hobbies: e.target.value }))} placeholder="Centres d'intérêt" rows={2} style={{ gridColumn: "1 / -1", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.85rem", outline: "none", resize: "vertical", fontFamily: "inherit" }} />
+                      <textarea value={createProfileForm.bio} onChange={e => setCreateProfileForm(f => ({ ...f, bio: e.target.value }))} placeholder="Bio (résumé de son histoire)" rows={3} style={{ gridColumn: "1 / -1", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.85rem", outline: "none", resize: "vertical", fontFamily: "inherit" }} />
+                    </div>
+
+                    <div style={{ fontSize: "0.72rem", color: "#999", marginBottom: 14 }}>Un mot de passe est généré automatiquement, à transmettre à la personne avec son email.</div>
+
+                    <button onClick={submitCreateProfile} disabled={createProfileLoading} style={{ width: "100%", background: "linear-gradient(135deg,#C0392B,#922B21)", color: "#fff", border: "none", borderRadius: 50, padding: "13px", fontSize: "0.88rem", fontWeight: 700, cursor: createProfileLoading ? "not-allowed" : "pointer", opacity: createProfileLoading ? 0.7 : 1 }}>{createProfileLoading ? "Création..." : "Créer le profil"}</button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Barre de recherche : trois champs côte à côte (nom / email / téléphone) */}
+          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10 }}>
+            <button onClick={() => { setCreateProfileResult(null); setCreateProfileError(null); setShowCreateProfileModal(true); }} style={{ background: "linear-gradient(135deg,#C0392B,#922B21)", color: "#fff", border: "none", borderRadius: 50, padding: "9px 18px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+              Créer un profil
+            </button>
+          </div>
           <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
             <div style={{ position: "relative", flex: 1, minWidth: 200 }}>
               <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}><IcoSearch /></span>
@@ -16049,6 +16367,15 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 <div style={proposalsViewMode === "grid" ? { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 10 } : { display: "flex", flexDirection: "column", gap: 10 }}>
                   {visibleProposals.map(p => {
                     const refusedAtGrid = p.refused_by === p.user1_id ? p.user1_responded_at : p.user2_responded_at;
+                    // Date d'acceptation réelle du match = le moment où la 2e personne répond (le plus
+                    // tardif des deux user_responded_at) — jusqu'ici confondue avec la date de création
+                    // de la proposition, ce qui rendait la carte ambiguë.
+                    const acceptedAtGrid = (() => {
+                      const t1 = p.user1_responded_at ? new Date(p.user1_responded_at).getTime() : 0;
+                      const t2 = p.user2_responded_at ? new Date(p.user2_responded_at).getTime() : 0;
+                      const max = Math.max(t1, t2);
+                      return max > 0 ? new Date(max) : null;
+                    })();
                     const statusInfo = p.status === "pending"
                       ? (propFilterCategory(p) === "pending_response"
                           ? { label: p.user1_response === "accepted" ? `En attente de ${p.profile2?.name || "..."}` : `En attente de ${p.profile1?.name || "..."}`, color: "#2980b9", bg: "rgba(41,128,185,0.08)" }
@@ -16101,7 +16428,16 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                             )}
                           </div>
                           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                            <div style={{ fontSize: "0.62rem", color: "#aaa" }}>{new Date(p.created_at).toLocaleDateString("fr-FR")} · expire {new Date(p.expires_at).toLocaleDateString("fr-FR")}</div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                            <div style={{ fontSize: "0.62rem", color: "#aaa" }}>Proposé le {new Date(p.created_at).toLocaleDateString("fr-FR")}</div>
+                            {p.status === "accepted" && acceptedAtGrid && (
+                              <div style={{ fontSize: "0.62rem", color: "#27ae60", fontWeight: 700 }}>· Accepté le {acceptedAtGrid.toLocaleDateString("fr-FR")}</div>
+                            )}
+                            {p.status === "refused" && refusedAtGrid && (
+                              <div style={{ fontSize: "0.62rem", color: "#e74c3c", fontWeight: 700 }}>· Refusé le {new Date(refusedAtGrid).toLocaleDateString("fr-FR")}</div>
+                            )}
+                            <div style={{ fontSize: "0.62rem", color: "#aaa" }}>· expire {new Date(p.expires_at).toLocaleDateString("fr-FR")}</div>
+                          </div>
                             {p.status === "expired" && <button onClick={async () => {
                               const newExpiry = new Date(Date.now() + (parseInt(proposeDuration) || 48) * 3600 * 1000).toISOString();
                               try {
