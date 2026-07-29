@@ -268,29 +268,29 @@ function AdminAppointments({ auth, showToast, onOpenProfile }: { auth: any; show
         : <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {filtered.map(a => { const si = apptStatusInfo(a.status); const canManageAssign = !a.assigned_to || a.assigned_to === auth.userId || (auth as any)?.adminLevel === "superadmin" || auth?.userId === SUPER_ADMIN_ID; return (
             <div key={a.id} style={{ background: G.blanc, borderRadius: 20, padding: 20, boxShadow: "0 2px 10px rgba(0,0,0,0.05)", border: `1.5px solid ${si.color}22` }}>
-              <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 14 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
                 <div onClick={() => a.user_id && onOpenProfile(a.user_id)} style={{ width: 44, height: 44, borderRadius: "50%", overflow: "hidden", background: G.creme, flexShrink: 0, cursor: "pointer" }}>{a.user?.photo_url && <img src={a.user.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}</div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: "flex", alignItems: "baseline", gap: 6, flexWrap: "wrap" }}>
-                    <span onClick={() => a.user_id && onOpenProfile(a.user_id)} style={{ fontWeight: 800, fontSize: "0.96rem", color: G.brun, cursor: "pointer" }}>{a.user?.name || "Utilisateur"}</span>
-                    {a.phone && <span style={{ fontSize: "0.78rem", color: "#999", fontWeight: 500 }}>(Tél : {a.phone})</span>}
-                  </div>
-                  <div style={{ fontSize: "0.72rem", color: "#999", marginTop: 2 }}>{a.type === "physique" ? "🏢 À l'agence" : "📞 Téléphonique"}{a.city ? ` · ${a.city}` : ""}</div>
-                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
-                    <span style={{ ...pillBase, background: a.user?.is_verified ? "rgba(39,174,96,0.12)" : "rgba(153,153,153,0.12)", color: a.user?.is_verified ? "#1a8c4a" : "#999" }}>{a.user?.is_verified ? "✓ Profil vérifié" : "Profil non vérifié"}</span>
-                    <span style={{ ...pillBase, background: a.user?.phone ? "rgba(39,174,96,0.12)" : "rgba(153,153,153,0.12)", color: a.user?.phone ? "#1a8c4a" : "#999" }}>{a.user?.phone ? "✓ Téléphone renseigné" : "Téléphone non renseigné"}</span>
-                    <span style={{ ...pillBase, background: a.user?.share_phone_with_matches ? "rgba(39,174,96,0.12)" : "rgba(153,153,153,0.12)", color: a.user?.share_phone_with_matches ? "#1a8c4a" : "#999" }}>{a.user?.share_phone_with_matches ? "✓ Téléphone visible" : "Téléphone non visible"}</span>
-                    <span onClick={() => openRelView(a)} title="Voir le profil relationnel" style={{ ...pillBase, cursor: "pointer", background: a.user?.relational_profile ? "rgba(142,68,173,0.1)" : "rgba(153,153,153,0.12)", color: a.user?.relational_profile ? "#7d3c98" : "#999" }}>{a.user?.relational_profile ? "✓ Profil relationnel" : "Profil relationnel vide"}</span>
-                    {a.user_id && userCounts[a.user_id] && (
-                      <>
-                        <span onClick={() => openListView(a, "matches")} title="Voir ses matchs" style={{ ...pillBase, cursor: "pointer", background: "rgba(233,30,140,0.1)", color: "#c2185b" }}>♥ {userCounts[a.user_id].matches} Match{userCounts[a.user_id].matches > 1 ? "s" : ""}</span>
-                        <span onClick={() => openListView(a, "proposals")} title="Voir ses propositions en attente" style={{ ...pillBase, cursor: "pointer", background: "rgba(41,128,185,0.1)", color: "#2471a3" }}>➤ {userCounts[a.user_id].proposals} Proposition{userCounts[a.user_id].proposals > 1 ? "s" : ""}</span>
-                        <span onClick={() => openListView(a, "likes")} title="Voir les profils qu'il/elle a likés" style={{ ...pillBase, cursor: "pointer", background: "rgba(230,126,34,0.1)", color: "#cf7012" }}>👍 {userCounts[a.user_id].likes} Liké{userCounts[a.user_id].likes > 1 ? "s" : ""}</span>
-                      </>
-                    )}
-                  </div>
-                </div>
+                <span onClick={() => a.user_id && onOpenProfile(a.user_id)} style={{ fontWeight: 800, fontSize: "0.96rem", color: G.brun, cursor: "pointer", flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.user?.name || "Utilisateur"}</span>
                 <span style={{ background: si.color + "1a", color: si.color, borderRadius: 50, padding: "6px 14px", fontSize: "0.72rem", fontWeight: 800, flexShrink: 0, display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap" }}>🗓️ Rendez-vous {si.label}</span>
+              </div>
+
+              <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
+                <span style={{ fontSize: "0.78rem", color: "#999", display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap" }}>{a.type === "physique" ? "🏢 À l'agence" : "📞 Téléphonique"}{a.city ? ` · ${a.city}` : ""}</span>
+                {a.phone && <span style={{ fontSize: "0.78rem", color: "#999", fontWeight: 500, whiteSpace: "nowrap" }}>(Tél : {a.phone})</span>}
+              </div>
+
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
+                <span style={{ ...pillBase, background: a.user?.is_verified ? "rgba(39,174,96,0.12)" : "rgba(153,153,153,0.12)", color: a.user?.is_verified ? "#1a8c4a" : "#999" }}>{a.user?.is_verified ? "✓ Profil vérifié" : "Profil non vérifié"}</span>
+                <span style={{ ...pillBase, background: a.user?.phone ? "rgba(39,174,96,0.12)" : "rgba(153,153,153,0.12)", color: a.user?.phone ? "#1a8c4a" : "#999" }}>{a.user?.phone ? "✓ Téléphone renseigné" : "Téléphone non renseigné"}</span>
+                <span style={{ ...pillBase, background: a.user?.share_phone_with_matches ? "rgba(39,174,96,0.12)" : "rgba(153,153,153,0.12)", color: a.user?.share_phone_with_matches ? "#1a8c4a" : "#999" }}>{a.user?.share_phone_with_matches ? "✓ Téléphone visible" : "Téléphone non visible"}</span>
+                <span onClick={() => openRelView(a)} title="Voir le profil relationnel" style={{ ...pillBase, cursor: "pointer", background: a.user?.relational_profile ? "rgba(142,68,173,0.1)" : "rgba(153,153,153,0.12)", color: a.user?.relational_profile ? "#7d3c98" : "#999" }}>{a.user?.relational_profile ? "✓ Profil relationnel" : "Profil relationnel vide"}</span>
+                {a.user_id && userCounts[a.user_id] && (
+                  <>
+                    <span onClick={() => openListView(a, "matches")} title="Voir ses matchs" style={{ ...pillBase, cursor: "pointer", background: "rgba(233,30,140,0.1)", color: "#c2185b" }}>♥ {userCounts[a.user_id].matches} Match{userCounts[a.user_id].matches > 1 ? "s" : ""}</span>
+                    <span onClick={() => openListView(a, "proposals")} title="Voir ses propositions en attente" style={{ ...pillBase, cursor: "pointer", background: "rgba(41,128,185,0.1)", color: "#2471a3" }}>➤ {userCounts[a.user_id].proposals} Proposition{userCounts[a.user_id].proposals > 1 ? "s" : ""}</span>
+                    <span onClick={() => openListView(a, "likes")} title="Voir les profils qu'il/elle a likés" style={{ ...pillBase, cursor: "pointer", background: "rgba(230,126,34,0.1)", color: "#cf7012" }}>👍 {userCounts[a.user_id].likes} Liké{userCounts[a.user_id].likes > 1 ? "s" : ""}</span>
+                  </>
+                )}
               </div>
 
               {(a.topic || a.message) && (
@@ -761,6 +761,7 @@ export function AdminDesktopPage() {
     featureGiftPremium: "true",
     featureAssistant: "true",
     featureGroupPremium: "true",
+    featureSocials: "true",
     featureGroupPhotos: "true",
     featurePhotoRetouch: "true",
     appointmentsEnabled: "true",
@@ -810,7 +811,7 @@ export function AdminDesktopPage() {
       "modal_same_gender_homme","modal_same_gender_femme","modal_match_title","modal_match_subtitle","modal_premium_default","modal_likes_epuises",
       "limit_likes_free","limit_messages_free","limit_messages_free_femme","limit_match_requests","limit_status_boosts","limit_photo_size_mb","match_welcome_message",
       "premium_price_fcfa","premium_price_week_fcfa","premium_price_2month_fcfa","premium_days_week","premium_days_2month","premium_duration_days",
-      "feature_statuses","feature_gift_premium","feature_assistant","feature_group_premium","feature_photo_retouch",
+      "feature_statuses","feature_gift_premium","feature_assistant","feature_group_premium","feature_socials","feature_photo_retouch",
       "feature_moderation_insults","feature_moderation_contact","support_reply_push_enabled",
       "appointments_enabled","phone_appointments_enabled","physical_appointments_enabled",
       "appointment_physical_price",
@@ -857,6 +858,7 @@ export function AdminDesktopPage() {
         featureGiftPremium: map["feature_gift_premium"] || c.featureGiftPremium,
         featureAssistant: map["feature_assistant"] || c.featureAssistant,
         featureGroupPremium: map["feature_group_premium"] || c.featureGroupPremium,
+        featureSocials: map["feature_socials"] || c.featureSocials,
         featureGroupPhotos: map["feature_group_photos"] || c.featureGroupPhotos,
         featurePhotoRetouch: map["feature_photo_retouch"] || c.featurePhotoRetouch,
         featureModerationInsults: map["feature_moderation_insults"] || c.featureModerationInsults,
@@ -1296,6 +1298,7 @@ export function AdminDesktopPage() {
                 ["feature_gift_premium", "featureGiftPremium" as keyof typeof appConfig, "Cadeau Premium"],
                 ["feature_assistant", "featureAssistant" as keyof typeof appConfig, "Assistant IA"],
                 ["feature_group_premium", "featureGroupPremium" as keyof typeof appConfig, "Groupe Premium"],
+                ["feature_socials", "featureSocials" as keyof typeof appConfig, "Réseaux sociaux (Facebook, TikTok, Insta, Snap)"],
                 ["feature_group_photos", "featureGroupPhotos" as keyof typeof appConfig, "Photos dans le Groupe"],
                 ["feature_photo_retouch", "featurePhotoRetouch" as keyof typeof appConfig, "Retouche photo Premium"],
                 ["feature_ambassador_program", "featureAmbassadorProgram" as keyof typeof appConfig, "Programme Ambassadeur (bouton \"Devenir Ambassadeur\")"],
@@ -2846,7 +2849,7 @@ function AssistantPhotoConfig({ auth }: { auth: Auth }) {
 export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () => void }) {
   const [rules, setRules] = React.useState({ blockSameGenderLike: true });
   const [modalTexts, setModalTexts] = React.useState({ sameGenderHomme: "Eh frère, reste du bon côté ! 😂", sameGenderFemme: "Eh soeur, reste du bon côté ! 😂", sameGenderSub: "Moyo Dating c'est pour les rencontres hétérosexuelles 😄", signupSuccess: "Ton compte est prêt ! Connecte-toi maintenant.", matchTitle: "C'est un Match !", matchSubtitle: "Toi et {name} vous plaisez mutuellement !", premiumDefault: "Passe Premium pour débloquer toutes les fonctionnalités de Moyo Dating !", likesEpuises: "Tu as utilisé tes {n} likes gratuits aujourd'hui. Passe Premium pour liker sans limite !" });
-  const [appConfig, setAppConfig] = React.useState({ limitLikes: "5", limitMessages: "3", limitMessagesFemme: "100", limitMatchRequests: "2", limitStatusBoosts: "2", limitPhotoSizeMb: "5", matchWelcomeMessage: "Vous avez un nouveau match ! Dites bonjour 👋", premiumPriceFcfa: "3500", premiumPriceEur: "10", eurToFcfaRate: "655.957", premiumDurationDays: "31", premiumPriceWeekFcfa: "1200", premiumPrice2monthFcfa: "5900", premiumDaysWeek: "7", premiumDays2month: "62", likesNotifDelayHours: "24", featureStatuses: "true", featureGiftPremium: "true", featureAssistant: "true", featureGroupPremium: "true", featureGroupPhotos: "true", featurePhotoRetouch: "true", maintenanceMode: "false", maintenanceMessage: "Moyo Dating est en maintenance. Nous revenons très vite ! 🔧", customBannedWords: "", contactBannedWords: "", autoModContactReply: AUTO_MOD_CONTACT_REPLY, featureModerationInsults: "true", featureModerationContact: "true", disabledBuiltinWords: "", disabledBuiltinContactWords: "", affiliateCommissionPercent: "15", affiliatePayableDelayDays: "15", featureAmbassadorProgram: "true", affiliatePayoutMinFcfa: "10000", affiliatePromoBonusDays: "3", supportReplyPushEnabled: "true" });
+  const [appConfig, setAppConfig] = React.useState({ limitLikes: "5", limitMessages: "3", limitMessagesFemme: "100", limitMatchRequests: "2", limitStatusBoosts: "2", limitPhotoSizeMb: "5", matchWelcomeMessage: "Vous avez un nouveau match ! Dites bonjour 👋", premiumPriceFcfa: "3500", premiumPriceEur: "10", eurToFcfaRate: "655.957", premiumDurationDays: "31", premiumPriceWeekFcfa: "1200", premiumPrice2monthFcfa: "5900", premiumDaysWeek: "7", premiumDays2month: "62", likesNotifDelayHours: "24", featureStatuses: "true", featureGiftPremium: "true", featureAssistant: "true", featureGroupPremium: "true", featureSocials: "true", featureGroupPhotos: "true", featurePhotoRetouch: "true", maintenanceMode: "false", maintenanceMessage: "Moyo Dating est en maintenance. Nous revenons très vite ! 🔧", customBannedWords: "", contactBannedWords: "", autoModContactReply: AUTO_MOD_CONTACT_REPLY, featureModerationInsults: "true", featureModerationContact: "true", disabledBuiltinWords: "", disabledBuiltinContactWords: "", affiliateCommissionPercent: "15", affiliatePayableDelayDays: "15", featureAmbassadorProgram: "true", affiliatePayoutMinFcfa: "10000", affiliatePromoBonusDays: "3", supportReplyPushEnabled: "true" });
   const [editingModal, setEditingModal] = React.useState<string | null>(null);
   const [editingValue, setEditingValue] = React.useState("");
   const [editingConfig, setEditingConfig] = React.useState<string | null>(null);
@@ -2905,7 +2908,7 @@ export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () =
   };
 
   React.useEffect(() => {
-    const allKeys = ["rule_block_same_gender_like","modal_same_gender_homme","modal_same_gender_femme","modal_same_gender_sub","modal_signup_success","modal_match_title","modal_match_subtitle","modal_premium_default","modal_likes_epuises","limit_likes_free","limit_messages_free","limit_messages_free_femme","limit_match_requests","limit_status_boosts","limit_photo_size_mb","match_welcome_message","match_proposal_expiry_days","premium_price_fcfa","premium_price_week_fcfa","premium_price_2month_fcfa","premium_days_week","premium_days_2month","premium_duration_days","feature_statuses","feature_gift_premium","feature_assistant","feature_group_premium","feature_photo_retouch","feature_moderation_insults","feature_moderation_contact","support_reply_push_enabled","maintenance_mode","maintenance_message","custom_banned_words","contact_banned_words","disabled_builtin_words","disabled_builtin_contact_words","auto_mod_contact_reply","poll_badges_ms","poll_admin_badge_ms","poll_stats_ms","poll_broadcast_ms","poll_support_ms","affiliate_commission_percent","affiliate_payable_delay_days","feature_ambassador_program","affiliate_payout_min_fcfa","affiliate_promo_bonus_days"];
+    const allKeys = ["rule_block_same_gender_like","modal_same_gender_homme","modal_same_gender_femme","modal_same_gender_sub","modal_signup_success","modal_match_title","modal_match_subtitle","modal_premium_default","modal_likes_epuises","limit_likes_free","limit_messages_free","limit_messages_free_femme","limit_match_requests","limit_status_boosts","limit_photo_size_mb","match_welcome_message","match_proposal_expiry_days","premium_price_fcfa","premium_price_week_fcfa","premium_price_2month_fcfa","premium_days_week","premium_days_2month","premium_duration_days","feature_statuses","feature_gift_premium","feature_assistant","feature_group_premium","feature_socials","feature_photo_retouch","feature_moderation_insults","feature_moderation_contact","support_reply_push_enabled","maintenance_mode","maintenance_message","custom_banned_words","contact_banned_words","disabled_builtin_words","disabled_builtin_contact_words","auto_mod_contact_reply","poll_badges_ms","poll_admin_badge_ms","poll_stats_ms","poll_broadcast_ms","poll_support_ms","affiliate_commission_percent","affiliate_payable_delay_days","feature_ambassador_program","affiliate_payout_min_fcfa","affiliate_promo_bonus_days"];
     fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(${allKeys.join(",")})&select=key,value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } })
       .then(r => r.json()).then(data => {
         if (!Array.isArray(data)) return;
@@ -2914,7 +2917,7 @@ export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () =
         if (map["match_proposal_expiry_days"]) setMatchProposalExpiryDaysM(map["match_proposal_expiry_days"]);
         if (map["rule_block_same_gender_like"]) setRules(r => ({ ...r, blockSameGenderLike: map["rule_block_same_gender_like"] === "true" }));
         setModalTexts(t => ({ sameGenderHomme: map["modal_same_gender_homme"] || t.sameGenderHomme, sameGenderFemme: map["modal_same_gender_femme"] || t.sameGenderFemme, sameGenderSub: map["modal_same_gender_sub"] || t.sameGenderSub, signupSuccess: map["modal_signup_success"] || t.signupSuccess, matchTitle: map["modal_match_title"] || t.matchTitle, matchSubtitle: map["modal_match_subtitle"] || t.matchSubtitle, premiumDefault: map["modal_premium_default"] || t.premiumDefault, likesEpuises: map["modal_likes_epuises"] || t.likesEpuises }));
-        setAppConfig(c => ({ limitLikes: map["limit_likes_free"] || c.limitLikes, limitMessages: map["limit_messages_free"] || c.limitMessages, limitMessagesFemme: map["limit_messages_free_femme"] || c.limitMessagesFemme, limitMatchRequests: map["limit_match_requests"] || c.limitMatchRequests, limitStatusBoosts: map["limit_status_boosts"] || c.limitStatusBoosts, limitPhotoSizeMb: map["limit_photo_size_mb"] || c.limitPhotoSizeMb, matchWelcomeMessage: map["match_welcome_message"] || c.matchWelcomeMessage, premiumPriceFcfa: map["premium_price_fcfa"] || c.premiumPriceFcfa, premiumPriceWeekFcfa: map["premium_price_week_fcfa"] || c.premiumPriceWeekFcfa, premiumPrice2monthFcfa: map["premium_price_2month_fcfa"] || c.premiumPrice2monthFcfa, premiumDaysWeek: map["premium_days_week"] || c.premiumDaysWeek, premiumDays2month: map["premium_days_2month"] || c.premiumDays2month, premiumPriceEur: map["premium_price_eur"] || c.premiumPriceEur, eurToFcfaRate: map["eur_to_fcfa_rate"] || c.eurToFcfaRate, premiumDurationDays: map["premium_duration_days"] || c.premiumDurationDays, likesNotifDelayHours: map["likes_notification_delay_hours"] || c.likesNotifDelayHours, featureStatuses: map["feature_statuses"] || c.featureStatuses, featureGiftPremium: map["feature_gift_premium"] || c.featureGiftPremium, featureAssistant: map["feature_assistant"] || c.featureAssistant, featureGroupPremium: map["feature_group_premium"] || c.featureGroupPremium,
+        setAppConfig(c => ({ limitLikes: map["limit_likes_free"] || c.limitLikes, limitMessages: map["limit_messages_free"] || c.limitMessages, limitMessagesFemme: map["limit_messages_free_femme"] || c.limitMessagesFemme, limitMatchRequests: map["limit_match_requests"] || c.limitMatchRequests, limitStatusBoosts: map["limit_status_boosts"] || c.limitStatusBoosts, limitPhotoSizeMb: map["limit_photo_size_mb"] || c.limitPhotoSizeMb, matchWelcomeMessage: map["match_welcome_message"] || c.matchWelcomeMessage, premiumPriceFcfa: map["premium_price_fcfa"] || c.premiumPriceFcfa, premiumPriceWeekFcfa: map["premium_price_week_fcfa"] || c.premiumPriceWeekFcfa, premiumPrice2monthFcfa: map["premium_price_2month_fcfa"] || c.premiumPrice2monthFcfa, premiumDaysWeek: map["premium_days_week"] || c.premiumDaysWeek, premiumDays2month: map["premium_days_2month"] || c.premiumDays2month, premiumPriceEur: map["premium_price_eur"] || c.premiumPriceEur, eurToFcfaRate: map["eur_to_fcfa_rate"] || c.eurToFcfaRate, premiumDurationDays: map["premium_duration_days"] || c.premiumDurationDays, likesNotifDelayHours: map["likes_notification_delay_hours"] || c.likesNotifDelayHours, featureStatuses: map["feature_statuses"] || c.featureStatuses, featureGiftPremium: map["feature_gift_premium"] || c.featureGiftPremium, featureAssistant: map["feature_assistant"] || c.featureAssistant, featureGroupPremium: map["feature_group_premium"] || c.featureGroupPremium, featureSocials: map["feature_socials"] || c.featureSocials,
         featureGroupPhotos: map["feature_group_photos"] || c.featureGroupPhotos, featurePhotoRetouch: map["feature_photo_retouch"] || c.featurePhotoRetouch, maintenanceMode: map["maintenance_mode"] || c.maintenanceMode, maintenanceMessage: map["maintenance_message"] || c.maintenanceMessage, customBannedWords: map["custom_banned_words"] || c.customBannedWords, contactBannedWords: map["contact_banned_words"] || c.contactBannedWords, autoModContactReply: map["auto_mod_contact_reply"] || c.autoModContactReply, featureModerationInsults: map["feature_moderation_insults"] || c.featureModerationInsults, featureModerationContact: map["feature_moderation_contact"] || c.featureModerationContact, disabledBuiltinWords: map["disabled_builtin_words"] !== undefined ? map["disabled_builtin_words"] : c.disabledBuiltinWords, disabledBuiltinContactWords: map["disabled_builtin_contact_words"] !== undefined ? map["disabled_builtin_contact_words"] : c.disabledBuiltinContactWords, affiliateCommissionPercent: map["affiliate_commission_percent"] || c.affiliateCommissionPercent, affiliatePayableDelayDays: map["affiliate_payable_delay_days"] || c.affiliatePayableDelayDays, featureAmbassadorProgram: map["feature_ambassador_program"] || c.featureAmbassadorProgram, affiliatePayoutMinFcfa: map["affiliate_payout_min_fcfa"] || c.affiliatePayoutMinFcfa, affiliatePromoBonusDays: map["affiliate_promo_bonus_days"] || c.affiliatePromoBonusDays, supportReplyPushEnabled: map["support_reply_push_enabled"] || c.supportReplyPushEnabled }));
         if (map["custom_banned_words"] !== undefined) buildCustomBannedRegex(map["custom_banned_words"]);
         if (map["contact_banned_words"] !== undefined) buildContactBannedRegex(map["contact_banned_words"]);
@@ -3062,7 +3065,7 @@ export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () =
         </div>
       </OffCanvasSection>
       <OffCanvasSection title="Fonctionnalités">
-        {([["feature_statuses","featureStatuses" as keyof typeof appConfig,"Statuts (Stories)"],["feature_gift_premium","featureGiftPremium" as keyof typeof appConfig,"Cadeau Premium"],["feature_assistant","featureAssistant" as keyof typeof appConfig,"Assistant IA"],["feature_group_premium","featureGroupPremium" as keyof typeof appConfig,"Groupe Premium"],["feature_group_photos","featureGroupPhotos" as keyof typeof appConfig,"Photos dans le Groupe"],["feature_photo_retouch","featurePhotoRetouch" as keyof typeof appConfig,"Retouche photo Premium"],["feature_ambassador_program","featureAmbassadorProgram" as keyof typeof appConfig,"Programme Ambassadeur (bouton \"Devenir Ambassadeur\")"],["feature_moderation_insults","featureModerationInsults" as keyof typeof appConfig,"Modération auto (insultes, menaces, arnaques, sexuel)"],["feature_moderation_contact","featureModerationContact" as keyof typeof appConfig,"Blocage partage de contact (comptes gratuits)"],["support_reply_push_enabled","supportReplyPushEnabled" as keyof typeof appConfig,"Notifications push Assistance (1er avertissement + réponses admin)"],["maintenance_mode","maintenanceMode" as keyof typeof appConfig,"Mode maintenance"]] as [string, keyof typeof appConfig, string][]).map(([key,ck,label]) => (
+        {([["feature_statuses","featureStatuses" as keyof typeof appConfig,"Statuts (Stories)"],["feature_gift_premium","featureGiftPremium" as keyof typeof appConfig,"Cadeau Premium"],["feature_assistant","featureAssistant" as keyof typeof appConfig,"Assistant IA"],["feature_group_premium","featureGroupPremium" as keyof typeof appConfig,"Groupe Premium"],["feature_socials","featureSocials" as keyof typeof appConfig,"Réseaux sociaux (Facebook, TikTok, Insta, Snap)"],["feature_group_photos","featureGroupPhotos" as keyof typeof appConfig,"Photos dans le Groupe"],["feature_photo_retouch","featurePhotoRetouch" as keyof typeof appConfig,"Retouche photo Premium"],["feature_ambassador_program","featureAmbassadorProgram" as keyof typeof appConfig,"Programme Ambassadeur (bouton \"Devenir Ambassadeur\")"],["feature_moderation_insults","featureModerationInsults" as keyof typeof appConfig,"Modération auto (insultes, menaces, arnaques, sexuel)"],["feature_moderation_contact","featureModerationContact" as keyof typeof appConfig,"Blocage partage de contact (comptes gratuits)"],["support_reply_push_enabled","supportReplyPushEnabled" as keyof typeof appConfig,"Notifications push Assistance (1er avertissement + réponses admin)"],["maintenance_mode","maintenanceMode" as keyof typeof appConfig,"Mode maintenance"]] as [string, keyof typeof appConfig, string][]).map(([key,ck,label]) => (
           <div key={key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: G.creme, borderRadius: 12 }}>
             <div style={{ fontSize: "0.83rem", fontWeight: 600, color: key === "maintenance_mode" ? G.rouge : "#1a1a1a" }}>{label}</div>
             <SwitchBtn on={appConfig[ck] === "true"} onToggle={async () => { const v = appConfig[ck] !== "true" ? "true" : "false"; setAppConfig(c => ({ ...c, [ck]: v })); await patch(key, v); }} />
@@ -8389,11 +8392,18 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
     if (!s.id) return;
     setStDeleting(s.id);
     try {
-      await sb.delete(auth.token, "statuses", `?id=eq.${s.id}`);
+      // Vérification réelle de la réponse (au lieu de sb.delete qui ne la vérifiait pas) : si
+      // la suppression est refusée en base (ex. politique RLS), on l'affiche clairement au lieu
+      // d'un faux message de succès qui laissait le statut réapparaître au rechargement suivant.
+      const delRes = await fetch(`${SUPABASE_URL}/rest/v1/statuses?id=eq.${s.id}`, {
+        method: "DELETE",
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` },
+      });
+      if (!delRes.ok) throw new Error(`delete failed: ${delRes.status}`);
       setOfficialStatuses(prev => prev.filter(x => x.id !== s.id));
       setFeatureStatuses(prev => prev.filter(x => x.id !== s.id));
       showToast("Statut supprimé.", "success");
-    } catch { showToast("Suppression impossible.", "error"); }
+    } catch { showToast("Suppression impossible. Réessaie ou contacte le support technique.", "error"); }
     finally { setStDeleting(null); }
   };
   const expiresInLabel = (iso?: string) => {

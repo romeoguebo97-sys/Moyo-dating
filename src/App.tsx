@@ -412,6 +412,7 @@ export function setFEATURE_SHOW_LIKES_VIEWS_FREE(v: any) { FEATURE_SHOW_LIKES_VI
 let PREMIUM_SCREEN_VARIANT: "a" | "b" = "a";
 export function setPREMIUM_SCREEN_VARIANT(v: any) { PREMIUM_SCREEN_VARIANT = v === "b" ? "b" : "a"; }
 let FEATURE_GROUP_PREMIUM = true;
+let FEATURE_SOCIALS = true;
 let FEATURE_AMBASSADOR_PROGRAM = true;
 let FEATURE_GROUP_PHOTOS = true;
 let FEATURE_PHOTO_RETOUCH = true;
@@ -507,7 +508,7 @@ export function dedupeMatchesByCouple<T extends { user1?: string; user2?: string
 }
 
 // Charger les settings dynamiques depuis Supabase au démarrage
-fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_messages_free_femme,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,pay_wero_enabled,pay_paypal_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,feature_show_likes_views_free,feature_group_premium,feature_group_photos,feature_photo_retouch,feature_moderation_insults,feature_moderation_contact,premium_screen_variant,custom_banned_words,contact_banned_words,disabled_builtin_words,disabled_builtin_contact_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,pay_wero_number,pay_paypal_number,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,social_linkedin,store_link_android,store_link_ios,plan_week_enabled,plan_month_enabled,plan_2month_enabled,discover_default_mode,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,auto_warn_ban_contact_enabled,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price,privacy_notice_enabled,premium_boost_enabled,assistant_photo_url,broadcast_enabled,modal_match_title,modal_match_subtitle,referral_bonus_week_days,referral_bonus_month_days,referral_bonus_2month_days,affiliate_commission_percent,affiliate_payable_delay_days,privacy_notice_step1_text,privacy_notice_step2_text,ban_screen_text,pay_link_enabled,feature_ambassador_program,affiliate_payout_min_fcfa,affiliate_promo_bonus_days,support_reply_push_enabled,ambassador_resources_link)&select=key,value`, {
+fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_messages_free_femme,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,pay_wero_enabled,pay_paypal_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,feature_show_likes_views_free,feature_group_premium,feature_socials,feature_group_photos,feature_photo_retouch,feature_moderation_insults,feature_moderation_contact,premium_screen_variant,custom_banned_words,contact_banned_words,disabled_builtin_words,disabled_builtin_contact_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,pay_wero_number,pay_paypal_number,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,social_linkedin,store_link_android,store_link_ios,plan_week_enabled,plan_month_enabled,plan_2month_enabled,discover_default_mode,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,auto_warn_ban_contact_enabled,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price,privacy_notice_enabled,premium_boost_enabled,assistant_photo_url,broadcast_enabled,modal_match_title,modal_match_subtitle,referral_bonus_week_days,referral_bonus_month_days,referral_bonus_2month_days,affiliate_commission_percent,affiliate_payable_delay_days,privacy_notice_step1_text,privacy_notice_step2_text,ban_screen_text,pay_link_enabled,feature_ambassador_program,affiliate_payout_min_fcfa,affiliate_promo_bonus_days,support_reply_push_enabled,ambassador_resources_link)&select=key,value`, {
   headers: { "apikey": SUPABASE_KEY },
 }).then(r => r.json()).then((data: { key: string; value: string }[]) => {
   if (!Array.isArray(data)) return;
@@ -522,6 +523,7 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
   if (map["feature_statuses"] !== undefined) FEATURE_STATUSES = map["feature_statuses"] !== "false";
   if (map["feature_gift_premium"] !== undefined) FEATURE_GIFT_PREMIUM = map["feature_gift_premium"] !== "false";
   if (map["feature_group_premium"] !== undefined) FEATURE_GROUP_PREMIUM = map["feature_group_premium"] !== "false";
+  if (map["feature_socials"] !== undefined) FEATURE_SOCIALS = map["feature_socials"] !== "false";
   if (map["feature_ambassador_program"] !== undefined) FEATURE_AMBASSADOR_PROGRAM = map["feature_ambassador_program"] !== "false";
   if (map["feature_photo_retouch"] !== undefined) FEATURE_PHOTO_RETOUCH = map["feature_photo_retouch"] !== "false";
   if (map["feature_group_photos"] !== undefined) FEATURE_GROUP_PHOTOS = map["feature_group_photos"] !== "false";
@@ -838,7 +840,7 @@ export type Auth = {
   refreshToken?: string;
   expiresAt?: number;
 };
-export type Profile = { id: string; name: string; age: number; city: string; gender: string; bio: string; religion?: string; profession?: string; hobbies?: string; phone?: string | null; photo_url?: string | null; is_premium: boolean; is_admin?: boolean; is_visible?: boolean; is_verified?: boolean; is_certified?: boolean; last_seen?: string; hide_online_status?: boolean; warning_count?: number; is_banned?: boolean; ban_until?: string | null; ban_reason?: string | null; last_notice_acknowledged?: boolean; last_notice_at?: string | null; has_installed_pwa?: boolean; account_deleted?: boolean; share_phone_with_matches?: boolean };
+export type Profile = { id: string; name: string; age: number; city: string; gender: string; bio: string; religion?: string; profession?: string; hobbies?: string; phone?: string | null; photo_url?: string | null; is_premium: boolean; is_admin?: boolean; is_visible?: boolean; is_verified?: boolean; is_certified?: boolean; last_seen?: string; hide_online_status?: boolean; warning_count?: number; is_banned?: boolean; ban_until?: string | null; ban_reason?: string | null; last_notice_acknowledged?: boolean; last_notice_at?: string | null; has_installed_pwa?: boolean; account_deleted?: boolean; share_phone_with_matches?: boolean; soc_facebook?: string | null; soc_tiktok?: string | null; soc_instagram?: string | null; soc_snapchat?: string | null; share_socials_with_matches?: boolean };
 export type Match = { id: string; user1: string; user2: string; partner?: Profile; lastMsg?: Message; unreadCount?: number; created_at?: string };
 export type Message = { id?: string; match_id: string; sender_id: string; content: string; is_read: boolean; is_delivered?: boolean; is_edited?: boolean; created_at?: string; reactions?: Record<string, string[]>; is_view_once?: boolean; viewed_at?: string | null; is_destroyed?: boolean; destroyed_at?: string | null };
 // Ciblage des diffusions générales : décide si une diffusion (target) concerne un utilisateur donné.
@@ -2299,6 +2301,39 @@ export function PremiumBadge({ size = 16 }: { size?: number }) {
       </svg>
     </div>
   );
+}
+
+export type SocialNet = "facebook" | "tiktok" | "instagram" | "snapchat";
+const SOCIAL_ICON_PATHS: Record<SocialNet, string> = {
+  facebook: "M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z",
+  tiktok: "M16.6 5.82s.51.5 0 0A4.278 4.278 0 0 1 15.54 3h-3.09v12.4a2.592 2.592 0 0 1-2.59 2.5c-1.42 0-2.6-1.16-2.6-2.6 0-1.72 1.66-3.01 3.37-2.48V9.66c-3.45-.46-6.47 2.22-6.47 5.64 0 3.33 2.76 5.7 5.69 5.7 3.14 0 5.69-2.55 5.69-5.7V9.01a7.35 7.35 0 0 0 4.3 1.38V7.3s-1.88.09-3.24-1.48z",
+  instagram: "M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z",
+  snapchat: "M12.017 2c2.74 0 3.096.011 4.176.061 1.08.05 1.816.222 2.46.472.665.259 1.229.605 1.792 1.168.514.514.913 1.128 1.168 1.792.25.644.422 1.38.472 2.46.05 1.08.061 1.436.061 4.176s-.011 3.096-.061 4.176c-.05 1.08-.222 1.816-.472 2.46a4.958 4.958 0 0 1-1.168 1.792 4.958 4.958 0 0 1-1.792 1.168c-.644.25-1.38.422-2.46.472-1.08.05-1.436.061-4.176.061s-3.096-.011-4.176-.061c-1.08-.05-1.816-.222-2.46-.472a4.958 4.958 0 0 1-1.792-1.168 4.958 4.958 0 0 1-1.168-1.792c-.25-.644-.422-1.38-.472-2.46C2.011 15.113 2 14.757 2 12.017s.011-3.096.061-4.176c.05-1.08.222-1.816.472-2.46A4.958 4.958 0 0 1 3.7 3.589a4.958 4.958 0 0 1 1.792-1.168c.644-.25 1.38-.422 2.46-.472C9.032 2.011 9.388 2 12.017 2z",
+};
+// Icônes volontairement neutres (gris, pas les couleurs de marque) — cohérent sur tout le
+// parcours : profil, menu de conversation, modal.
+export function SocialIcon({ net, size = 16, color = "#666" }: { net: SocialNet; size?: number; color?: string }) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill={color}><path d={SOCIAL_ICON_PATHS[net]} /></svg>;
+}
+export const SOCIAL_LIST: { key: "soc_facebook" | "soc_tiktok" | "soc_instagram" | "soc_snapchat"; net: SocialNet; label: string; placeholder: string }[] = [
+  { key: "soc_facebook", net: "facebook", label: "Facebook", placeholder: "facebook.com/tonprofil ou @tonpseudo" },
+  { key: "soc_tiktok", net: "tiktok", label: "TikTok", placeholder: "@tonpseudo" },
+  { key: "soc_instagram", net: "instagram", label: "Instagram", placeholder: "@tonpseudo" },
+  { key: "soc_snapchat", net: "snapchat", label: "Snapchat", placeholder: "@tonpseudo" },
+];
+// Accepte un lien complet déjà collé, ou juste un pseudo/@pseudo, et construit toujours un lien
+// cliquable valide vers le bon réseau.
+export function buildSocialUrl(net: SocialNet, raw: string): string {
+  let v = (raw || "").trim();
+  if (/^https?:\/\//i.test(v)) return v;
+  v = v.replace(/^@/, "");
+  if (net === "facebook") {
+    if (v.includes(".com/")) return `https://${v.replace(/^www\./, "")}`;
+    return `https://facebook.com/${v}`;
+  }
+  if (net === "tiktok") return `https://www.tiktok.com/@${v.replace(/^.*tiktok\.com\/@?/i, "")}`;
+  if (net === "instagram") return `https://www.instagram.com/${v.replace(/^.*instagram\.com\//i, "")}`;
+  return `https://www.snapchat.com/add/${v.replace(/^.*snapchat\.com\/add\//i, "")}`;
 }
 
 export const Avatar = memo(function Avatar({ url, gender, size = 54, border = false, premium = false }: { url?: string | null; gender?: string; size?: number; border?: boolean; premium?: boolean }) {
@@ -10402,6 +10437,24 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
       })
       .catch(() => setPhoneReveal({ name: partner.name, status: "unavailable" }));
   };
+  // ── Révélation des réseaux sociaux d'un match — même principe que le numéro (carte séparée,
+  //    dépend du réglage de visibilité de l'autre), dans son propre modal indépendant. ──
+  const [socialsReveal, setSocialsReveal] = useState<{ name: string; status: "loading" | "revealed" | "unavailable"; nets?: { net: SocialNet; label: string; value: string }[] } | null>(null);
+  const openSocialsReveal = (partner?: Profile | null) => {
+    if (!partner) return;
+    setSocialsReveal({ name: partner.name, status: "loading" });
+    sb.query<{ soc_facebook: string | null; soc_tiktok: string | null; soc_instagram: string | null; soc_snapchat: string | null; share_socials_with_matches?: boolean }>(auth.token, "profiles", `?id=eq.${partner.id}&select=soc_facebook,soc_tiktok,soc_instagram,soc_snapchat,share_socials_with_matches`)
+      .then(res => {
+        const p = res?.[0];
+        if (!p?.share_socials_with_matches) { setSocialsReveal({ name: partner.name, status: "unavailable" }); return; }
+        const nets = SOCIAL_LIST
+          .map(s => ({ net: s.net, label: s.label, value: (p as any)[s.key] as string | null }))
+          .filter(n => n.value) as { net: SocialNet; label: string; value: string }[];
+        if (nets.length === 0) { setSocialsReveal({ name: partner.name, status: "unavailable" }); return; }
+        setSocialsReveal({ name: partner.name, status: "revealed", nets });
+      })
+      .catch(() => setSocialsReveal({ name: partner.name, status: "unavailable" }));
+  };
   const [imgLoading, setImgLoading] = useState(false);
   const [previewImg, setPreviewImg] = useState<string | null>(null);
   const [previewVideoUrl, setPreviewVideoUrl] = useState<string | null>(null);
@@ -13725,6 +13778,42 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
         </div>
       )}
 
+      {socialsReveal && (
+        <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 400, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }} onClick={() => setSocialsReveal(null)}>
+          <div className="moyo-card-in" onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 300, textAlign: "center", boxShadow: "0 20px 60px rgba(44,26,14,0.2)" }}>
+            {socialsReveal.status === "loading" ? (
+              <div style={{ padding: "16px 0", color: "#999", fontSize: "0.86rem" }}>Chargement…</div>
+            ) : socialsReveal.status === "revealed" ? (
+              <>
+                <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(102,102,102,0.14)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                </div>
+                <div style={{ fontSize: "0.78rem", color: "#999", marginBottom: 16 }}>Réseaux sociaux de {socialsReveal.name}</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 18 }}>
+                  {socialsReveal.nets?.map(n => (
+                    <a key={n.net} href={buildSocialUrl(n.net, n.value)} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", border: `1px solid ${G.gris}`, borderRadius: 12, textDecoration: "none" }}>
+                      <div style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(102,102,102,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><SocialIcon net={n.net} size={16} /></div>
+                      <span style={{ flex: 1, textAlign: "left", fontSize: "0.85rem", color: "#333", fontWeight: 600 }}>{n.label}</span>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                    </a>
+                  ))}
+                </div>
+                <Btn variant="ghost" onClick={() => setSocialsReveal(null)} style={{ width: "100%" }}>Fermer</Btn>
+              </>
+            ) : (
+              <>
+                <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(180,60,60,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
+                </div>
+                <h3 style={{ fontSize: "1rem", fontWeight: 700, marginBottom: 8, color: G.brun }}>Réseaux non disponibles</h3>
+                <p style={{ fontSize: "0.84rem", color: "#666", marginBottom: 18, lineHeight: 1.6 }}>{socialsReveal.name} n'a pas encore renseigné de réseaux, ou n'a pas autorisé ses matchs à les voir.</p>
+                <Btn variant="ghost" onClick={() => setSocialsReveal(null)} style={{ width: "100%" }}>Fermer</Btn>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Menu du bas "plus d'actions" : contenu adapté selon les droits Premium des deux côtés,
           même famille visuelle que les autres menus du bas de l'app (poignée, en-tête avec photo,
           liste icône + libellé). */}
@@ -13754,6 +13843,14 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
                 </div>
                 <div style={{ fontWeight: 700, fontSize: "0.93rem", color: G.brun, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, minWidth: 0 }}>Voir le numéro de téléphone de {open.partner.name}</div>
               </div>
+              {FEATURE_SOCIALS && (
+                <div onPointerDown={() => { setConvMenuOpen(false); setTimeout(() => openSocialsReveal(open.partner), 50); }} style={{ padding: "15px 20px", display: "flex", alignItems: "center", gap: 14, cursor: "pointer", borderBottom: "1px solid #F8F8F8", WebkitTapHighlightColor: "transparent" }}>
+                  <div style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(102,102,102,0.14)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                  </div>
+                  <div style={{ fontWeight: 700, fontSize: "0.93rem", color: G.brun, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, minWidth: 0 }}>Voir les réseaux sociaux de {open.partner.name}</div>
+                </div>
+              )}
               {FEATURE_GIFT_PREMIUM && auth.isPremium && !open.partner.is_premium && (
                 <div onPointerDown={() => { setConvMenuOpen(false); setTimeout(() => open.partner && onShowGiftPremium?.({ id: open.partner.id, name: open.partner.name }), 50); }} style={{ padding: "15px 20px", display: "flex", alignItems: "center", gap: 14, cursor: "pointer", borderBottom: "1px solid #F8F8F8", WebkitTapHighlightColor: "transparent" }}>
                   <div style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(212,168,67,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -16123,6 +16220,22 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
     setEditingPhoneCard(false);
     setToast({ msg: "Numéro mis à jour !" });
   };
+  // ── Édition des réseaux sociaux, même principe que la carte téléphone : un seul champ par
+  //    réseau, tous optionnels, plus un réglage de visibilité côté matchs. ──
+  const [editingSocialsCard, setEditingSocialsCard] = useState(false);
+  const [socialsDraft, setSocialsDraft] = useState({ soc_facebook: "", soc_tiktok: "", soc_instagram: "", soc_snapchat: "" });
+  const saveSocialsCard = async () => {
+    const clean = {
+      soc_facebook: socialsDraft.soc_facebook.trim().slice(0, 200) || null,
+      soc_tiktok: socialsDraft.soc_tiktok.trim().slice(0, 200) || null,
+      soc_instagram: socialsDraft.soc_instagram.trim().slice(0, 200) || null,
+      soc_snapchat: socialsDraft.soc_snapchat.trim().slice(0, 200) || null,
+    };
+    await sb.update(auth.token, "profiles", auth.userId, clean);
+    setProfile(p => p ? { ...p, ...clean } : null);
+    setEditingSocialsCard(false);
+    setToast({ msg: "Réseaux sociaux mis à jour !" });
+  };
   const [form, setForm] = useState<Partial<Profile>>({});
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<ToastState>(null);
@@ -17158,6 +17271,71 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
                 </div>
                 <div style={{ width: 46, height: 26, borderRadius: 50, background: profile.share_phone_with_matches ? "#27ae60" : G.rouge, position: "relative", transition: "background 0.3s", flexShrink: 0 }}>
                   <div style={{ position: "absolute", top: 3, left: profile.share_phone_with_matches ? 23 : 3, width: 20, height: 20, borderRadius: "50%", background: G.blanc, boxShadow: "0 2px 6px rgba(0,0,0,0.2)", transition: "left 0.3s" }} />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Mes réseaux sociaux — même construction que la carte téléphone : carte repliée avec
+            résumé, formulaire d'édition à 4 champs optionnels, réglage de visibilité séparé.
+            Coupe-circuit admin : disparaît entièrement si FEATURE_SOCIALS est désactivé. */}
+        {FEATURE_SOCIALS && (!isWideProfile || activeSection === "main") && (
+          <div style={{ background: G.blanc, borderRadius: 18, border: "1.5px solid rgba(102,102,102,0.18)", overflow: "hidden", marginTop: 12, boxShadow: "0 2px 10px rgba(0,0,0,0.06)" }}>
+            {editingSocialsCard ? (
+              <div style={{ padding: "15px 18px" }}>
+                <div style={{ fontWeight: 700, fontSize: "0.95rem", color: G.brun, marginBottom: 12 }}>Mes réseaux sociaux</div>
+                {SOCIAL_LIST.map(s => (
+                  <div key={s.key} style={{ marginBottom: 12 }}>
+                    <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.78rem", fontWeight: 700, color: "#555", marginBottom: 6 }}>
+                      <SocialIcon net={s.net} size={15} /> {s.label}
+                    </label>
+                    <input
+                      type="text"
+                      value={(socialsDraft as any)[s.key]}
+                      onChange={e => setSocialsDraft(d => ({ ...d, [s.key]: e.target.value }))}
+                      placeholder={s.placeholder}
+                      style={{ width: "100%", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.85rem", outline: "none", color: "#333" }}
+                    />
+                  </div>
+                ))}
+                <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+                  <Btn variant="ghost" onClick={() => setEditingSocialsCard(false)} style={{ flex: 1 }}>Annuler</Btn>
+                  <Btn variant="primary" onClick={saveSocialsCard} style={{ flex: 1 }}>Enregistrer</Btn>
+                </div>
+              </div>
+            ) : (
+              <div className="moyo-tap" onClick={() => {
+                setSocialsDraft({ soc_facebook: profile?.soc_facebook || "", soc_tiktok: profile?.soc_tiktok || "", soc_instagram: profile?.soc_instagram || "", soc_snapchat: profile?.soc_snapchat || "" });
+                setEditingSocialsCard(true);
+              }} style={{ padding: "15px 18px", display: "flex", alignItems: "center", gap: 14, cursor: "pointer" }}>
+                <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(102,102,102,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, fontSize: "0.95rem", color: G.brun }}>Mes réseaux sociaux</div>
+                  {(() => {
+                    const count = SOCIAL_LIST.filter(s => (profile as any)?.[s.key]).length;
+                    return count > 0
+                      ? <div style={{ fontSize: "0.82rem", color: "#888", marginTop: 2 }}>{count} réseau{count > 1 ? "x" : ""} ajouté{count > 1 ? "s" : ""}</div>
+                      : <div style={{ fontSize: "0.82rem", color: G.rouge, fontWeight: 600, marginTop: 2 }}>Ajouter mes réseaux</div>;
+                  })()}
+                </div>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, color: "#bbb" }}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              </div>
+            )}
+            {!editingSocialsCard && SOCIAL_LIST.some(s => (profile as any)?.[s.key]) && (
+              <div className="moyo-tap" onClick={async () => {
+                const newShared = !profile?.share_socials_with_matches;
+                await sb.update(auth.token, "profiles", auth.userId, { share_socials_with_matches: newShared });
+                setProfile(p => p ? { ...p, share_socials_with_matches: newShared } : null);
+                setToast({ msg: newShared ? "Réseaux visibles par tes matchs" : "Réseaux masqués", type: "success" });
+              }} style={{ padding: "13px 18px", borderTop: "1px solid #F5F5F5", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, cursor: "pointer" }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: "0.95rem", fontWeight: 700, color: profile?.share_socials_with_matches ? "#1a8a4a" : G.brun, lineHeight: 1.4 }}>{profile?.share_socials_with_matches ? "Tes réseaux sont visibles par tes matchs." : "Active pour que tes matchs voient tes réseaux."}</div>
+                </div>
+                <div style={{ width: 46, height: 26, borderRadius: 50, background: profile?.share_socials_with_matches ? "#27ae60" : G.rouge, position: "relative", transition: "background 0.3s", flexShrink: 0 }}>
+                  <div style={{ position: "absolute", top: 3, left: profile?.share_socials_with_matches ? 23 : 3, width: 20, height: 20, borderRadius: "50%", background: G.blanc, boxShadow: "0 2px 6px rgba(0,0,0,0.2)", transition: "left 0.3s" }} />
                 </div>
               </div>
             )}
