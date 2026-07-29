@@ -18583,7 +18583,7 @@ export default function App() {
   const [pendingBroadcast, setPendingBroadcast] = useState<{ id: string; message: string } | null>(null);
   const [userGender, setUserGender] = useState<string>("");
   const [selfBan, setSelfBan] = useState<{ until: string | null; name?: string; email?: string; reason?: string | null } | null>(null);
-  const [pendingProposal, setPendingProposal] = useState<{ id: string; proposerId: string; proposerName: string; proposerPhoto?: string | null; proposerAge?: number; proposerCity?: string; myRole: "user1" | "user2"; source?: string; pairKey?: string } | null>(null);
+  const [pendingProposal, setPendingProposal] = useState<{ id: string; proposerId: string; proposerName: string; proposerPhoto?: string | null; proposerAge?: number; proposerCity?: string; myRole: "user1" | "user2"; source?: string; pairKey?: string; otherAlreadyAccepted?: boolean } | null>(null);
   // ── Fenêtre bloquante demandant le numéro de téléphone, si activée par l'admin et que le
   //    membre n'en a pas encore renseigné un. Ne se ferme qu'une fois le numéro enregistré. ──
   const [phonePromptOpen, setPhonePromptOpen] = useState(false);
@@ -19557,6 +19557,9 @@ export default function App() {
         const pdata = await pr.json().catch(() => []);
         if (!Array.isArray(pdata) || pdata.length === 0) return;
         const proposer = pdata[0];
+        // Si l'autre personne a déjà répondu "accepted", on le signale sur cet écran (jamais un
+        // refus, pour ne jamais révéler à quelqu'un que l'autre a dit non).
+        const otherResponse = myRole === "user1" ? prop.user2_response : prop.user1_response;
         setPendingProposal(prev => prev?.id === prop.id ? prev : {
           id: prop.id,
           proposerId,
@@ -19566,7 +19569,8 @@ export default function App() {
           proposerCity: proposer.city,
           myRole,
           source: prop.source,
-          pairKey
+          pairKey,
+          otherAlreadyAccepted: otherResponse === "accepted",
         });
       } catch {}
     };
@@ -20232,9 +20236,12 @@ export default function App() {
           </div>
           <div style={{ fontFamily: "Georgia, serif", fontWeight: 700, fontSize: "1.35rem", color: "#fff", marginBottom: 4 }}>{pendingProposal.proposerName}</div>
           {(pendingProposal.proposerAge || pendingProposal.proposerCity) && (
-            <div style={{ fontSize: "0.86rem", color: "rgba(255,255,255,0.6)", marginBottom: 26 }}>
+            <div style={{ fontSize: "0.86rem", color: "rgba(255,255,255,0.6)", marginBottom: pendingProposal.otherAlreadyAccepted ? 4 : 26 }}>
               {pendingProposal.proposerAge ? `${pendingProposal.proposerAge} ans` : ""}{pendingProposal.proposerAge && pendingProposal.proposerCity ? " · " : ""}{pendingProposal.proposerCity || ""}
             </div>
+          )}
+          {pendingProposal.otherAlreadyAccepted && (
+            <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#ff8a7a", marginBottom: 26 }}>⚡ {pendingProposal.proposerName} a déjà flashé pour toi</div>
           )}
           {/* Boutons */}
           <button
@@ -20293,7 +20300,7 @@ export default function App() {
             style={{ width: "100%", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: "#fff", border: "none", borderRadius: 999, padding: "15px", fontSize: "0.95rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 9, boxShadow: "0 8px 24px rgba(192,57,43,0.4)", marginBottom: 12 }}
           >
             <svg width="17" height="17" viewBox="0 0 24 24" fill="#fff" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
-            Oui, je suis intéressé(e)
+            {pendingProposal.otherAlreadyAccepted ? "Oui, je suis aussi intéressé(e)" : "Oui, je suis intéressé(e)"}
           </button>
           <button
             disabled={proposalResponding}

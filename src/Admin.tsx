@@ -6881,7 +6881,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
 
   // ── Listes cliquables des cartes stats "Nouveaux aujourd'hui / Profils vérifiés / bannis / incomplets" ──
   // (même principe que "Premium actifs" ci-dessus, mutualisé pour éviter 4 x 3 states dupliqués)
-  type SimpleUserListType = "today" | "verified" | "banned" | "incomplete" | "pwa" | "phone_visible";
+  type SimpleUserListType = "today" | "verified" | "banned" | "incomplete" | "pwa" | "phone_visible" | "android_app";
   const [userListModal, setUserListModal] = useState<SimpleUserListType | null>(null);
   const [userListProfiles, setUserListProfiles] = useState<AdminProfile[]>([]);
   const [userListLoading, setUserListLoading] = useState(false);
@@ -6911,6 +6911,11 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
       icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>,
       gradient: "linear-gradient(135deg,#8e44ad,#5e2d73)",
     },
+    android_app: {
+      title: "App Android installée",
+      icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>,
+      gradient: "linear-gradient(135deg,#27ae60,#1a8a4a)",
+    },
     phone_visible: {
       title: "Numéro visible",
       icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>,
@@ -6922,7 +6927,19 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
     setUserListLoading(true); setUserListProfiles([]);
     const now = new Date();
     const todayIso = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).toISOString();
-    const filterQs: Record<SimpleUserListType, string> = {
+    const H = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` };
+    if (userListModal === "android_app") {
+      // Pas de colonne directe sur profiles : on passe par les user_id distincts de fcm_tokens.
+      fetch(`${SUPABASE_URL}/rest/v1/fcm_tokens?select=user_id&limit=20000`, { headers: H })
+        .then(r => r.json()).then(async (rows) => {
+          const ids = [...new Set((Array.isArray(rows) ? rows : []).map((r: any) => r.user_id))].filter(Boolean);
+          if (ids.length === 0) { setUserListProfiles([]); setUserListLoading(false); return; }
+          const data = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=in.(${ids.join(",")})&select=id,name,age,city,gender,photo_url,is_verified,is_banned,is_complete,created_at,phone,share_phone_with_matches&order=created_at.desc&limit=200`, { headers: H }).then(r2 => r2.json()).catch(() => []);
+          setUserListProfiles(Array.isArray(data) ? data : []); setUserListLoading(false);
+        }).catch(() => setUserListLoading(false));
+      return;
+    }
+    const filterQs: Record<Exclude<SimpleUserListType, "android_app">, string> = {
       today: `created_at=gte.${todayIso}&order=created_at.desc`,
       verified: `is_verified=eq.true&order=created_at.desc`,
       banned: `is_banned=eq.true&order=created_at.desc`,
@@ -6931,7 +6948,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
       phone_visible: `share_phone_with_matches=eq.true&order=created_at.desc`,
     };
     fetch(`${SUPABASE_URL}/rest/v1/profiles?select=id,name,age,city,gender,photo_url,is_verified,is_banned,is_complete,created_at,phone,share_phone_with_matches&${filterQs[userListModal]}&limit=200`, {
-      headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+      headers: H
     }).then(r => r.json()).then(data => { setUserListProfiles(Array.isArray(data) ? data : []); setUserListLoading(false); }).catch(() => setUserListLoading(false));
   }, [userListModal]);
 
@@ -6941,26 +6958,44 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
   const [showPendingProposalsList, setShowPendingProposalsList] = useState(false);
   const [pendingProposalsList, setPendingProposalsList] = useState<{ id: string; created_at: string; profile1?: AdminProfile; profile2?: AdminProfile }[]>([]);
   const [pendingProposalsLoading, setPendingProposalsLoading] = useState(false);
+  const [pendingProposalsLoadingMore, setPendingProposalsLoadingMore] = useState(false);
+  const [pendingProposalsHasMore, setPendingProposalsHasMore] = useState(true);
+  const PENDING_PROPOSALS_PAGE = 200;
+  const loadPendingProposalsPage = async (offset: number) => {
+    const H = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` };
+    const raw = await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?status=eq.pending&order=created_at.desc&limit=${PENDING_PROPOSALS_PAGE}&offset=${offset}&select=id,created_at,user1_id,user2_id`, { headers: H }).then(r => r.json()).catch(() => []);
+    const rows = Array.isArray(raw) ? raw : [];
+    const ids = [...new Set(rows.flatMap((p: any) => [p.user1_id, p.user2_id]))].filter(Boolean);
+    const profileMap: Record<string, AdminProfile> = {};
+    for (let i = 0; i < ids.length; i += 50) {
+      const batch = ids.slice(i, i + 50);
+      const pdata = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=in.(${batch.join(",")})&select=id,name,age,city,gender,photo_url`, { headers: H }).then(r => r.json()).catch(() => []);
+      if (Array.isArray(pdata)) pdata.forEach((p: AdminProfile) => { profileMap[p.id] = p; });
+    }
+    return rows.map((p: any) => ({ id: p.id, created_at: p.created_at, profile1: profileMap[p.user1_id], profile2: profileMap[p.user2_id] }));
+  };
   useEffect(() => {
     if (!showPendingProposalsList) return;
     setPendingProposalsLoading(true);
+    setPendingProposalsHasMore(true);
     (async () => {
       try {
-        const H = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` };
-        const raw = await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?status=eq.pending&order=created_at.desc&limit=200&select=id,created_at,user1_id,user2_id`, { headers: H }).then(r => r.json()).catch(() => []);
-        const rows = Array.isArray(raw) ? raw : [];
-        const ids = [...new Set(rows.flatMap((p: any) => [p.user1_id, p.user2_id]))].filter(Boolean);
-        const profileMap: Record<string, AdminProfile> = {};
-        for (let i = 0; i < ids.length; i += 50) {
-          const batch = ids.slice(i, i + 50);
-          const pdata = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=in.(${batch.join(",")})&select=id,name,age,city,gender,photo_url`, { headers: H }).then(r => r.json()).catch(() => []);
-          if (Array.isArray(pdata)) pdata.forEach((p: AdminProfile) => { profileMap[p.id] = p; });
-        }
-        setPendingProposalsList(rows.map((p: any) => ({ id: p.id, created_at: p.created_at, profile1: profileMap[p.user1_id], profile2: profileMap[p.user2_id] })));
-      } catch { setPendingProposalsList([]); }
+        const page = await loadPendingProposalsPage(0);
+        setPendingProposalsList(page);
+        setPendingProposalsHasMore(page.length === PENDING_PROPOSALS_PAGE);
+      } catch { setPendingProposalsList([]); setPendingProposalsHasMore(false); }
       setPendingProposalsLoading(false);
     })();
   }, [showPendingProposalsList]);
+  const loadMorePendingProposals = async () => {
+    setPendingProposalsLoadingMore(true);
+    try {
+      const page = await loadPendingProposalsPage(pendingProposalsList.length);
+      setPendingProposalsList(prev => [...prev, ...page]);
+      setPendingProposalsHasMore(page.length === PENDING_PROPOSALS_PAGE);
+    } catch { setPendingProposalsHasMore(false); }
+    setPendingProposalsLoadingMore(false);
+  };
   const [matchList, setMatchList] = useState<{ id: string; created_at: string; user1?: string; user2?: string; profile1?: AdminProfile; profile2?: AdminProfile; message_count?: number }[]>([]);
   const [matchListSearch, setMatchListSearch] = useState("");
   // ── Recherche débattue (400ms) : redéclenche loadMatchListData avec le texte tapé,
@@ -8117,6 +8152,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
     retentionD30: null as number | null,
     retentionSample: 0,
     pwaInstalls: 0,
+    androidAppInstalls: 0,
     phoneVisibleCount: 0,
     pendingProposals: 0,
   });
@@ -8668,22 +8704,40 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
         setCreateProfileLoading(false);
         return;
       }
+      // Se connecter immédiatement avec le compte fraîchement créé pour récupérer SON PROPRE
+      // token — exactement comme le fait le vrai parcours d'inscription (App.tsx). Utiliser le
+      // token de l'admin ici échouait silencieusement (RLS bloque l'écriture dans le dossier/la
+      // ligne d'un autre utilisateur), d'où la photo et les infos qui ne s'enregistraient pas.
+      const loginRes = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY },
+        body: JSON.stringify({ email: f.email.trim(), password }),
+      }).then(r => r.json());
+      const newUserToken: string | undefined = loginRes?.access_token;
+      if (!newUserToken) {
+        setCreateProfileError("Compte créé mais impossible de s'y connecter pour finaliser le profil. Réessaie.");
+        setCreateProfileLoading(false);
+        return;
+      }
       let photoUrl: string | null = null;
       if (createProfilePhoto) {
-        try {
-          const ext = createProfilePhoto.name.split(".").pop()?.toLowerCase() || "jpg";
-          const path = `${newUserId}/avatar.${ext}`;
-          const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/avatars/${path}`, {
-            method: "POST",
-            headers: { "Authorization": `Bearer ${auth.token}`, "apikey": SUPABASE_KEY, "Content-Type": createProfilePhoto.type || "image/jpeg", "x-upsert": "true" },
-            body: createProfilePhoto,
-          });
-          if (uploadRes.ok) photoUrl = `${SUPABASE_URL}/storage/v1/object/public/avatars/${path}`;
-        } catch {}
+        const ext = createProfilePhoto.name.split(".").pop()?.toLowerCase() || "jpg";
+        const path = `${newUserId}/avatar.${ext}`;
+        const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/avatars/${path}`, {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${newUserToken}`, "apikey": SUPABASE_KEY, "Content-Type": createProfilePhoto.type || "image/jpeg", "x-upsert": "true" },
+          body: createProfilePhoto,
+        });
+        if (!uploadRes.ok) {
+          setCreateProfileError("Le compte a été créé mais l'envoi de la photo a échoué. Réessaie en modifiant le profil de la personne.");
+          setCreateProfileLoading(false);
+          return;
+        }
+        photoUrl = `${SUPABASE_URL}/storage/v1/object/public/avatars/${path}`;
       }
-      await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${newUserId}`, {
+      const patchRes = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${newUserId}`, {
         method: "PATCH",
-        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${newUserToken}`, "Content-Type": "application/json", "Prefer": "return=representation" },
         body: JSON.stringify({
           name: f.name.trim(),
           age: ageNum,
@@ -8701,6 +8755,13 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
           privacy_notice_seen: false,
         }),
       });
+      const patchData = await patchRes.json().catch(() => null);
+      const patched = Array.isArray(patchData) ? patchData[0] : patchData;
+      if (!patchRes.ok || !patched?.id) {
+        setCreateProfileError("Le compte a été créé mais l'enregistrement du profil a échoué. Réessaie en modifiant le profil de la personne.");
+        setCreateProfileLoading(false);
+        return;
+      }
       setCreateProfileResult({ email: f.email.trim(), password, name: f.name.trim() });
       setCreateProfileForm(blankCreateProfileForm);
       setCreateProfilePhoto(null);
@@ -8997,47 +9058,37 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
         fetch(`${SUPABASE_URL}/rest/v1/match_proposals?status=eq.pending&select=id`, { headers: countHeader }),
       ]);
 
-      // ── Likes par jour (30 derniers jours) ──
-      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-      // Les 14 derniers jours calendaires, dans l'ordre, y compris ceux à 0 — pour que le
-      // graphique affiche toujours exactement 14 barres consécutives comme annoncé dans le titre.
-      const last14Days: string[] = Array.from({ length: 14 }, (_, i) => {
-        const d = new Date(); d.setDate(d.getDate() - (13 - i));
-        return d.toISOString().slice(0, 10);
-      });
+      // ── App Android native installée : nombre distinct d'utilisateurs ayant enregistré un
+      //    jeton FCM (uniquement posé par l'app native empaquetée, jamais par le site/la PWA) —
+      //    pas de "count distinct" natif côté PostgREST, on dédoublonne donc côté client. ──
+      const fcmRows = await fetch(`${SUPABASE_URL}/rest/v1/fcm_tokens?select=user_id&limit=20000`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } }).then(r => r.json()).catch(() => []);
+      const androidAppInstalls = new Set((Array.isArray(fcmRows) ? fcmRows : []).map((r: any) => r.user_id)).size;
 
-      const likesRaw = await fetch(`${SUPABASE_URL}/rest/v1/likes?created_at=gte.${thirtyDaysAgo}&select=created_at&order=created_at.asc&limit=5000`, {
-        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
-      }).then(r => r.json()).catch(() => []);
+      // ── Likes / inscrits / matchs par jour (14 derniers jours) ──
+      // Reconstruction volontairement défensive : arithmétique 100% en UTC (aucune dépendance au
+      // fuseau du navigateur/serveur), clé de date obtenue en reconstruisant un vrai objet Date
+      // depuis created_at (plutôt que de découper la chaîne brute — plus fiable quel que soit le
+      // format exact renvoyé par Postgres), fenêtre de récupération large et limite haute.
+      const dayKey = (iso: string) => { try { return new Date(iso).toISOString().slice(0, 10); } catch { return ""; } };
+      const nowUtcMidnight = Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate());
+      const last14Days: string[] = Array.from({ length: 14 }, (_, i) => dayKey(new Date(nowUtcMidnight - (13 - i) * 86400000).toISOString()));
+      const fortyDaysAgoIso = new Date(nowUtcMidnight - 45 * 86400000).toISOString();
+      const H = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` };
 
-      const likesByDay: Record<string, number> = {};
-      (likesRaw as { created_at: string }[]).forEach(l => {
-        const d = l.created_at?.slice(0, 10);
-        if (d) likesByDay[d] = (likesByDay[d] || 0) + 1;
-      });
-      const likesPerDay = last14Days.map(date => ({ date, count: likesByDay[date] || 0 }));
+      const buildPerDay = (rows: { created_at: string }[]) => {
+        const byDay: Record<string, number> = {};
+        rows.forEach(row => { const k = dayKey(row.created_at); if (k) byDay[k] = (byDay[k] || 0) + 1; });
+        return last14Days.map(date => ({ date, count: byDay[date] || 0 }));
+      };
 
-      // ── Nouveaux inscrits par jour (30 derniers jours) ──
-      const signupsRaw = await fetch(`${SUPABASE_URL}/rest/v1/profiles?created_at=gte.${thirtyDaysAgo}&select=created_at&order=created_at.asc&limit=5000`, {
-        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
-      }).then(r => r.json()).catch(() => []);
-      const signupsByDay: Record<string, number> = {};
-      (signupsRaw as { created_at: string }[]).forEach(u => {
-        const d = u.created_at?.slice(0, 10);
-        if (d) signupsByDay[d] = (signupsByDay[d] || 0) + 1;
-      });
-      const signupsPerDay = last14Days.map(date => ({ date, count: signupsByDay[date] || 0 }));
-
-      // ── Nouveaux matchs par jour (30 derniers jours) ──
-      const matchesRaw = await fetch(`${SUPABASE_URL}/rest/v1/matches?created_at=gte.${thirtyDaysAgo}&select=created_at&order=created_at.asc&limit=5000`, {
-        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
-      }).then(r => r.json()).catch(() => []);
-      const matchesByDay: Record<string, number> = {};
-      (matchesRaw as { created_at: string }[]).forEach(m => {
-        const d = m.created_at?.slice(0, 10);
-        if (d) matchesByDay[d] = (matchesByDay[d] || 0) + 1;
-      });
-      const matchesPerDay = last14Days.map(date => ({ date, count: matchesByDay[date] || 0 }));
+      const [likesRawRes, signupsRawRes, matchesRawRes] = await Promise.all([
+        fetch(`${SUPABASE_URL}/rest/v1/likes?created_at=gte.${fortyDaysAgoIso}&select=created_at&order=created_at.asc&limit=20000`, { headers: H }).then(r => r.json()).catch(() => []),
+        fetch(`${SUPABASE_URL}/rest/v1/profiles?created_at=gte.${fortyDaysAgoIso}&select=created_at&order=created_at.asc&limit=20000`, { headers: H }).then(r => r.json()).catch(() => []),
+        fetch(`${SUPABASE_URL}/rest/v1/matches?created_at=gte.${fortyDaysAgoIso}&select=created_at&order=created_at.asc&limit=20000`, { headers: H }).then(r => r.json()).catch(() => []),
+      ]);
+      const likesPerDay = buildPerDay(Array.isArray(likesRawRes) ? likesRawRes : []);
+      const signupsPerDay = buildPerDay(Array.isArray(signupsRawRes) ? signupsRawRes : []);
+      const matchesPerDay = buildPerDay(Array.isArray(matchesRawRes) ? matchesRawRes : []);
 
       // ── Top 5 profils les plus likés ──
       const topLikesRaw = await fetch(`${SUPABASE_URL}/rest/v1/likes?select=to_user&limit=5000`, {
@@ -9113,6 +9164,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
         retentionD30,
         retentionSample: sample.length,
         pwaInstalls: parseCount(rPwaInstalls),
+        androidAppInstalls,
         phoneVisibleCount: parseCount(rPhoneVisible),
         pendingProposals: parseCount(rPendingProposals),
       });
@@ -10632,7 +10684,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
             <div style={{ background: "linear-gradient(135deg,#2980b9,#1f5f8b)", padding: "18px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
               <div>
                 <div style={{ fontWeight: 800, fontSize: "1rem", color: "#fff" }}>➤ Propositions en attente</div>
-                <div style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.8)", marginTop: 2 }}>{pendingProposalsList.length} proposition{pendingProposalsList.length > 1 ? "s" : ""} pas encore acceptée{pendingProposalsList.length > 1 ? "s" : ""} ou refusée{pendingProposalsList.length > 1 ? "s" : ""}</div>
+                <div style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.8)", marginTop: 2 }}>{pendingProposalsList.length}{pendingProposalsHasMore ? "+" : ""} proposition{pendingProposalsList.length > 1 ? "s" : ""} pas encore acceptée{pendingProposalsList.length > 1 ? "s" : ""} ou refusée{pendingProposalsList.length > 1 ? "s" : ""}{pendingProposalsHasMore ? " (charge par lots de 200)" : ""}</div>
               </div>
               <button onClick={() => setShowPendingProposalsList(false)} style={{ background: "rgba(255,255,255,0.2)", border: "none", borderRadius: "50%", width: 32, height: 32, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -10663,6 +10715,13 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   </div>
                 );
               })}
+              {!pendingProposalsLoading && pendingProposalsHasMore && (
+                <div style={{ textAlign: "center", padding: "14px 0 4px" }}>
+                  <button onClick={loadMorePendingProposals} disabled={pendingProposalsLoadingMore} style={{ background: "rgba(41,128,185,0.1)", border: "1.5px solid rgba(41,128,185,0.3)", borderRadius: 50, padding: "9px 20px", fontSize: "0.8rem", fontWeight: 700, color: "#2471a3", cursor: pendingProposalsLoadingMore ? "not-allowed" : "pointer" }}>
+                    {pendingProposalsLoadingMore ? "Chargement..." : "Charger 200 de plus"}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -11701,6 +11760,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     ["Profils vérifiés", stats.verifiedUsers, G.vert, "verified"],
                     ["Profils bannis", stats.bannedUsers, "#e74c3c", "banned"],
                     ["App installée (PWA)", stats.pwaInstalls, "#8e44ad", "pwa"],
+                    ["App Android installée", stats.androidAppInstalls, "#27ae60", "android_app"],
                     ["Numéro visible", stats.phoneVisibleCount, "#16a085", "phone_visible"],
                     ["Propositions en attente", stats.pendingProposals, "#2980b9", "pending_proposals"],
                   ] as [string, number, string, string | null][]).map(([label, val, color, action]) => (
@@ -11708,7 +11768,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                       if (action === "premium") setShowPremiumList(true);
                       else if (action === "matches") setShowMatchList(true);
                       else if (action === "pending_proposals") setShowPendingProposalsList(true);
-                      else if (action === "today" || action === "verified" || action === "banned" || action === "pwa" || action === "phone_visible") setUserListModal(action as SimpleUserListType);
+                      else if (action === "today" || action === "verified" || action === "banned" || action === "pwa" || action === "phone_visible" || action === "android_app") setUserListModal(action as SimpleUserListType);
                     }} style={{ background: `${color}0d`, borderRadius: 12, padding: "12px", border: `1px solid ${color}25`, cursor: action ? "pointer" : "default", position: "relative" }}>
                       <div style={{ fontSize: "1.4rem", fontWeight: 800, color }}>{val}</div>
                       <div style={{ fontSize: "0.7rem", color: "#555", marginTop: 2 }}>{label}</div>
@@ -12129,12 +12189,6 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
           )}
 
           {/* Barre de recherche : trois champs côte à côte (nom / email / téléphone) */}
-          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10 }}>
-            <button onClick={() => { setCreateProfileResult(null); setCreateProfileError(null); setShowCreateProfileModal(true); }} style={{ background: "linear-gradient(135deg,#C0392B,#922B21)", color: "#fff", border: "none", borderRadius: 50, padding: "9px 18px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
-              Créer un profil
-            </button>
-          </div>
           <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
             <div style={{ position: "relative", flex: 1, minWidth: 200 }}>
               <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}><IcoSearch /></span>
@@ -12174,6 +12228,10 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
             <Btn variant="ghost" onClick={() => { setUserSearch(""); setUserSearchEmail(""); setUserPage(0); loadUsers("", 0, usersSort, ""); }} style={{ padding: "10px 16px" }}>
               Réinitialiser
             </Btn>
+            <button onClick={() => { setCreateProfileResult(null); setCreateProfileError(null); setShowCreateProfileModal(true); }} style={{ background: "linear-gradient(135deg,#C0392B,#922B21)", color: "#fff", border: "none", borderRadius: 12, padding: "10px 18px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+              Créer un profil
+            </button>
           </div>
           {/* ── Tri + Toggle vue ── */}
           <div style={{ display: "flex", gap: 8, marginBottom: 14, alignItems: "center" }}>
@@ -12233,46 +12291,48 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
             <div style={{ textAlign: "center", padding: 40, color: "#aaa", fontSize: "0.88rem" }}>Aucun utilisateur trouvé</div>
           ) : (
             <>
-              <div style={{ fontSize: "0.75rem", color: "#888", marginBottom: 10, fontWeight: 600 }}>{displayedUsers.length} utilisateur(s) affichés</div>
+              <div style={{ display: "flex", gap: 10, marginBottom: 12, flexWrap: "wrap", alignItems: "stretch" }}>
+                <div style={{ background: G.rouge, color: "#fff", borderRadius: 10, padding: "0 16px", fontSize: "0.78rem", fontWeight: 700, display: "flex", alignItems: "center", whiteSpace: "nowrap" }}>{displayedUsers.length} utilisateur{displayedUsers.length > 1 ? "s" : ""} affiché{displayedUsers.length > 1 ? "s" : ""}</div>
 
-              {/* ── Filtre profils incomplets ── */}
-              <div
-                onClick={() => { setShowIncomplete(v => !v); setSelectedUsers(new Set()); }}
-                style={{ display: "flex", alignItems: "center", gap: 8, background: showIncomplete ? "rgba(231,76,60,0.08)" : "#F8F8F8", border: `1.5px solid ${showIncomplete ? "#e74c3c" : G.gris}`, borderRadius: 10, padding: "8px 14px", marginBottom: 10, cursor: "pointer" }}
-              >
-                <div style={{ width: 18, height: 18, borderRadius: 4, border: `2px solid ${showIncomplete ? "#e74c3c" : "#bbb"}`, background: showIncomplete ? "#e74c3c" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  {showIncomplete && <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
+                {/* ── Filtre profils incomplets ── */}
+                <div
+                  onClick={() => { setShowIncomplete(v => !v); setSelectedUsers(new Set()); }}
+                  style={{ display: "flex", alignItems: "center", gap: 8, background: showIncomplete ? "rgba(231,76,60,0.08)" : "#F8F8F8", border: `1.5px solid ${showIncomplete ? "#e74c3c" : G.gris}`, borderRadius: 10, padding: "8px 14px", cursor: "pointer", flex: 1, minWidth: 220 }}
+                >
+                  <div style={{ width: 18, height: 18, borderRadius: 4, border: `2px solid ${showIncomplete ? "#e74c3c" : "#bbb"}`, background: showIncomplete ? "#e74c3c" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    {showIncomplete && <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
+                  </div>
+                  <span style={{ fontSize: "0.8rem", fontWeight: 700, color: showIncomplete ? "#e74c3c" : "#555", whiteSpace: "nowrap" }}>
+                    Afficher uniquement les profils incomplets (<code style={{ fontFamily: "monospace", background: "rgba(0,0,0,0.06)", padding: "1px 5px", borderRadius: 4 }}>...</code>)
+                  </span>
                 </div>
-                <span style={{ fontSize: "0.8rem", fontWeight: 700, color: showIncomplete ? "#e74c3c" : "#555" }}>
-                  Afficher uniquement les profils incomplets (<code style={{ fontFamily: "monospace", background: "rgba(0,0,0,0.06)", padding: "1px 5px", borderRadius: 4 }}>...</code>)
-                </span>
-              </div>
 
-              {/* ── Barre actions groupées ── */}
-              {displayedUsers.filter(u => u.id !== auth.userId).length > 0 && (
-                <div style={{ background: selectedUsers.size > 0 ? "rgba(231,76,60,0.06)" : "#F8F8F8", border: `1.5px solid ${selectedUsers.size > 0 ? "#e74c3c" : G.gris}`, borderRadius: 12, padding: "10px 14px", marginBottom: 12, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                  <div style={{ display: "flex", gap: 6, flex: 1, flexWrap: "wrap", alignItems: "center" }}>
-                    <button
-                      onClick={() => selectedUsers.size === displayedUsers.filter(u => u.id !== auth.userId).length ? deselectAll() : selectAll(displayedUsers)}
-                      style={{ background: G.blanc, border: `1.5px solid ${G.gris}`, borderRadius: 8, padding: "5px 12px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer", color: "#333" }}
-                    >
-                      {selectedUsers.size === displayedUsers.filter(u => u.id !== auth.userId).length && displayedUsers.length > 0 ? "✗ Tout désélectionner" : "✓ Tout sélectionner"}
-                    </button>
+                {/* ── Barre actions groupées ── */}
+                {displayedUsers.filter(u => u.id !== auth.userId).length > 0 && (
+                  <div style={{ background: selectedUsers.size > 0 ? "rgba(231,76,60,0.06)" : "#F8F8F8", border: `1.5px solid ${selectedUsers.size > 0 ? "#e74c3c" : G.gris}`, borderRadius: 10, padding: "8px 14px", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", flex: 1, minWidth: 220 }}>
+                    <div style={{ display: "flex", gap: 6, flex: 1, flexWrap: "wrap", alignItems: "center" }}>
+                      <button
+                        onClick={() => selectedUsers.size === displayedUsers.filter(u => u.id !== auth.userId).length ? deselectAll() : selectAll(displayedUsers)}
+                        style={{ background: "transparent", border: "none", padding: 0, fontSize: "0.8rem", fontWeight: 700, cursor: "pointer", color: "#555" }}
+                      >
+                        {selectedUsers.size === displayedUsers.filter(u => u.id !== auth.userId).length && displayedUsers.length > 0 ? "✗ Tout désélectionner" : "✓ Tout sélectionner"}
+                      </button>
+                      {selectedUsers.size > 0 && (
+                        <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#e74c3c" }}>{selectedUsers.size} sélectionné(s)</span>
+                      )}
+                    </div>
                     {selectedUsers.size > 0 && (
-                      <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#e74c3c" }}>{selectedUsers.size} sélectionné(s)</span>
+                      <button
+                        onClick={() => confirm(`⚠️ Supprimer définitivement les ${selectedUsers.size} profil(s) sélectionné(s) ? Cette action est irréversible.`, () => bulkDelete())}
+                        disabled={bulkDeleting}
+                        style={{ background: bulkDeleting ? "#aaa" : "#c0392b", color: "#fff", border: "none", borderRadius: 8, padding: "6px 14px", fontSize: "0.78rem", fontWeight: 700, cursor: bulkDeleting ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: 6 }}
+                      >
+                        {bulkDeleting ? "Suppression..." : `Supprimer (${selectedUsers.size})`}
+                      </button>
                     )}
                   </div>
-                  {selectedUsers.size > 0 && (
-                    <button
-                      onClick={() => confirm(`⚠️ Supprimer définitivement les ${selectedUsers.size} profil(s) sélectionné(s) ? Cette action est irréversible.`, () => bulkDelete())}
-                      disabled={bulkDeleting}
-                      style={{ background: bulkDeleting ? "#aaa" : "#c0392b", color: "#fff", border: "none", borderRadius: 8, padding: "6px 14px", fontSize: "0.78rem", fontWeight: 700, cursor: bulkDeleting ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: 6 }}
-                    >
-                      {bulkDeleting ? "Suppression..." : `Supprimer (${selectedUsers.size})`}
-                    </button>
-                  )}
-                </div>
-              )}
+                )}
+              </div>
 
               {/* ── MODALE CONFIRMATION ÉVÉNEMENT PREMIUM (déplacée au niveau supérieur, sous-onglet Marketing) ── */}
 
@@ -16334,12 +16394,14 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   <TimesEditor value={spAutoTimes} onSave={async (v) => { setSpAutoTimes(v); await saveSpAutoSetting("spontaneous_auto_times", v); }} />
                 </div>
                 <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                  <div style={{ flex: "1 1 140px" }}>
-                    <div style={{ fontSize: "0.68rem", fontWeight: 700, color: "#999", marginBottom: 4 }}>Par personne, par passage</div>
+                  <div style={{ flex: "1 1 200px" }}>
+                    <div style={{ fontSize: "0.74rem", fontWeight: 800, color: G.brun, marginBottom: 2 }}>Max par personne, à chaque passage</div>
+                    <div style={{ fontSize: "0.66rem", color: "#999", marginBottom: 6, lineHeight: 1.4 }}>Combien de nouvelles propositions une personne peut recevoir en un seul déclenchement (un horaire ci-dessus, ou son inscription).</div>
                     <input type="number" min={1} max={10} value={spAutoPerRunLimit} onChange={e => setSpAutoPerRunLimit(e.target.value)} onBlur={() => saveSpAutoSetting("spontaneous_auto_per_run_limit", spAutoPerRunLimit)} style={{ width: 70, border: `1.5px solid ${G.gris}`, borderRadius: 8, padding: "7px 9px", fontSize: "0.8rem", outline: "none" }} />
                   </div>
-                  <div style={{ flex: "1 1 140px" }}>
-                    <div style={{ fontSize: "0.68rem", fontWeight: 700, color: "#999", marginBottom: 4 }}>Par personne, par jour (max)</div>
+                  <div style={{ flex: "1 1 200px" }}>
+                    <div style={{ fontSize: "0.74rem", fontWeight: 800, color: G.brun, marginBottom: 2 }}>Max par personne, sur toute la journée</div>
+                    <div style={{ fontSize: "0.66rem", color: "#999", marginBottom: 6, lineHeight: 1.4 }}>Cumulé sur tous les passages du jour (tous les horaires + l'inscription confondus). Une fois ce plafond atteint, les passages suivants du jour ne lui proposent plus rien.</div>
                     <input type="number" min={1} max={50} value={spAutoDailyLimit} onChange={e => setSpAutoDailyLimit(e.target.value)} onBlur={() => saveSpAutoSetting("spontaneous_auto_daily_limit", spAutoDailyLimit)} style={{ width: 70, border: `1.5px solid ${G.gris}`, borderRadius: 8, padding: "7px 9px", fontSize: "0.8rem", outline: "none" }} />
                   </div>
                 </div>
