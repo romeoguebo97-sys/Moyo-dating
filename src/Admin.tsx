@@ -3,6 +3,7 @@ import type { Auth, Match, Message, PaymentRequest, Profile, StatusPost, ToastSt
 import {
   APPOINTMENT_PHYSICAL_PRICE, APPT_HOUR_MAX, APPT_HOUR_MIN, AUTO_MOD_CONTACT_REPLY, Avatar, BLOCK_SAME_GENDER, Badge, Btn, CONTACT_ADDRESS, CONTACT_EMAIL, CONTACT_WHATSAPP, ConfirmModal, DISCOVER_DEFAULT_MODE, DateTimePicker, EUR_TO_FCFA, EXPENSE_CATEGORIES, EXPENSE_CAT_COLORS, FREE_LIMITS, G, LANDING_MEMBERS, LANDING_SLOGAN, LANDING_STAT_CITIES, LANDING_STAT_COUPLES, LANDING_STAT_MEMBERS, LANDING_TITLE_END, LANDING_TITLE_HIGHLIGHT, LANDING_TITLE_START, LIFETIME_PREMIUM_UNTIL, Messages, PAY_AIRTEL_ENABLED, PAY_AIRTEL_NUMBER, PAY_AIRTEL_RESPONSABLE, PAY_CB_ENABLED, PAY_MTN_ENABLED, PAY_MTN_NUMBER, PAY_MTN_RESPONSABLE, PAY_WERO_ENABLED, PAY_WERO_NUMBER, PAY_PAYPAL_ENABLED, PAY_PAYPAL_NUMBER, PLAN_2MONTH_ENABLED, PLAN_MONTH_ENABLED, PLAN_WEEK_ENABLED, POLL_ADMIN_BADGE_MS, POLL_BADGES_MS, POLL_BROADCAST_MS, POLL_STATS_MS, POLL_SUPPORT_MS, PREMIUM_30_DAYS_MS, PREMIUM_DAYS_2MONTH, PREMIUM_DAYS_WEEK, PREMIUM_PRICE_2MONTH_FCFA, PREMIUM_PRICE_EUR, PREMIUM_PRICE_FCFA, PREMIUM_PRICE_WEEK_FCFA, PREMIUM_STAT_COUPLES, PREMIUM_STAT_MEMBERS, PremiumBadge, REFERRAL_BONUS_2MONTH, REFERRAL_BONUS_MONTH, REFERRAL_BONUS_WEEK, AFFILIATE_COMMISSION_PERCENT, AFFILIATE_PAYABLE_DELAY_DAYS, AFFILIATE_PAYOUT_MIN_FCFA, AFFILIATE_PROMO_BONUS_DAYS, PRIVACY_NOTICE_STEP1_TEXT, PRIVACY_NOTICE_STEP2_TEXT, BAN_SCREEN_TEXT, SOCIAL_FACEBOOK, SOCIAL_INSTAGRAM, SOCIAL_TIKTOK, SOCIAL_YOUTUBE, SOCIAL_LINKEDIN, STORE_LINK_ANDROID, STORE_LINK_IOS, AMBASSADOR_RESOURCES_LINK, SUPABASE_KEY, SUPABASE_URL, SUPER_ADMIN_ID, SUPPORT_PREFIX_REPLY, SUPPORT_PREFIX_USER, SUPPORT_TEAM_ID, SUPPORT_TEAM_NAME, SUPPORT_TEAM_PHOTO, SUPPORT_REPLY_PUSH_ENABLED, Toast, VerifiedBadge, apptStatusInfo, buildContactBannedRegex, buildCustomBannedRegex, setExemptedBuiltinWords, setExemptedContactWords, cleanSupportReason, dedupeMatchesByCouple, fmtApptDT, fmtDate, formatMoney, isSupportReason, logAdminAction, mmLevel, mmScore, paymentCurrency, resolveStatusImageUrl, sb, sendMatchWelcomeMessage,
   setAPPOINTMENT_PHYSICAL_PRICE, setAUTO_MOD_CONTACT_REPLY, setBLOCK_SAME_GENDER, setCONTACT_ADDRESS, setCONTACT_EMAIL, setCONTACT_WHATSAPP, setDISCOVER_DEFAULT_MODE, setEUR_TO_FCFA, setLANDING_MEMBERS, setLANDING_SLOGAN, setLANDING_STAT_CITIES, setLANDING_STAT_COUPLES, setLANDING_STAT_MEMBERS, setLANDING_TITLE_END, setLANDING_TITLE_HIGHLIGHT, setLANDING_TITLE_START, setPAY_AIRTEL_ENABLED, setPAY_AIRTEL_NUMBER, setPAY_AIRTEL_RESPONSABLE, setPAY_CB_ENABLED, setPAY_MTN_ENABLED, setPAY_MTN_NUMBER, setPAY_MTN_RESPONSABLE, setPAY_WERO_ENABLED, setPAY_WERO_NUMBER, setPAY_PAYPAL_ENABLED, setPAY_PAYPAL_NUMBER, setPLAN_2MONTH_ENABLED, setPLAN_MONTH_ENABLED, setPLAN_WEEK_ENABLED, setPOLL_ADMIN_BADGE_MS, setPOLL_BADGES_MS, setPOLL_BROADCAST_MS, setPOLL_STATS_MS, setPOLL_SUPPORT_MS, setPREMIUM_30_DAYS_MS, setPREMIUM_DAYS_2MONTH, setPREMIUM_DAYS_WEEK, setPREMIUM_PRICE_2MONTH_FCFA, setPREMIUM_PRICE_EUR, setPREMIUM_PRICE_FCFA, setPREMIUM_PRICE_WEEK_FCFA, setPREMIUM_STAT_COUPLES, setPREMIUM_STAT_MEMBERS, setPREMIUM_BOOST_ENABLED, setPREMIUM_SCREEN_VARIANT, setFEATURE_SHOW_LIKES_VIEWS_FREE, setPRIVACY_NOTICE_ENABLED, setSOCIAL_FACEBOOK, setSOCIAL_INSTAGRAM, setSOCIAL_TIKTOK, setSOCIAL_YOUTUBE, setSOCIAL_LINKEDIN, setSTORE_LINK_ANDROID, setSTORE_LINK_IOS, setAMBASSADOR_RESOURCES_LINK, setSUPPORT_TEAM_PHOTO, setAFFILIATE_COMMISSION_PERCENT, setAFFILIATE_PAYABLE_DELAY_DAYS, setAFFILIATE_PAYOUT_MIN_FCFA, setAFFILIATE_PROMO_BONUS_DAYS, setPRIVACY_NOTICE_STEP1_TEXT, setPRIVACY_NOTICE_STEP2_TEXT, setBAN_SCREEN_TEXT, setPAY_LINK_ENABLED,
+  VILLES, RELIGIONS, PhoneCountryField, UploadRingOverlay,
 } from "./App";
 
 async function saveSetting(key: string, value: string, token: string): Promise<boolean> {
@@ -1291,6 +1292,17 @@ export function AdminDesktopPage() {
                   }} />
               ))}
             </OffCanvasSection>}
+            {configTab === "tarifs" && <OffCanvasSection title="Inscription">
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: "#FAFAFA", borderRadius: 12 }}>
+                <div style={{ fontSize: "0.83rem", fontWeight: 600, color: G.brun }}>Paiement obligatoire à l'inscription</div>
+                <SwitchBtn on={appConfig.requireSignupPayment === "true"} onToggle={async () => {
+                  if (!auth) return;
+                  const v = appConfig.requireSignupPayment !== "true" ? "true" : "false";
+                  setAppConfig(c => ({ ...c, requireSignupPayment: v }));
+                  await fetch(`${SUPABASE_URL}/rest/v1/app_settings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ key: "require_signup_payment", value: v }) });
+                }} />
+              </div>
+            </OffCanvasSection>}
             {configTab === "general" && <OffCanvasSection title="Fonctionnalités">
               {([
                 ["feature_statuses", "featureStatuses" as keyof typeof appConfig, "Statuts (Stories)"],
@@ -1301,7 +1313,6 @@ export function AdminDesktopPage() {
                 ["feature_assistant", "featureAssistant" as keyof typeof appConfig, "Assistant IA"],
                 ["feature_group_premium", "featureGroupPremium" as keyof typeof appConfig, "Groupe Premium"],
                 ["feature_socials", "featureSocials" as keyof typeof appConfig, "Réseaux sociaux (Facebook, TikTok, Insta, Snap)"],
-                ["require_signup_payment", "requireSignupPayment" as keyof typeof appConfig, "Paiement obligatoire à l'inscription"],
                 ["feature_group_photos", "featureGroupPhotos" as keyof typeof appConfig, "Photos dans le Groupe"],
                 ["feature_photo_retouch", "featurePhotoRetouch" as keyof typeof appConfig, "Retouche photo Premium"],
                 ["feature_ambassador_program", "featureAmbassadorProgram" as keyof typeof appConfig, "Programme Ambassadeur (bouton \"Devenir Ambassadeur\")"],
@@ -2979,6 +2990,16 @@ export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () =
           <EditableRow key={key} label={label} value={key === "premium_price_eur" ? value + " €" : value} type="number" open={editingConfig === key} onOpen={() => { setEditingConfig(editingConfig === key ? null : key); setEditingConfigValue(value); }} editValue={editingConfigValue} onEdit={setEditingConfigValue} onSave={async () => { await patch(key, editingConfigValue); setAppConfig(c => ({ ...c, [ck]: editingConfigValue })); if (key === "premium_price_fcfa") setPREMIUM_PRICE_FCFA(parseInt(editingConfigValue) || 3500); if (key === "premium_price_week_fcfa") setPREMIUM_PRICE_WEEK_FCFA(parseInt(editingConfigValue) || 1200); if (key === "premium_price_2month_fcfa") setPREMIUM_PRICE_2MONTH_FCFA(parseInt(editingConfigValue) || 5900); if (key === "premium_days_week") setPREMIUM_DAYS_WEEK(parseInt(editingConfigValue) || 7); if (key === "premium_days_2month") setPREMIUM_DAYS_2MONTH(parseInt(editingConfigValue) || 62); if (key === "premium_price_eur") setPREMIUM_PRICE_EUR(parseFloat(editingConfigValue) || 10); if (key === "eur_to_fcfa_rate") setEUR_TO_FCFA(parseFloat(editingConfigValue) || 655.957); if (key === "premium_duration_days") setPREMIUM_30_DAYS_MS((parseInt(editingConfigValue) || 31) * 24 * 60 * 60 * 1000); if (key === "appointment_physical_price") setAPPOINTMENT_PHYSICAL_PRICE(parseInt(editingConfigValue) || 10000); setEditingConfig(null); }} />
         ))}
       </OffCanvasSection>
+      <OffCanvasSection title="Inscription">
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 4px" }}>
+          <span style={{ fontSize: "0.82rem", fontWeight: 600, color: "#333" }}>Paiement obligatoire à l'inscription</span>
+          <SwitchBtn on={appConfig.requireSignupPayment === "true"} onToggle={async () => {
+            const v = appConfig.requireSignupPayment !== "true" ? "true" : "false";
+            setAppConfig(c => ({ ...c, requireSignupPayment: v }));
+            await patch("require_signup_payment", v);
+          }} />
+        </div>
+      </OffCanvasSection>
       <OffCanvasSection title="Programme Ambassadeur">
         {([["affiliate_commission_percent","affiliateCommissionPercent" as keyof typeof appConfig,"Commission par défaut (% du prix payé)",appConfig.affiliateCommissionPercent,setAFFILIATE_COMMISSION_PERCENT],["affiliate_payable_delay_days","affiliatePayableDelayDays" as keyof typeof appConfig,"Délai avant commission payable (jours)",appConfig.affiliatePayableDelayDays,setAFFILIATE_PAYABLE_DELAY_DAYS],["affiliate_payout_min_fcfa","affiliatePayoutMinFcfa" as keyof typeof appConfig,"Minimum de versement (FCFA)",appConfig.affiliatePayoutMinFcfa,setAFFILIATE_PAYOUT_MIN_FCFA],["affiliate_promo_bonus_days","affiliatePromoBonusDays" as keyof typeof appConfig,"Jours bonus offerts (lien & code promo)",appConfig.affiliatePromoBonusDays,setAFFILIATE_PROMO_BONUS_DAYS]] as [string, keyof typeof appConfig, string, string, (v: any) => void][]).map(([key,ck,label,value,setter]) => (
           <EditableRow key={key} label={label} value={value} type="number" open={editingConfig === key} onOpen={() => { setEditingConfig(editingConfig === key ? null : key); setEditingConfigValue(value); }} editValue={editingConfigValue} onEdit={setEditingConfigValue} onSave={async () => { await upsertSetting(key, editingConfigValue); setAppConfig(c => ({ ...c, [ck]: editingConfigValue })); setter(editingConfigValue); setEditingConfig(null); }} />
@@ -3068,7 +3089,7 @@ export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () =
         </div>
       </OffCanvasSection>
       <OffCanvasSection title="Fonctionnalités">
-        {([["feature_statuses","featureStatuses" as keyof typeof appConfig,"Statuts (Stories)"],["feature_gift_premium","featureGiftPremium" as keyof typeof appConfig,"Cadeau Premium"],["feature_assistant","featureAssistant" as keyof typeof appConfig,"Assistant IA"],["feature_group_premium","featureGroupPremium" as keyof typeof appConfig,"Groupe Premium"],["feature_socials","featureSocials" as keyof typeof appConfig,"Réseaux sociaux (Facebook, TikTok, Insta, Snap)"],["require_signup_payment","requireSignupPayment" as keyof typeof appConfig,"Paiement obligatoire à l'inscription"],["feature_group_photos","featureGroupPhotos" as keyof typeof appConfig,"Photos dans le Groupe"],["feature_photo_retouch","featurePhotoRetouch" as keyof typeof appConfig,"Retouche photo Premium"],["feature_ambassador_program","featureAmbassadorProgram" as keyof typeof appConfig,"Programme Ambassadeur (bouton \"Devenir Ambassadeur\")"],["feature_moderation_insults","featureModerationInsults" as keyof typeof appConfig,"Modération auto (insultes, menaces, arnaques, sexuel)"],["feature_moderation_contact","featureModerationContact" as keyof typeof appConfig,"Blocage partage de contact (comptes gratuits)"],["support_reply_push_enabled","supportReplyPushEnabled" as keyof typeof appConfig,"Notifications push Assistance (1er avertissement + réponses admin)"],["maintenance_mode","maintenanceMode" as keyof typeof appConfig,"Mode maintenance"]] as [string, keyof typeof appConfig, string][]).map(([key,ck,label]) => (
+        {([["feature_statuses","featureStatuses" as keyof typeof appConfig,"Statuts (Stories)"],["feature_gift_premium","featureGiftPremium" as keyof typeof appConfig,"Cadeau Premium"],["feature_assistant","featureAssistant" as keyof typeof appConfig,"Assistant IA"],["feature_group_premium","featureGroupPremium" as keyof typeof appConfig,"Groupe Premium"],["feature_socials","featureSocials" as keyof typeof appConfig,"Réseaux sociaux (Facebook, TikTok, Insta, Snap)"],["feature_group_photos","featureGroupPhotos" as keyof typeof appConfig,"Photos dans le Groupe"],["feature_photo_retouch","featurePhotoRetouch" as keyof typeof appConfig,"Retouche photo Premium"],["feature_ambassador_program","featureAmbassadorProgram" as keyof typeof appConfig,"Programme Ambassadeur (bouton \"Devenir Ambassadeur\")"],["feature_moderation_insults","featureModerationInsults" as keyof typeof appConfig,"Modération auto (insultes, menaces, arnaques, sexuel)"],["feature_moderation_contact","featureModerationContact" as keyof typeof appConfig,"Blocage partage de contact (comptes gratuits)"],["support_reply_push_enabled","supportReplyPushEnabled" as keyof typeof appConfig,"Notifications push Assistance (1er avertissement + réponses admin)"],["maintenance_mode","maintenanceMode" as keyof typeof appConfig,"Mode maintenance"]] as [string, keyof typeof appConfig, string][]).map(([key,ck,label]) => (
           <div key={key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: G.creme, borderRadius: 12 }}>
             <div style={{ fontSize: "0.83rem", fontWeight: 600, color: key === "maintenance_mode" ? G.rouge : "#1a1a1a" }}>{label}</div>
             <SwitchBtn on={appConfig[ck] === "true"} onToggle={async () => { const v = appConfig[ck] !== "true" ? "true" : "false"; setAppConfig(c => ({ ...c, [ck]: v })); await patch(key, v); }} />
@@ -8609,6 +8630,9 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
   const [createProfileForm, setCreateProfileForm] = useState(blankCreateProfileForm);
   const [createProfilePhoto, setCreateProfilePhoto] = useState<File | null>(null);
   const [createProfilePhotoPreview, setCreateProfilePhotoPreview] = useState<string | null>(null);
+  const [createProfileCropSrc, setCreateProfileCropSrc] = useState<string | null>(null);
+  const [createProfilePhoneValid, setCreateProfilePhoneValid] = useState(true);
+  const createProfileFileRef = useRef<HTMLInputElement>(null);
   const [createProfileLoading, setCreateProfileLoading] = useState(false);
   const [createProfileError, setCreateProfileError] = useState<string | null>(null);
   const [createProfileResult, setCreateProfileResult] = useState<{ email: string; password: string; name: string } | null>(null);
@@ -8624,6 +8648,10 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
     const ageNum = parseInt(f.age);
     if (!f.email.trim() || !f.name.trim() || !f.city.trim() || !f.age || isNaN(ageNum) || ageNum < 18 || ageNum > 99) {
       setCreateProfileError("Email, prénom, ville et âge (18-99) sont obligatoires.");
+      return;
+    }
+    if (!createProfilePhoto) {
+      setCreateProfileError("Une photo est obligatoire.");
       return;
     }
     setCreateProfileLoading(true);
@@ -8677,6 +8705,8 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
       setCreateProfileForm(blankCreateProfileForm);
       setCreateProfilePhoto(null);
       setCreateProfilePhotoPreview(null);
+      setCreateProfileCropSrc(null);
+      setCreateProfilePhoneValid(true);
       showToast("✅ Profil créé", "success");
       loadUsers(userSearch, 0, usersSort, userSearchEmail, usersFilters, userSearchPhone);
     } catch {
@@ -10613,22 +10643,26 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 <div style={{ textAlign: "center", padding: 40, color: "#aaa" }}>Chargement...</div>
               ) : pendingProposalsList.length === 0 ? (
                 <div style={{ textAlign: "center", padding: 40, color: "#aaa" }}>Aucune proposition en attente</div>
-              ) : pendingProposalsList.map(p => (
-                <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: `1px solid ${G.gris}` }}>
-                  <div style={{ display: "flex", alignItems: "center" }}>
-                    <div style={{ width: 38, height: 38, borderRadius: "50%", background: G.creme, overflow: "hidden", border: `2px solid ${G.blanc}`, boxShadow: "0 0 0 1px #eee" }}>
-                      {p.profile1?.photo_url && <img src={p.profile1.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+              ) : pendingProposalsList.map(p => {
+                // Toujours femme à gauche, homme à droite — même convention que l'onglet Propositions.
+                const p1IsWoman = p.profile1?.gender === "Femme";
+                const leftProfile = p1IsWoman ? p.profile1 : p.profile2;
+                const rightProfile = p1IsWoman ? p.profile2 : p.profile1;
+                return (
+                  <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: `1px solid ${G.gris}` }}>
+                    <div style={{ width: 38, height: 38, borderRadius: "50%", background: G.creme, overflow: "hidden", flexShrink: 0, border: `2px solid ${G.blanc}`, boxShadow: "0 0 0 1px #eee" }}>
+                      {leftProfile?.photo_url && <img src={leftProfile.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
                     </div>
-                    <div style={{ width: 38, height: 38, borderRadius: "50%", background: G.creme, overflow: "hidden", border: `2px solid ${G.blanc}`, boxShadow: "0 0 0 1px #eee", marginLeft: -12 }}>
-                      {p.profile2?.photo_url && <img src={p.profile2.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+                    <div style={{ flex: 1, minWidth: 0, textAlign: "center" }}>
+                      <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#333" }}>{leftProfile?.name || "?"} & {rightProfile?.name || "?"}</div>
+                      <div style={{ fontSize: "0.7rem", color: "#999" }}>Proposée {new Date(p.created_at).toLocaleDateString("fr-FR")}</div>
+                    </div>
+                    <div style={{ width: 38, height: 38, borderRadius: "50%", background: G.creme, overflow: "hidden", flexShrink: 0, border: `2px solid ${G.blanc}`, boxShadow: "0 0 0 1px #eee" }}>
+                      {rightProfile?.photo_url && <img src={rightProfile.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
                     </div>
                   </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#333" }}>{p.profile1?.name || "?"} & {p.profile2?.name || "?"}</div>
-                    <div style={{ fontSize: "0.7rem", color: "#999" }}>Proposée {new Date(p.created_at).toLocaleDateString("fr-FR")}</div>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>
@@ -11989,19 +12023,54 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   <div style={{ padding: "18px 20px" }}>
                     {createProfileError && <div style={{ background: "rgba(231,76,60,0.08)", color: "#c0392b", borderRadius: 10, padding: "10px 12px", fontSize: "0.8rem", marginBottom: 14 }}>{createProfileError}</div>}
 
+                    {createProfileCropSrc && (
+                      <CropModal
+                        src={createProfileCropSrc}
+                        onConfirm={(blob) => {
+                          setCreateProfileCropSrc(null);
+                          const croppedFile = new File([blob], "avatar.jpg", { type: "image/jpeg" });
+                          setCreateProfilePhoto(croppedFile);
+                          setCreateProfilePhotoPreview(URL.createObjectURL(blob));
+                          if (createProfileFileRef.current) createProfileFileRef.current.value = "";
+                        }}
+                        onCancel={() => { setCreateProfileCropSrc(null); if (createProfileFileRef.current) createProfileFileRef.current.value = ""; }}
+                      />
+                    )}
                     <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 16 }}>
-                      <label style={{ width: 64, height: 64, borderRadius: "50%", background: G.creme, flexShrink: 0, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", border: `1.5px dashed ${G.gris}` }}>
-                        {createProfilePhotoPreview ? <img src={createProfilePhotoPreview} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>}
-                        <input type="file" accept="image/*" style={{ display: "none" }} onChange={e => { const file = e.target.files?.[0]; if (file) { setCreateProfilePhoto(file); setCreateProfilePhotoPreview(URL.createObjectURL(file)); } }} />
-                      </label>
-                      <div style={{ fontSize: "0.78rem", color: "#888" }}>Photo reçue sur WhatsApp (facultatif, ajoutable plus tard)</div>
+                      <input ref={createProfileFileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        const reader = new FileReader();
+                        reader.onload = () => setCreateProfileCropSrc(reader.result as string);
+                        reader.readAsDataURL(file);
+                      }} />
+                      <div onClick={() => createProfileFileRef.current?.click()} style={{ cursor: "pointer" }}>
+                        <UploadRingOverlay active={false} size={64} ringColor={G.rouge}>
+                          {createProfilePhotoPreview ? (
+                            <div style={{ width: 64, height: 64, borderRadius: "50%", overflow: "hidden", border: `2px solid ${G.rouge}` }}>
+                              <img src={createProfilePhotoPreview} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                            </div>
+                          ) : (
+                            <div style={{ width: 64, height: 64, borderRadius: "50%", background: G.creme, display: "flex", alignItems: "center", justifyContent: "center", border: `1.5px dashed ${G.gris}` }}>
+                              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                            </div>
+                          )}
+                        </UploadRingOverlay>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: "0.78rem", color: "#888" }}>Photo reçue sur WhatsApp</div>
+                        <div style={{ fontSize: "0.72rem", color: createProfilePhoto ? G.rouge : "#e74c3c", fontWeight: 600, cursor: "pointer" }} onClick={() => createProfileFileRef.current?.click()}>{createProfilePhoto ? "Changer la photo" : "Photo obligatoire — cliquer pour ajouter"}</div>
+                      </div>
                     </div>
 
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
                       <input value={createProfileForm.email} onChange={e => setCreateProfileForm(f => ({ ...f, email: e.target.value }))} placeholder="Email *" style={{ gridColumn: "1 / -1", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.85rem", outline: "none" }} />
                       <input value={createProfileForm.name} onChange={e => setCreateProfileForm(f => ({ ...f, name: e.target.value }))} placeholder="Prénom *" style={{ boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.85rem", outline: "none" }} />
                       <input value={createProfileForm.age} onChange={e => setCreateProfileForm(f => ({ ...f, age: e.target.value.replace(/\D/g, "") }))} placeholder="Âge *" style={{ boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.85rem", outline: "none" }} />
-                      <input value={createProfileForm.city} onChange={e => setCreateProfileForm(f => ({ ...f, city: e.target.value }))} placeholder="Ville *" style={{ boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.85rem", outline: "none" }} />
+                      <select value={createProfileForm.city} onChange={e => setCreateProfileForm(f => ({ ...f, city: e.target.value }))} style={{ boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.85rem", outline: "none", background: "#fff" }}>
+                        <option value="">Ville *</option>
+                        {VILLES.map(c => c.startsWith("──") ? <option key={c} disabled>{c}</option> : <option key={c} value={c}>{c}</option>)}
+                      </select>
                       <select value={createProfileForm.gender} onChange={e => {
                         const g = e.target.value;
                         setCreateProfileForm(f => {
@@ -12014,8 +12083,13 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                         <option value="Femme">Femme</option>
                         <option value="Homme">Homme</option>
                       </select>
-                      <input value={createProfileForm.phone} onChange={e => setCreateProfileForm(f => ({ ...f, phone: e.target.value }))} placeholder="Téléphone" style={{ gridColumn: "1 / -1", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.85rem", outline: "none" }} />
-                      <input value={createProfileForm.religion} onChange={e => setCreateProfileForm(f => ({ ...f, religion: e.target.value }))} placeholder="Religion" style={{ boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.85rem", outline: "none" }} />
+                      <div style={{ gridColumn: "1 / -1" }}>
+                        <PhoneCountryField value={createProfileForm.phone} onChange={(v, valid) => { setCreateProfileForm(f => ({ ...f, phone: v })); setCreateProfilePhoneValid(valid); }} hint="Reste privé, jamais visible par les autres membres." />
+                      </div>
+                      <select value={createProfileForm.religion} onChange={e => setCreateProfileForm(f => ({ ...f, religion: e.target.value }))} style={{ boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.85rem", outline: "none", background: "#fff" }}>
+                        <option value="">Religion</option>
+                        {RELIGIONS.map(r => <option key={r} value={r}>{r}</option>)}
+                      </select>
                       <input value={createProfileForm.profession} onChange={e => setCreateProfileForm(f => ({ ...f, profession: e.target.value }))} placeholder="Profession" style={{ boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.85rem", outline: "none" }} />
                       <select value={createProfileForm.maritalStatus} onChange={e => setCreateProfileForm(f => ({ ...f, maritalStatus: e.target.value }))} style={{ boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.85rem", outline: "none", background: "#fff" }}>
                         <option value="">Statut marital</option>
@@ -12047,7 +12121,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
 
                     <div style={{ fontSize: "0.72rem", color: "#999", marginBottom: 14 }}>Un mot de passe est généré automatiquement, à transmettre à la personne avec son email.</div>
 
-                    <button onClick={submitCreateProfile} disabled={createProfileLoading} style={{ width: "100%", background: "linear-gradient(135deg,#C0392B,#922B21)", color: "#fff", border: "none", borderRadius: 50, padding: "13px", fontSize: "0.88rem", fontWeight: 700, cursor: createProfileLoading ? "not-allowed" : "pointer", opacity: createProfileLoading ? 0.7 : 1 }}>{createProfileLoading ? "Création..." : "Créer le profil"}</button>
+                    <button onClick={submitCreateProfile} disabled={createProfileLoading || !createProfilePhoto || !createProfilePhoneValid} style={{ width: "100%", background: "linear-gradient(135deg,#C0392B,#922B21)", color: "#fff", border: "none", borderRadius: 50, padding: "13px", fontSize: "0.88rem", fontWeight: 700, cursor: (createProfileLoading || !createProfilePhoto || !createProfilePhoneValid) ? "not-allowed" : "pointer", opacity: (createProfileLoading || !createProfilePhoto || !createProfilePhoneValid) ? 0.7 : 1 }}>{createProfileLoading ? "Création..." : "Créer le profil"}</button>
                   </div>
                 )}
               </div>

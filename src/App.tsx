@@ -80,7 +80,7 @@ export function setAMBASSADOR_RESOURCES_LINK(v: any) { AMBASSADOR_RESOURCES_LINK
 // et ne l'insère (POST) que si elle n'existe pas. Ne dépend d'aucun "upsert" / contrainte spéciale.
 const APP_URL = "https://dating.moyo-congo.com";
 
-const VILLES = [
+export const VILLES = [
   "Brazzaville","Pointe-Noire","Dolisie","Nkayi","Owando",
   "Ouesso","Impfondo","Sibiti","Djambala","Kinkala",
   "Ewo","Gamboma","Madingou","Mossaka","Odziba",
@@ -88,7 +88,7 @@ const VILLES = [
   "Diaspora Europe","Diaspora Amérique","Diaspora Asie / Océanie","Diaspora Afrique (autre pays)",
 ];
 
-const RELIGIONS = [
+export const RELIGIONS = [
   "Chrétien(ne)", "Catholique", "Protestant(e)", "Évangélique",
   "Kimbanguiste", "Témoin de Jéhovah", "Croyant(e) du message", "Musulman(e)",
   "Brahnamiste", "Autre", "Athée", "Non pratiquant(e)",
@@ -844,7 +844,7 @@ export type Auth = {
   refreshToken?: string;
   expiresAt?: number;
 };
-export type Profile = { id: string; name: string; age: number; city: string; gender: string; bio: string; religion?: string; profession?: string; hobbies?: string; phone?: string | null; photo_url?: string | null; is_premium: boolean; is_admin?: boolean; is_visible?: boolean; is_verified?: boolean; is_certified?: boolean; last_seen?: string; hide_online_status?: boolean; warning_count?: number; is_banned?: boolean; ban_until?: string | null; ban_reason?: string | null; last_notice_acknowledged?: boolean; last_notice_at?: string | null; has_installed_pwa?: boolean; account_deleted?: boolean; share_phone_with_matches?: boolean; soc_facebook?: string | null; soc_tiktok?: string | null; soc_instagram?: string | null; soc_snapchat?: string | null; share_socials_with_matches?: boolean; signup_payment_required?: boolean };
+export type Profile = { id: string; name: string; age: number; city: string; gender: string; bio: string; religion?: string; profession?: string; hobbies?: string; phone?: string | null; photo_url?: string | null; is_premium: boolean; is_admin?: boolean; is_visible?: boolean; is_verified?: boolean; is_certified?: boolean; last_seen?: string; hide_online_status?: boolean; warning_count?: number; is_banned?: boolean; ban_until?: string | null; ban_reason?: string | null; last_notice_acknowledged?: boolean; last_notice_at?: string | null; has_installed_pwa?: boolean; account_deleted?: boolean; share_phone_with_matches?: boolean; soc_facebook?: string | null; soc_tiktok?: string | null; soc_instagram?: string | null; soc_snapchat?: string | null; share_socials_with_matches?: boolean; signup_payment_required?: boolean; marital_status?: string | null; has_children?: boolean | null };
 export type Match = { id: string; user1: string; user2: string; partner?: Profile; lastMsg?: Message; unreadCount?: number; created_at?: string };
 export type Message = { id?: string; match_id: string; sender_id: string; content: string; is_read: boolean; is_delivered?: boolean; is_edited?: boolean; created_at?: string; reactions?: Record<string, string[]>; is_view_once?: boolean; viewed_at?: string | null; is_destroyed?: boolean; destroyed_at?: string | null };
 // Ciblage des diffusions générales : décide si une diffusion (target) concerne un utilisateur donné.
@@ -2044,7 +2044,7 @@ function splitStoredPhone(value: string): { country: CountryCode; national: stri
   return { country: "CG", national: "" };
 }
 
-function PhoneCountryField({ value, onChange, label, required = false, autoFocus = false, hint }: {
+export function PhoneCountryField({ value, onChange, label, required = false, autoFocus = false, hint }: {
   value: string;
   onChange: (storedValue: string, valid: boolean) => void;
   label?: React.ReactNode;
@@ -2352,7 +2352,7 @@ export const Avatar = memo(function Avatar({ url, gender, size = 54, border = fa
 // Composant 100% autonome : il observe juste un booléen déjà existant (`active`) et
 // gère sa propre animation en interne. Ne touche à AUCUNE fonction d'upload ni à
 // aucun state existant — zéro risque pour la logique réseau.
-function UploadRingOverlay({ active, size, ringColor, children }: { active: boolean; size: number; ringColor?: string; children: React.ReactNode }) {
+export function UploadRingOverlay({ active, size, ringColor, children }: { active: boolean; size: number; ringColor?: string; children: React.ReactNode }) {
   const [progress, setProgress] = useState(0);
   useEffect(() => {
     if (!active) { setProgress(0); return; }
@@ -5221,7 +5221,7 @@ function SignUp({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Aut
   const [step, setStep] = useState(isResume && resumeToken && resumeUid ? 2 : 1);
   const [tempToken, setTempToken] = useState<string | null>(isResume ? resumeToken : sessionStorage.getItem("moyo_signup_token"));
   const [tempUserId, setTempUserId] = useState<string | null>(isResume ? resumeUid : sessionStorage.getItem("moyo_signup_uid"));
-  const [form, setForm] = useState({ email: "", password: "", name: "", age: "", city: "", gender: "", bio: "", religion: "", profession: "", hobbies: "", phone: "" });
+  const [form, setForm] = useState({ email: "", password: "", name: "", age: "", city: "", gender: "", bio: "", religion: "", profession: "", hobbies: "", phone: "", maritalStatus: "", hasChildren: "" as "" | "oui" | "non" });
   const [phoneValid, setPhoneValid] = useState(true);
   const [loading, setLoading] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
@@ -5457,6 +5457,8 @@ function SignUp({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Aut
           gender: form.gender,
           bio: form.bio.trim(),
           religion: form.religion,
+          marital_status: form.maritalStatus || null,
+          has_children: form.hasChildren === "oui" ? true : form.hasChildren === "non" ? false : null,
           profession: form.profession.trim() || null,
           hobbies: form.hobbies.trim() || null,
           phone: form.phone.trim() || null,
@@ -5590,7 +5592,14 @@ function SignUp({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Aut
             const selected = form.gender === g;
             const color = g === "Homme" ? G.rouge : "#DB2777";
             return (
-              <div key={g} onClick={() => upd("gender", g)}
+              <div key={g} onClick={() => {
+                setForm(f => {
+                  const validForHomme = ["", "Célibataire", "Divorcé", "Veuf", "Veuf avec enfant(s)", "Veuf sans enfant"];
+                  const validForFemme = ["", "Célibataire", "Divorcée", "Veuve", "Veuve avec enfant(s)", "Veuve sans enfant"];
+                  const stillValid = (g === "Homme" ? validForHomme : validForFemme).includes(f.maritalStatus);
+                  return { ...f, gender: g, maritalStatus: stillValid ? f.maritalStatus : "" };
+                });
+              }}
                 style={{ flex: 1, padding: "22px 12px", borderRadius: 16, textAlign: "center", cursor: "pointer",
                   border: `2.5px solid ${selected ? color : G.gris}`,
                   background: selected ? `${color}14` : G.blanc,
@@ -5708,6 +5717,36 @@ function SignUp({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Aut
           <select value={form.religion} onChange={e => upd("religion", e.target.value)} style={{ width: "100%", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, fontSize: "0.93rem", background: G.blanc, color: G.brun, outline: "none" }}>
             <option value="">Sélectionne ta religion</option>
             {RELIGIONS.map(r => <option key={r} value={r}>{r}</option>)}
+          </select>
+        </div>
+        <div style={{ marginBottom: 18 }}>
+          <label style={{ display: "block", fontWeight: 500, marginBottom: 7, fontSize: "0.88rem", color: "#555" }}>Situation maritale <span style={{ color: G.rouge, fontSize: "0.78rem", fontWeight: 600 }}>(optionnel)</span></label>
+          <select value={form.maritalStatus} onChange={e => upd("maritalStatus", e.target.value)} style={{ width: "100%", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, fontSize: "0.93rem", background: G.blanc, color: G.brun, outline: "none" }}>
+            <option value="">Sélectionne ta situation</option>
+            <option value="Célibataire">Célibataire</option>
+            {form.gender === "Homme" ? (
+              <>
+                <option value="Divorcé">Divorcé</option>
+                <option value="Veuf">Veuf</option>
+                <option value="Veuf avec enfant(s)">Veuf avec enfant(s)</option>
+                <option value="Veuf sans enfant">Veuf sans enfant</option>
+              </>
+            ) : (
+              <>
+                <option value="Divorcée">Divorcée</option>
+                <option value="Veuve">Veuve</option>
+                <option value="Veuve avec enfant(s)">Veuve avec enfant(s)</option>
+                <option value="Veuve sans enfant">Veuve sans enfant</option>
+              </>
+            )}
+          </select>
+        </div>
+        <div style={{ marginBottom: 18 }}>
+          <label style={{ display: "block", fontWeight: 500, marginBottom: 7, fontSize: "0.88rem", color: "#555" }}>A des enfants ? <span style={{ color: G.rouge, fontSize: "0.78rem", fontWeight: 600 }}>(optionnel)</span></label>
+          <select value={form.hasChildren} onChange={e => upd("hasChildren", e.target.value)} style={{ width: "100%", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, fontSize: "0.93rem", background: G.blanc, color: G.brun, outline: "none" }}>
+            <option value="">Sélectionne une réponse</option>
+            <option value="oui">Oui</option>
+            <option value="non">Non</option>
           </select>
         </div>
         <div style={{ marginBottom: 18 }}>
@@ -15232,7 +15271,7 @@ function GroupChat({ auth, onBack, onShowPremium, onOpenPrivateChat }: { auth: A
   );
 }
 
-function CropModal({ src, onConfirm, onCancel }: { src: string; onConfirm: (blob: Blob) => void; onCancel: () => void }) {
+export function CropModal({ src, onConfirm, onCancel }: { src: string; onConfirm: (blob: Blob) => void; onCancel: () => void }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imgRef2 = useRef<HTMLImageElement>(null);
   const canvasContainerRef = useRef<HTMLDivElement>(null);
@@ -16429,7 +16468,7 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
       setErrorMsg("Votre profil contient des coordonnées (numéro, WhatsApp, réseau social, lien…). Pour la sécurité de tous, le partage de contact dans le profil public n'est pas autorisé. Retirez-les pour enregistrer.");
       return;
     }
-    await sb.update(auth.token, "profiles", auth.userId, { name: form.name, age: form.age, city: form.city, bio: form.bio, religion: form.religion, profession: (form.profession || "").trim() || null, hobbies: (form.hobbies || "").trim() || null, phone: (form.phone || "").trim() || null });
+    await sb.update(auth.token, "profiles", auth.userId, { name: form.name, age: form.age, city: form.city, bio: form.bio, religion: form.religion, profession: (form.profession || "").trim() || null, hobbies: (form.hobbies || "").trim() || null, phone: (form.phone || "").trim() || null, marital_status: (form as any).marital_status || null, has_children: (form as any).has_children ?? null });
     setProfile(p => p ? { ...p, ...(form as Profile) } : null);
     setEditing(false);
     setToast({ msg: "Profil mis à jour !" });
@@ -16553,6 +16592,32 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
         <select value={form.religion || ""} onChange={e => setForm(f => ({ ...f, religion: e.target.value }))} style={{ width: "100%", boxSizing: "border-box", display: "block", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, marginBottom: 14, fontSize: "0.93rem", background: G.blanc, color: G.brun, fontFamily: "inherit" }}>
           <option value="">Religion (optionnel)</option>
           {RELIGIONS.map(r => <option key={r} value={r}>{r}</option>)}
+        </select>
+        <label style={{ display: "block", fontWeight: 600, marginBottom: 7, fontSize: "0.88rem", color: "#555" }}>Situation maritale <span style={{ color: "#aaa", fontSize: "0.78rem", fontWeight: 400 }}>(optionnel)</span></label>
+        <select value={(form as any).marital_status || ""} onChange={e => setForm(f => ({ ...f, marital_status: e.target.value } as any))} style={{ width: "100%", boxSizing: "border-box", display: "block", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, marginBottom: 14, fontSize: "0.93rem", background: G.blanc, color: G.brun, fontFamily: "inherit" }}>
+          <option value="">Situation maritale</option>
+          <option value="Célibataire">Célibataire</option>
+          {form.gender === "Homme" ? (
+            <>
+              <option value="Divorcé">Divorcé</option>
+              <option value="Veuf">Veuf</option>
+              <option value="Veuf avec enfant(s)">Veuf avec enfant(s)</option>
+              <option value="Veuf sans enfant">Veuf sans enfant</option>
+            </>
+          ) : (
+            <>
+              <option value="Divorcée">Divorcée</option>
+              <option value="Veuve">Veuve</option>
+              <option value="Veuve avec enfant(s)">Veuve avec enfant(s)</option>
+              <option value="Veuve sans enfant">Veuve sans enfant</option>
+            </>
+          )}
+        </select>
+        <label style={{ display: "block", fontWeight: 600, marginBottom: 7, fontSize: "0.88rem", color: "#555" }}>A des enfants ? <span style={{ color: "#aaa", fontSize: "0.78rem", fontWeight: 400 }}>(optionnel)</span></label>
+        <select value={(form as any).has_children === true ? "oui" : (form as any).has_children === false ? "non" : ""} onChange={e => setForm(f => ({ ...f, has_children: e.target.value === "oui" ? true : e.target.value === "non" ? false : null } as any))} style={{ width: "100%", boxSizing: "border-box", display: "block", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, marginBottom: 14, fontSize: "0.93rem", background: G.blanc, color: G.brun, fontFamily: "inherit" }}>
+          <option value="">A des enfants ?</option>
+          <option value="oui">Oui</option>
+          <option value="non">Non</option>
         </select>
         <label style={{ display: "block", fontWeight: 600, marginBottom: 7, fontSize: "0.88rem", color: "#555" }}>Profession <span style={{ color: "#aaa", fontSize: "0.78rem", fontWeight: 400 }}>(optionnel)</span></label>
         <input value={form.profession || ""} onChange={e => setForm(f => ({ ...f, profession: e.target.value.slice(0, 60) }))} placeholder="Ex : Infirmière, Ingénieur, Étudiant…" style={{ width: "100%", boxSizing: "border-box", display: "block", padding: "13px 14px", border: `2px solid ${G.gris}`, borderRadius: 12, marginBottom: 14, fontSize: "0.93rem", fontFamily: "inherit" }} />
@@ -20178,6 +20243,7 @@ export default function App() {
               setProposalResponding(true);
               try {
                 const myResponseField = pendingProposal.myRole === "user1" ? "user1_response" : "user2_response";
+                const myTsField = pendingProposal.myRole === "user1" ? "user1_responded_at" : "user2_responded_at";
                 // Récupérer la proposition actuelle pour vérifier l'autre réponse
                 const r = await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?id=eq.${pendingProposal.id}&select=user1_response,user2_response,user1_id,user2_id&limit=1`, {
                   headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth!.token}` }
@@ -20189,7 +20255,7 @@ export default function App() {
                 await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?id=eq.${pendingProposal.id}`, {
                   method: "PATCH",
                   headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth!.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
-                  body: JSON.stringify({ [myResponseField]: "accepted", status: newStatus })
+                  body: JSON.stringify({ [myResponseField]: "accepted", [myTsField]: new Date().toISOString(), status: newStatus })
                 });
                 // Si les deux ont accepté → créer le match
                 if (newStatus === "accepted" && prop) {
@@ -20235,10 +20301,11 @@ export default function App() {
               setProposalResponding(true);
               try {
                 const myResponseField = pendingProposal.myRole === "user1" ? "user1_response" : "user2_response";
+                const myTsField = pendingProposal.myRole === "user1" ? "user1_responded_at" : "user2_responded_at";
                 await fetch(`${SUPABASE_URL}/rest/v1/match_proposals?id=eq.${pendingProposal.id}`, {
                   method: "PATCH",
                   headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth!.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
-                  body: JSON.stringify({ [myResponseField]: "refused", status: "refused", refused_by: auth!.userId })
+                  body: JSON.stringify({ [myResponseField]: "refused", [myTsField]: new Date().toISOString(), status: "refused", refused_by: auth!.userId })
                 });
                 logAdminAction(auth!.token, auth!.userId, "Système", `Proposition refusée par ${auth!.name} (proposé : ${pendingProposal.proposerName})`, auth!.userId);
                 setPendingProposal(null);
