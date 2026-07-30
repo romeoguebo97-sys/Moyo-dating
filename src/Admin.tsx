@@ -11305,13 +11305,6 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                         <Row label="- Vérifier" color="#555" desc="Retirer la vérification de ce membre." disabled={isLoading}
                           onClick={() => confirm(`Retirer la vérification de ${u.name} ?`, () => adminAction(u.id, { is_verified: false }, `Vérification retirée pour ${u.name}.`))} />
                       )}
-                      {!u.is_vip ? (
-                        <Row label="⭐ VIP" color="#8B008B" desc="Rendre ce membre VIP : les comptes gratuits ne pourront plus le liker sans passer Premium." disabled={isLoading}
-                          onClick={() => confirm(`Rendre ${u.name} VIP ? Les membres gratuits ne pourront plus le/la liker sans passer Premium.`, () => adminAction(u.id, { is_vip: true }, `${u.name} est maintenant VIP.`))} />
-                      ) : (
-                        <Row label="- VIP" color="#555" desc="Retirer le statut VIP de ce membre." disabled={isLoading}
-                          onClick={() => confirm(`Retirer le statut VIP de ${u.name} ?`, () => adminAction(u.id, { is_vip: false }, `Statut VIP retiré pour ${u.name}.`))} />
-                      )}
                     </>
                   )}
                   {manageTab === "moderation" && (
@@ -11407,27 +11400,43 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                       <div style={{ fontWeight: 800, fontSize: "0.95rem", color: G.brun, marginBottom: 4 }}>Réglages du profil</div>
                       <div style={{ fontSize: "0.76rem", color: "#999", marginBottom: 16 }}>Les mêmes réglages que ce membre a dans son propre profil. Certains ont du mal à les activer eux-mêmes — tu peux le faire à leur place, à leur demande.</div>
 
-                      {u.phone ? (
-                        !u.share_phone_with_matches ? (
-                          <Row label="✓ Rendre visible" color={G.vert} desc="Activer la visibilité du numéro de téléphone de ce membre auprès de ses matchs." disabled={isLoading}
-                            onClick={() => adminAction(u.id, { share_phone_with_matches: true }, `Numéro de ${u.name} rendu visible par ses matchs.`)} />
-                        ) : (
-                          <Row label="✕ Masquer" color="#555" desc="Désactiver la visibilité du numéro de téléphone de ce membre auprès de ses matchs." disabled={isLoading}
-                            onClick={() => adminAction(u.id, { share_phone_with_matches: false }, `Numéro de ${u.name} masqué.`)} />
-                        )
-                      ) : (
-                       <Row label="Numéro" color="#aaa" desc="Ce membre n'a pas encore renseigné de numéro de téléphone." disabled onClick={() => {}} />
-                      )}
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "12px 14px", background: "#FAFAFA", borderRadius: 12, marginBottom: 8, opacity: u.phone ? 1 : 0.5 }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: "0.85rem", fontWeight: 700, color: G.brun }}>Numéro visible par ses matchs</div>
+                          <div style={{ fontSize: "0.72rem", color: "#999", marginTop: 2 }}>{u.phone ? "Active pour que ses matchs voient son numéro de téléphone." : "Ce membre n'a pas encore renseigné de numéro de téléphone."}</div>
+                        </div>
+                        <SwitchBtn on={!!u.share_phone_with_matches} onToggle={() => {
+                          if (!u.phone || isLoading) return;
+                          const next = !u.share_phone_with_matches;
+                          adminAction(u.id, { share_phone_with_matches: next }, next ? `Numéro de ${u.name} rendu visible par ses matchs.` : `Numéro de ${u.name} masqué.`);
+                        }} />
+                      </div>
 
                       {FEATURE_SOCIALS && (
-                        !u.share_socials_with_matches ? (
-                          <Row label="✓ Rendre visibles" color={G.vert} desc="Activer la visibilité des réseaux sociaux de ce membre auprès de ses matchs." disabled={isLoading}
-                            onClick={() => adminAction(u.id, { share_socials_with_matches: true }, `Réseaux sociaux de ${u.name} rendus visibles par ses matchs.`)} />
-                        ) : (
-                          <Row label="✕ Masquer" color="#555" desc="Désactiver la visibilité des réseaux sociaux de ce membre auprès de ses matchs." disabled={isLoading}
-                            onClick={() => adminAction(u.id, { share_socials_with_matches: false }, `Réseaux sociaux de ${u.name} masqués.`)} />
-                        )
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "12px 14px", background: "#FAFAFA", borderRadius: 12, marginBottom: 8 }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: "0.85rem", fontWeight: 700, color: G.brun }}>Réseaux sociaux visibles par ses matchs</div>
+                            <div style={{ fontSize: "0.72rem", color: "#999", marginTop: 2 }}>Active pour que ses matchs voient ses réseaux sociaux.</div>
+                          </div>
+                          <SwitchBtn on={!!u.share_socials_with_matches} onToggle={() => {
+                            if (isLoading) return;
+                            const next = !u.share_socials_with_matches;
+                            adminAction(u.id, { share_socials_with_matches: next }, next ? `Réseaux sociaux de ${u.name} rendus visibles par ses matchs.` : `Réseaux sociaux de ${u.name} masqués.`);
+                          }} />
+                        </div>
                       )}
+
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "12px 14px", background: "#FAFAFA", borderRadius: 12 }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: "0.85rem", fontWeight: 700, color: G.brun }}>Compte VIP</div>
+                          <div style={{ fontSize: "0.72rem", color: "#999", marginTop: 2 }}>Une fois activé, les comptes gratuits ne peuvent plus liker ce membre sans passer Premium.</div>
+                        </div>
+                        <SwitchBtn on={!!u.is_vip} onToggle={() => {
+                          if (isLoading) return;
+                          const next = !u.is_vip;
+                          adminAction(u.id, { is_vip: next }, next ? `${u.name} est maintenant VIP.` : `Statut VIP retiré pour ${u.name}.`);
+                        }} />
+                      </div>
                     </>
                   )}
                 </div>

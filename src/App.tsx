@@ -2234,7 +2234,7 @@ function ModerationModal({ type, onClose }: { type: "insult" | "scam" | "sexual"
   const config = {
     insult: {
       icon: "🚫",
-      text: "Ce message contient des termes irrespectueux. Sur MOYO, nous encourageons le respect et la bienveilllance ❤️",
+      text: "Ce message contient des termes irrespectueux. Sur MOYO, nous encourageons le respect et la bienveillance ❤️",
     },
     scam: {
       icon: "⚠️",
@@ -17540,7 +17540,7 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
         {/* Compte VIP : en libre-service, contrairement au numéro/réseaux ce n'est pas une simple
             visibilité mais une vraie restriction pour les autres (les comptes gratuits ne peuvent
             plus liker), d'où le message explicite avant activation. */}
-        <div style={{ background: G.blanc, borderRadius: 18, border: "1.5px solid rgba(139,0,139,0.18)", overflow: "hidden", marginTop: 0, boxShadow: "0 2px 10px rgba(0,0,0,0.06)" }}>
+        <div style={{ background: G.blanc, borderRadius: 18, border: "1.5px solid rgba(102,102,102,0.18)", overflow: "hidden", marginTop: 0, boxShadow: "0 2px 10px rgba(0,0,0,0.06)" }}>
           <div className="moyo-tap" onClick={async () => {
             const newVip = !profile?.is_vip;
             await sb.update(auth.token, "profiles", auth.userId, { is_vip: newVip });
@@ -17552,9 +17552,9 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontWeight: 700, fontSize: "0.95rem", color: G.brun }}>Compte VIP</div>
-              <div style={{ fontSize: "0.82rem", color: profile?.is_vip ? "#8B008B" : "#888", marginTop: 2, fontWeight: profile?.is_vip ? 700 : 400 }}>{profile?.is_vip ? "Seuls les comptes Premium peuvent te liker." : "Active pour empêcher les comptes gratuits de te liker."}</div>
+              <div style={{ fontSize: "0.82rem", color: profile?.is_vip ? "#1a8a4a" : "#888", marginTop: 2, fontWeight: profile?.is_vip ? 700 : 400 }}>{profile?.is_vip ? "Seuls les comptes Premium peuvent te liker." : "Active pour empêcher les comptes gratuits de te liker."}</div>
             </div>
-            <div style={{ width: 46, height: 26, borderRadius: 50, background: profile?.is_vip ? "#8B008B" : G.gris, position: "relative", transition: "background 0.3s", flexShrink: 0 }}>
+            <div style={{ width: 46, height: 26, borderRadius: 50, background: profile?.is_vip ? "#27ae60" : G.rouge, position: "relative", transition: "background 0.3s", flexShrink: 0 }}>
               <div style={{ position: "absolute", top: 3, left: profile?.is_vip ? 23 : 3, width: 20, height: 20, borderRadius: "50%", background: G.blanc, boxShadow: "0 2px 6px rgba(0,0,0,0.2)", transition: "left 0.3s" }} />
             </div>
           </div>
