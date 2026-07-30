@@ -3,7 +3,7 @@ import type { Auth, Match, Message, PaymentRequest, Profile, StatusPost, ToastSt
 import {
   APPOINTMENT_PHYSICAL_PRICE, APPT_HOUR_MAX, APPT_HOUR_MIN, AUTO_MOD_CONTACT_REPLY, Avatar, BLOCK_SAME_GENDER, Badge, Btn, CONTACT_ADDRESS, CONTACT_EMAIL, CONTACT_WHATSAPP, ConfirmModal, DISCOVER_DEFAULT_MODE, DateTimePicker, EUR_TO_FCFA, EXPENSE_CATEGORIES, EXPENSE_CAT_COLORS, FREE_LIMITS, G, LANDING_MEMBERS, LANDING_SLOGAN, LANDING_STAT_CITIES, LANDING_STAT_COUPLES, LANDING_STAT_MEMBERS, LANDING_TITLE_END, LANDING_TITLE_HIGHLIGHT, LANDING_TITLE_START, LIFETIME_PREMIUM_UNTIL, Messages, PAY_AIRTEL_ENABLED, PAY_AIRTEL_NUMBER, PAY_AIRTEL_RESPONSABLE, PAY_CB_ENABLED, PAY_MTN_ENABLED, PAY_MTN_NUMBER, PAY_MTN_RESPONSABLE, PAY_WERO_ENABLED, PAY_WERO_NUMBER, PAY_PAYPAL_ENABLED, PAY_PAYPAL_NUMBER, PLAN_2MONTH_ENABLED, PLAN_MONTH_ENABLED, PLAN_WEEK_ENABLED, POLL_ADMIN_BADGE_MS, POLL_BADGES_MS, POLL_BROADCAST_MS, POLL_STATS_MS, POLL_SUPPORT_MS, PREMIUM_30_DAYS_MS, PREMIUM_DAYS_2MONTH, PREMIUM_DAYS_WEEK, PREMIUM_PRICE_2MONTH_FCFA, PREMIUM_PRICE_EUR, PREMIUM_PRICE_FCFA, PREMIUM_PRICE_WEEK_FCFA, PREMIUM_STAT_COUPLES, PREMIUM_STAT_MEMBERS, PremiumBadge, REFERRAL_BONUS_2MONTH, REFERRAL_BONUS_MONTH, REFERRAL_BONUS_WEEK, AFFILIATE_COMMISSION_PERCENT, AFFILIATE_PAYABLE_DELAY_DAYS, AFFILIATE_PAYOUT_MIN_FCFA, AFFILIATE_PROMO_BONUS_DAYS, PRIVACY_NOTICE_STEP1_TEXT, PRIVACY_NOTICE_STEP2_TEXT, BAN_SCREEN_TEXT, SOCIAL_FACEBOOK, SOCIAL_INSTAGRAM, SOCIAL_TIKTOK, SOCIAL_YOUTUBE, SOCIAL_LINKEDIN, STORE_LINK_ANDROID, STORE_LINK_IOS, AMBASSADOR_RESOURCES_LINK, SUPABASE_KEY, SUPABASE_URL, SUPER_ADMIN_ID, SUPPORT_PREFIX_REPLY, SUPPORT_PREFIX_USER, SUPPORT_TEAM_ID, SUPPORT_TEAM_NAME, SUPPORT_TEAM_PHOTO, SUPPORT_REPLY_PUSH_ENABLED, Toast, VerifiedBadge, apptStatusInfo, buildContactBannedRegex, buildCustomBannedRegex, setExemptedBuiltinWords, setExemptedContactWords, cleanSupportReason, dedupeMatchesByCouple, fmtApptDT, fmtDate, formatMoney, isSupportReason, logAdminAction, mmLevel, mmScore, paymentCurrency, resolveStatusImageUrl, sb, sendMatchWelcomeMessage,
   setAPPOINTMENT_PHYSICAL_PRICE, setAUTO_MOD_CONTACT_REPLY, setBLOCK_SAME_GENDER, setCONTACT_ADDRESS, setCONTACT_EMAIL, setCONTACT_WHATSAPP, setDISCOVER_DEFAULT_MODE, setEUR_TO_FCFA, setLANDING_MEMBERS, setLANDING_SLOGAN, setLANDING_STAT_CITIES, setLANDING_STAT_COUPLES, setLANDING_STAT_MEMBERS, setLANDING_TITLE_END, setLANDING_TITLE_HIGHLIGHT, setLANDING_TITLE_START, setPAY_AIRTEL_ENABLED, setPAY_AIRTEL_NUMBER, setPAY_AIRTEL_RESPONSABLE, setPAY_CB_ENABLED, setPAY_MTN_ENABLED, setPAY_MTN_NUMBER, setPAY_MTN_RESPONSABLE, setPAY_WERO_ENABLED, setPAY_WERO_NUMBER, setPAY_PAYPAL_ENABLED, setPAY_PAYPAL_NUMBER, setPLAN_2MONTH_ENABLED, setPLAN_MONTH_ENABLED, setPLAN_WEEK_ENABLED, setPOLL_ADMIN_BADGE_MS, setPOLL_BADGES_MS, setPOLL_BROADCAST_MS, setPOLL_STATS_MS, setPOLL_SUPPORT_MS, setPREMIUM_30_DAYS_MS, setPREMIUM_DAYS_2MONTH, setPREMIUM_DAYS_WEEK, setPREMIUM_PRICE_2MONTH_FCFA, setPREMIUM_PRICE_EUR, setPREMIUM_PRICE_FCFA, setPREMIUM_PRICE_WEEK_FCFA, setPREMIUM_STAT_COUPLES, setPREMIUM_STAT_MEMBERS, setPREMIUM_BOOST_ENABLED, setPREMIUM_SCREEN_VARIANT, setFEATURE_SHOW_LIKES_VIEWS_FREE, setPRIVACY_NOTICE_ENABLED, setSOCIAL_FACEBOOK, setSOCIAL_INSTAGRAM, setSOCIAL_TIKTOK, setSOCIAL_YOUTUBE, setSOCIAL_LINKEDIN, setSTORE_LINK_ANDROID, setSTORE_LINK_IOS, setAMBASSADOR_RESOURCES_LINK, setSUPPORT_TEAM_PHOTO, setAFFILIATE_COMMISSION_PERCENT, setAFFILIATE_PAYABLE_DELAY_DAYS, setAFFILIATE_PAYOUT_MIN_FCFA, setAFFILIATE_PROMO_BONUS_DAYS, setPRIVACY_NOTICE_STEP1_TEXT, setPRIVACY_NOTICE_STEP2_TEXT, setBAN_SCREEN_TEXT, setPAY_LINK_ENABLED,
-  VILLES, RELIGIONS, PhoneCountryField, UploadRingOverlay,
+  VILLES, RELIGIONS, PhoneCountryField, UploadRingOverlay, FEATURE_SOCIALS,
 } from "./App";
 
 async function saveSetting(key: string, value: string, token: string): Promise<boolean> {
@@ -4738,6 +4738,9 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
     religion?: string;
     relational_profile?: any;
     ban_allow_payment?: boolean;
+    is_vip?: boolean;
+    share_phone_with_matches?: boolean;
+    share_socials_with_matches?: boolean;
   };
 
   // ── Onglet actif ──
@@ -7769,7 +7772,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
     const openAffiliateProfile = async (userId: string) => {
       if (!auth) return;
       try {
-        const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${userId}&select=id,name,age,city,gender,is_premium,is_admin,is_verified,is_banned,is_ambassador,created_at,last_seen,premium_until,premium_is_gift,email,phone,admin_level,photo_url,bio&limit=1`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${userId}&select=id,name,age,city,gender,is_premium,is_admin,is_verified,is_banned,is_ambassador,created_at,last_seen,premium_until,premium_is_gift,email,phone,admin_level,is_vip,share_phone_with_matches,share_socials_with_matches,photo_url,bio&limit=1`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
         const data = await r.json().catch(() => []);
         if (Array.isArray(data) && data[0]) { setManageUserModal(data[0]); setManageTab("statuts"); }
       } catch {}
@@ -8977,7 +8980,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
   const [actionLoading, setActionLoading] = useState<string | null>(null); // userId en cours
   const [banModal, setBanModal] = useState<AdminProfile | null>(null);
   const [manageUserModal, setManageUserModal] = useState<AdminProfile | null>(null);
-  const [manageTab, setManageTab] = useState<"statuts" | "moderation" | "campagnes">("statuts");
+  const [manageTab, setManageTab] = useState<"statuts" | "moderation" | "campagnes" | "reglages">("statuts");
   // Garde la fenêtre "Gérer" à jour avec les dernières données (ex: après avoir vérifié/banni
   // depuis la fenêtre elle-même, les boutons doivent refléter le nouvel état sans la refermer).
   useEffect(() => {
@@ -9231,7 +9234,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
         recent: `last_seen=gte.${recentThreshold}`,
       };
       const filterQs = Array.from(filters).map(f => `&${filterClauses[f]}`).join("");
-      let params = `?select=id,name,age,city,gender,is_premium,is_admin,is_verified,is_banned,is_ambassador,created_at,last_seen,premium_until,premium_is_gift,email,phone,admin_level&order=${serverSort}&limit=${pageSize}&offset=${offset}${filterQs}`;
+      let params = `?select=id,name,age,city,gender,is_premium,is_admin,is_verified,is_banned,is_ambassador,created_at,last_seen,premium_until,premium_is_gift,email,phone,admin_level,is_vip,share_phone_with_matches,share_socials_with_matches&order=${serverSort}&limit=${pageSize}&offset=${offset}${filterQs}`;
       if (search.trim() || searchEmail.trim() || searchPhone.trim()) {
         const nameQ = search.trim() ? `name.ilike.*${encodeURIComponent(search.trim())}*` : null;
         const emailQ = searchEmail.trim() ? `email.ilike.*${encodeURIComponent(searchEmail.trim())}*` : null;
@@ -9240,7 +9243,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
         // (avec un point) n'est valide qu'à l'intérieur de or(...) — utilisée seule, elle est invalide
         // et Supabase l'ignore silencieusement, d'où le filtre qui ne trouvait jamais rien.
         const orFilter = [nameQ, emailQ, phoneQ].filter(Boolean).join(",");
-        params = `?select=id,name,age,city,gender,is_premium,is_admin,is_verified,is_banned,is_ambassador,created_at,last_seen,premium_until,premium_is_gift,email,phone,admin_level&or=(${orFilter})&order=${serverSort}&limit=${pageSize}&offset=${offset}${filterQs}`;
+        params = `?select=id,name,age,city,gender,is_premium,is_admin,is_verified,is_banned,is_ambassador,created_at,last_seen,premium_until,premium_is_gift,email,phone,admin_level,is_vip,share_phone_with_matches,share_socials_with_matches&or=(${orFilter})&order=${serverSort}&limit=${pageSize}&offset=${offset}${filterQs}`;
       }
       const res = await sb.query<AdminProfile>(auth.token, "profiles", params);
       // Quand une recherche est active, on trie par pertinence (correspondance exacte / "commence par" en premier)
@@ -11195,7 +11198,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
         const targetIsSuperAdmin = (u as any).admin_level === "superadmin";
         const cannotModerate = isSelf || (targetIsSuperAdmin && !iAmSuperAdmin);
         const close = () => setManageUserModal(null);
-        const NavItem = ({ id, label, Icon }: { id: "statuts" | "moderation" | "campagnes"; label: string; Icon: () => React.ReactElement }) => {
+        const NavItem = ({ id, label, Icon }: { id: "statuts" | "moderation" | "campagnes" | "reglages"; label: string; Icon: () => React.ReactElement }) => {
           const active = manageTab === id;
           return (
             <div onClick={() => setManageTab(id)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderRadius: 10, cursor: "pointer", background: active ? "rgba(192,57,43,0.08)" : "transparent", color: active ? G.rouge : "#666", fontWeight: 700, fontSize: "0.85rem", marginBottom: 4 }}>
@@ -11241,6 +11244,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   <NavItem id="statuts" label="Statuts" Icon={() => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>} />
                   <NavItem id="moderation" label="Modération" Icon={() => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>} />
                   <NavItem id="campagnes" label="Campagnes ciblées" Icon={() => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a2 2 0 0 1-3.2 2.4L6 15"/></svg>} />
+                  <NavItem id="reglages" label="Réglages du profil" Icon={() => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>} />
                 </div>
                 {/* Contenu */}
                 <div style={{ flex: 1, minWidth: 0, padding: 20, overflowY: "auto" }}>
@@ -11300,6 +11304,13 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                       ) : (
                         <Row label="- Vérifier" color="#555" desc="Retirer la vérification de ce membre." disabled={isLoading}
                           onClick={() => confirm(`Retirer la vérification de ${u.name} ?`, () => adminAction(u.id, { is_verified: false }, `Vérification retirée pour ${u.name}.`))} />
+                      )}
+                      {!u.is_vip ? (
+                        <Row label="⭐ VIP" color="#8B008B" desc="Rendre ce membre VIP : les comptes gratuits ne pourront plus le liker sans passer Premium." disabled={isLoading}
+                          onClick={() => confirm(`Rendre ${u.name} VIP ? Les membres gratuits ne pourront plus le/la liker sans passer Premium.`, () => adminAction(u.id, { is_vip: true }, `${u.name} est maintenant VIP.`))} />
+                      ) : (
+                        <Row label="- VIP" color="#555" desc="Retirer le statut VIP de ce membre." disabled={isLoading}
+                          onClick={() => confirm(`Retirer le statut VIP de ${u.name} ?`, () => adminAction(u.id, { is_vip: false }, `Statut VIP retiré pour ${u.name}.`))} />
                       )}
                     </>
                   )}
@@ -11389,6 +11400,34 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                           </>
                         );
                       })()}
+                    </>
+                  )}
+                  {manageTab === "reglages" && (
+                    <>
+                      <div style={{ fontWeight: 800, fontSize: "0.95rem", color: G.brun, marginBottom: 4 }}>Réglages du profil</div>
+                      <div style={{ fontSize: "0.76rem", color: "#999", marginBottom: 16 }}>Les mêmes réglages que ce membre a dans son propre profil. Certains ont du mal à les activer eux-mêmes — tu peux le faire à leur place, à leur demande.</div>
+
+                      {u.phone ? (
+                        !u.share_phone_with_matches ? (
+                          <Row label="✓ Rendre visible" color={G.vert} desc="Activer la visibilité du numéro de téléphone de ce membre auprès de ses matchs." disabled={isLoading}
+                            onClick={() => adminAction(u.id, { share_phone_with_matches: true }, `Numéro de ${u.name} rendu visible par ses matchs.`)} />
+                        ) : (
+                          <Row label="✕ Masquer" color="#555" desc="Désactiver la visibilité du numéro de téléphone de ce membre auprès de ses matchs." disabled={isLoading}
+                            onClick={() => adminAction(u.id, { share_phone_with_matches: false }, `Numéro de ${u.name} masqué.`)} />
+                        )
+                      ) : (
+                        <Row label="Numéro" color="#aaa" desc="Ce membre n'a pas encore renseigné de numéro de téléphone." disabled />
+                      )}
+
+                      {FEATURE_SOCIALS && (
+                        !u.share_socials_with_matches ? (
+                          <Row label="✓ Rendre visibles" color={G.vert} desc="Activer la visibilité des réseaux sociaux de ce membre auprès de ses matchs." disabled={isLoading}
+                            onClick={() => adminAction(u.id, { share_socials_with_matches: true }, `Réseaux sociaux de ${u.name} rendus visibles par ses matchs.`)} />
+                        ) : (
+                          <Row label="✕ Masquer" color="#555" desc="Désactiver la visibilité des réseaux sociaux de ce membre auprès de ses matchs." disabled={isLoading}
+                            onClick={() => adminAction(u.id, { share_socials_with_matches: false }, `Réseaux sociaux de ${u.name} masqués.`)} />
+                        )
+                      )}
                     </>
                   )}
                 </div>

@@ -412,7 +412,7 @@ export function setFEATURE_SHOW_LIKES_VIEWS_FREE(v: any) { FEATURE_SHOW_LIKES_VI
 let PREMIUM_SCREEN_VARIANT: "a" | "b" = "a";
 export function setPREMIUM_SCREEN_VARIANT(v: any) { PREMIUM_SCREEN_VARIANT = v === "b" ? "b" : "a"; }
 let FEATURE_GROUP_PREMIUM = true;
-let FEATURE_SOCIALS = true;
+export let FEATURE_SOCIALS = true;
 // Abonnement obligatoire à l'inscription : désactivé par défaut, le parcours actuel (inscription
 // gratuite, upgrade Premium plus tard si souhaité) reste inchangé tant que ce n'est pas activé.
 export let REQUIRE_SIGNUP_PAYMENT = false;
@@ -844,7 +844,7 @@ export type Auth = {
   refreshToken?: string;
   expiresAt?: number;
 };
-export type Profile = { id: string; name: string; age: number; city: string; gender: string; bio: string; religion?: string; profession?: string; hobbies?: string; phone?: string | null; photo_url?: string | null; is_premium: boolean; is_admin?: boolean; is_visible?: boolean; is_verified?: boolean; is_certified?: boolean; last_seen?: string; hide_online_status?: boolean; warning_count?: number; is_banned?: boolean; ban_until?: string | null; ban_reason?: string | null; last_notice_acknowledged?: boolean; last_notice_at?: string | null; has_installed_pwa?: boolean; account_deleted?: boolean; share_phone_with_matches?: boolean; soc_facebook?: string | null; soc_tiktok?: string | null; soc_instagram?: string | null; soc_snapchat?: string | null; share_socials_with_matches?: boolean; signup_payment_required?: boolean; marital_status?: string | null; has_children?: boolean | null };
+export type Profile = { id: string; name: string; age: number; city: string; gender: string; bio: string; religion?: string; profession?: string; hobbies?: string; phone?: string | null; photo_url?: string | null; is_premium: boolean; is_admin?: boolean; is_visible?: boolean; is_verified?: boolean; is_certified?: boolean; last_seen?: string; hide_online_status?: boolean; warning_count?: number; is_banned?: boolean; ban_until?: string | null; ban_reason?: string | null; last_notice_acknowledged?: boolean; last_notice_at?: string | null; has_installed_pwa?: boolean; account_deleted?: boolean; share_phone_with_matches?: boolean; soc_facebook?: string | null; soc_tiktok?: string | null; soc_instagram?: string | null; soc_snapchat?: string | null; share_socials_with_matches?: boolean; signup_payment_required?: boolean; marital_status?: string | null; has_children?: boolean | null; is_vip?: boolean };
 export type Match = { id: string; user1: string; user2: string; partner?: Profile; lastMsg?: Message; unreadCount?: number; created_at?: string };
 export type Message = { id?: string; match_id: string; sender_id: string; content: string; is_read: boolean; is_delivered?: boolean; is_edited?: boolean; created_at?: string; reactions?: Record<string, string[]>; is_view_once?: boolean; viewed_at?: string | null; is_destroyed?: boolean; destroyed_at?: string | null };
 // Ciblage des diffusions générales : décide si une diffusion (target) concerne un utilisateur donné.
@@ -7476,6 +7476,7 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages, onMatch }
       return;
     }
     if (!auth.isPremium && likesToday >= FREE_LIMITS.likes) { onShowPremium(modalTexts.likesEpuises.replace("{n}", String(FREE_LIMITS.likes))); return; }
+    if (!auth.isPremium && p.is_vip) { onShowPremium(`Ce compte est VIP, passe Premium pour liker ${p.name}`); return; }
     // Sécurité hétéro : interdire le like d'un profil de même genre (si la règle est active).
     if (BLOCK_SAME_GENDER && myGender && p.gender && myGender === p.gender) { setShowSameGender(true); return; }
     // Like - mise à jour optimiste immédiate
@@ -8287,7 +8288,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMes
       if (isPrem && total > 0) {
         const ids = res.map(r => r.from_user).filter(Boolean).join(",");
         if (ids) {
-          const profiles = await sb.query<Profile>(auth.token, "profiles", `?id=in.(${ids})&select=id,name,age,city,bio,photo_url,gender,religion,is_premium,is_verified`);
+          const profiles = await sb.query<Profile>(auth.token, "profiles", `?id=in.(${ids})&select=id,name,age,city,bio,photo_url,gender,religion,is_premium,is_verified,is_vip`);
           setLikers(Array.isArray(profiles) ? profiles.filter(p => p && !dIds.has(p.id)) : []);
           const meta: Record<string, { date?: string; isMatch?: boolean }> = {};
           res.forEach(r => { meta[r.from_user] = { date: r.created_at, isMatch: matchedUserIds.has(r.from_user) }; });
@@ -8302,7 +8303,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMes
         const sent = await sb.query<LikeRecord>(auth.token, "likes", `?from_user=eq.${auth.userId}&select=to_user,created_at&order=created_at.desc&limit=50`);
         if (Array.isArray(sent) && sent.length > 0) {
           const sentIds = sent.map(s => s.to_user).filter(Boolean).join(",");
-          const sentProfiles = await sb.query<Profile>(auth.token, "profiles", `?id=in.(${sentIds})&select=id,name,age,city,bio,photo_url,gender,religion,is_premium,is_verified`);
+          const sentProfiles = await sb.query<Profile>(auth.token, "profiles", `?id=in.(${sentIds})&select=id,name,age,city,bio,photo_url,gender,religion,is_premium,is_verified,is_vip`);
           const knownIds = new Set(Array.isArray(sentProfiles) ? sentProfiles.map(p => p.id) : []);
           setSentLikes(Array.isArray(sentProfiles) ? sentProfiles : []);
           const smeta: Record<string, { date?: string; status: "pending"|"match"|"unavailable" }> = {};
@@ -8329,7 +8330,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMes
           const allIds = [...seen.keys()].filter(id => !dIds.has(id));
           if (allIds.length > 0) {
             const vIds = allIds.join(",");
-            const vProfiles = await sb.query<Profile>(auth.token, "profiles", `?id=in.(${vIds})&select=id,name,age,city,bio,photo_url,gender,religion,is_premium,is_verified,is_visible,is_admin`);
+            const vProfiles = await sb.query<Profile>(auth.token, "profiles", `?id=in.(${vIds})&select=id,name,age,city,bio,photo_url,gender,religion,is_premium,is_verified,is_visible,is_admin,is_vip`);
             const found = Array.isArray(vProfiles) ? vProfiles : [];
             // Compteur = uniquement les profils réellement récupérables
             const foundIds = new Set(found.map(p => p.id));
@@ -8358,7 +8359,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMes
           const seenVisited = new Map<string, string>();
           myVisits.forEach(v => { if (!seenVisited.has(v.visited_id)) seenVisited.set(v.visited_id, v.created_at || ""); });
           const vIds = [...seenVisited.keys()].join(",");
-          const vProfiles = await sb.query<Profile>(auth.token, "profiles", `?id=in.(${vIds})&select=id,name,age,city,bio,photo_url,gender,religion,is_premium,is_verified`);
+          const vProfiles = await sb.query<Profile>(auth.token, "profiles", `?id=in.(${vIds})&select=id,name,age,city,bio,photo_url,gender,religion,is_premium,is_verified,is_vip`);
           setVisitedProfiles(Array.isArray(vProfiles) ? vProfiles : []);
           const pvmeta: Record<string, { date?: string }> = {};
           seenVisited.forEach((date, id) => { pvmeta[id] = { date }; });
@@ -8421,6 +8422,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMes
     //    peut arriver dans "Reçus" quelle que soit sa provenance, donc sans cette vérification on
     //    pouvait liker en retour une personne du même genre et créer un vrai match. ──
     if (BLOCK_SAME_GENDER && myGender && p.gender && myGender === p.gender) { setSelectedProfile(null); setShowSameGenderWarn(true); return; }
+    if (!auth.isPremium && p.is_vip) { setSelectedProfile(null); onShowPremium(`Ce compte est VIP, passe Premium pour liker ${p.name}`); return; }
     setLiking(true);
     try {
       await sb.insert(auth.token, "likes", { from_user: auth.userId, to_user: p.id });
@@ -17243,6 +17245,7 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
           </div>
         )}
 
+        {(!isWideProfile || activeSection === "main") && FEATURE_AMBASSADOR_PROGRAM && (ambStatus === "none" || ambStatus === "pending") && <AmbassadorCard auth={auth} status={ambStatus} onRequested={() => setAmbStatus("pending")} />}
         {/* CTA Premium - rouge si gratuit, doré si actif, rouge si expiré */}
         {(!isWideProfile || ["premium","main"].includes(activeSection)) && (() => {
           const stored = localStorage.getItem(`moyo_premium_until_${auth.userId}`);
@@ -17329,6 +17332,95 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
             </div>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><polyline points="9 18 15 12 9 6" /></svg>
           </div>
+        )}
+
+        {/* Super promo Premium — restylée pour ressembler aux autres cartes d'action de la page
+            (au lieu de sa mise en avant visuelle d'origine), à la demande explicite du client. */}
+        {promoAvailable && (
+          <div onClick={onOpenSuperPromo} className="moyo-tap" style={{ background: G.blanc, borderRadius: 18, padding: "15px 18px", cursor: "pointer", boxShadow: "0 2px 10px rgba(0,0,0,0.06)", display: "flex", alignItems: "center", gap: 14, border: `1.5px solid ${G.gris}` }}>
+            <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z" /><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6" /></svg>
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: 800, fontSize: "1rem", color: G.brun, marginBottom: 3 }}>Super promo Premium disponible</div>
+              <div style={{ fontSize: "0.78rem", color: "#888", lineHeight: 1.4 }}>{promoAvailable.price.toLocaleString("fr-FR")} FCFA au lieu de {PREMIUM_PRICE_FCFA.toLocaleString("fr-FR")} FCFA</div>
+            </div>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+          </div>
+        )}
+
+        {/* ── Bouton Passer sur les Statuts Moyo Dating (Premium uniquement) ── */}
+        {(!isWideProfile || ["main"].includes(activeSection)) && (
+          auth.isPremium
+            ? <FeatureRequestButton auth={auth} />
+            : <div onClick={() => onShowPremium("Passez Premium pour faire découvrir votre profil dans les Statuts Moyo Dating !")} style={{ background: G.blanc, borderRadius: 18, padding: "18px 20px", cursor: "pointer", boxShadow: "0 2px 10px rgba(0,0,0,0.06)", display: "flex", alignItems: "center", gap: 14, border: "1.5px solid rgba(212,168,67,0.3)", marginTop: 0 }}>
+                <div style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(212,168,67,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={G.or} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/></svg>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 800, fontSize: "1rem", color: G.brun, marginBottom: 3 }}>Passer sur les Statuts Moyo</div>
+                  <div style={{ fontSize: "0.78rem", color: "#8a7248", lineHeight: 1.4, display: "flex", alignItems: "center", gap: 6 }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill={G.or} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                    <span>Réservé aux membres Premium</span>
+                  </div>
+                </div>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              </div>
+        )}
+
+        {/* ── Bouton Améliorer ma photo de profil (Premium uniquement) ── */}
+        {FEATURE_PHOTO_RETOUCH && (!isWideProfile || ["main"].includes(activeSection)) && (
+          auth.isPremium
+            ? <div onClick={() => {
+                const msg = `Bonjour, je souhaite améliorer ma photo de profil Moyo Dating.\n\nMon compte : ${auth.name}\nMon email : ${auth.email || "non renseigné"}\n\nJe vous envoie la photo juste après ce message.`;
+                window.open(`https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent(msg)}`, "_blank");
+              }} style={{ background: G.blanc, borderRadius: 18, padding: "18px 20px", cursor: "pointer", boxShadow: "0 2px 10px rgba(0,0,0,0.06)", display: "flex", alignItems: "center", gap: 14, border: "1.5px solid rgba(212,168,67,0.3)", marginTop: 0 }}>
+                <div style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(212,168,67,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={G.or} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 800, fontSize: "1rem", color: G.brun, marginBottom: 3 }}>Améliorer ma photo de profil</div>
+                  <div style={{ fontSize: "0.78rem", color: "#888", lineHeight: 1.4 }}>Envoie ta photo, notre équipe la rend plus attirante</div>
+                </div>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.or} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+              </div>
+            : <div onClick={() => onShowPremium("Passez Premium pour améliorer votre photo de profil avec notre équipe !")} style={{ background: G.blanc, borderRadius: 18, padding: "18px 20px", cursor: "pointer", boxShadow: "0 2px 10px rgba(0,0,0,0.06)", display: "flex", alignItems: "center", gap: 14, border: "1.5px solid rgba(212,168,67,0.3)", marginTop: 0 }}>
+                <div style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(212,168,67,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={G.or} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 800, fontSize: "1rem", color: G.brun, marginBottom: 3 }}>Améliorer ma photo de profil</div>
+                  <div style={{ fontSize: "0.78rem", color: "#8a7248", lineHeight: 1.4, display: "flex", alignItems: "center", gap: 6 }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill={G.or} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                    <span>Réservé aux membres Premium</span>
+                  </div>
+                </div>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              </div>
+        )}
+
+        {(!isWideProfile || ["parrainage","main"].includes(activeSection)) && <div onClick={() => {
+          const refLink = `https://dating.moyo-congo.com?ref=${auth.userId}`;
+          const msg = encodeURIComponent(`Salut ! Les célibataires congolais sont déjà sur MOYO.\nEt toi, tu attends quoi pour trouver quelqu'un qui te correspond vraiment ?\nCrée ton compte gratuitement ici : ${refLink}`);
+          if (navigator.share) {
+            navigator.share({ title: "Moyo Congo", text: `Salut ! Les célibataires congolais sont déjà sur MOYO. Crée ton compte gratuitement :`, url: refLink });
+          } else {
+            window.open(`https://wa.me/?text=${msg}`, "_blank");
+          }
+        }} style={{ background: G.blanc, borderRadius: 18, padding: "15px 18px", cursor: "pointer", boxShadow: "0 2px 10px rgba(0,0,0,0.06)", display: "flex", alignItems: "center", gap: 14, border: "1.5px solid rgba(26,92,58,0.2)", marginTop: 0 }}>
+          <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(26,92,58,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 800, fontSize: "1rem", color: G.brun, marginBottom: 3 }}>Parrainer un ami</div>
+            <div style={{ fontSize: "0.78rem", color: "#888", lineHeight: 1.4 }}>Gagnez <span style={{ fontWeight: 800, color: G.vert }}>jusqu'à {REFERRAL_BONUS_2MONTH} jours Premium offerts</span> selon la formule de votre filleul</div>
+          </div>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+        </div>}
+        {/* Parrainage - mis en avant */}
+        {/* ── Bouton Demande de mise en relation (ouvert à tous ; paiement requis à l'envoi) ── */}
+        {(!isWideProfile || ["main"].includes(activeSection)) && (
+          <MatchRequestButton auth={auth} onShowPremium={onShowPremium} />
         )}
 
         {/* Numéro WhatsApp — affichage/édition ET réglage de visibilité réunis dans une seule
@@ -17445,95 +17537,84 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
           </div>
         )}
 
-        {promoAvailable && (
-          <div onClick={onOpenSuperPromo} style={{ marginTop: 12, background: G.creme, border: `1.5px solid ${G.rouge}`, borderRadius: 16, padding: "14px 16px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ width: 40, height: 40, borderRadius: "50%", background: "rgba(192,57,43,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z" /><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6" /></svg>
+        {/* Compte VIP : en libre-service, contrairement au numéro/réseaux ce n'est pas une simple
+            visibilité mais une vraie restriction pour les autres (les comptes gratuits ne peuvent
+            plus liker), d'où le message explicite avant activation. */}
+        <div style={{ background: G.blanc, borderRadius: 18, border: "1.5px solid rgba(139,0,139,0.18)", overflow: "hidden", marginTop: 0, boxShadow: "0 2px 10px rgba(0,0,0,0.06)" }}>
+          <div className="moyo-tap" onClick={async () => {
+            const newVip = !profile?.is_vip;
+            await sb.update(auth.token, "profiles", auth.userId, { is_vip: newVip });
+            setProfile(p => p ? { ...p, is_vip: newVip } : null);
+            setToast({ msg: newVip ? "Compte VIP activé" : "Compte VIP désactivé", type: "success" });
+          }} style={{ padding: "15px 18px", display: "flex", alignItems: "center", gap: 14, cursor: "pointer" }}>
+            <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(139,0,139,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill={profile?.is_vip ? "#8B008B" : "none"} stroke="#8B008B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a2 2 0 0 1-3.2 2.4L6 15"/></svg>
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: "0.88rem", fontWeight: 800, color: G.brun }}>Super promo Premium disponible</div>
-              <div style={{ fontSize: "0.74rem", color: G.brunLight, opacity: 0.8 }}>{promoAvailable.price.toLocaleString("fr-FR")} FCFA au lieu de {PREMIUM_PRICE_FCFA.toLocaleString("fr-FR")} FCFA</div>
+              <div style={{ fontWeight: 700, fontSize: "0.95rem", color: G.brun }}>Compte VIP</div>
+              <div style={{ fontSize: "0.82rem", color: profile?.is_vip ? "#8B008B" : "#888", marginTop: 2, fontWeight: profile?.is_vip ? 700 : 400 }}>{profile?.is_vip ? "Seuls les comptes Premium peuvent te liker." : "Active pour empêcher les comptes gratuits de te liker."}</div>
             </div>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><polyline points="9 18 15 12 9 6" /></svg>
+            <div style={{ width: 46, height: 26, borderRadius: 50, background: profile?.is_vip ? "#8B008B" : G.gris, position: "relative", transition: "background 0.3s", flexShrink: 0 }}>
+              <div style={{ position: "absolute", top: 3, left: profile?.is_vip ? 23 : 3, width: 20, height: 20, borderRadius: "50%", background: G.blanc, boxShadow: "0 2px 6px rgba(0,0,0,0.2)", transition: "left 0.3s" }} />
+            </div>
           </div>
-        )}
+        </div>
 
-
-        {/* Parrainage - mis en avant */}
-        {/* ── Bouton Demande de mise en relation (ouvert à tous ; paiement requis à l'envoi) ── */}
-        {(!isWideProfile || ["main"].includes(activeSection)) && (
-          <MatchRequestButton auth={auth} onShowPremium={onShowPremium} />
-        )}
-
-        {/* ── Bouton Passer sur les Statuts Moyo Dating (Premium uniquement) ── */}
-        {(!isWideProfile || ["main"].includes(activeSection)) && (
-          auth.isPremium
-            ? <FeatureRequestButton auth={auth} />
-            : <div onClick={() => onShowPremium("Passez Premium pour faire découvrir votre profil dans les Statuts Moyo Dating !")} style={{ background: G.blanc, borderRadius: 18, padding: "18px 20px", cursor: "pointer", boxShadow: "0 2px 10px rgba(0,0,0,0.06)", display: "flex", alignItems: "center", gap: 14, border: "1.5px solid rgba(212,168,67,0.3)", marginTop: 0 }}>
-                <div style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(212,168,67,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={G.or} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/></svg>
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 800, fontSize: "1rem", color: G.brun, marginBottom: 3 }}>Passer sur les Statuts Moyo</div>
-                  <div style={{ fontSize: "0.78rem", color: "#8a7248", lineHeight: 1.4, display: "flex", alignItems: "center", gap: 6 }}>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill={G.or} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                    <span>Réservé aux membres Premium</span>
-                  </div>
-                </div>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-              </div>
-        )}
-
-        {/* ── Bouton Améliorer ma photo de profil (Premium uniquement) ── */}
-        {FEATURE_PHOTO_RETOUCH && (!isWideProfile || ["main"].includes(activeSection)) && (
-          auth.isPremium
-            ? <div onClick={() => {
-                const msg = `Bonjour, je souhaite améliorer ma photo de profil Moyo Dating.\n\nMon compte : ${auth.name}\nMon email : ${auth.email || "non renseigné"}\n\nJe vous envoie la photo juste après ce message.`;
-                window.open(`https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent(msg)}`, "_blank");
-              }} style={{ background: G.blanc, borderRadius: 18, padding: "18px 20px", cursor: "pointer", boxShadow: "0 2px 10px rgba(0,0,0,0.06)", display: "flex", alignItems: "center", gap: 14, border: "1.5px solid rgba(212,168,67,0.3)", marginTop: 0 }}>
-                <div style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(212,168,67,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={G.or} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 800, fontSize: "1rem", color: G.brun, marginBottom: 3 }}>Améliorer ma photo de profil</div>
-                  <div style={{ fontSize: "0.78rem", color: "#888", lineHeight: 1.4 }}>Envoie ta photo, notre équipe la rend plus attirante</div>
-                </div>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.or} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
-              </div>
-            : <div onClick={() => onShowPremium("Passez Premium pour améliorer votre photo de profil avec notre équipe !")} style={{ background: G.blanc, borderRadius: 18, padding: "18px 20px", cursor: "pointer", boxShadow: "0 2px 10px rgba(0,0,0,0.06)", display: "flex", alignItems: "center", gap: 14, border: "1.5px solid rgba(212,168,67,0.3)", marginTop: 0 }}>
-                <div style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(212,168,67,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={G.or} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 800, fontSize: "1rem", color: G.brun, marginBottom: 3 }}>Améliorer ma photo de profil</div>
-                  <div style={{ fontSize: "0.78rem", color: "#8a7248", lineHeight: 1.4, display: "flex", alignItems: "center", gap: 6 }}>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill={G.or} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                    <span>Réservé aux membres Premium</span>
-                  </div>
-                </div>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-              </div>
-        )}
-
-        {(!isWideProfile || ["parrainage","main"].includes(activeSection)) && <div onClick={() => {
-          const refLink = `https://dating.moyo-congo.com?ref=${auth.userId}`;
-          const msg = encodeURIComponent(`Salut ! Les célibataires congolais sont déjà sur MOYO.\nEt toi, tu attends quoi pour trouver quelqu'un qui te correspond vraiment ?\nCrée ton compte gratuitement ici : ${refLink}`);
-          if (navigator.share) {
-            navigator.share({ title: "Moyo Congo", text: `Salut ! Les célibataires congolais sont déjà sur MOYO. Crée ton compte gratuitement :`, url: refLink });
-          } else {
-            window.open(`https://wa.me/?text=${msg}`, "_blank");
-          }
-        }} style={{ background: G.blanc, borderRadius: 18, padding: "15px 18px", cursor: "pointer", boxShadow: "0 2px 10px rgba(0,0,0,0.06)", display: "flex", alignItems: "center", gap: 14, border: "1.5px solid rgba(26,92,58,0.2)", marginTop: 0 }}>
-          <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(26,92,58,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        {/* Toggle Visible / Invisible */}
+        {(!isWideProfile || ["visibility","main"].includes(activeSection)) && <div style={{
+          background: G.blanc, borderRadius: 16, padding: "16px 20px",
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: `1px solid var(--c-card-bd)`,
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={{ width: 42, height: 42, borderRadius: "50%", background: isVisible ? "rgba(39,174,96,0.1)" : "rgba(231,76,60,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              {isVisible
+                ? <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#27ae60" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                : <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+              }
+            </div>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: "0.95rem", color: G.brun }}>Profil {isVisible ? "visible" : "invisible"}</div>
+              <div style={{ fontSize: "0.82rem", color: "#888", fontWeight: 400, marginTop: 2 }}>{isVisible ? "Tu apparais dans Découvrir" : "Tu n'apparais plus dans Découvrir"}</div>
+            </div>
           </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 800, fontSize: "1rem", color: G.brun, marginBottom: 3 }}>Parrainer un ami</div>
-            <div style={{ fontSize: "0.78rem", color: "#888", lineHeight: 1.4 }}>Gagnez <span style={{ fontWeight: 800, color: G.vert }}>jusqu'à {REFERRAL_BONUS_2MONTH} jours Premium offerts</span> selon la formule de votre filleul</div>
+          <div onClick={async () => {
+            const newVal = !isVisible;
+            await sb.update(auth.token, "profiles", auth.userId, { is_visible: newVal });
+            setProfile(p => p ? { ...p, is_visible: newVal } : null);
+            setToast({ msg: newVal ? "Profil rendu visible ✅" : "Profil rendu invisible 🔒" });
+          }} style={{ width: 52, height: 28, borderRadius: 50, background: isVisible ? "#27ae60" : "#e74c3c", cursor: "pointer", position: "relative", transition: "background 0.3s", flexShrink: 0 }}>
+            <div style={{ position: "absolute", top: 3, left: isVisible ? 27 : 3, width: 22, height: 22, borderRadius: "50%", background: G.blanc, boxShadow: "0 2px 6px rgba(0,0,0,0.2)", transition: "left 0.3s" }} />
           </div>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
         </div>}
-        {(!isWideProfile || activeSection === "main") && FEATURE_AMBASSADOR_PROGRAM && (ambStatus === "none" || ambStatus === "pending") && <AmbassadorCard auth={auth} status={ambStatus} onRequested={() => setAmbStatus("pending")} />}
+
+        {/* Statut en ligne (confidentialité) */}
+        {(!isWideProfile || ["visibility","main"].includes(activeSection)) && profile && (() => {
+          const hidden = !!profile.hide_online_status;
+          return (
+            <div style={{ background: G.blanc, borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: `1px solid var(--c-card-bd)` }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                <div style={{ width: 42, height: 42, borderRadius: "50%", background: !hidden ? "rgba(39,174,96,0.1)" : "rgba(150,150,150,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={!hidden ? "#27ae60" : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3" fill={!hidden ? "#27ae60" : "#999"}/></svg>
+                </div>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: "0.95rem", color: G.brun }}>Statut en ligne</div>
+                  <div style={{ fontSize: "0.82rem", color: "#888", marginTop: 2 }}>{!hidden ? "Visible par les autres" : "Masqué, personne ne le voit"}</div>
+                </div>
+              </div>
+              <div onClick={async () => {
+                const newHidden = !hidden;
+                await sb.update(auth.token, "profiles", auth.userId, { hide_online_status: newHidden });
+                setProfile(p => p ? { ...p, hide_online_status: newHidden } : null);
+                setToast({ msg: newHidden ? "Statut en ligne masqué 🔒" : "Statut en ligne visible ✅" });
+              }} style={{ width: 52, height: 28, borderRadius: 50, background: !hidden ? "#27ae60" : G.rouge, cursor: "pointer", position: "relative", transition: "background 0.3s", flexShrink: 0 }}>
+                <div style={{ position: "absolute", top: 3, left: !hidden ? 27 : 3, width: 22, height: 22, borderRadius: "50%", background: G.blanc, boxShadow: "0 2px 6px rgba(0,0,0,0.2)", transition: "left 0.3s" }} />
+              </div>
+            </div>
+          );
+        })()}
+
+
         {/* Email de connexion + Vérification */}
         {(!isWideProfile || activeSection === "main") && <div style={{ background: G.blanc, borderRadius: 18, border: emailVerified ? "1.5px solid rgba(39,174,96,0.3)" : "1.5px solid rgba(192,57,43,0.2)", boxShadow: "0 2px 10px rgba(0,0,0,0.06)", overflow: "hidden", marginTop: 0 }}>
           <div id="moyo-email-card" style={{ padding: "15px 18px", display: "flex", alignItems: "center", gap: 14, transition: "background 0.4s ease", background: scrollHighlight === "email" ? "rgba(212,168,67,0.22)" : "transparent" }}>
@@ -17675,60 +17756,19 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
           </div>
         ))}
 
-        {/* Toggle Visible / Invisible */}
-        {(!isWideProfile || ["visibility","main"].includes(activeSection)) && <div style={{
-          background: G.blanc, borderRadius: 16, padding: "16px 20px",
-          display: "flex", alignItems: "center", justifyContent: "space-between",
-          boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: `1px solid var(--c-card-bd)`,
-        }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            <div style={{ width: 42, height: 42, borderRadius: "50%", background: isVisible ? "rgba(39,174,96,0.1)" : "rgba(231,76,60,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              {isVisible
-                ? <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#27ae60" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                : <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-              }
+        {/* ── Modifier mon mot de passe ── */}
+        {(!isWideProfile || ["password","main"].includes(activeSection)) && (
+          <div onClick={() => setShowChangePassword(true)} style={{ background: G.blanc, borderRadius: 16, padding: "15px 20px", display: "flex", alignItems: "center", gap: 14, cursor: "pointer", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: "1px solid var(--c-card-bd)" }}>
+            <div style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
             </div>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: "0.95rem", color: G.brun }}>Profil {isVisible ? "visible" : "invisible"}</div>
-              <div style={{ fontSize: "0.82rem", color: "#888", fontWeight: 400, marginTop: 2 }}>{isVisible ? "Tu apparais dans Découvrir" : "Tu n'apparais plus dans Découvrir"}</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 700, fontSize: "0.95rem", color: G.brun }}>Modifier mon mot de passe</div>
+              <div style={{ fontSize: "0.78rem", color: "#888", marginTop: 2 }}>Changer ton mot de passe de connexion</div>
             </div>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2.5" strokeLinecap="round"><path d="M9 18l6-6-6-6"/></svg>
           </div>
-          <div onClick={async () => {
-            const newVal = !isVisible;
-            await sb.update(auth.token, "profiles", auth.userId, { is_visible: newVal });
-            setProfile(p => p ? { ...p, is_visible: newVal } : null);
-            setToast({ msg: newVal ? "Profil rendu visible ✅" : "Profil rendu invisible 🔒" });
-          }} style={{ width: 52, height: 28, borderRadius: 50, background: isVisible ? "#27ae60" : "#e74c3c", cursor: "pointer", position: "relative", transition: "background 0.3s", flexShrink: 0 }}>
-            <div style={{ position: "absolute", top: 3, left: isVisible ? 27 : 3, width: 22, height: 22, borderRadius: "50%", background: G.blanc, boxShadow: "0 2px 6px rgba(0,0,0,0.2)", transition: "left 0.3s" }} />
-          </div>
-        </div>}
-
-        {/* Statut en ligne (confidentialité) */}
-        {(!isWideProfile || ["visibility","main"].includes(activeSection)) && profile && (() => {
-          const hidden = !!profile.hide_online_status;
-          return (
-            <div style={{ background: G.blanc, borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: `1px solid var(--c-card-bd)` }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                <div style={{ width: 42, height: 42, borderRadius: "50%", background: !hidden ? "rgba(39,174,96,0.1)" : "rgba(150,150,150,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={!hidden ? "#27ae60" : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3" fill={!hidden ? "#27ae60" : "#999"}/></svg>
-                </div>
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: "0.95rem", color: G.brun }}>Statut en ligne</div>
-                  <div style={{ fontSize: "0.82rem", color: "#888", marginTop: 2 }}>{!hidden ? "Visible par les autres" : "Masqué, personne ne le voit"}</div>
-                </div>
-              </div>
-              <div onClick={async () => {
-                const newHidden = !hidden;
-                await sb.update(auth.token, "profiles", auth.userId, { hide_online_status: newHidden });
-                setProfile(p => p ? { ...p, hide_online_status: newHidden } : null);
-                setToast({ msg: newHidden ? "Statut en ligne masqué 🔒" : "Statut en ligne visible ✅" });
-              }} style={{ width: 52, height: 28, borderRadius: 50, background: !hidden ? "#27ae60" : G.rouge, cursor: "pointer", position: "relative", transition: "background 0.3s", flexShrink: 0 }}>
-                <div style={{ position: "absolute", top: 3, left: !hidden ? 27 : 3, width: 22, height: 22, borderRadius: "50%", background: G.blanc, boxShadow: "0 2px 6px rgba(0,0,0,0.2)", transition: "left 0.3s" }} />
-              </div>
-            </div>
-          );
-        })()}
-
+        )}
 
         {/* Mode sombre */}
         {(!isWideProfile || ["darkmode","main"].includes(activeSection)) && <div style={{ background: G.blanc, borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: `1px solid var(--c-card-bd)` }}>
@@ -17893,7 +17933,6 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
               )}
             </div>
         )}
-
         {/* ── Carte Avertissements ── */}
         {(!isWideProfile || activeSection === "main") && (() => {
           const wc = profile?.warning_count ?? 0;
@@ -17956,20 +17995,6 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
           );
         })()}
 
-
-        {/* ── Modifier mon mot de passe ── */}
-        {(!isWideProfile || ["password","main"].includes(activeSection)) && (
-          <div onClick={() => setShowChangePassword(true)} style={{ background: G.blanc, borderRadius: 16, padding: "15px 20px", display: "flex", alignItems: "center", gap: 14, cursor: "pointer", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: "1px solid var(--c-card-bd)" }}>
-            <div style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 700, fontSize: "0.95rem", color: G.brun }}>Modifier mon mot de passe</div>
-              <div style={{ fontSize: "0.78rem", color: "#888", marginTop: 2 }}>Changer ton mot de passe de connexion</div>
-            </div>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2.5" strokeLinecap="round"><path d="M9 18l6-6-6-6"/></svg>
-          </div>
-        )}
 
         {/* ── Se déconnecter | Supprimer mon compte ── */}
         {(!isWideProfile || ["logout","delete","main"].includes(activeSection)) && <div style={{ display: "flex", gap: 10 }}>
