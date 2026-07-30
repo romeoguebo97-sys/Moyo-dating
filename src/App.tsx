@@ -2234,7 +2234,7 @@ function ModerationModal({ type, onClose }: { type: "insult" | "scam" | "sexual"
   const config = {
     insult: {
       icon: "🚫",
-      text: "Ce message contient des termes irrespectueux. Sur MOYO, nous encourageons le respect et la bienveillance ❤️",
+      text: "Ce message contient des termes irrespectueux. Sur MOYO, nous encourageons le respect et la bienveilllance ❤️",
     },
     scam: {
       icon: "⚠️",
