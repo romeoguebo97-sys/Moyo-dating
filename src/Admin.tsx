@@ -11416,7 +11416,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                             onClick={() => adminAction(u.id, { share_phone_with_matches: false }, `Numéro de ${u.name} masqué.`)} />
                         )
                       ) : (
-                        <Row label="Numéro" color="#aaa" desc="Ce membre n'a pas encore renseigné de numéro de téléphone." disabled />
+                       <Row label="Numéro" color="#aaa" desc="Ce membre n'a pas encore renseigné de numéro de téléphone." disabled onClick={() => {}} />
                       )}
 
                       {FEATURE_SOCIALS && (
