@@ -11203,7 +11203,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               {/* ── Onglet 2 : offrir gratuitement (collaborateur, geste commercial…) → active immédiatement ── */}
               {grantTab === "free" && (
                 <div>
-                  <div style={{ fontSize: "0.78rem", fontWeight: 800, color: G.brun, marginBottom: 8 }}>🎁 Offrirrrrr gratuitement (collaborateur, etc.)</div>
+                  <div style={{ fontSize: "0.78rem", fontWeight: 800, color: G.brun, marginBottom: 8 }}>🎁 Offrir gratuitement (collaborateur, etc.)</div>
                   <div style={{ fontSize: "0.68rem", color: "#888", marginBottom: 10 }}>Aucun paiement, aucune trace dans Budget/Paiements. Vous choisissez librement la date de fin (ex: fin de contrat).</div>
                   <div style={{ display: "flex", gap: 6, marginBottom: 10, flexWrap: "wrap" }}>
                     <button onClick={() => setGrantFreeDate(presetDate(3))} style={{ background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "6px 12px", fontSize: "0.72rem", fontWeight: 700, color: G.brun, cursor: "pointer" }}>3 jours</button>
