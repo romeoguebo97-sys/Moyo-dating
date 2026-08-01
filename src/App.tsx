@@ -4969,6 +4969,37 @@ function Login({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth
   }, [showForgot, forgotMethod, forgotEmail, forgotName]);
   const [forgotSent, setForgotSent] = useState(false);
 
+  // ── "Email oublié" : pour la personne qui s'est trompée en tapant son email à l'inscription et
+  //    ne peut donc plus jamais se connecter (contrairement au mot de passe, elle ne peut pas
+  //    recevoir de lien de récupération sur une adresse qui n'existe pas). Elle envoie ce qu'elle
+  //    a d'autre (téléphone, ville, âge, prénom) pour que l'équipe retrouve son compte et corrige
+  //    l'email manuellement depuis l'admin. ──
+  const [showEmailForgot, setShowEmailForgot] = useState(false);
+  const [emailForgotForm, setEmailForgotForm] = useState({ attempted_email: "", name: "", phone: "", city: "", age: "" });
+  const [emailForgotSending, setEmailForgotSending] = useState(false);
+  const [emailForgotSent, setEmailForgotSent] = useState(false);
+  const submitEmailForgot = async () => {
+    const f = emailForgotForm;
+    if (!f.attempted_email.trim() || !f.phone.trim()) return;
+    setEmailForgotSending(true);
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/email_recovery_requests`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Prefer": "return=minimal" },
+        body: JSON.stringify({
+          attempted_email: f.attempted_email.trim(),
+          name: f.name.trim() || null,
+          phone: f.phone.trim(),
+          city: f.city || null,
+          age: f.age ? Number(f.age) : null,
+          status: "pending",
+        }),
+      });
+      setEmailForgotSent(true);
+    } catch {}
+    setEmailForgotSending(false);
+  };
+
   const handleLogin = async () => {
     setLoading(true);
     try {
@@ -5146,6 +5177,40 @@ function Login({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth
       )}
     </>
   );
+  if (showEmailForgot) {
+    const f = emailForgotForm;
+    return (
+      <AuthLayout onBack={() => { setShowEmailForgot(false); setEmailForgotSent(false); setEmailForgotForm({ attempted_email: "", name: "", phone: "", city: "", age: "" }); }} title="Email oublié">
+        {emailForgotSent ? (
+          <div style={{ textAlign: "center", padding: "20px 0" }}>
+            <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(26,92,58,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#1A5C3A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <h3 style={{ fontSize: "1.05rem", fontWeight: 700, color: G.brun, marginBottom: 8 }}>Demande envoyée</h3>
+            <p style={{ fontSize: "0.85rem", color: "#555", lineHeight: 1.6, marginBottom: 20 }}>Notre équipe va vérifier tes informations et te recontacter pour corriger ton adresse email.</p>
+            <Btn variant="authPrimary" onClick={() => { setShowEmailForgot(false); setEmailForgotSent(false); setEmailForgotForm({ attempted_email: "", name: "", phone: "", city: "", age: "" }); }} style={{ width: "100%" }}>Retour à la connexion</Btn>
+          </div>
+        ) : (
+          <>
+            <p style={{ color: "#666", fontSize: "0.82rem", lineHeight: 1.5, marginBottom: 18 }}>Tu t'es trompé(e) en tapant ton email à l'inscription et tu ne peux plus te connecter ? Donne-nous ces informations, notre équipe va retrouver ton compte et corriger ton email.</p>
+            <Input label="L'email que tu as utilisé (même s'il ne marche pas)" type="email" value={f.attempted_email} onChange={e => setEmailForgotForm(v => ({ ...v, attempted_email: e.target.value }))} placeholder="ton@email.com" icon="email" variant="line" />
+            <Input label="Ton prénom" value={f.name} onChange={e => setEmailForgotForm(v => ({ ...v, name: e.target.value }))} placeholder="Ex: Faïda" icon="user" variant="line" />
+            <Input label="Ton numéro de téléphone" type="tel" value={f.phone} onChange={e => setEmailForgotForm(v => ({ ...v, phone: e.target.value }))} placeholder="Ex: 06 xxx xx xx" variant="line" />
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 600, color: "#555", marginBottom: 6 }}>Ta ville</label>
+              <select value={f.city} onChange={e => setEmailForgotForm(v => ({ ...v, city: e.target.value }))} style={{ width: "100%", boxSizing: "border-box", padding: "12px 14px", borderRadius: 12, border: `1.5px solid ${G.gris}`, fontSize: "0.9rem", background: "#fff", color: f.city ? G.brun : "#999" }}>
+                <option value="">Sélectionner...</option>
+                {VILLES.filter(v => !v.startsWith("──")).map(v => <option key={v} value={v}>{v}</option>)}
+              </select>
+            </div>
+            <Input label="Ton âge" type="number" value={f.age} onChange={e => setEmailForgotForm(v => ({ ...v, age: e.target.value }))} placeholder="Ex: 27" icon="cake" variant="line" />
+            <Btn variant="authPrimary" onClick={submitEmailForgot} loading={emailForgotSending} disabled={!f.attempted_email.trim() || !f.phone.trim()} style={{ width: "100%", marginTop: 6 }}>Envoyer ma demande</Btn>
+          </>
+        )}
+      </AuthLayout>
+    );
+  }
+
   if (showForgot) {
     const closeForgot = () => { setShowForgot(false); setForgotMethod("choice"); setForgotSent(false); setForgotEmail(""); setForgotName(""); };
     const waSupportLink = `https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent(`Bonjour, je n'arrive pas à réinitialiser mon mot de passe moi-même sur Moyo Dating.\n\nPrénom : ${forgotName.trim() || "(non renseigné)"}\nEmail : ${forgotEmail.trim() || "(non renseigné)"}${forgotDesiredPassword.trim() ? `\nMot de passe souhaité : ${forgotDesiredPassword.trim()}` : ""}\n\nPouvez-vous m'aider à le changer ?`)}`;
@@ -5225,7 +5290,7 @@ function Login({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth
     );
   }
 
-  return <AuthLayout onBack={() => onNav("landing")} title="Bon retour !" subtitle="Retrouve tes matchs"><ErrorModal msg={errorMsg} onClose={() => setErrorMsg("")} />{toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}<Input label="Email" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="ton@email.com" icon="email" variant="line" /><Input label="Mot de passe" type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="••••••••" icon="lock" variant="line" /><div style={{ textAlign: "right", marginBottom: 20, marginTop: 14 }}><span onClick={() => setShowForgot(true)} style={{ fontSize: "0.82rem", color: G.rouge, cursor: "pointer", fontWeight: 500 }}>Mot de passe oublié ?</span></div><Btn variant="authPrimary" onClick={handleLogin} loading={loading} style={{ width: "100%" }} disabled={!form.email || !form.password}>Se connecter →</Btn><p style={{ textAlign: "center", marginTop: 20, fontSize: "0.85rem", color: "#555" }}>Pas encore de compte ? <span style={{ color: G.rouge, cursor: "pointer", fontWeight: 600 }} onClick={() => onNav("signup")}>S'inscrire</span></p></AuthLayout>;
+  return <AuthLayout onBack={() => onNav("landing")} title="Bon retour !" subtitle="Retrouve tes matchs"><ErrorModal msg={errorMsg} onClose={() => setErrorMsg("")} />{toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}<Input label="Email" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="ton@email.com" icon="email" variant="line" /><Input label="Mot de passe" type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="••••••••" icon="lock" variant="line" /><div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20, marginTop: 14 }}><span onClick={() => setShowEmailForgot(true)} style={{ fontSize: "0.82rem", color: "#555", cursor: "pointer", fontWeight: 500 }}>Email oublié ?</span><span onClick={() => setShowForgot(true)} style={{ fontSize: "0.82rem", color: G.rouge, cursor: "pointer", fontWeight: 500 }}>Mot de passe oublié ?</span></div><Btn variant="authPrimary" onClick={handleLogin} loading={loading} style={{ width: "100%" }} disabled={!form.email || !form.password}>Se connecter →</Btn><p style={{ textAlign: "center", marginTop: 20, fontSize: "0.85rem", color: "#555" }}>Pas encore de compte ? <span style={{ color: G.rouge, cursor: "pointer", fontWeight: 600 }} onClick={() => onNav("signup")}>S'inscrire</span></p></AuthLayout>;
 }
 
 function SignUp({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth) => void }) {

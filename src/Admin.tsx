@@ -6734,6 +6734,77 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
   const [pwResetLoading, setPwResetLoading] = useState(false);
   const [pwResetResult, setPwResetResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
+  // ── Corriger l'email de connexion d'un membre (ex: faute de frappe empêchant toute connexion) —
+  //    même mécanisme que la réinitialisation de mot de passe : passe par une Edge Function avec
+  //    les droits nécessaires pour toucher l'email d'authentification, pas juste la fiche profil. ──
+  const [emailEditModal, setEmailEditModal] = useState<AdminProfile | null>(null);
+  const [emailEditValue, setEmailEditValue] = useState("");
+  const [emailEditLoading, setEmailEditLoading] = useState(false);
+  const [emailEditResult, setEmailEditResult] = useState<{ ok: boolean; msg: string } | null>(null);
+
+  // ── Demandes "Email oublié" soumises depuis l'écran de connexion — l'admin les consulte pour
+  //    retrouver le bon compte (via téléphone/ville/âge) puis corrige l'email avec l'outil ci-dessus. ──
+  const [showEmailRecoveryModal, setShowEmailRecoveryModal] = useState(false);
+  const [emailRecoveryRequests, setEmailRecoveryRequests] = useState<{ id: string; attempted_email: string; name: string | null; phone: string; city: string | null; age: number | null; status: string; created_at: string }[]>([]);
+  const [emailRecoveryLoading, setEmailRecoveryLoading] = useState(false);
+  const loadEmailRecoveryRequests = async () => {
+    setEmailRecoveryLoading(true);
+    try {
+      const data = await fetch(`${SUPABASE_URL}/rest/v1/email_recovery_requests?status=eq.pending&order=created_at.desc&limit=100`, {
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+      }).then(r => r.json()).catch(() => []);
+      setEmailRecoveryRequests(Array.isArray(data) ? data : []);
+    } catch { setEmailRecoveryRequests([]); }
+    setEmailRecoveryLoading(false);
+  };
+  const resolveEmailRecoveryRequest = async (id: string) => {
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/email_recovery_requests?id=eq.${id}`, {
+        method: "PATCH", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
+        body: JSON.stringify({ status: "resolved" }),
+      });
+      setEmailRecoveryRequests(prev => prev.filter(r => r.id !== id));
+    } catch {}
+  };
+
+  const submitEmailUpdate = async (targetUser: AdminProfile, newEmail: string) => {
+    const trimmed = newEmail.trim();
+    if (!trimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) { setEmailEditResult({ ok: false, msg: "Adresse email invalide." }); return; }
+    setEmailEditLoading(true);
+    setEmailEditResult(null);
+    try {
+      let freshToken = auth!.token;
+      if (auth!.refreshToken) {
+        try {
+          const rr = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY },
+            body: JSON.stringify({ refresh_token: auth!.refreshToken }),
+          });
+          const rd = await rr.json().catch(() => null);
+          if (rr.ok && rd?.access_token) freshToken = rd.access_token;
+        } catch {}
+      }
+      const r = await fetch(`${SUPABASE_URL}/functions/v1/admin-update-email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${freshToken}` },
+        body: JSON.stringify({ target_user_id: targetUser.id, new_email: trimmed }),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok || !data?.success) {
+        if (r.status === 401) throw new Error("Ta session a expiré. Déconnecte-toi puis reconnecte-toi, ensuite réessaie.");
+        if (data?.error?.includes("already") || data?.error?.includes("existe")) throw new Error("Cette adresse email est déjà utilisée par un autre compte.");
+        throw new Error(data?.error || `Erreur (HTTP ${r.status})`);
+      }
+      logAdminAction(auth!.token, auth!.userId, auth!.name, `Email de connexion corrigé pour ${targetUser.name} : ${trimmed}`, targetUser.id);
+      setEmailEditResult({ ok: true, msg: `Email de connexion mis à jour : ${trimmed}` });
+      loadUsers();
+    } catch (e: any) {
+      setEmailEditResult({ ok: false, msg: e?.message || "Échec de la correction." });
+    }
+    setEmailEditLoading(false);
+  };
+
   const genTempPassword = () => {
     const words = ["Moyo", "Congo", "Amour", "Coeur", "Rouge", "Zenith", "Etoile", "Douala"];
     const w = words[Math.floor(Math.random() * words.length)];
@@ -10977,6 +11048,88 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
         );
       })()}
 
+      {emailEditModal && (() => {
+        const u = emailEditModal;
+        const close = () => { setEmailEditModal(null); setEmailEditValue(""); setEmailEditResult(null); };
+        return (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", zIndex: 10003, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }} onClick={close}>
+            <div style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 520, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }} onClick={e => e.stopPropagation()}>
+              <div style={{ background: "linear-gradient(135deg,#8e44ad,#6c3483)", padding: "22px 20px 16px", textAlign: "center" }}>
+                <div style={{ width: 50, height: 50, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px" }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                </div>
+                <div style={{ color: "#fff", fontWeight: 800, fontSize: "1.02rem" }}>Email de connexion de {u.name}</div>
+                <div style={{ color: "rgba(255,255,255,0.8)", fontSize: "0.75rem", marginTop: 2 }}>Utile si la personne s'est trompée en s'inscrivant et ne peut plus se connecter</div>
+              </div>
+              <div style={{ padding: "20px 20px 22px" }}>
+                {!emailEditResult ? (
+                  <>
+                    <div style={{ fontSize: "0.78rem", color: "#888", marginBottom: 8 }}>Adresse email actuelle : <strong>{u.email || "non renseignée"}</strong></div>
+                    <div style={{ fontSize: "0.78rem", color: "#888", marginBottom: 8 }}>Nouvelle adresse email :</div>
+                    <input value={emailEditValue} onChange={e => setEmailEditValue(e.target.value)} placeholder="prenom@exemple.com" style={{ width: "100%", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "11px 12px", fontSize: "0.9rem", outline: "none", marginBottom: 16 }} />
+                    <div style={{ fontSize: "0.68rem", color: "#aaa", marginBottom: 16, lineHeight: 1.5 }}>{u.name} devra se connecter avec cette nouvelle adresse (et son mot de passe habituel, inchangé).</div>
+                    <button disabled={emailEditLoading || !emailEditValue.trim()} onClick={() => submitEmailUpdate(u, emailEditValue)}
+                      style={{ width: "100%", background: emailEditValue.trim() ? "linear-gradient(135deg,#8e44ad,#6c3483)" : "#ccc", color: "#fff", border: "none", borderRadius: 12, padding: "13px", fontSize: "0.9rem", fontWeight: 700, cursor: emailEditValue.trim() ? "pointer" : "not-allowed" }}>
+                      {emailEditLoading ? "Correction..." : "Corriger l'email"}
+                    </button>
+                    <button onClick={close} style={{ width: "100%", marginTop: 10, background: "transparent", color: "#888", border: "none", padding: "8px", fontSize: "0.8rem", fontWeight: 600, cursor: "pointer" }}>Annuler</button>
+                  </>
+                ) : emailEditResult.ok ? (
+                  <>
+                    <div style={{ background: "rgba(26,92,58,0.08)", border: "1px solid rgba(26,92,58,0.25)", borderRadius: 12, padding: "14px", marginBottom: 14, textAlign: "center" }}>
+                      <div style={{ fontSize: "0.8rem", color: "#1A5C3A", fontWeight: 700, marginBottom: 6 }}>✅ Email mis à jour</div>
+                      <div style={{ fontFamily: "monospace", fontWeight: 800, fontSize: "1rem", color: "#1A5C3A" }}>{emailEditValue.trim()}</div>
+                    </div>
+                    <div style={{ fontSize: "0.72rem", color: "#888", marginBottom: 16, textAlign: "center" }}>Communiquez cette nouvelle adresse à {u.name} maintenant.</div>
+                    <button onClick={close} style={{ width: "100%", background: "linear-gradient(135deg,#1A5C3A,#134429)", color: "#fff", border: "none", borderRadius: 12, padding: "13px", fontSize: "0.9rem", fontWeight: 700, cursor: "pointer" }}>Fermer</button>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ background: "rgba(192,57,43,0.08)", border: "1px solid rgba(192,57,43,0.25)", borderRadius: 12, padding: "14px", marginBottom: 16, textAlign: "center", color: G.rouge, fontSize: "0.85rem", fontWeight: 600 }}>
+                      ❌ {emailEditResult.msg}
+                    </div>
+                    <button onClick={() => setEmailEditResult(null)} style={{ width: "100%", background: "linear-gradient(135deg,#8e44ad,#6c3483)", color: "#fff", border: "none", borderRadius: 12, padding: "13px", fontSize: "0.9rem", fontWeight: 700, cursor: "pointer" }}>Réessayer</button>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {showEmailRecoveryModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10002, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={() => setShowEmailRecoveryModal(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 560, maxHeight: "85vh", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+            <div style={{ background: "linear-gradient(135deg,#8e44ad,#6c3483)", padding: "18px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+              <div>
+                <div style={{ color: "#fff", fontWeight: 800, fontSize: "1rem" }}>Demandes "Email oublié"</div>
+                <div style={{ color: "rgba(255,255,255,0.8)", fontSize: "0.75rem", marginTop: 2 }}>{emailRecoveryRequests.length} en attente</div>
+              </div>
+              <button onClick={() => setShowEmailRecoveryModal(false)} style={{ background: "rgba(255,255,255,0.2)", border: "none", borderRadius: "50%", width: 32, height: 32, color: "#fff", cursor: "pointer" }}>✕</button>
+            </div>
+            <div style={{ overflowY: "auto", padding: "12px 16px" }}>
+              {emailRecoveryLoading ? (
+                <div style={{ textAlign: "center", padding: 30, color: "#aaa" }}>Chargement...</div>
+              ) : emailRecoveryRequests.length === 0 ? (
+                <div style={{ textAlign: "center", padding: 30, color: "#aaa", fontSize: "0.85rem" }}>Aucune demande en attente.</div>
+              ) : emailRecoveryRequests.map(r => (
+                <div key={r.id} style={{ background: G.creme, borderRadius: 14, padding: "14px 16px", marginBottom: 10 }}>
+                  <div style={{ fontWeight: 800, fontSize: "0.9rem", color: G.brun, marginBottom: 6 }}>{r.name || "Prénom non renseigné"}</div>
+                  <div style={{ fontSize: "0.8rem", color: "#555", marginBottom: 2 }}>📧 Email tenté : <strong>{r.attempted_email}</strong></div>
+                  <div style={{ fontSize: "0.8rem", color: "#555", marginBottom: 2 }}>📱 Téléphone : <strong>{r.phone}</strong></div>
+                  {(r.city || r.age) && <div style={{ fontSize: "0.8rem", color: "#555", marginBottom: 2 }}>📍 {r.city || "—"} {r.age ? `· ${r.age} ans` : ""}</div>}
+                  <div style={{ fontSize: "0.7rem", color: "#aaa", marginBottom: 10 }}>Envoyée le {new Date(r.created_at).toLocaleDateString("fr-FR")}</div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button onClick={() => { setShowEmailRecoveryModal(false); setUserSearchPhone(r.phone); setUserSearch(""); setUserSearchEmail(""); loadUsers("", 0, usersSort, "", usersFilters, r.phone); }} style={{ flex: 1, background: "#8e44ad", color: "#fff", border: "none", borderRadius: 10, padding: "9px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer" }}>🔍 Chercher ce membre</button>
+                    <button onClick={() => resolveEmailRecoveryRequest(r.id)} style={{ background: "#F0EDE6", color: "#555", border: "none", borderRadius: 10, padding: "9px 14px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer" }}>Marquer traité</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {pinModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", zIndex: 10003, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
           <div style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 500, maxHeight: "85vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}>
@@ -11441,6 +11594,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                           )}
                           <Row label="🔑 Mot de passe" color="#8e44ad" desc="Réinitialiser ou modifier le mot de passe de ce membre." disabled={isLoading}
                             onClick={() => { setPwResetValue(genTempPassword()); setPwResetResult(null); setPwResetModal(u); }} />
+                          <Row label="✉️ Corriger l'email" color="#8e44ad" desc="Corriger l'adresse email de connexion (ex : faute de frappe empêchant toute connexion)." disabled={isLoading}
+                            onClick={() => { setEmailEditValue(u.email || ""); setEmailEditResult(null); setEmailEditModal(u); }} />
                           <Row label="+ Super Admin" color="#8B008B" desc="Attribuer les droits Super Admin à ce membre." disabled={isLoading}
                             onClick={() => confirm(`Nommer ${u.name} Super Admin ? Il aura accès à tout, y compris les paiements.`, async () => {
                               await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${u.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ admin_level: "superadmin", is_admin: true }) });
@@ -12249,6 +12404,12 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
       {/* ═══════════════════════════════════════════ ONGLET UTILISATEURS */}
       {activeTab === "users" && (
         <div style={{ padding: "16px" }}>
+          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
+            <button onClick={() => { setShowEmailRecoveryModal(true); loadEmailRecoveryRequests(); }} style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(142,68,173,0.08)", border: "1.5px solid rgba(142,68,173,0.3)", borderRadius: 50, padding: "8px 16px", fontSize: "0.8rem", fontWeight: 700, color: "#8e44ad", cursor: "pointer" }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+              Demandes "Email oublié"
+            </button>
+          </div>
           {/* Modale profil complet admin */}
           {adminViewedProfile && (
             <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: "calc(env(safe-area-inset-top) + 16px) 16px calc(env(safe-area-inset-bottom) + 16px)" }} onClick={() => setAdminViewedProfile(null)}>
