@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback, memo } from "react";
-import type { Auth, Match, Message, PaymentRequest, Profile, StatusPost, ToastState } from "./App";
+import type { Auth, Match, Message, PaymentRequest, Profile, StatusPost, ToastState, CarouselSlideDB } from "./App";
 import {
   APPOINTMENT_PHYSICAL_PRICE, APPT_HOUR_MAX, APPT_HOUR_MIN, AUTO_MOD_CONTACT_REPLY, Avatar, BLOCK_SAME_GENDER, Badge, Btn, CONTACT_ADDRESS, CONTACT_EMAIL, CONTACT_WHATSAPP, ConfirmModal, DISCOVER_DEFAULT_MODE, DateTimePicker, EUR_TO_FCFA, EXPENSE_CATEGORIES, EXPENSE_CAT_COLORS, FREE_LIMITS, G, LANDING_MEMBERS, LANDING_SLOGAN, LANDING_STAT_CITIES, LANDING_STAT_COUPLES, LANDING_STAT_MEMBERS, LANDING_TITLE_END, LANDING_TITLE_HIGHLIGHT, LANDING_TITLE_START, LIFETIME_PREMIUM_UNTIL, Messages, PAY_AIRTEL_ENABLED, PAY_AIRTEL_NUMBER, PAY_AIRTEL_RESPONSABLE, PAY_CB_ENABLED, PAY_MTN_ENABLED, PAY_MTN_NUMBER, PAY_MTN_RESPONSABLE, PAY_WERO_ENABLED, PAY_WERO_NUMBER, PAY_PAYPAL_ENABLED, PAY_PAYPAL_NUMBER, PLAN_2MONTH_ENABLED, PLAN_MONTH_ENABLED, PLAN_WEEK_ENABLED, POLL_ADMIN_BADGE_MS, POLL_BADGES_MS, POLL_BROADCAST_MS, POLL_STATS_MS, POLL_SUPPORT_MS, PREMIUM_30_DAYS_MS, PREMIUM_DAYS_2MONTH, PREMIUM_DAYS_WEEK, PREMIUM_PRICE_2MONTH_FCFA, PREMIUM_PRICE_EUR, PREMIUM_PRICE_FCFA, PREMIUM_PRICE_WEEK_FCFA, PREMIUM_STAT_COUPLES, PREMIUM_STAT_MEMBERS, PremiumBadge, REFERRAL_BONUS_2MONTH, REFERRAL_BONUS_MONTH, REFERRAL_BONUS_WEEK, AFFILIATE_COMMISSION_PERCENT, AFFILIATE_PAYABLE_DELAY_DAYS, AFFILIATE_PAYOUT_MIN_FCFA, AFFILIATE_PROMO_BONUS_DAYS, PRIVACY_NOTICE_STEP1_TEXT, PRIVACY_NOTICE_STEP2_TEXT, BAN_SCREEN_TEXT, SOCIAL_FACEBOOK, SOCIAL_INSTAGRAM, SOCIAL_TIKTOK, SOCIAL_YOUTUBE, SOCIAL_LINKEDIN, STORE_LINK_ANDROID, STORE_LINK_IOS, AMBASSADOR_RESOURCES_LINK, SUPABASE_KEY, SUPABASE_URL, SUPER_ADMIN_ID, SUPPORT_PREFIX_REPLY, SUPPORT_PREFIX_USER, SUPPORT_TEAM_ID, SUPPORT_TEAM_NAME, SUPPORT_TEAM_PHOTO, SUPPORT_REPLY_PUSH_ENABLED, Toast, VerifiedBadge, apptStatusInfo, buildContactBannedRegex, buildCustomBannedRegex, setExemptedBuiltinWords, setExemptedContactWords, cleanSupportReason, dedupeMatchesByCouple, fmtApptDT, fmtDate, formatMoney, isSupportReason, logAdminAction, mmLevel, mmScore, paymentCurrency, resolveStatusImageUrl, sb, sendMatchWelcomeMessage,
   setAPPOINTMENT_PHYSICAL_PRICE, setAUTO_MOD_CONTACT_REPLY, setBLOCK_SAME_GENDER, setCONTACT_ADDRESS, setCONTACT_EMAIL, setCONTACT_WHATSAPP, setDISCOVER_DEFAULT_MODE, setEUR_TO_FCFA, setLANDING_MEMBERS, setLANDING_SLOGAN, setLANDING_STAT_CITIES, setLANDING_STAT_COUPLES, setLANDING_STAT_MEMBERS, setLANDING_TITLE_END, setLANDING_TITLE_HIGHLIGHT, setLANDING_TITLE_START, setPAY_AIRTEL_ENABLED, setPAY_AIRTEL_NUMBER, setPAY_AIRTEL_RESPONSABLE, setPAY_CB_ENABLED, setPAY_MTN_ENABLED, setPAY_MTN_NUMBER, setPAY_MTN_RESPONSABLE, setPAY_WERO_ENABLED, setPAY_WERO_NUMBER, setPAY_PAYPAL_ENABLED, setPAY_PAYPAL_NUMBER, setPLAN_2MONTH_ENABLED, setPLAN_MONTH_ENABLED, setPLAN_WEEK_ENABLED, setPOLL_ADMIN_BADGE_MS, setPOLL_BADGES_MS, setPOLL_BROADCAST_MS, setPOLL_STATS_MS, setPOLL_SUPPORT_MS, setPREMIUM_30_DAYS_MS, setPREMIUM_DAYS_2MONTH, setPREMIUM_DAYS_WEEK, setPREMIUM_PRICE_2MONTH_FCFA, setPREMIUM_PRICE_EUR, setPREMIUM_PRICE_FCFA, setPREMIUM_PRICE_WEEK_FCFA, setPREMIUM_STAT_COUPLES, setPREMIUM_STAT_MEMBERS, setPREMIUM_BOOST_ENABLED, setPREMIUM_SCREEN_VARIANT, setFEATURE_SHOW_LIKES_VIEWS_FREE, setPRIVACY_NOTICE_ENABLED, setSOCIAL_FACEBOOK, setSOCIAL_INSTAGRAM, setSOCIAL_TIKTOK, setSOCIAL_YOUTUBE, setSOCIAL_LINKEDIN, setSTORE_LINK_ANDROID, setSTORE_LINK_IOS, setAMBASSADOR_RESOURCES_LINK, setSUPPORT_TEAM_PHOTO, setAFFILIATE_COMMISSION_PERCENT, setAFFILIATE_PAYABLE_DELAY_DAYS, setAFFILIATE_PAYOUT_MIN_FCFA, setAFFILIATE_PROMO_BONUS_DAYS, setPRIVACY_NOTICE_STEP1_TEXT, setPRIVACY_NOTICE_STEP2_TEXT, setBAN_SCREEN_TEXT, setPAY_LINK_ENABLED,
   VILLES, RELIGIONS, PhoneCountryField, UploadRingOverlay, FEATURE_SOCIALS,
+  CarouselIcon, CAROUSEL_ICON_KEYS, CAROUSEL_COLORS, CAROUSEL_COLOR_KEYS, CAROUSEL_DESTINATIONS,
 } from "./App";
 
 async function saveSetting(key: string, value: string, token: string): Promise<boolean> {
@@ -7290,7 +7291,90 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
       default: return base;
     }
   };
-  const [mktTab, setMktTab] = useState<"statuts" | "features" | "event" | "promo" | "phoneprompt" | "premiumnudge" | "ambassadornudge" | "referrals" | "inactive">("statuts");
+  const [mktTab, setMktTab] = useState<"statuts" | "features" | "event" | "promo" | "phoneprompt" | "premiumnudge" | "ambassadornudge" | "referrals" | "inactive" | "carousel">("statuts");
+  // ── Carrousel d'engagement (Découvrir/Likes/Vues) — gestion complète depuis l'admin ──
+  const [carouselAudience, setCarouselAudience] = useState<"free" | "premium">("free");
+  const [carouselSlides, setCarouselSlides] = useState<CarouselSlideDB[]>([]);
+  const [carouselLoading, setCarouselLoading] = useState(false);
+  const blankCarouselForm = { id: "", audience: "free" as "free" | "premium", title: "", description: "", button_text: "", icon_key: "star", color_key: "rouge", action_type: "premium" as "premium" | "tab" | "external_link" | "referral_share" | "pay_link_share", action_value: "", active: true };
+  const [carouselForm, setCarouselForm] = useState(blankCarouselForm);
+  const [carouselEditingId, setCarouselEditingId] = useState<string | null>(null);
+  const [carouselFormOpen, setCarouselFormOpen] = useState(false);
+  const loadCarouselSlides = async () => {
+    setCarouselLoading(true);
+    try {
+      const data = await fetch(`${SUPABASE_URL}/rest/v1/carousel_slides?order=audience.asc,order_index.asc`, {
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+      }).then(r => r.json()).catch(() => []);
+      setCarouselSlides(Array.isArray(data) ? data : []);
+    } catch {}
+    setCarouselLoading(false);
+  };
+  useEffect(() => { if (mktTab === "carousel") loadCarouselSlides(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [mktTab]);
+  const carouselVisible = carouselSlides.filter(s => s.audience === carouselAudience);
+  const saveCarouselSlide = async () => {
+    const f = carouselForm;
+    if (!f.title.trim() || !f.description.trim() || !f.button_text.trim()) { showToast("Titre, description et texte du bouton sont obligatoires.", "error"); return; }
+    if (f.action_type === "external_link" && !f.action_value.trim()) { showToast("Renseigne l'URL du lien externe.", "error"); return; }
+    const body = {
+      audience: carouselAudience,
+      title: f.title.trim(),
+      description: f.description.trim(),
+      button_text: f.button_text.trim(),
+      icon_key: f.icon_key,
+      color_key: f.color_key,
+      action_type: f.action_type,
+      action_value: (f.action_type === "premium" || f.action_type === "referral_share" || f.action_type === "pay_link_share") ? null : (f.action_value.trim() || null),
+      active: f.active,
+    };
+    try {
+      if (carouselEditingId) {
+        await fetch(`${SUPABASE_URL}/rest/v1/carousel_slides?id=eq.${carouselEditingId}`, {
+          method: "PATCH", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
+          body: JSON.stringify(body),
+        });
+        showToast("Diapositive mise à jour.", "success");
+      } else {
+        const nextOrder = carouselVisible.length > 0 ? Math.max(...carouselVisible.map(s => s.order_index)) + 1 : 0;
+        await fetch(`${SUPABASE_URL}/rest/v1/carousel_slides`, {
+          method: "POST", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
+          body: JSON.stringify({ ...body, order_index: nextOrder }),
+        });
+        showToast("Diapositive ajoutée.", "success");
+      }
+      setCarouselFormOpen(false);
+      setCarouselForm(blankCarouselForm);
+      setCarouselEditingId(null);
+      loadCarouselSlides();
+    } catch { showToast("Erreur lors de l'enregistrement.", "error"); }
+  };
+  const deleteCarouselSlide = async (id: string) => {
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/carousel_slides?id=eq.${id}`, { method: "DELETE", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      showToast("Diapositive supprimée.", "success");
+      loadCarouselSlides();
+    } catch { showToast("Erreur lors de la suppression.", "error"); }
+  };
+  const moveCarouselSlide = async (slide: CarouselSlideDB, dir: -1 | 1) => {
+    const list = carouselSlides.filter(s => s.audience === slide.audience).sort((a, b) => a.order_index - b.order_index);
+    const i = list.findIndex(s => s.id === slide.id);
+    const j = i + dir;
+    if (j < 0 || j >= list.length) return;
+    const other = list[j];
+    try {
+      await Promise.all([
+        fetch(`${SUPABASE_URL}/rest/v1/carousel_slides?id=eq.${slide.id}`, { method: "PATCH", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" }, body: JSON.stringify({ order_index: other.order_index }) }),
+        fetch(`${SUPABASE_URL}/rest/v1/carousel_slides?id=eq.${other.id}`, { method: "PATCH", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" }, body: JSON.stringify({ order_index: slide.order_index }) }),
+      ]);
+      loadCarouselSlides();
+    } catch {}
+  };
+  const toggleCarouselActive = async (slide: CarouselSlideDB) => {
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/carousel_slides?id=eq.${slide.id}`, { method: "PATCH", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" }, body: JSON.stringify({ active: !slide.active }) });
+      loadCarouselSlides();
+    } catch {}
+  };
   // ── SUPER PROMO (formule 1 mois à prix réduit, ciblée, affichée côté membre max 1x/jour) ──
   const PROMO_LABEL = "Super promo (1 mois)"; // doit rester identique au label envoyé par PremiumModal (subscription_selected)
   // promoActive n'est plus un state local : on lit désormais autoShortcuts.promo_active,
@@ -8404,6 +8488,33 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
   const [featureDetail, setFeatureDetail] = useState<{ status: StatusPost & { profile?: any }; viewers: any[]; likers: any[] } | null>(null);
   const [featureDetailLoading, setFeatureDetailLoading] = useState(false);
   const [frProcessing, setFrProcessing] = useState<string | null>(null);
+  // ── Mise en avant directe depuis "Gérer un membre" (Statuts) — même mécanisme que l'acceptation
+  //    d'une demande de mise en avant (feature_requests → statuses), mais déclenchée directement
+  //    par l'admin, sans qu'aucune demande n'ait été soumise par la personne elle-même. Volontairement
+  //    séparée de la file "Mises en avant" de Marketing, qui reste réservée aux demandes des membres. ──
+  const [featuringUserId, setFeaturingUserId] = useState<string | null>(null);
+  const directFeatureProfile = async (u: AdminProfile) => {
+    if (featuringUserId) return;
+    setFeaturingUserId(u.id);
+    try {
+      const arr = await sb.query<any>(auth.token, "profiles", `?id=eq.${u.id}&select=photo_url,gender&limit=1`).catch(() => [] as any[]);
+      const p = Array.isArray(arr) ? arr[0] : null;
+      if (!p?.photo_url) { showToast("Ce profil n'a pas de photo principale.", "error"); setFeaturingUserId(null); return; }
+      const targetGender = p.gender === "Homme" ? "Femme" : "Homme";
+      const caption = `Célibataire à découvrir aujourd'hui 💝\nVous aimez son profil ? Laissez un like pour lui montrer votre intérêt.`;
+      const expires_at = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+      const stArr = await sb.insert<{ id?: string }>(auth.token, "statuses", {
+        user_id: auth.userId, image_url: p.photo_url, image_path: null, caption,
+        is_official: false, is_feature: true, target_gender: targetGender, feature_user_id: u.id, expires_at,
+      });
+      const st = Array.isArray(stArr) ? stArr[0] : null;
+      if (!st || !st.id) { showToast("Échec de la publication du statut.", "error"); setFeaturingUserId(null); return; }
+      notifyUser(u.id, "feature_accepted", "⭐ Mise en avant validée", "Ton statut est publié pour 24h, visible par toute la communauté.", "statuses");
+      showToast(`${u.name} mis en avant pour 24h.`, "success");
+      loadFeatureStatuses();
+    } catch { showToast("Impossible de mettre ce profil en avant.", "error"); }
+    finally { setFeaturingUserId(null); }
+  };
   const [stFile, setStFile] = useState<File | null>(null);
   const [stPreview, setStPreview] = useState<string | null>(null);
   const [stCaption, setStCaption] = useState("");
@@ -11305,6 +11416,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                         <Row label="- Vérifier" color="#555" desc="Retirer la vérification de ce membre." disabled={isLoading}
                           onClick={() => confirm(`Retirer la vérification de ${u.name} ?`, () => adminAction(u.id, { is_verified: false }, `Vérification retirée pour ${u.name}.`))} />
                       )}
+                      <Row label="⭐ Mettre en avant" color="#8E44AD" desc="Publier directement ce profil sur les Statuts Moyo pour 24h, sans passer par une demande." disabled={isLoading || featuringUserId === u.id}
+                        onClick={() => confirm(`Mettre ${u.name} en avant sur les Statuts Moyo pour 24h ?`, () => directFeatureProfile(u))} />
                     </>
                   )}
                   {manageTab === "moderation" && (
@@ -13680,13 +13793,13 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
       {activeTab === "marketing" && (
         <div style={{ padding: "16px" }}>
           <div style={{ display: "flex", gap: 10, marginBottom: 16, overflowX: "auto", paddingBottom: 2 }}>
-            {([["statuts", "Statuts Moyo Dating", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>], ["features", "Mises en avant", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>], ["event", "Campagnes Premium", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>], ["promo", "Promotion", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/><line x1="9" y1="9" x2="9" y2="9"/></svg>], ["phoneprompt", "Profil incomplet", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>], ["premiumnudge", "Inciter au Premium", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>], ["ambassadornudge", "Inciter à devenir Ambassadeur", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>], ["referrals", "Suivi parrainage", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>], ["inactive", "Relance inactifs", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>]] as [("statuts" | "features" | "event" | "promo" | "phoneprompt" | "premiumnudge" | "ambassadornudge" | "referrals" | "inactive"), string, React.ReactElement][]).map(([k, lbl, ico]) => (
+            {([["statuts", "Statuts Moyo Dating", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>], ["features", "Mises en avant", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>], ["event", "Campagnes Premium", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>], ["promo", "Promotion", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/><line x1="9" y1="9" x2="9" y2="9"/></svg>], ["phoneprompt", "Profil incomplet", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>], ["premiumnudge", "Inciter au Premium", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>], ["ambassadornudge", "Inciter à devenir Ambassadeur", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>], ["referrals", "Suivi parrainage", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>], ["inactive", "Relance inactifs", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>], ["carousel", "Carrousel Découvrir", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/></svg>]] as [("statuts" | "features" | "event" | "promo" | "phoneprompt" | "premiumnudge" | "ambassadornudge" | "referrals" | "inactive" | "carousel"), string, React.ReactElement][]).map(([k, lbl, ico]) => (
               <button key={k} onClick={() => setMktTab(k)} style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 7, padding: "9px 18px", borderRadius: 999, cursor: "pointer", fontSize: "0.82rem", fontWeight: 800, background: mktTab === k ? "#E67E22" : "#fff", color: mktTab === k ? "#fff" : "#555", border: mktTab === k ? "none" : `1.5px solid ${G.gris}`, boxShadow: mktTab === k ? "0 4px 12px rgba(230,126,34,0.25)" : "none" }}>{ico}{lbl}{k === "features" && featurePendingCount > 0 && <span style={{ background: mktTab === k ? "#fff" : "#E67E22", color: mktTab === k ? "#E67E22" : "#fff", borderRadius: 50, fontSize: "0.6rem", fontWeight: 800, padding: "1px 6px", lineHeight: 1.5 }}>{featurePendingCount > 99 ? "99+" : featurePendingCount}</span>}</button>
             ))}
           </div>
 
           {/* ── Cartes KPI (contextuelles selon le sous-onglet, masquées sur Événement Premium) ── */}
-          {mktTab !== "event" && mktTab !== "promo" && mktTab !== "phoneprompt" && mktTab !== "premiumnudge" && mktTab !== "ambassadornudge" && mktTab !== "referrals" && mktTab !== "inactive" && (
+          {mktTab !== "event" && mktTab !== "promo" && mktTab !== "phoneprompt" && mktTab !== "premiumnudge" && mktTab !== "ambassadornudge" && mktTab !== "referrals" && mktTab !== "inactive" && mktTab !== "carousel" && (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: 12, marginBottom: 16 }}>
             {(mktTab === "statuts" ? [
               { ic: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>, bg: "rgba(192,57,43,0.12)", label: "Statuts actifs", value: officialStatuses.length, sub: "En ligne actuellement", subColor: G.rouge },
@@ -14037,6 +14150,122 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#999", marginBottom: 6 }}>Message affiché dans la fenêtre</div>
                 <textarea value={ambassadorNudgeMessage} onChange={e => setAmbassadorNudgeMessage(e.target.value)} onBlur={() => savePremiumNudgeSetting("ambassador_nudge_message", ambassadorNudgeMessage)} rows={3} style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.85rem", fontFamily: "inherit", resize: "vertical" }} />
               </div>
+            </div>
+          )}
+
+          {mktTab === "carousel" && (
+            <div>
+              <div style={{ fontSize: "0.8rem", color: "#888", marginBottom: 16, lineHeight: 1.5 }}>
+                Gère les diapositives du petit carrousel affiché sur Découvrir, Likes et Vues. Les comptes gratuits voient le carrousel "Gratuit" (incitation Premium), les comptes Premium voient le carrousel "Premium" (conseils). S'il n'y a aucune diapositive active pour un public, l'app garde ses diapositives par défaut — rien ne se casse.
+              </div>
+
+              <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+                {(["free", "premium"] as const).map(a => (
+                  <button key={a} onClick={() => setCarouselAudience(a)} style={{ padding: "9px 18px", borderRadius: 999, cursor: "pointer", fontSize: "0.82rem", fontWeight: 800, background: carouselAudience === a ? "#E67E22" : "#fff", color: carouselAudience === a ? "#fff" : "#555", border: carouselAudience === a ? "none" : `1.5px solid ${G.gris}` }}>
+                    {a === "free" ? "🆓 Gratuit" : "⭐ Premium"} ({carouselSlides.filter(s => s.audience === a).length})
+                  </button>
+                ))}
+                <button onClick={() => { setCarouselForm({ ...blankCarouselForm, audience: carouselAudience }); setCarouselEditingId(null); setCarouselFormOpen(true); }} style={{ marginLeft: "auto", background: "linear-gradient(135deg,#E67E22,#c96c15)", color: "#fff", border: "none", borderRadius: 999, padding: "9px 18px", fontSize: "0.82rem", fontWeight: 800, cursor: "pointer" }}>
+                  + Ajouter une diapositive
+                </button>
+              </div>
+
+              {carouselLoading ? (
+                <div style={{ textAlign: "center", padding: 40, color: "#aaa" }}>Chargement...</div>
+              ) : carouselVisible.length === 0 ? (
+                <div style={{ textAlign: "center", padding: 40, color: "#aaa", fontSize: "0.85rem" }}>Aucune diapositive personnalisée pour ce public — les diapositives par défaut de l'app s'affichent.</div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {carouselVisible.sort((a, b) => a.order_index - b.order_index).map((s, i) => {
+                    const color = CAROUSEL_COLORS[s.color_key] || CAROUSEL_COLORS.rouge;
+                    return (
+                      <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 14, background: G.blanc, border: `1.5px solid ${G.gris}`, borderRadius: 14, padding: "12px 16px", opacity: s.active ? 1 : 0.5 }}>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                          <button onClick={() => moveCarouselSlide(s, -1)} disabled={i === 0} style={{ background: "none", border: "none", cursor: i === 0 ? "default" : "pointer", color: i === 0 ? "#ddd" : "#888", padding: 0 }}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"/></svg></button>
+                          <button onClick={() => moveCarouselSlide(s, 1)} disabled={i === carouselVisible.length - 1} style={{ background: "none", border: "none", cursor: i === carouselVisible.length - 1 ? "default" : "pointer", color: i === carouselVisible.length - 1 ? "#ddd" : "#888", padding: 0 }}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
+                        </div>
+                        <div style={{ width: 40, height: 40, borderRadius: 10, background: color.bg, display: "flex", alignItems: "center", justifyContent: "center", color: color.accent, flexShrink: 0 }}>
+                          <CarouselIcon iconKey={s.icon_key} size={20} />
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: 700, fontSize: "0.85rem", color: G.brun, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.title}</div>
+                          <div style={{ fontSize: "0.72rem", color: "#999", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.description}</div>
+                          <div style={{ fontSize: "0.68rem", color: color.accent, fontWeight: 700, marginTop: 2 }}>
+                            "{s.button_text}" → {s.action_type === "premium" ? "Écran Premium" : s.action_type === "referral_share" ? "Partager le lien de parrainage" : s.action_type === "pay_link_share" ? "Générer le lien de paiement" : s.action_type === "external_link" ? `Lien externe (${s.action_value})` : (CAROUSEL_DESTINATIONS[s.action_value || ""]?.label || s.action_value)}
+                          </div>
+                        </div>
+                        <button onClick={() => toggleCarouselActive(s)} title={s.active ? "Désactiver" : "Activer"} style={{ background: "none", border: "none", cursor: "pointer", flexShrink: 0 }}>
+                          <SwitchBtn on={s.active} onToggle={() => toggleCarouselActive(s)} />
+                        </button>
+                        <button onClick={() => { setCarouselForm({ id: s.id, audience: s.audience, title: s.title, description: s.description, button_text: s.button_text, icon_key: s.icon_key, color_key: s.color_key, action_type: s.action_type, action_value: s.action_value || "", active: s.active }); setCarouselEditingId(s.id); setCarouselFormOpen(true); }} style={{ background: "#F0EDE6", border: "none", borderRadius: 8, padding: "7px 10px", cursor: "pointer", color: "#555", flexShrink: 0 }}>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        </button>
+                        <button onClick={() => confirm(`Supprimer la diapositive "${s.title}" ?`, () => deleteCarouselSlide(s.id))} style={{ background: "rgba(231,76,60,0.1)", border: "none", borderRadius: 8, padding: "7px 10px", cursor: "pointer", color: "#e74c3c", flexShrink: 0 }}>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {carouselFormOpen && (
+                <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10020, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={() => setCarouselFormOpen(false)}>
+                  <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 480, maxHeight: "85vh", overflowY: "auto", padding: 24 }}>
+                    <div style={{ fontWeight: 800, fontSize: "1rem", color: G.brun, marginBottom: 16 }}>{carouselEditingId ? "Modifier la diapositive" : "Nouvelle diapositive"} <span style={{ fontWeight: 600, fontSize: "0.78rem", color: "#999" }}>({carouselAudience === "free" ? "Gratuit" : "Premium"})</span></div>
+
+                    <input value={carouselForm.title} onChange={e => setCarouselForm(f => ({ ...f, title: e.target.value }))} placeholder="Titre" style={{ width: "100%", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.85rem", outline: "none", marginBottom: 10 }} />
+                    <textarea value={carouselForm.description} onChange={e => setCarouselForm(f => ({ ...f, description: e.target.value }))} placeholder="Description (1-2 phrases courtes)" rows={2} style={{ width: "100%", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.85rem", outline: "none", marginBottom: 10, fontFamily: "inherit", resize: "vertical" }} />
+                    <input value={carouselForm.button_text} onChange={e => setCarouselForm(f => ({ ...f, button_text: e.target.value }))} placeholder="Texte du bouton" style={{ width: "100%", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.85rem", outline: "none", marginBottom: 14 }} />
+
+                    <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#999", marginBottom: 6 }}>Icône</div>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 6, marginBottom: 14 }}>
+                      {CAROUSEL_ICON_KEYS.map(k => (
+                        <button key={k} onClick={() => setCarouselForm(f => ({ ...f, icon_key: k }))} title={k} style={{ aspectRatio: "1", borderRadius: 10, border: carouselForm.icon_key === k ? `2px solid ${G.rouge}` : `1.5px solid ${G.gris}`, background: carouselForm.icon_key === k ? "rgba(192,57,43,0.06)" : "#fff", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: carouselForm.icon_key === k ? G.rouge : "#888" }}>
+                          <CarouselIcon iconKey={k} size={18} />
+                        </button>
+                      ))}
+                    </div>
+
+                    <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#999", marginBottom: 6 }}>Couleur</div>
+                    <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+                      {CAROUSEL_COLOR_KEYS.map(k => (
+                        <button key={k} onClick={() => setCarouselForm(f => ({ ...f, color_key: k }))} title={CAROUSEL_COLORS[k].label} style={{ width: 34, height: 34, borderRadius: "50%", background: CAROUSEL_COLORS[k].accent, border: carouselForm.color_key === k ? "3px solid #333" : "3px solid transparent", cursor: "pointer" }} />
+                      ))}
+                    </div>
+
+                    <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#999", marginBottom: 6 }}>Action du bouton</div>
+                    <select value={carouselForm.action_type} onChange={e => setCarouselForm(f => ({ ...f, action_type: e.target.value as typeof f.action_type, action_value: "" }))} style={{ width: "100%", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.85rem", outline: "none", marginBottom: 10, background: "#fff" }}>
+                      <option value="premium">Ouvrir l'écran Premium</option>
+                      <option value="tab">Aller à une page précise de l'app</option>
+                      <option value="referral_share">Partager mon lien de parrainage (comme "Inviter un ami")</option>
+                      <option value="pay_link_share">Générer mon lien de paiement à partager (comme "Faire payer par quelqu'un d'autre")</option>
+                      <option value="external_link">Lien externe (pub, partenariat...)</option>
+                    </select>
+                    {carouselForm.action_type === "tab" && (
+                      <select value={carouselForm.action_value} onChange={e => setCarouselForm(f => ({ ...f, action_value: e.target.value }))} style={{ width: "100%", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.85rem", outline: "none", marginBottom: 14, background: "#fff" }}>
+                        <option value="">Choisir une destination</option>
+                        {Object.entries(CAROUSEL_DESTINATIONS).map(([key, d]) => (
+                          <option key={key} value={key}>{d.label}</option>
+                        ))}
+                      </select>
+                    )}
+                    {carouselForm.action_type === "external_link" && (
+                      <input value={carouselForm.action_value} onChange={e => setCarouselForm(f => ({ ...f, action_value: e.target.value }))} placeholder="https://..." style={{ width: "100%", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px 12px", fontSize: "0.85rem", outline: "none", marginBottom: 14 }} />
+                    )}
+
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
+                      <span style={{ fontSize: "0.82rem", fontWeight: 700, color: G.brun }}>Active</span>
+                      <SwitchBtn on={carouselForm.active} onToggle={() => setCarouselForm(f => ({ ...f, active: !f.active }))} />
+                    </div>
+
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button onClick={() => { setCarouselFormOpen(false); setCarouselEditingId(null); }} style={{ flex: 1, background: "#F0EDE6", color: "#555", border: "none", borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>Annuler</button>
+                      <button onClick={saveCarouselSlide} style={{ flex: 1, background: "linear-gradient(135deg,#E67E22,#c96c15)", color: "#fff", border: "none", borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>{carouselEditingId ? "Enregistrer" : "Ajouter"}</button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

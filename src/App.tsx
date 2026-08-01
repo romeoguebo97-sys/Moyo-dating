@@ -6186,6 +6186,9 @@ function NotifBell({ auth, setTab }: { auth: Auth; setTab: (t: string) => void }
   const [emailVerified, setEmailVerified] = useState(true);
   const [phoneShared, setPhoneShared] = useState(true);
   const [hasRelProfile, setHasRelProfile] = useState(true);
+  const [hasSocialsShared, setHasSocialsShared] = useState(true);
+  const [isVip, setIsVip] = useState(true);
+  const [myGender, setMyGender] = useState<string | null>(null);
   const [items, setItems] = useState<{ id: string; type: string; title: string; body: string; is_read: boolean; created_at: string; nav_tab?: string | null; nav_sub?: string | null }[]>([]);
   const [dismissedTodos, setDismissedTodos] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem(`moyo_dismissed_todos_${auth.userId}`) || "[]"); } catch { return []; }
@@ -6195,11 +6198,20 @@ function NotifBell({ auth, setTab }: { auth: Auth; setTab: (t: string) => void }
     if (!auth) return;
     try {
       const [pRes, nRes] = await Promise.all([
-        fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${auth.userId}&select=email_verified,share_phone_with_matches,relational_profile`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } }),
+        fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${auth.userId}&select=email_verified,share_phone_with_matches,relational_profile,share_socials_with_matches,soc_facebook,soc_tiktok,soc_instagram,soc_snapchat,is_vip,gender`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } }),
         fetch(`${SUPABASE_URL}/rest/v1/user_notifications?user_id=eq.${auth.userId}&order=created_at.desc&limit=30`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } }),
       ]);
       const pData = await pRes.json().catch(() => []);
-      if (Array.isArray(pData) && pData[0]) { setEmailVerified(!!pData[0].email_verified); setPhoneShared(!!pData[0].share_phone_with_matches); setHasRelProfile(!!pData[0].relational_profile); }
+      if (Array.isArray(pData) && pData[0]) {
+        const p = pData[0];
+        setEmailVerified(!!p.email_verified);
+        setPhoneShared(!!p.share_phone_with_matches);
+        setHasRelProfile(!!p.relational_profile);
+        const hasAnySocial = !!(p.soc_facebook || p.soc_tiktok || p.soc_instagram || p.soc_snapchat);
+        setHasSocialsShared(!hasAnySocial || !!p.share_socials_with_matches);
+        setIsVip(!!p.is_vip);
+        setMyGender(p.gender || null);
+      }
       const nData = await nRes.json().catch(() => []);
       if (Array.isArray(nData)) setItems(nData);
     } catch {}
@@ -6211,9 +6223,11 @@ function NotifBell({ auth, setTab }: { auth: Auth; setTab: (t: string) => void }
   const showEmailTodo = !emailVerified && !dismissedTodos.includes("email");
   const showPhoneTodo = !phoneShared && !dismissedTodos.includes("phone");
   const showRelTodo = !hasRelProfile && !dismissedTodos.includes("rel");
-  const unreadCount = items.filter(i => !i.is_read).length + (showEmailTodo ? 1 : 0) + (showPhoneTodo ? 1 : 0) + (showRelTodo ? 1 : 0);
+  const showSocialsTodo = FEATURE_SOCIALS && !hasSocialsShared && !dismissedTodos.includes("socials");
+  const showVipTodo = myGender === "Femme" && !isVip && !dismissedTodos.includes("vip");
+  const unreadCount = items.filter(i => !i.is_read).length + (showEmailTodo ? 1 : 0) + (showPhoneTodo ? 1 : 0) + (showRelTodo ? 1 : 0) + (showSocialsTodo ? 1 : 0) + (showVipTodo ? 1 : 0);
 
-  const dismissTodo = (key: "email" | "phone" | "rel") => {
+  const dismissTodo = (key: "email" | "phone" | "rel" | "socials" | "vip") => {
     setDismissedTodos(prev => {
       const next = prev.includes(key) ? prev : [...prev, key];
       try { localStorage.setItem(`moyo_dismissed_todos_${auth.userId}`, JSON.stringify(next)); } catch {}
@@ -6240,6 +6254,8 @@ function NotifBell({ auth, setTab }: { auth: Auth; setTab: (t: string) => void }
   const goToPhoneTodo = () => { setOpen(false); try { sessionStorage.setItem("moyo_scroll_to", "phone"); } catch {} setTab("profile"); };
   const goToEmailTodo = () => { setOpen(false); try { sessionStorage.setItem("moyo_scroll_to", "email"); } catch {} setTab("profile"); };
   const goToRelTodo = () => { setOpen(false); try { sessionStorage.setItem("moyo_open_rel_wizard", "1"); } catch {} setTab("profile"); };
+  const goToSocialsTodo = () => { setOpen(false); try { sessionStorage.setItem("moyo_scroll_to", "socials"); } catch {} setTab("profile"); };
+  const goToVipTodo = () => { setOpen(false); try { sessionStorage.setItem("moyo_scroll_to", "vip"); } catch {} setTab("profile"); };
 
   // Redirection ciblée selon le type/nav_sub de la notification : le contrat Ambassadeur et les
   // versements ouvrent directement le tableau de bord Ambassadeur (même mécanisme que la
@@ -6301,7 +6317,7 @@ function NotifBell({ auth, setTab }: { auth: Auth; setTab: (t: string) => void }
                 <div style={{ padding: "24px 16px", textAlign: "center", fontSize: "0.8rem", color: "#aaa" }}>Chargement...</div>
               ) : (
                 <>
-                  {(showEmailTodo || showPhoneTodo || showRelTodo) && (
+                  {(showEmailTodo || showPhoneTodo || showRelTodo || showSocialsTodo || showVipTodo) && (
                     <div style={{ padding: "12px 16px", borderBottom: "1px solid #eee", background: "#FFFBF0" }}>
                       <div style={{ fontSize: "0.68rem", fontWeight: 800, color: "#B8860B", marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.4 }}>À faire</div>
                       {showEmailTodo && (
@@ -6322,6 +6338,28 @@ function NotifBell({ auth, setTab }: { auth: Auth; setTab: (t: string) => void }
                             <span style={{ fontSize: "0.8rem", color: "#555", fontWeight: 600 }}>Rends ton numéro visible pour tes matchs</span>
                           </div>
                           <div onClick={() => dismissTodo("phone")} title="Ignorer" style={{ cursor: "pointer", color: "#bbb", padding: 4, flexShrink: 0 }}>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                          </div>
+                        </div>
+                      )}
+                      {showSocialsTodo && (
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 2px" }}>
+                          <div onClick={goToSocialsTodo} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", flex: 1, minWidth: 0 }}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#B8860B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                            <span style={{ fontSize: "0.8rem", color: "#555", fontWeight: 600 }}>Rends tes réseaux sociaux visibles pour tes matchs</span>
+                          </div>
+                          <div onClick={() => dismissTodo("socials")} title="Ignorer" style={{ cursor: "pointer", color: "#bbb", padding: 4, flexShrink: 0 }}>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                          </div>
+                        </div>
+                      )}
+                      {showVipTodo && (
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 2px" }}>
+                          <div onClick={goToVipTodo} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", flex: 1, minWidth: 0 }}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#B8860B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a2 2 0 0 1-3.2 2.4L6 15"/></svg>
+                            <span style={{ fontSize: "0.8rem", color: "#555", fontWeight: 600 }}>Découvre le statut Compte VIP</span>
+                          </div>
+                          <div onClick={() => dismissTodo("vip")} title="Ignorer" style={{ cursor: "pointer", color: "#bbb", padding: 4, flexShrink: 0 }}>
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                           </div>
                         </div>
@@ -6954,6 +6992,104 @@ const ProfileListCard = memo(function ProfileListCard({ prof, liked, onLike, onB
 });
 
 // ── CAROUSEL D'ENGAGEMENT PREMIUM ──
+// ── Carrousel d'engagement (Découvrir/Likes/Vues) — bibliothèque d'icônes et palette de couleurs
+//    prédéfinies, pour que l'admin puisse composer des diapositives sans écrire de SVG ni choisir
+//    une couleur libre. Exportées pour être réutilisées telles quelles côté Admin.tsx (aperçu). ──
+export const CAROUSEL_ICON_PATHS: Record<string, string> = {
+  star: "M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z",
+  heart: "M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z",
+  camera: "M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z##M12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z",
+  send: "M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z",
+  zap: "M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7z",
+  trophy: "M8 21h8##M12 17v4##M17 3H7v6a5 5 0 0 0 10 0V3z##M7 5H3v2a4 4 0 0 0 4 4##M17 5h4v2a4 4 0 0 1-4 4",
+  eye: "M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z##M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z",
+  shield: "M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z##M9 12l2 2 4-4",
+  gift: "M20 12v9H4v-9##M2 7h20v5H2z##M12 22V7##M12 7C9 7 8 4 9 3s3 0 3 4##M12 7c3 0 4-3 3-4s-3 0-3 4",
+  megaphone: "M3 11l18-5v12L3 14v-3z##M11.6 16.8a2 2 0 0 1-3.2 2.4L6 15",
+  users: "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2##M9 7a4 4 0 1 0 0-8 4 4 0 0 0 0 8##M23 21v-2a4 4 0 0 0-3-3.87##M16 3.13a4 4 0 0 1 0 7.75",
+  flame: "M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z",
+  pen: "M12 20h9##M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z",
+  unlock: "M7 11V7a5 5 0 0 1 9.9-1##M3 11h18v11H3z",
+  thumbsUp: "M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z##M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3",
+  calendar: "M3 4h18v18H3z##M16 2v4##M8 2v4##M3 10h18",
+  mapPin: "M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z##M12 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6z",
+  award: "M12 15a6 6 0 1 0 0-12 6 6 0 0 0 0 12z##M8.21 13.89L7 23l5-3 5 3-1.21-9.12",
+  rocket: "M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z##M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z##M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0##M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5",
+  crown: "M2 20h20##M4 17l-2-9 6 4 4-7 4 7 6-4-2 9z",
+  sparkles: "M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z##M5 3l.7 2.1L8 6l-2.3.9L5 9l-.7-2.1L2 6l2.3-.9L5 3z##M19 15l.7 2.1L22 18l-2.3.9L19 21l-.7-2.1L16 18l2.3-.9L19 15z",
+};
+export const CAROUSEL_ICON_KEYS = Object.keys(CAROUSEL_ICON_PATHS);
+export function CarouselIcon({ iconKey, size = 28 }: { iconKey: string; size?: number }) {
+  const d = CAROUSEL_ICON_PATHS[iconKey] || CAROUSEL_ICON_PATHS.star;
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      {d.split("##").map((path, i) => <path key={i} d={path} />)}
+    </svg>
+  );
+}
+export const CAROUSEL_COLORS: Record<string, { label: string; accent: string; bg: string }> = {
+  rouge: { label: "Rouge", accent: G.rouge, bg: "linear-gradient(135deg,rgba(192,57,43,0.08),rgba(192,57,43,0.02))" },
+  or: { label: "Or", accent: G.or, bg: "linear-gradient(135deg,rgba(212,168,67,0.12),rgba(212,168,67,0.04))" },
+  vert: { label: "Vert", accent: G.vert, bg: "linear-gradient(135deg,rgba(26,92,58,0.08),rgba(26,92,58,0.02))" },
+  violet: { label: "Violet", accent: "#7B5EA7", bg: "linear-gradient(135deg,rgba(123,94,167,0.08),rgba(123,94,167,0.02))" },
+  bleu: { label: "Bleu", accent: "#2980b9", bg: "linear-gradient(135deg,rgba(41,128,185,0.08),rgba(41,128,185,0.02))" },
+};
+export const CAROUSEL_COLOR_KEYS = Object.keys(CAROUSEL_COLORS);
+// Forme d'une diapositive telle que stockée en base (table carousel_slides).
+export type CarouselSlideDB = {
+  id: string;
+  audience: "free" | "premium";
+  title: string;
+  description: string;
+  button_text: string;
+  icon_key: string;
+  color_key: string;
+  action_type: "premium" | "tab" | "external_link" | "referral_share" | "pay_link_share";
+  action_value: string | null;
+  order_index: number;
+  active: boolean;
+};
+
+// ── Partage du lien de parrainage — exactement le même mécanisme que "Inviter un ami" dans le
+//    menu du Profil (partage natif si disponible, sinon WhatsApp), réutilisable depuis le carrousel. ──
+export function shareReferralLink(userId: string) {
+  const refLink = `https://dating.moyo-congo.com?ref=${userId}`;
+  const msg = encodeURIComponent(`Salut ! Les célibataires congolais sont déjà sur MOYO.\nCrée ton compte gratuitement ici : ${refLink}`);
+  if ((navigator as any).share) (navigator as any).share({ title: "Moyo Congo", text: "Rejoins-moi sur Moyo Dating !", url: refLink });
+  else window.open(`https://wa.me/?text=${msg}`, "_blank");
+}
+
+// ── Navigation globale sans prop-drilling : le carrousel d'engagement est utilisé très profondément
+//    (Découvrir, Likes, Vues), le faire remonter jusqu'à setTab() à la racine par props serait
+//    fragile. On expose donc un pointeur de fonction au niveau module, réglé une fois au montage
+//    de la racine, et appelable depuis n'importe où — même principe que les flags sessionStorage
+//    déjà utilisés partout ailleurs dans l'app pour ce genre de navigation "profonde". ──
+let _globalNavigate: ((tab: string) => void) | null = null;
+export function setGlobalNavigate(fn: typeof _globalNavigate) { _globalNavigate = fn; }
+export function globalNavigate(tab: string, flag?: string, flagValue: string = "1") {
+  if (flag) { try { sessionStorage.setItem(flag, flagValue); } catch {} }
+  _globalNavigate?.(tab);
+}
+// ── Destinations précises proposées à l'admin pour le bouton du carrousel — au-delà des 4 onglets
+//    génériques, réutilise les mêmes flags sessionStorage déjà lus par le reste de l'app (scroll
+//    vers une carte précise via "moyo_scroll_to", ouverture directe d'un tableau de bord...). ──
+export const CAROUSEL_DESTINATIONS: Record<string, { label: string; tab: string; flag?: string; flagValue?: string }> = {
+  profile: { label: "Profil", tab: "profile" },
+  matches: { label: "Matchs", tab: "matches" },
+  messages: { label: "Messages", tab: "messages" },
+  likes: { label: "Likes", tab: "likes" },
+  ambassador: { label: "Ambassadeur (tableau de bord si déjà membre)", tab: "profile", flag: "moyo_open_ambassador_dashboard", flagValue: "1" },
+  ambassador_join: { label: "Devenir Ambassadeur (carte d'inscription)", tab: "profile", flag: "moyo_scroll_to", flagValue: "ambassador" },
+  phone: { label: "Numéro de téléphone", tab: "profile", flag: "moyo_scroll_to", flagValue: "phone" },
+  socials: { label: "Réseaux sociaux", tab: "profile", flag: "moyo_scroll_to", flagValue: "socials" },
+  vip: { label: "Compte VIP", tab: "profile", flag: "moyo_scroll_to", flagValue: "vip" },
+  relational: { label: "Profil relationnel / mise en relation", tab: "profile", flag: "moyo_open_rel_wizard", flagValue: "1" },
+  statuses: { label: "Passer sur les Statuts Moyo", tab: "profile", flag: "moyo_scroll_to", flagValue: "statuses" },
+  photo_retouch: { label: "Améliorer ma photo de profil", tab: "profile", flag: "moyo_scroll_to", flagValue: "photo_retouch" },
+  appointment: { label: "Rendez-vous avec l'équipe Moyo", tab: "profile", flag: "moyo_scroll_to", flagValue: "appointment" },
+  rating: { label: "Noter Moyo Dating", tab: "profile", flag: "moyo_scroll_to", flagValue: "rating" },
+};
+
 const premiumConversionSlides = [
   {
     id: 1,
@@ -7098,15 +7234,46 @@ const premiumAdviceSlides = [
 ];
 
 const PremiumEngagementCarousel = React.memo(function PremiumEngagementCarousel({
+  auth,
   isPremium,
   onShowPremium,
   onNav,
 }: {
+  auth?: Auth;
   isPremium: boolean;
   onShowPremium: (r: string) => void;
   onNav?: (tab: string) => void;
 }) {
-  const slides = isPremium ? premiumAdviceSlides : premiumConversionSlides;
+  // ── Diapositives pilotées depuis l'admin (table carousel_slides) — avec repli automatique sur
+  //    les diapositives par défaut si la table est vide ou pas encore configurée pour ce public,
+  //    pour ne jamais casser l'affichage. null = chargement en cours. ──
+  const [dbSlides, setDbSlides] = useState<CarouselSlideDB[] | null>(null);
+  useEffect(() => {
+    if (!auth?.token) { setDbSlides(null); return; }
+    const audience = isPremium ? "premium" : "free";
+    fetch(`${SUPABASE_URL}/rest/v1/carousel_slides?audience=eq.${audience}&active=eq.true&order=order_index.asc`, {
+      headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+    }).then(r => r.json()).then(d => setDbSlides(Array.isArray(d) ? d : [])).catch(() => setDbSlides([]));
+  }, [auth?.token, isPremium]);
+
+  const defaultSlides = isPremium ? premiumAdviceSlides : premiumConversionSlides;
+  type NormalizedSlide = { title: string; description: string; buttonText: string; icon: React.ReactNode; accent: string; bg: string; actionType: "premium" | "tab" | "external_link" | "referral_share" | "pay_link_share"; actionValue: string | null };
+  const slides: NormalizedSlide[] = (dbSlides && dbSlides.length > 0)
+    ? dbSlides.map(s => ({
+        title: s.title,
+        description: s.description,
+        buttonText: s.button_text,
+        icon: <CarouselIcon iconKey={s.icon_key} size={28} />,
+        accent: (CAROUSEL_COLORS[s.color_key] || CAROUSEL_COLORS.rouge).accent,
+        bg: (CAROUSEL_COLORS[s.color_key] || CAROUSEL_COLORS.rouge).bg,
+        actionType: s.action_type,
+        actionValue: s.action_value,
+      }))
+    : defaultSlides.map(s => ({
+        title: s.title, description: s.description, buttonText: s.buttonText, icon: s.icon, accent: s.accent, bg: s.bg,
+        actionType: isPremium ? "tab" : "premium",
+        actionValue: isPremium ? ((s as typeof premiumAdviceSlides[0]).tab || "profile") : null,
+      }));
   const [idx, setIdx] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const touchStartX = useRef<number | null>(null);
@@ -7119,19 +7286,28 @@ const PremiumEngagementCarousel = React.memo(function PremiumEngagementCarousel(
   };
 
   useEffect(() => {
+    setIdx(0);
     resetTimer();
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [isPremium]);
+  }, [isPremium, slides.length]);
 
   const goTo = (i: number) => { setIdx(i); resetTimer(); };
   const prev = () => goTo((idx - 1 + slides.length) % slides.length);
   const next = () => goTo((idx + 1) % slides.length);
 
-  const slide = slides[idx];
+  const slide = slides[Math.min(idx, slides.length - 1)];
+  if (!slide) return null;
 
   const handleAction = () => {
-    if (isPremium) {
-      onNav?.((slide as typeof premiumAdviceSlides[0]).tab || "profile");
+    if (slide.actionType === "external_link" && slide.actionValue) {
+      window.open(slide.actionValue, "_blank", "noopener,noreferrer");
+    } else if (slide.actionType === "referral_share") {
+      if (auth?.userId) shareReferralLink(auth.userId);
+    } else if (slide.actionType === "pay_link_share") {
+      if (auth?.token && auth?.userId) copyMyPaymentLink(auth.token, auth.userId, auth.name);
+    } else if (slide.actionType === "tab") {
+      const dest = CAROUSEL_DESTINATIONS[slide.actionValue || ""] || { tab: slide.actionValue || "profile" };
+      globalNavigate(dest.tab, dest.flag, dest.flagValue);
     } else {
       onShowPremium("Passe Premium pour débloquer toutes les fonctionnalités de Moyo Dating !");
     }
@@ -7894,7 +8070,7 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages, onMatch }
       <div key={idx} style={{ width: isActive ? 23 : 7, height: 7, borderRadius: 99, background: isActive ? G.rouge : "#E0D5CC", transition: "width 0.25s ease, background 0.25s ease" }} />
     );
   })}
-</div><div style={{ marginTop: 6 }}>{!isWide && <PremiumEngagementCarousel isPremium={auth.isPremium} onShowPremium={onShowPremium} onNav={undefined} />}</div></>}{viewedProfile && (
+</div><div style={{ marginTop: 6 }}>{!isWide && <PremiumEngagementCarousel auth={auth} isPremium={auth.isPremium} onShowPremium={onShowPremium} onNav={undefined} />}</div></>}{viewedProfile && (
     <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 400, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={() => setViewedProfile(null)}>
       <div className="moyo-sheet-in" style={{ background: G.blanc, borderRadius: "22px 22px 0 0", width: "100%", maxWidth: 500, maxHeight: "88vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
         <div style={{ height: 270, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", overflow: "hidden", position: "relative" }}>
@@ -8047,7 +8223,7 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages, onMatch }
         {/* 3. Carrousel */}
         <div>
           <div style={{ fontSize: "0.66rem", fontWeight: 800, color: "#aaa", textTransform: "uppercase", letterSpacing: "0.09em", marginBottom: 8 }}>Conseil du moment</div>
-          <PremiumEngagementCarousel isPremium={auth.isPremium} onShowPremium={onShowPremium} onNav={undefined} />
+          <PremiumEngagementCarousel auth={auth} isPremium={auth.isPremium} onShowPremium={onShowPremium} onNav={undefined} />
         </div>
 
         {/* 4. Guide + Assistant Moyo Dating */}
@@ -8246,6 +8422,10 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMes
 
   const [dismissedIds, setDismissedIds] = useState(new Set<string>());
   const [confirmDismiss, setConfirmDismiss] = useState<Profile | null>(null);
+  // ── Distingue "retirer un visiteur de ma liste" (masquage simple, permanent) de "retirer le
+  //    like reçu de quelqu'un" (supprime réellement la ligne likes — elle peut te reliker plus
+  //    tard, contrairement à un simple masquage). ──
+  const [confirmDismissIsLiker, setConfirmDismissIsLiker] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
   const [confirmUnlike, setConfirmUnlike] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -8394,21 +8574,29 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMes
 
   const confirmAndDismiss = async (profileId: string) => {
     setConfirmDismiss(null);
-    setDismissedIds(prev => new Set([...prev, profileId]));
+    const wasLiker = confirmDismissIsLiker;
+    setConfirmDismissIsLiker(false);
     setLikers(prev => prev.filter(p => p.id !== profileId));
     setVisitors(prev => prev.filter(p => p.id !== profileId));
     setCount(prev => Math.max(0, prev - 1));
     try {
-      await fetch(`${SUPABASE_URL}/rest/v1/dismissed_cards`, {
-        method: "POST",
-        headers: { ...sb.h(auth.token), "Prefer": "return=minimal,resolution=ignore-duplicates" },
-        body: JSON.stringify({ user_id: auth.userId, dismissed_id: profileId }),
-      });
+      if (wasLiker) {
+        // Retire réellement son like sur moi (pas un simple masquage) : elle peut me reliker
+        // plus tard, la carte réapparaîtra alors naturellement dans mes "Reçus".
+        await sb.delete(auth.token, "likes", `?from_user=eq.${profileId}&to_user=eq.${auth.userId}`);
+      } else {
+        setDismissedIds(prev => new Set([...prev, profileId]));
+        await fetch(`${SUPABASE_URL}/rest/v1/dismissed_cards`, {
+          method: "POST",
+          headers: { ...sb.h(auth.token), "Prefer": "return=minimal,resolution=ignore-duplicates" },
+          body: JSON.stringify({ user_id: auth.userId, dismissed_id: profileId }),
+        });
+      }
     } catch {}
     if (onBadgeUpdate) onBadgeUpdate();
   };
 
-  const handleDismiss = (p: Profile, e: React.MouseEvent) => { e.stopPropagation(); setConfirmDismiss(p); };
+  const handleDismiss = (p: Profile, e: React.MouseEvent, isLiker: boolean = false) => { e.stopPropagation(); setConfirmDismiss(p); setConfirmDismissIsLiker(isLiker); };
 
   const handleLike = async (p: Profile) => {
     // Si on a déjà liké cette personne (et que ce n'est pas un match) → demander confirmation
@@ -8673,7 +8861,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMes
                         meta={likerMeta[p.id]}
                         onView={() => setSelectedProfile(p)}
                         rightSlot={
-                          <div onClick={(e) => handleDismiss(p, e)}
+                          <div onClick={(e) => handleDismiss(p, e, true)}
                             style={{ width: 26, height: 26, borderRadius: "50%", background: "rgba(0,0,0,0.35)",
                               display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
                             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -8690,7 +8878,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMes
                         meta={likerMeta[p.id]}
                         onView={() => setSelectedProfile(p)}
                         rightSlot={
-                          <div onClick={(e) => handleDismiss(p, e)}
+                          <div onClick={(e) => handleDismiss(p, e, true)}
                             style={{ width: 30, height: 30, borderRadius: "50%", background: "#F5F0EB",
                               display: "flex", alignItems: "center", justifyContent: "center",
                               cursor: "pointer", flexShrink: 0 }}>
@@ -8971,10 +9159,12 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMes
             </div>
             <h3 style={{ fontSize: "1rem", fontWeight: 700, color: G.brun, marginBottom: 8 }}>Retirer {confirmDismiss.name} ?</h3>
             <p style={{ fontSize: "0.83rem", color: G.brunLight, marginBottom: 22, lineHeight: 1.6 }}>
-              Cette carte disparaîtra de ta liste. Tes likes, matchs et messages restent intacts.
+              {confirmDismissIsLiker
+                ? "Son like sur toi sera retiré. Elle disparaît de ta liste, mais pourra te liker à nouveau plus tard."
+                : "Cette carte disparaîtra de ta liste. Tes likes, matchs et messages restent intacts."}
             </p>
             <div style={{ display: "flex", gap: 10 }}>
-              <Btn variant="ghost" onClick={() => setConfirmDismiss(null)} style={{ flex: 1 }}>Annuler</Btn>
+              <Btn variant="ghost" onClick={() => { setConfirmDismiss(null); setConfirmDismissIsLiker(false); }} style={{ flex: 1 }}>Annuler</Btn>
               <Btn variant="danger" onClick={() => confirmAndDismiss(confirmDismiss.id)} style={{ flex: 1 }}>Retirer</Btn>
             </div>
           </div>
@@ -15838,7 +16028,7 @@ function MatchRequestButton({ auth, onShowPremium }: { auth: Auth; onShowPremium
         </div>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
       </div>
-      <AppointmentsButton auth={auth} onShowPremium={onShowPremium} />
+      <div id="moyo-appointment-card"><AppointmentsButton auth={auth} onShowPremium={onShowPremium} /></div>
       {/* ── Modal confirmation suppression du profil relationnel ── */}
       {showDeleteRel && (
         <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10004, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={() => !deletingRel && setShowDeleteRel(false)}>
@@ -16107,17 +16297,23 @@ function MatchRequestButton({ auth, onShowPremium }: { auth: Auth; onShowPremium
 
 export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark, onOpenAdmin, adminBadgeCount, assistantEnabled = true, onToggleAssistant, promoAvailable, onOpenSuperPromo }: { auth: Auth; onLogout: () => void; onShowPremium: (r: string) => void; darkMode?: boolean; onToggleDark?: () => void; onOpenAdmin?: () => void; adminBadgeCount?: number; assistantEnabled?: boolean; onToggleAssistant?: () => void; promoAvailable?: { price: number; expiresAt: string; message: string } | null; onOpenSuperPromo?: () => void }) {
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [scrollHighlight, setScrollHighlight] = useState<"phone" | "email" | null>(null);
+  const [scrollHighlight, setScrollHighlight] = useState<"phone" | "email" | "socials" | "vip" | "ambassador" | "photo_retouch" | "statuses" | "appointment" | "rating" | null>(null);
   useEffect(() => {
     try {
       const target = sessionStorage.getItem("moyo_scroll_to");
-      if (target === "phone" || target === "email") {
+      const validTargets = ["phone", "email", "socials", "vip", "ambassador", "photo_retouch", "statuses", "appointment", "rating"];
+      if (target && validTargets.includes(target)) {
         sessionStorage.removeItem("moyo_scroll_to");
+        const elIds: Record<string, string> = {
+          phone: "moyo-phone-toggle", email: "moyo-email-card", socials: "moyo-socials-card", vip: "moyo-vip-card",
+          ambassador: "moyo-ambassador-card", photo_retouch: "moyo-photo-retouch-card", statuses: "moyo-statuses-card",
+          appointment: "moyo-appointment-card", rating: "moyo-rating-card",
+        };
         setTimeout(() => {
-          const el = document.getElementById(target === "phone" ? "moyo-phone-toggle" : "moyo-email-card");
+          const el = document.getElementById(elIds[target]);
           if (el) {
             el.scrollIntoView({ behavior: "smooth", block: "center" });
-            setScrollHighlight(target);
+            setScrollHighlight(target as any);
             setTimeout(() => setScrollHighlight(h => h === target ? null : h), 1800);
           }
         }, 400);
@@ -17202,7 +17398,7 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
                 { label: "Nom et prénom", value: ambContractName, set: setAmbContractName, ph: "Ex : Faïda Moukoko" },
                 { label: "Date et lieu de naissance", value: ambContractBirth, set: setAmbContractBirth, ph: "Ex : 12/05/1994 à Brazzaville" },
                 { label: "Adresse", value: ambContractAddress, set: setAmbContractAddress, ph: "Ex : Quartier Bacongo, Brazzaville" },
-                { label: "Téléphone", value: ambContractPhone, set: setAmbContractPhone, ph: "Ex : +242065432109" },
+                { label: "Téléphone", value: ambContractPhone, set: setAmbContractPhone, ph: `Ex : +242${PAY_MTN_NUMBER}` },
                 { label: "E-mail", value: ambContractEmail, set: setAmbContractEmail, ph: "Ex : toi@email.com" },
               ].map((f, i) => (
                 <div key={i} style={{ marginBottom: 12 }}>
@@ -17245,7 +17441,7 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
           </div>
         )}
 
-        {(!isWideProfile || activeSection === "main") && FEATURE_AMBASSADOR_PROGRAM && (ambStatus === "none" || ambStatus === "pending") && <AmbassadorCard auth={auth} status={ambStatus} onRequested={() => setAmbStatus("pending")} />}
+        {(!isWideProfile || activeSection === "main") && FEATURE_AMBASSADOR_PROGRAM && (ambStatus === "none" || ambStatus === "pending") && <div id="moyo-ambassador-card" style={{ transition: "box-shadow 0.4s ease", borderRadius: 18, boxShadow: scrollHighlight === "ambassador" ? "0 0 0 3px rgba(212,168,67,0.5)" : "none" }}><AmbassadorCard auth={auth} status={ambStatus} onRequested={() => setAmbStatus("pending")} /></div>}
         {/* CTA Premium - rouge si gratuit, doré si actif, rouge si expiré */}
         {(!isWideProfile || ["premium","main"].includes(activeSection)) && (() => {
           const stored = localStorage.getItem(`moyo_premium_until_${auth.userId}`);
@@ -17351,7 +17547,8 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
 
         {/* ── Bouton Passer sur les Statuts Moyo Dating (Premium uniquement) ── */}
         {(!isWideProfile || ["main"].includes(activeSection)) && (
-          auth.isPremium
+          <div id="moyo-statuses-card">
+          {auth.isPremium
             ? <FeatureRequestButton auth={auth} />
             : <div onClick={() => onShowPremium("Passez Premium pour faire découvrir votre profil dans les Statuts Moyo Dating !")} style={{ background: G.blanc, borderRadius: 18, padding: "18px 20px", cursor: "pointer", boxShadow: "0 2px 10px rgba(0,0,0,0.06)", display: "flex", alignItems: "center", gap: 14, border: "1.5px solid rgba(212,168,67,0.3)", marginTop: 0 }}>
                 <div style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(212,168,67,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -17365,16 +17562,17 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
                   </div>
                 </div>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-              </div>
+              </div>}
+          </div>
         )}
 
         {/* ── Bouton Améliorer ma photo de profil (Premium uniquement) ── */}
         {FEATURE_PHOTO_RETOUCH && (!isWideProfile || ["main"].includes(activeSection)) && (
           auth.isPremium
-            ? <div onClick={() => {
+            ? <div id="moyo-photo-retouch-card" onClick={() => {
                 const msg = `Bonjour, je souhaite améliorer ma photo de profil Moyo Dating.\n\nMon compte : ${auth.name}\nMon email : ${auth.email || "non renseigné"}\n\nJe vous envoie la photo juste après ce message.`;
                 window.open(`https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent(msg)}`, "_blank");
-              }} style={{ background: G.blanc, borderRadius: 18, padding: "18px 20px", cursor: "pointer", boxShadow: "0 2px 10px rgba(0,0,0,0.06)", display: "flex", alignItems: "center", gap: 14, border: "1.5px solid rgba(212,168,67,0.3)", marginTop: 0 }}>
+              }} style={{ background: G.blanc, borderRadius: 18, padding: "18px 20px", cursor: "pointer", boxShadow: scrollHighlight === "photo_retouch" ? "0 0 0 3px rgba(212,168,67,0.5)" : "0 2px 10px rgba(0,0,0,0.06)", display: "flex", alignItems: "center", gap: 14, border: "1.5px solid rgba(212,168,67,0.3)", marginTop: 0, transition: "box-shadow 0.4s ease" }}>
                 <div style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(212,168,67,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={G.or} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
                 </div>
@@ -17476,7 +17674,7 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
             résumé, formulaire d'édition à 4 champs optionnels, réglage de visibilité séparé.
             Coupe-circuit admin : disparaît entièrement si FEATURE_SOCIALS est désactivé. */}
         {FEATURE_SOCIALS && (!isWideProfile || activeSection === "main") && (
-          <div style={{ background: G.blanc, borderRadius: 18, border: "1.5px solid rgba(102,102,102,0.18)", overflow: "hidden", marginTop: 0, boxShadow: "0 2px 10px rgba(0,0,0,0.06)" }}>
+          <div id="moyo-socials-card" style={{ background: G.blanc, borderRadius: 18, border: "1.5px solid rgba(102,102,102,0.18)", overflow: "hidden", marginTop: 0, transition: "box-shadow 0.4s ease", boxShadow: scrollHighlight === "socials" ? "0 0 0 3px rgba(212,168,67,0.5)" : "0 2px 10px rgba(0,0,0,0.06)" }}>
             {editingSocialsCard ? (
               <div style={{ padding: "15px 18px" }}>
                 <div style={{ fontWeight: 700, fontSize: "0.95rem", color: G.brun, marginBottom: 12 }}>Mes réseaux sociaux</div>
@@ -17540,7 +17738,7 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
         {/* Compte VIP : en libre-service, contrairement au numéro/réseaux ce n'est pas une simple
             visibilité mais une vraie restriction pour les autres (les comptes gratuits ne peuvent
             plus liker), d'où le message explicite avant activation. */}
-        <div style={{ background: G.blanc, borderRadius: 18, border: "1.5px solid rgba(102,102,102,0.18)", overflow: "hidden", marginTop: 0, boxShadow: "0 2px 10px rgba(0,0,0,0.06)" }}>
+        <div id="moyo-vip-card" style={{ background: G.blanc, borderRadius: 18, border: "1.5px solid rgba(102,102,102,0.18)", overflow: "hidden", marginTop: 0, transition: "box-shadow 0.4s ease", boxShadow: scrollHighlight === "vip" ? "0 0 0 3px rgba(212,168,67,0.5)" : "0 2px 10px rgba(0,0,0,0.06)" }}>
           <div className="moyo-tap" onClick={async () => {
             const newVip = !profile?.is_vip;
             await sb.update(auth.token, "profiles", auth.userId, { is_vip: newVip });
@@ -17866,8 +18064,9 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
         })()}
 
         {(!isWideProfile || ["rating","main"].includes(activeSection)) && <div
+          id="moyo-rating-card"
           onClick={() => setShowRating(v => !v)}
-          style={{ background: G.blanc, borderRadius: showRating ? "16px 16px 0 0" : 16, padding: "16px 20px", display: "flex", alignItems: "center", gap: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: `1px solid ${showRating ? G.or : "var(--c-card-bd)"}`, cursor: "pointer", transition: "border-color 0.2s, border-radius 0.2s" }}
+          style={{ background: G.blanc, borderRadius: showRating ? "16px 16px 0 0" : 16, padding: "16px 20px", display: "flex", alignItems: "center", gap: 14, boxShadow: scrollHighlight === "rating" ? "0 0 0 3px rgba(212,168,67,0.5)" : "0 1px 4px rgba(0,0,0,0.06)", border: `1px solid ${showRating ? G.or : "var(--c-card-bd)"}`, cursor: "pointer", transition: "border-color 0.2s, border-radius 0.2s, box-shadow 0.4s ease" }}
         >
           <div style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(212,168,67,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill={showRating ? G.or : "none"} stroke={G.or} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
@@ -18551,6 +18750,7 @@ export default function App() {
     }
   }, [darkMode]);
   const [tab, setTab] = useState("discover");
+  useEffect(() => { setGlobalNavigate(setTab); return () => setGlobalNavigate(null); }, []);
   const [auth, setAuth] = useState<Auth | null>(null);
   // ── Détection app installée (PWA) : si la personne utilise l'app depuis l'icône installée
   //    (mode standalone), on l'enregistre une seule fois sur son profil. Sert uniquement de
@@ -18608,7 +18808,7 @@ export default function App() {
   const [pendingBroadcast, setPendingBroadcast] = useState<{ id: string; message: string } | null>(null);
   const [userGender, setUserGender] = useState<string>("");
   const [selfBan, setSelfBan] = useState<{ until: string | null; name?: string; email?: string; reason?: string | null } | null>(null);
-  const [pendingProposal, setPendingProposal] = useState<{ id: string; proposerId: string; proposerName: string; proposerPhoto?: string | null; proposerAge?: number; proposerCity?: string; myRole: "user1" | "user2"; source?: string; pairKey?: string; otherAlreadyAccepted?: boolean } | null>(null);
+  const [pendingProposal, setPendingProposal] = useState<{ id: string; proposerId: string; proposerName: string; proposerPhoto?: string | null; proposerAge?: number; proposerCity?: string; proposerIsVip?: boolean; myRole: "user1" | "user2"; source?: string; pairKey?: string; otherAlreadyAccepted?: boolean } | null>(null);
   // ── Fenêtre bloquante demandant le numéro de téléphone, si activée par l'admin et que le
   //    membre n'en a pas encore renseigné un. Ne se ferme qu'une fois le numéro enregistré. ──
   const [phonePromptOpen, setPhonePromptOpen] = useState(false);
@@ -19576,7 +19776,7 @@ export default function App() {
         const myRole: "user1" | "user2" = prop.user1_id === auth.userId ? "user1" : "user2";
         const proposerId = myRole === "user1" ? prop.user2_id : prop.user1_id;
         // Charger le profil de l'autre personne
-        const pr = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${proposerId}&select=id,name,age,city,photo_url&limit=1`, {
+        const pr = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${proposerId}&select=id,name,age,city,photo_url,is_vip&limit=1`, {
           headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
         });
         const pdata = await pr.json().catch(() => []);
@@ -19592,6 +19792,7 @@ export default function App() {
           proposerPhoto: proposer.photo_url,
           proposerAge: proposer.age,
           proposerCity: proposer.city,
+          proposerIsVip: !!proposer.is_vip,
           myRole,
           source: prop.source,
           pairKey,
@@ -20272,6 +20473,10 @@ export default function App() {
           <button
             disabled={proposalResponding}
             onClick={async () => {
+              if (!auth!.isPremium && pendingProposal.proposerIsVip) {
+                showPremium(`Ce compte est VIP, passe Premium pour liker ${pendingProposal.proposerName}`);
+                return;
+              }
               setProposalResponding(true);
               try {
                 const myResponseField = pendingProposal.myRole === "user1" ? "user1_response" : "user2_response";
