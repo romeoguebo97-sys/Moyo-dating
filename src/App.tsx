@@ -1582,6 +1582,11 @@ export const sb = {
       onNewToken,
     );
     const res = await r.json().catch(() => null);
+    // ── Ne jamais renvoyer le corps d'une réponse en échec comme si c'était une ligne insérée
+    //    avec succès — sinon le code appelant (ex: setMsgs(m => [...m, res[0]])) insère l'objet
+    //    d'erreur du serveur dans les données de l'app, qui plante ensuite au rendu (ex: accès à
+    //    m.content sur un objet qui n'a que { code, message, details }). ──
+    if (!r.ok) throw new Error((res && (res.message || res.error || res.hint)) || `Erreur serveur (HTTP ${r.status})`);
     return Array.isArray(res) ? res : res ? [res] : [];
   },
 
@@ -2598,7 +2603,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail, giftFor, prom
   //    du contenu Congo/diaspora (juste un chargement) — sinon un bref éclair du mauvais contenu
   //    est inévitable, même si tout se corrige une fraction de seconde après. ──
   if (isDiaspora === null) return (
-    <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 300, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
+    <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 99000, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
       <div onClick={e => e.stopPropagation()} className="moyo-sheet-in" style={{ background: "#FCFBF8", width: "100%", maxWidth: 460, height: "100%", maxHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
         <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={gold} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "pulse 1s ease-in-out infinite" }}><circle cx="12" cy="12" r="10" /></svg>
       </div>
@@ -2606,7 +2611,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail, giftFor, prom
   );
 
   if (step === "b1") return (
-    <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 300, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
+    <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 99000, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
       <div onClick={e => e.stopPropagation()} className="moyo-sheet-in" style={{ background: "#FCFBF8", width: "100%", maxWidth: 460, height: "100%", maxHeight: "100vh", overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y", boxShadow: "0 30px 80px rgba(0,0,0,0.4)", position: "relative", display: "flex", flexDirection: "column" }}>
         <div style={{ padding: "calc(env(safe-area-inset-top) + 18px) 20px 0", flexShrink: 0 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 22 }}>
@@ -2660,7 +2665,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail, giftFor, prom
 
   // ════════ VERSION B — ÉTAPE 2/3 : CHOIX DE L'OPÉRATEUR (simple, direct) ════════
   if (step === "b2") return (
-    <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 300, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
+    <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 99000, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
       <div onClick={e => e.stopPropagation()} className="moyo-sheet-in" style={{ background: "#FCFBF8", width: "100%", maxWidth: 460, height: "100%", maxHeight: "100vh", overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y", boxShadow: "0 30px 80px rgba(0,0,0,0.4)", position: "relative", display: "flex", flexDirection: "column" }}>
         <div style={{ padding: "calc(env(safe-area-inset-top) + 18px) 20px 0", flexShrink: 0 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 22 }}>
@@ -2766,7 +2771,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail, giftFor, prom
     const B3OP = OPS[b2Operator];
 
     return (
-      <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 300, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
+      <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 99000, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
         <div onClick={e => e.stopPropagation()} className="moyo-sheet-in" style={{ background: "#FCFBF8", width: "100%", maxWidth: 460, height: "100%", maxHeight: "100vh", display: "flex", flexDirection: "column" }}>
           <div style={{ padding: "calc(env(safe-area-inset-top) + 18px) 20px 0", flexShrink: 0 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
@@ -2902,7 +2907,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail, giftFor, prom
     };
 
     if (txSent || screenshotSent) return (
-      <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+      <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", zIndex: 99000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
         <div className="moyo-card-in" style={{ background: G.blanc, borderRadius: 20, padding: "32px 26px", width: "100%", maxWidth: 340, textAlign: "center" }}>
           <div style={{ width: 60, height: 60, borderRadius: "50%", background: txActivated ? "rgba(26,92,58,0.1)" : "rgba(212,168,67,0.14)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={txActivated ? "#1A5C3A" : gold} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
@@ -2915,7 +2920,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail, giftFor, prom
     );
 
     return (
-      <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 300, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
+      <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 99000, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
         <div onClick={e => e.stopPropagation()} className="moyo-sheet-in" style={{ background: "#FCFBF8", width: "100%", maxWidth: 460, height: "100%", maxHeight: "100vh", overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y", boxShadow: "0 30px 80px rgba(0,0,0,0.4)" }}>
           <div style={{ padding: "calc(env(safe-area-inset-top) + 18px) 20px 0" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
@@ -2987,7 +2992,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail, giftFor, prom
 
   // ════════ ÉCRAN 1 : OFFRE — VERSION A (par défaut) ════════
   if (step === "offer") return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 300, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
+    <div style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 99000, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
       <div onClick={e => e.stopPropagation()} style={{ background: "#FCFBF8", borderRadius: 0, width: "100%", maxWidth: 460, height: "100%", maxHeight: "100vh", overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y", boxShadow: "0 30px 80px rgba(0,0,0,0.4)", position: "relative", padding: "calc(env(safe-area-inset-top) + 18px) 20px 16px" }}>
         <div onClick={onClose} style={{ position: "absolute", top: "calc(env(safe-area-inset-top) + 16px)", right: 16, cursor: "pointer", background: "#eceae5", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2 }}>
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#777" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
@@ -3050,7 +3055,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail, giftFor, prom
 
   // ════════ ÉTAPE 2 SUR 4 : CHOIX DU MOYEN DE PAIEMENT + CODE PROMO + LIEN CADEAU ════════
   if (step === "a2") return (
-    <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 300, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
+    <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 99000, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
       <div onClick={e => e.stopPropagation()} className="moyo-sheet-in" style={{ background: "#FCFBF8", width: "100%", maxWidth: 460, height: "100%", maxHeight: "100vh", overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y", boxShadow: "0 30px 80px rgba(0,0,0,0.4)", position: "relative", padding: "calc(env(safe-area-inset-top) + 18px) 20px 16px" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 22 }}>
           <div onClick={() => setStep("offer")} style={{ cursor: "pointer", background: "#eceae5", borderRadius: "50%", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -3184,7 +3189,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail, giftFor, prom
     };
 
     if (txSent || screenshotSent) return (
-      <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+      <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", zIndex: 99000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
         <div className="moyo-card-in" style={{ background: G.blanc, borderRadius: 20, padding: "32px 26px", width: "100%", maxWidth: 340, textAlign: "center" }}>
           <div style={{ width: 60, height: 60, borderRadius: "50%", background: txActivated ? "rgba(26,92,58,0.1)" : "rgba(212,168,67,0.14)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={txActivated ? "#1A5C3A" : gold} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
@@ -3197,7 +3202,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail, giftFor, prom
     );
 
     return (
-      <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 300, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
+      <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 99000, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
         <div onClick={e => e.stopPropagation()} className="moyo-sheet-in" style={{ background: "#FCFBF8", width: "100%", maxWidth: 460, height: "100%", maxHeight: "100vh", overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y", boxShadow: "0 30px 80px rgba(0,0,0,0.4)" }}>
           <div style={{ padding: "calc(env(safe-area-inset-top) + 18px) 20px 0" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
@@ -3263,7 +3268,7 @@ function PremiumModal({ onClose, reason, userId, token, userEmail, giftFor, prom
   const numBadge = (n: string) => <div style={{ width: 26, height: 26, borderRadius: "50%", background: OP.numBg, color: OP.numColor, fontWeight: 800, fontSize: "0.85rem", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{n}</div>;
 
   return (
-    <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 300, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
+    <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 99000, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
       <div className="moyo-sheet-in" style={{ background: "#f6f6f7", width: "100%", maxWidth: 460, height: "100%", maxHeight: "100vh", display: "flex", flexDirection: "column", overscrollBehavior: "contain" }}>
         <div style={{ background: OP.main, padding: "calc(env(safe-area-inset-top) + 16px) 18px 14px", flexShrink: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -11617,10 +11622,21 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
     }
   };
 
+  // ── Retirer un like fait depuis les Statuts — jamais si ça a débouché sur un match (même
+  //    prudence que pour "Retirer un like envoyé" ailleurs dans l'app). ──
+  const unlikeFeatureProfile = async (targetId: string) => {
+    try {
+      const mutual = await sb.query<object>(auth.token, "likes", `?from_user=eq.${targetId}&to_user=eq.${auth.userId}`).catch(() => [] as object[]);
+      if (Array.isArray(mutual) && mutual.length) return; // déjà un match, on ne casse jamais ça
+      await sb.delete(auth.token, "likes", `?from_user=eq.${auth.userId}&to_user=eq.${targetId}`);
+      setLikedFeatureIds(prev => { const n = new Set(prev); n.delete(targetId); return n; });
+    } catch {}
+  };
+
   const likeFeatureProfile = async (st?: StatusPost | null) => {
     const targetId = st?.feature_user_id;
     if (!targetId || targetId === auth.userId) return;
-    if (likedFeatureIds.has(targetId)) return; // déjà liké, rien à refaire
+    if (likedFeatureIds.has(targetId)) { unlikeFeatureProfile(targetId); return; }
     if (BLOCK_SAME_GENDER && myGenderForLikeGuard && st?.feature_profile?.gender && myGenderForLikeGuard === st.feature_profile.gender) {
       setShowSameGenderWarnMsg(true);
       return;
@@ -11880,7 +11896,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
       history.push(now);
       try { localStorage.setItem(key, JSON.stringify(history)); } catch {}
       setToast({ msg: `Demande envoyée à ${open.partner?.name}. Elle recevra une notification et pourra choisir librement de t'offrir Premium.`, type: "success" });
-    } catch { setToast({ msg: "Impossible d'envoyer la demande.", type: "error" }); }
+    } catch (e: any) { setToast({ msg: e?.message ? `Impossible d'envoyer la demande : ${e.message}` : "Impossible d'envoyer la demande.", type: "error" }); }
     setConfirmGiftRequest(false);
   };
   const unmatchPartnerNow = async () => {
@@ -14445,7 +14461,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
               getMatchWithUser(featureProfileView.id) ? (
                 <Btn variant="primary" onClick={() => { const m = getMatchWithUser(featureProfileView.id); setFeatureProfileView(null); closeStatusViewer(); if (m) openChat(m); }} style={{ width: "100%", fontSize: "1rem", padding: "14px" }}>💬 Envoyer un message</Btn>
               ) : (
-                <Btn variant="primary" disabled={likedFeatureIds.has(featureProfileView.id)} onClick={() => likeFeatureProfile({ feature_user_id: featureProfileView.id, feature_profile: featureProfileView } as StatusPost)} style={{ width: "100%", fontSize: "1rem", padding: "14px" }}>{likedFeatureIds.has(featureProfileView.id) ? "Déjà liké ❤️" : "❤️ Liker ce profil"}</Btn>
+                <Btn variant="primary" onClick={() => likeFeatureProfile({ feature_user_id: featureProfileView.id, feature_profile: featureProfileView } as StatusPost)} style={{ width: "100%", fontSize: "1rem", padding: "14px", opacity: likedFeatureIds.has(featureProfileView.id) ? 0.85 : 1 }}>{likedFeatureIds.has(featureProfileView.id) ? "Déjà liké ❤️ — touche pour retirer" : "❤️ Liker ce profil"}</Btn>
               )
             )}
           </div>
@@ -14553,9 +14569,9 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
                     Envoyer un message
                   </button>
                 ) : (
-                  <button disabled={likedFeatureIds.has(statusPreview.feature_user_id)} onClick={(e) => { e.stopPropagation(); likeFeatureProfile(statusPreview); }} style={{ width: "100%", marginTop: 16, display: "flex", alignItems: "center", justifyContent: "center", gap: 9, background: likedFeatureIds.has(statusPreview.feature_user_id) ? "#aaa" : G.rouge, color: "#fff", border: "none", borderRadius: 16, padding: "15px", fontWeight: 800, fontSize: "1rem", cursor: likedFeatureIds.has(statusPreview.feature_user_id) ? "default" : "pointer", boxShadow: likedFeatureIds.has(statusPreview.feature_user_id) ? "none" : "0 8px 24px rgba(192,57,43,0.5)" }}>
+                  <button onClick={(e) => { e.stopPropagation(); likeFeatureProfile(statusPreview); }} style={{ width: "100%", marginTop: 16, display: "flex", alignItems: "center", justifyContent: "center", gap: 9, background: likedFeatureIds.has(statusPreview.feature_user_id) ? "#aaa" : G.rouge, color: "#fff", border: "none", borderRadius: 16, padding: "15px", fontWeight: 800, fontSize: "1rem", cursor: "pointer", boxShadow: likedFeatureIds.has(statusPreview.feature_user_id) ? "none" : "0 8px 24px rgba(192,57,43,0.5)" }}>
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
-                    {likedFeatureIds.has(statusPreview.feature_user_id) ? "Déjà liké" : "Liker ce profil"}
+                    {likedFeatureIds.has(statusPreview.feature_user_id) ? "Déjà liké — toucher pour retirer" : "Liker ce profil"}
                   </button>
                 )
               )}
