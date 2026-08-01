@@ -845,7 +845,7 @@ export type Auth = {
   expiresAt?: number;
 };
 export type Profile = { id: string; name: string; age: number; city: string; gender: string; bio: string; religion?: string; profession?: string; hobbies?: string; phone?: string | null; photo_url?: string | null; is_premium: boolean; is_admin?: boolean; is_visible?: boolean; is_verified?: boolean; is_certified?: boolean; last_seen?: string; hide_online_status?: boolean; warning_count?: number; is_banned?: boolean; ban_until?: string | null; ban_reason?: string | null; last_notice_acknowledged?: boolean; last_notice_at?: string | null; has_installed_pwa?: boolean; account_deleted?: boolean; share_phone_with_matches?: boolean; soc_facebook?: string | null; soc_tiktok?: string | null; soc_instagram?: string | null; soc_snapchat?: string | null; share_socials_with_matches?: boolean; signup_payment_required?: boolean; marital_status?: string | null; has_children?: boolean | null; is_vip?: boolean };
-export type Match = { id: string; user1: string; user2: string; partner?: Profile; lastMsg?: Message; unreadCount?: number; created_at?: string };
+export type Match = { id: string; user1: string; user2: string; partner?: Profile; lastMsg?: Message; unreadCount?: number; created_at?: string; user1_typing_at?: string | null; user2_typing_at?: string | null };
 export type Message = { id?: string; match_id: string; sender_id: string; content: string; is_read: boolean; is_delivered?: boolean; is_edited?: boolean; created_at?: string; reactions?: Record<string, string[]>; is_view_once?: boolean; viewed_at?: string | null; is_destroyed?: boolean; destroyed_at?: string | null };
 // Ciblage des diffusions générales : décide si une diffusion (target) concerne un utilisateur donné.
 // target peut être composite "genre|abonnement" (ex. "femmes|premium") ou une ancienne valeur simple.
@@ -1043,6 +1043,17 @@ function AppointmentsButton({ auth, onShowPremium }: { auth: any; onShowPremium:
   const [operator, setOperator] = useState<"MTN" | "Airtel">("MTN");
   const [txRef, setTxRef] = useState("");
   const [confirmDel, setConfirmDel] = useState<any>(null);
+  // ── Ouverture directe depuis le carrousel (même principe que "Deviens Ambassadeur") : évite
+  //    de faire cliquer une seconde fois sur la carte une fois arrivé sur le Profil. ──
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem("moyo_open_appointment_request") === "1") {
+        sessionStorage.removeItem("moyo_open_appointment_request");
+        setView("new");
+        setOpen(true);
+      }
+    } catch {}
+  }, []);
   const [deleting, setDeleting] = useState(false);
 
   // Empêche le scroll de l'arrière-plan (profil) quand la feuille est ouverte
@@ -1823,6 +1834,15 @@ const GLOBAL_CSS = `
     white-space: pre-wrap;
   }
   .chat-textarea:focus { outline: none; }
+  /* ── Points animés "en train d'écrire..." ── */
+  .moyo-typing-dot {
+    display: inline-block;
+    animation: moyoTypingBounce 1s infinite ease-in-out;
+  }
+  @keyframes moyoTypingBounce {
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+    30% { transform: translateY(-4px); opacity: 1; }
+  }
   /* iOS : empêche le zoom automatique sur focus */
   @supports (-webkit-touch-callout: none) {
     .chat-textarea { font-size: 16px !important; }
@@ -7079,15 +7099,15 @@ export const CAROUSEL_DESTINATIONS: Record<string, { label: string; tab: string;
   messages: { label: "Messages", tab: "messages" },
   likes: { label: "Likes", tab: "likes" },
   ambassador: { label: "Ambassadeur (tableau de bord si déjà membre)", tab: "profile", flag: "moyo_open_ambassador_dashboard", flagValue: "1" },
-  ambassador_join: { label: "Devenir Ambassadeur (carte d'inscription)", tab: "profile", flag: "moyo_scroll_to", flagValue: "ambassador" },
+  ambassador_join: { label: "Devenir Ambassadeur (ouvre directement la demande)", tab: "profile", flag: "moyo_open_ambassador_request", flagValue: "1" },
   phone: { label: "Numéro de téléphone", tab: "profile", flag: "moyo_scroll_to", flagValue: "phone" },
   socials: { label: "Réseaux sociaux", tab: "profile", flag: "moyo_scroll_to", flagValue: "socials" },
   vip: { label: "Compte VIP", tab: "profile", flag: "moyo_scroll_to", flagValue: "vip" },
   relational: { label: "Profil relationnel / mise en relation", tab: "profile", flag: "moyo_open_rel_wizard", flagValue: "1" },
-  statuses: { label: "Passer sur les Statuts Moyo", tab: "profile", flag: "moyo_scroll_to", flagValue: "statuses" },
+  statuses: { label: "Passer sur les Statuts Moyo (ouvre directement la demande)", tab: "profile", flag: "moyo_open_statuses_request", flagValue: "1" },
   photo_retouch: { label: "Améliorer ma photo de profil", tab: "profile", flag: "moyo_scroll_to", flagValue: "photo_retouch" },
-  appointment: { label: "Rendez-vous avec l'équipe Moyo", tab: "profile", flag: "moyo_scroll_to", flagValue: "appointment" },
-  rating: { label: "Noter Moyo Dating", tab: "profile", flag: "moyo_scroll_to", flagValue: "rating" },
+  appointment: { label: "Rendez-vous avec l'équipe Moyo (ouvre directement la demande)", tab: "profile", flag: "moyo_open_appointment_request", flagValue: "1" },
+  rating: { label: "Noter Moyo Dating (ouvre directement l'avis)", tab: "profile", flag: "moyo_open_rating", flagValue: "1" },
 };
 
 const premiumConversionSlides = [
@@ -10674,6 +10694,26 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
   };
   const [msgs, setMsgs] = useState<Message[]>([]);
   const [text, setText] = useState("");
+  // ── "En train d'écrire..." — diffuse mon statut de frappe via une colonne timestamp sur le
+  //    match (user1_typing_at / user2_typing_at), en écoute via le même mécanisme realtime déjà
+  //    utilisé pour les messages. Pas de table dédiée : juste 2 colonnes sur "matches", au plus
+  //    léger possible. Le statut expire tout seul après quelques secondes d'inactivité côté
+  //    lecteur (pas besoin d'un événement explicite "j'ai arrêté d'écrire"). ──
+  const [partnerTyping, setPartnerTyping] = useState(false);
+  const typingSendRef = useRef<number>(0);
+  const typingClearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sendTypingSignal = () => {
+    if (!open?.id) return;
+    const now = Date.now();
+    if (now - typingSendRef.current < 2500) return; // throttle : au plus 1 envoi / 2.5s
+    typingSendRef.current = now;
+    const myField = open.user1 === auth.userId ? "user1_typing_at" : "user2_typing_at";
+    fetch(`${SUPABASE_URL}/rest/v1/matches?id=eq.${open.id}`, {
+      method: "PATCH",
+      headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
+      body: JSON.stringify({ [myField]: new Date().toISOString() }),
+    }).catch(() => {});
+  };
   // ── Brise-glace : 3 suggestions tirées au hasard parmi la banque, pour inciter à lancer la
   //    conversation. Stable tant que la même conversation reste ouverte (ne se retire pas à
   //    chaque re-render), recalculé seulement quand on change de conversation. ──
@@ -10981,6 +11021,9 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
   const [statusPreviewList, setStatusPreviewList] = useState<StatusPost[]>([]);
   const [statusPreviewIndex, setStatusPreviewIndex] = useState(0);
   const [featureProfileView, setFeatureProfileView] = useState<Profile | null>(null);
+  // ── Suivi des profils déjà likés depuis les Statuts (mise en avant) — sans ça, le bouton
+  //    "Liker ce profil" ne changeait jamais d'état, impossible de savoir si le like avait pris. ──
+  const [likedFeatureIds, setLikedFeatureIds] = useState<Set<string>>(new Set());
   const [statusProgress, setStatusProgress] = useState(0);
   const [statusReplyText, setStatusReplyText] = useState("");
   const [statusStats, setStatusStats] = useState<Record<string, { views: number; likes: number }>>({});
@@ -11207,6 +11250,29 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
     return () => { try { ws?.close(); } catch {} };
   }, [open?.id]);
 
+  // ── "En train d'écrire..." — écoute temps réel sur le match ouvert. Le statut s'efface tout
+  //    seul 3.5s après la dernière frappe détectée du partenaire (pas d'événement explicite
+  //    "j'ai arrêté d'écrire", donc on se base sur la fraîcheur du timestamp). ──
+  useEffect(() => {
+    setPartnerTyping(false);
+    if (typingClearTimerRef.current) { clearTimeout(typingClearTimerRef.current); typingClearTimerRef.current = null; }
+    if (!open?.id) return;
+    const checkTyping = async () => {
+      try {
+        const rows = await sb.query<{ user1_typing_at: string | null; user2_typing_at: string | null }>(auth.token, "matches", `?id=eq.${open.id}&select=user1_typing_at,user2_typing_at&limit=1`);
+        const row = rows?.[0];
+        if (!row) return;
+        const partnerField = open.user1 === auth.userId ? row.user2_typing_at : row.user1_typing_at;
+        const isRecent = !!partnerField && (Date.now() - new Date(partnerField).getTime()) < 3500;
+        setPartnerTyping(isRecent);
+        if (typingClearTimerRef.current) clearTimeout(typingClearTimerRef.current);
+        if (isRecent) typingClearTimerRef.current = setTimeout(() => setPartnerTyping(false), 3500);
+      } catch {}
+    };
+    const wsTyping = sb.subscribeRealtime(auth.token, "matches", `id=eq.${open.id}`, checkTyping);
+    return () => { try { wsTyping?.close(); } catch {} if (typingClearTimerRef.current) clearTimeout(typingClearTimerRef.current); };
+  }, [open?.id]);
+
   // Polling dédié toutes les 2s pour détecter les changements de is_read
   useEffect(() => {
     if (!open) return;
@@ -11247,8 +11313,10 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
       const featUids = Array.from(new Set(featRawArr.map(s => s.feature_user_id).filter(Boolean) as string[]));
       const featProfById: Record<string, Profile> = {};
       if (featUids.length) {
-        const fp = await sb.query<Profile>(auth.token, "profiles", `?id=in.(${featUids.join(",")})&select=id,name,age,city,gender,bio,photo_url,is_premium,is_verified`).catch(() => [] as Profile[]);
+        const fp = await sb.query<Profile>(auth.token, "profiles", `?id=in.(${featUids.join(",")})&select=id,name,age,city,gender,bio,photo_url,is_premium,is_verified,is_vip`).catch(() => [] as Profile[]);
         (Array.isArray(fp) ? fp : []).forEach(p => { featProfById[p.id] = p; });
+        const myLikes = await sb.query<{ to_user: string }>(auth.token, "likes", `?from_user=eq.${auth.userId}&to_user=in.(${featUids.join(",")})&select=to_user`).catch(() => [] as { to_user: string }[]);
+        setLikedFeatureIds(new Set((Array.isArray(myLikes) ? myLikes : []).map(l => l.to_user)));
       }
       const featEnriched = featRawArr.map(st => ({ ...st, user_id: "moyo-official", profile: moyoProfile, image_url: st.image_url || null, feature_profile: featProfById[st.feature_user_id || ""] }));
 
@@ -11487,14 +11555,20 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
   const likeFeatureProfile = async (st?: StatusPost | null) => {
     const targetId = st?.feature_user_id;
     if (!targetId || targetId === auth.userId) return;
+    if (likedFeatureIds.has(targetId)) return; // déjà liké, rien à refaire
     if (BLOCK_SAME_GENDER && myGenderForLikeGuard && st?.feature_profile?.gender && myGenderForLikeGuard === st.feature_profile.gender) {
       setShowSameGenderWarnMsg(true);
+      return;
+    }
+    if (!auth.isPremium && st?.feature_profile?.is_vip) {
+      onShowPremium(`Ce compte est VIP, passe Premium pour liker ${st.feature_profile.name}`);
       return;
     }
     try {
       // Déjà liké ? (évite les doublons et la double consommation du quota)
       const already = await sb.query<object>(auth.token, "likes", `?from_user=eq.${auth.userId}&to_user=eq.${targetId}&select=from_user&limit=1`).catch(() => [] as object[]);
       const alreadyLiked = Array.isArray(already) && already.length > 0;
+      setLikedFeatureIds(prev => new Set(prev).add(targetId));
       // ── Quota journalier : les likes faits depuis les statuts comptent comme ceux de Découvrir ──
       if (!alreadyLiked && !auth.isPremium) {
         const today = new Date().toISOString().split("T")[0];
@@ -11912,6 +11986,14 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
     if (row && row.id) {
       // Insertion réussie : on ajoute la vraie bulle
       setMsgs(m => [...m, row]); setMsgCount(c => c + 1); setText(""); setReplyTo(null);
+      // Efface immédiatement mon signal "en train d'écrire" côté partenaire, au lieu d'attendre
+      // l'expiration naturelle du timestamp.
+      const myField = open.user1 === auth.userId ? "user1_typing_at" : "user2_typing_at";
+      fetch(`${SUPABASE_URL}/rest/v1/matches?id=eq.${open.id}`, {
+        method: "PATCH",
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
+        body: JSON.stringify({ [myField]: null }),
+      }).catch(() => {});
     } else if (row && (row.code === "P0001" || (typeof row.message === "string" && row.message.includes("FREE_MESSAGE_LIMIT_REACHED")))) {
       // Refus du serveur : limite de messages gratuits atteinte (trigger trg_free_message_limit)
       onShowPremium(`Tu as envoyé tes ${freeMessageLimitFor(myGenderForLikeGuard)} messages gratuits avec ${open.partner?.name}. Passe Premium !`);
@@ -13437,6 +13519,15 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
             </React.Fragment>
           );
         })}
+          {partnerTyping && (
+            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 4px 2px" }}>
+              <div style={{ background: G.blanc, border: `1px solid ${G.gris}`, borderRadius: "16px 16px 16px 4px", padding: "10px 14px", display: "flex", alignItems: "center", gap: 4 }}>
+                <span className="moyo-typing-dot" style={{ width: 6, height: 6, borderRadius: "50%", background: "#aaa", animationDelay: "0s" }} />
+                <span className="moyo-typing-dot" style={{ width: 6, height: 6, borderRadius: "50%", background: "#aaa", animationDelay: "0.15s" }} />
+                <span className="moyo-typing-dot" style={{ width: 6, height: 6, borderRadius: "50%", background: "#aaa", animationDelay: "0.3s" }} />
+              </div>
+            </div>
+          )}
           <div ref={bottomRef} />
         </div>
       </div>
@@ -13544,7 +13635,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
                 ref={textareaRef}
                 className="chat-textarea"
                 value={text}
-                onChange={e => setText(e.target.value)}
+                onChange={e => { setText(e.target.value); if (e.target.value.trim()) sendTypingSignal(); }}
                 onFocus={() => setShowEmojiPicker(false)}
                 placeholder="Écris un message..."
                 rows={1}
@@ -14289,7 +14380,7 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
               getMatchWithUser(featureProfileView.id) ? (
                 <Btn variant="primary" onClick={() => { const m = getMatchWithUser(featureProfileView.id); setFeatureProfileView(null); closeStatusViewer(); if (m) openChat(m); }} style={{ width: "100%", fontSize: "1rem", padding: "14px" }}>💬 Envoyer un message</Btn>
               ) : (
-                <Btn variant="primary" onClick={() => { const id = featureProfileView.id; setFeatureProfileView(null); likeFeatureProfile({ feature_user_id: id } as StatusPost); }} style={{ width: "100%", fontSize: "1rem", padding: "14px" }}>❤️ Liker ce profil</Btn>
+                <Btn variant="primary" disabled={likedFeatureIds.has(featureProfileView.id)} onClick={() => likeFeatureProfile({ feature_user_id: featureProfileView.id, feature_profile: featureProfileView } as StatusPost)} style={{ width: "100%", fontSize: "1rem", padding: "14px" }}>{likedFeatureIds.has(featureProfileView.id) ? "Déjà liké ❤️" : "❤️ Liker ce profil"}</Btn>
               )
             )}
           </div>
@@ -14397,9 +14488,9 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
                     Envoyer un message
                   </button>
                 ) : (
-                  <button onClick={(e) => { e.stopPropagation(); likeFeatureProfile(statusPreview); }} style={{ width: "100%", marginTop: 16, display: "flex", alignItems: "center", justifyContent: "center", gap: 9, background: G.rouge, color: "#fff", border: "none", borderRadius: 16, padding: "15px", fontWeight: 800, fontSize: "1rem", cursor: "pointer", boxShadow: "0 8px 24px rgba(192,57,43,0.5)" }}>
+                  <button disabled={likedFeatureIds.has(statusPreview.feature_user_id)} onClick={(e) => { e.stopPropagation(); likeFeatureProfile(statusPreview); }} style={{ width: "100%", marginTop: 16, display: "flex", alignItems: "center", justifyContent: "center", gap: 9, background: likedFeatureIds.has(statusPreview.feature_user_id) ? "#aaa" : G.rouge, color: "#fff", border: "none", borderRadius: 16, padding: "15px", fontWeight: 800, fontSize: "1rem", cursor: likedFeatureIds.has(statusPreview.feature_user_id) ? "default" : "pointer", boxShadow: likedFeatureIds.has(statusPreview.feature_user_id) ? "none" : "0 8px 24px rgba(192,57,43,0.5)" }}>
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
-                    Liker ce profil
+                    {likedFeatureIds.has(statusPreview.feature_user_id) ? "Déjà liké" : "Liker ce profil"}
                   </button>
                 )
               )}
@@ -15739,6 +15830,16 @@ function FeatureRequestButton({ auth }: { auth: Auth }) {
   const [sent, setSent] = useState(false);
   const [errorModal, setErrorModal] = useState<string | null>(null);
 
+  // ── Ouverture directe depuis le carrousel (même principe que "Deviens Ambassadeur") ──
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem("moyo_open_statuses_request") === "1") {
+        sessionStorage.removeItem("moyo_open_statuses_request");
+        setShowModal(true);
+      }
+    } catch {}
+  }, []);
+
   const submit = async () => {
     if (loading) return;
     setLoading(true);
@@ -16555,6 +16656,14 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
 
   // ── NOTATION ──
   const [showRating, setShowRating] = useState(false);
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem("moyo_open_rating") === "1") {
+        sessionStorage.removeItem("moyo_open_rating");
+        setShowRating(true);
+      }
+    } catch {}
+  }, []);
   const [userRating, setUserRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [ratingComment, setRatingComment] = useState("");

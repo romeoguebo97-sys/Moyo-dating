@@ -519,14 +519,26 @@ function TimesEditor({ value, onSave }: { value: string; onSave: (newValue: stri
   const [saving, setSaving] = React.useState(false);
   const times = (value || "").split(",").map(t => t.trim()).filter(Boolean).sort();
 
+  // ── Le Congo est toujours UTC+1, été comme hiver (pas de changement d'heure) — donc une
+  //    conversion fixe suffit, pas besoin de bibliothèque de fuseaux horaires. Stockage en base
+  //    toujours en UTC (ce que le serveur utilise), mais saisie et affichage en heure du Congo. ──
+  const shiftTime = (hhmm: string, deltaMin: number) => {
+    const [h, m] = hhmm.split(":").map(Number);
+    const total = ((h * 60 + m + deltaMin) % 1440 + 1440) % 1440;
+    return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+  };
+  const utcToCongo = (hhmm: string) => shiftTime(hhmm, 60);
+  const congoToUtc = (hhmm: string) => shiftTime(hhmm, -60);
+
   const persist = async (list: string[]) => {
     setSaving(true);
     try { await onSave(list.slice().sort().join(",")); } finally { setSaving(false); }
   };
   const addTime = () => {
-    const t = newTime.trim();
-    if (!t || saving) return;
-    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(t)) return;
+    const typed = newTime.trim();
+    if (!typed || saving) return;
+    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(typed)) return;
+    const t = congoToUtc(typed); // converti en UTC avant stockage
     if (times.includes(t)) { setNewTime(""); return; }
     persist([...times, t]);
     setNewTime("");
@@ -535,12 +547,12 @@ function TimesEditor({ value, onSave }: { value: string; onSave: (newValue: stri
 
   return (
     <div>
-      <div style={{ fontSize: "0.68rem", fontWeight: 700, color: "#999", marginBottom: 6 }}>Horaires de déclenchement (heure UTC)</div>
+      <div style={{ fontSize: "0.68rem", fontWeight: 700, color: "#999", marginBottom: 6 }}>Horaires de déclenchement (heure du Congo)</div>
       {times.length > 0 && (
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
           {times.map(t => (
             <span key={t} style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(192,57,43,0.08)", color: G2.rouge, borderRadius: 50, padding: "5px 5px 5px 10px", fontSize: "0.76rem", fontWeight: 700 }}>
-              {t}
+              {utcToCongo(t)}
               <button onClick={() => removeTime(t)} disabled={saving} title="Retirer cet horaire" style={{ border: "none", background: "rgba(192,57,43,0.18)", color: G2.rouge, borderRadius: "50%", width: 16, height: 16, fontSize: "0.62rem", cursor: saving ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1, padding: 0 }}>✕</button>
             </span>
           ))}
@@ -3879,7 +3891,7 @@ const HELP_SECTIONS: HelpSection[] = [
         ["Membres total", "Nombre total de comptes créés sur la plateforme."],
         ["Matchs", "Nombre de paires qui se sont mutuellement likées. Carte cliquable → ouvre la liste des matchs."],
         ["Messages", "Volume total de messages échangés."],
-        ["Signalements", "Nombre de signalements reçus toutes sources confondues."],
+        ["Signalements", "Nombre de signalements déjà traités/archivés (validés, rejetés, ayant mené à un bannissement)."],
         ["Nouveaux aujourd'hui", "Inscriptions du jour en cours (minuit UTC). Carte cliquable → liste des profils inscrits aujourd'hui."],
         ["Premium actifs", "Utilisateurs ayant un abonnement Premium actif. Carte cliquable → liste des membres Premium."],
         ["Profils vérifiés", "Comptes ayant obtenu le badge de vérification. Carte cliquable → liste des profils vérifiés."],
@@ -8221,6 +8233,34 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
   const [warnLoading, setWarnLoading] = useState(false);
 
   // ── Stats ──
+  // ── Répartition par âge & ville — pour repérer les tranches d'âge sous-représentées par genre,
+  //    utile pour cibler les prochaines campagnes de communication. ──
+  const AGE_BUCKETS: [number, number | null, string][] = [[18, 24, "18-24"], [25, 29, "25-29"], [30, 34, "30-34"], [35, 39, "35-39"], [40, 44, "40-44"], [45, 49, "45-49"], [50, null, "50+"]];
+  const [ageStatsCity, setAgeStatsCity] = useState("");
+  const [ageStatsLoading, setAgeStatsLoading] = useState(false);
+  const [ageStatsData, setAgeStatsData] = useState<{ avgFemme: number | null; avgHomme: number | null; totalFemme: number; totalHomme: number; buckets: { label: string; femme: number; homme: number }[] } | null>(null);
+  const loadAgeStats = async (city: string) => {
+    setAgeStatsLoading(true);
+    try {
+      const qs = city ? `&city=eq.${encodeURIComponent(city)}` : "";
+      const rows = await fetch(`${SUPABASE_URL}/rest/v1/profiles?select=age,gender${qs}&age=not.is.null&limit=20000`, {
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }
+      }).then(r => r.json()).catch(() => []);
+      const list = Array.isArray(rows) ? rows : [];
+      const femmes = list.filter((p: any) => p.gender === "Femme" && typeof p.age === "number");
+      const hommes = list.filter((p: any) => p.gender === "Homme" && typeof p.age === "number");
+      const avg = (arr: any[]) => arr.length ? Math.round((arr.reduce((s, p) => s + p.age, 0) / arr.length) * 10) / 10 : null;
+      const buckets = AGE_BUCKETS.map(([min, max, label]) => ({
+        label,
+        femme: femmes.filter(p => p.age >= min && (max === null || p.age <= max)).length,
+        homme: hommes.filter(p => p.age >= min && (max === null || p.age <= max)).length,
+      }));
+      setAgeStatsData({ avgFemme: avg(femmes), avgHomme: avg(hommes), totalFemme: femmes.length, totalHomme: hommes.length, buckets });
+    } catch { setAgeStatsData(null); }
+    setAgeStatsLoading(false);
+  };
+  useEffect(() => { if (activeTab === "stats") loadAgeStats(ageStatsCity); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [activeTab, ageStatsCity]);
+
   const [stats, setStats] = useState({
     users: 0, matches: 0, messages: 0, reports: 0,
     todayUsers: 0, premiumUsers: 0, verifiedUsers: 0, bannedUsers: 0,
@@ -9158,7 +9198,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
         fetch(`${SUPABASE_URL}/rest/v1/profiles?select=id`, { headers: countHeader }),
         fetch(`${SUPABASE_URL}/rest/v1/matches?select=id`, { headers: countHeader }),
         fetch(`${SUPABASE_URL}/rest/v1/messages?select=id`, { headers: countHeader }),
-        fetch(`${SUPABASE_URL}/rest/v1/reports?select=id`, { headers: countHeader }),
+        fetch(`${SUPABASE_URL}/rest/v1/reports?select=id&status=in.(reviewed,rejected,banned,archived)`, { headers: countHeader }),
         fetch(`${SUPABASE_URL}/rest/v1/profiles?is_premium=eq.true&select=id`, { headers: countHeader }),
         fetch(`${SUPABASE_URL}/rest/v1/profiles?is_verified=eq.true&select=id`, { headers: countHeader }),
         fetch(`${SUPABASE_URL}/rest/v1/profiles?is_banned=eq.true&select=id`, { headers: countHeader }),
@@ -11974,6 +12014,63 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     </div>
                     <div style={{ fontSize: "0.68rem", color: "#999", marginTop: 6 }}>% de personnes qui vont jusqu'au bout des 5 étapes d'inscription (photo, infos...) au lieu d'abandonner en route.</div>
                   </div>
+                )}
+              </div>
+
+              {/* Répartition par âge & ville — pour cibler les tranches d'âge sous-représentées */}
+              <div style={{ background: G.blanc, borderRadius: 16, padding: "16px", marginBottom: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10, marginBottom: 4 }}>
+                  <h3 style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun, margin: 0 }}>Répartition par âge</h3>
+                  <select value={ageStatsCity} onChange={e => setAgeStatsCity(e.target.value)} style={{ border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "6px 10px", fontSize: "0.78rem", background: "#fff", color: G.brun }}>
+                    <option value="">Toutes les villes</option>
+                    {VILLES.filter(v => !v.startsWith("──")).map(v => <option key={v} value={v}>{v}</option>)}
+                  </select>
+                </div>
+                <p style={{ fontSize: "0.68rem", color: "#999", marginBottom: 14, lineHeight: 1.5 }}>
+                  Repère les tranches d'âge les moins représentées par genre, pour cibler tes prochaines campagnes de communication.
+                </p>
+                {ageStatsLoading ? (
+                  <div style={{ textAlign: "center", padding: 24, color: "#aaa", fontSize: "0.8rem" }}>Chargement...</div>
+                ) : !ageStatsData || (ageStatsData.totalFemme === 0 && ageStatsData.totalHomme === 0) ? (
+                  <div style={{ textAlign: "center", padding: 24, color: "#aaa", fontSize: "0.8rem" }}>Aucun profil avec âge renseigné pour cette sélection.</div>
+                ) : (
+                  <>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
+                      <div style={{ background: "rgba(233,30,140,0.06)", borderRadius: 12, padding: "12px 14px", border: "1px solid rgba(233,30,140,0.15)" }}>
+                        <div style={{ fontSize: "1.4rem", fontWeight: 800, color: "#e91e8c" }}>{ageStatsData.avgFemme ?? "—"} <span style={{ fontSize: "0.7rem", fontWeight: 600 }}>ans</span></div>
+                        <div style={{ fontSize: "0.72rem", color: "#555", fontWeight: 600 }}>Âge moyen · Femmes</div>
+                        <div style={{ fontSize: "0.65rem", color: "#999" }}>{ageStatsData.totalFemme} profil{ageStatsData.totalFemme > 1 ? "s" : ""}</div>
+                      </div>
+                      <div style={{ background: "rgba(26,110,245,0.06)", borderRadius: 12, padding: "12px 14px", border: "1px solid rgba(26,110,245,0.15)" }}>
+                        <div style={{ fontSize: "1.4rem", fontWeight: 800, color: "#1a6ef5" }}>{ageStatsData.avgHomme ?? "—"} <span style={{ fontSize: "0.7rem", fontWeight: 600 }}>ans</span></div>
+                        <div style={{ fontSize: "0.72rem", color: "#555", fontWeight: 600 }}>Âge moyen · Hommes</div>
+                        <div style={{ fontSize: "0.65rem", color: "#999" }}>{ageStatsData.totalHomme} profil{ageStatsData.totalHomme > 1 ? "s" : ""}</div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: "flex", gap: 12, marginBottom: 8 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.68rem", color: "#555" }}><span style={{ width: 9, height: 9, borderRadius: 2, background: "#e91e8c", display: "inline-block" }} /> Femmes</div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.68rem", color: "#555" }}><span style={{ width: 9, height: 9, borderRadius: 2, background: "#1a6ef5", display: "inline-block" }} /> Hommes</div>
+                    </div>
+                    {(() => {
+                      const maxCount = Math.max(1, ...ageStatsData.buckets.map(b => Math.max(b.femme, b.homme)));
+                      return ageStatsData.buckets.map(b => (
+                        <div key={b.label} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+                          <div style={{ width: 42, fontSize: "0.7rem", fontWeight: 700, color: "#666", flexShrink: 0 }}>{b.label}</div>
+                          <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                              <div style={{ height: 8, borderRadius: 4, background: "#e91e8c", width: `${(b.femme / maxCount) * 100}%`, minWidth: b.femme > 0 ? 3 : 0 }} />
+                              <span style={{ fontSize: "0.65rem", color: "#999" }}>{b.femme}</span>
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                              <div style={{ height: 8, borderRadius: 4, background: "#1a6ef5", width: `${(b.homme / maxCount) * 100}%`, minWidth: b.homme > 0 ? 3 : 0 }} />
+                              <span style={{ fontSize: "0.65rem", color: "#999" }}>{b.homme}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ));
+                    })()}
+                  </>
                 )}
               </div>
 
