@@ -278,7 +278,7 @@ export let POLL_ADMIN_BADGE_MS = 5000;   // Badge admin
 export let POLL_STATS_MS = 60000;        // Stats tableau de bord
 export let POLL_BROADCAST_MS = 60000;    // Broadcasts
 export let POLL_SUPPORT_MS = 6000;       // Messages support
-export const FREE_LIMITS = { likes: 5, messages: 3, messagesFemme: 100, matchRequests: 2, statusBoosts: 2 }; // valeurs par défaut, écrasées par app_settings
+export const FREE_LIMITS = { likes: 5, messages: 3, messagesFemme: 100, matchRequests: 2, statusBoosts: 2, giftRequestsPerMonth: 2 }; // valeurs par défaut, écrasées par app_settings
 // Limite de messages gratuits/match : différenciée par genre (ex: femmes 100, hommes 3 par défaut).
 export function freeMessageLimitFor(gender?: string | null): number {
   return gender === "Femme" ? FREE_LIMITS.messagesFemme : FREE_LIMITS.messages;
@@ -511,7 +511,7 @@ export function dedupeMatchesByCouple<T extends { user1?: string; user2?: string
 }
 
 // Charger les settings dynamiques depuis Supabase au démarrage
-fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_messages_free_femme,limit_match_requests,limit_status_boosts,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,pay_wero_enabled,pay_paypal_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,feature_show_likes_views_free,feature_group_premium,feature_socials,require_signup_payment,feature_group_photos,feature_photo_retouch,feature_moderation_insults,feature_moderation_contact,premium_screen_variant,custom_banned_words,contact_banned_words,disabled_builtin_words,disabled_builtin_contact_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,pay_wero_number,pay_paypal_number,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,social_linkedin,store_link_android,store_link_ios,plan_week_enabled,plan_month_enabled,plan_2month_enabled,discover_default_mode,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,auto_warn_ban_contact_enabled,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price,privacy_notice_enabled,premium_boost_enabled,assistant_photo_url,broadcast_enabled,modal_match_title,modal_match_subtitle,referral_bonus_week_days,referral_bonus_month_days,referral_bonus_2month_days,affiliate_commission_percent,affiliate_payable_delay_days,privacy_notice_step1_text,privacy_notice_step2_text,ban_screen_text,pay_link_enabled,feature_ambassador_program,affiliate_payout_min_fcfa,affiliate_promo_bonus_days,support_reply_push_enabled,ambassador_resources_link)&select=key,value`, {
+fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_messages_free_femme,limit_match_requests,limit_status_boosts,limit_gift_requests_month,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,pay_wero_enabled,pay_paypal_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,feature_show_likes_views_free,feature_group_premium,feature_socials,require_signup_payment,feature_group_photos,feature_photo_retouch,feature_moderation_insults,feature_moderation_contact,premium_screen_variant,custom_banned_words,contact_banned_words,disabled_builtin_words,disabled_builtin_contact_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,pay_wero_number,pay_paypal_number,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,social_linkedin,store_link_android,store_link_ios,plan_week_enabled,plan_month_enabled,plan_2month_enabled,discover_default_mode,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,auto_warn_ban_contact_enabled,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price,privacy_notice_enabled,premium_boost_enabled,assistant_photo_url,broadcast_enabled,modal_match_title,modal_match_subtitle,referral_bonus_week_days,referral_bonus_month_days,referral_bonus_2month_days,affiliate_commission_percent,affiliate_payable_delay_days,privacy_notice_step1_text,privacy_notice_step2_text,ban_screen_text,pay_link_enabled,feature_ambassador_program,affiliate_payout_min_fcfa,affiliate_promo_bonus_days,support_reply_push_enabled,ambassador_resources_link)&select=key,value`, {
   headers: { "apikey": SUPABASE_KEY },
 }).then(r => r.json()).then((data: { key: string; value: string }[]) => {
   if (!Array.isArray(data)) return;
@@ -592,6 +592,7 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
   if (map["limit_messages_free_femme"]) FREE_LIMITS.messagesFemme = parseInt(map["limit_messages_free_femme"]) || 100;
   if (map["limit_match_requests"]) FREE_LIMITS.matchRequests = parseInt(map["limit_match_requests"]) || 2;
   if (map["limit_status_boosts"]) FREE_LIMITS.statusBoosts = parseInt(map["limit_status_boosts"]) || 2;
+  if (map["limit_gift_requests_month"]) FREE_LIMITS.giftRequestsPerMonth = parseInt(map["limit_gift_requests_month"]) || 2;
   if (map["premium_duration_days"]) PREMIUM_30_DAYS_MS = (parseInt(map["premium_duration_days"]) || 31) * 24 * 60 * 60 * 1000;
   if (map["premium_price_fcfa"]) PREMIUM_PRICE_FCFA = parseInt(map["premium_price_fcfa"]) || 3500;
   if (map["premium_price_week_fcfa"]) PREMIUM_PRICE_WEEK_FCFA = parseInt(map["premium_price_week_fcfa"]) || 1200;
@@ -11885,8 +11886,8 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
     if (!Array.isArray(history)) history = [];
     const now = Date.now();
     history = history.filter(t => typeof t === "number" && now - t < MONTH_MS);
-    if (history.length >= 2) {
-      setToast({ msg: "Tu as atteint la limite de 2 demandes ce mois-ci pour cette conversation 😊", type: "error" });
+    if (history.length >= FREE_LIMITS.giftRequestsPerMonth) {
+      setToast({ msg: `Tu as atteint la limite de ${FREE_LIMITS.giftRequestsPerMonth} demandes ce mois-ci pour cette conversation 😊`, type: "error" });
       setConfirmGiftRequest(false);
       return;
     }
@@ -17702,6 +17703,21 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
           );
         })()}
 
+        {/* Super promo Premium — restylée pour ressembler aux autres cartes d'action de la page
+            (au lieu de sa mise en avant visuelle d'origine), à la demande explicite du client. */}
+        {promoAvailable && (
+          <div onClick={onOpenSuperPromo} className="moyo-tap" style={{ background: G.blanc, borderRadius: 18, padding: "15px 18px", cursor: "pointer", boxShadow: "0 2px 10px rgba(0,0,0,0.06)", display: "flex", alignItems: "center", gap: 14, border: `1.5px solid ${G.gris}` }}>
+            <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z" /><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6" /></svg>
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: 800, fontSize: "1rem", color: G.brun, marginBottom: 3 }}>Super promo Premium disponible</div>
+              <div style={{ fontSize: "0.78rem", color: "#888", lineHeight: 1.4 }}>{promoAvailable.price.toLocaleString("fr-FR")} FCFA au lieu de {PREMIUM_PRICE_FCFA.toLocaleString("fr-FR")} FCFA</div>
+            </div>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+          </div>
+        )}
+
         {PAY_LINK_ENABLED && (!isWideProfile || activeSection === "main") && (
           <div className="moyo-tap" onClick={async () => {
             const r = await copyMyPaymentLink(auth.token, auth.userId, profile?.name || auth.name);
@@ -17717,21 +17733,6 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
               <div style={{ fontSize: "0.8rem", color: "#888", marginTop: 2 }}>Il ne verra jamais qu'il s'agit de Moyo Dating.</div>
             </div>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><polyline points="9 18 15 12 9 6" /></svg>
-          </div>
-        )}
-
-        {/* Super promo Premium — restylée pour ressembler aux autres cartes d'action de la page
-            (au lieu de sa mise en avant visuelle d'origine), à la demande explicite du client. */}
-        {promoAvailable && (
-          <div onClick={onOpenSuperPromo} className="moyo-tap" style={{ background: G.blanc, borderRadius: 18, padding: "15px 18px", cursor: "pointer", boxShadow: "0 2px 10px rgba(0,0,0,0.06)", display: "flex", alignItems: "center", gap: 14, border: `1.5px solid ${G.gris}` }}>
-            <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z" /><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6" /></svg>
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontWeight: 800, fontSize: "1rem", color: G.brun, marginBottom: 3 }}>Super promo Premium disponible</div>
-              <div style={{ fontSize: "0.78rem", color: "#888", lineHeight: 1.4 }}>{promoAvailable.price.toLocaleString("fr-FR")} FCFA au lieu de {PREMIUM_PRICE_FCFA.toLocaleString("fr-FR")} FCFA</div>
-            </div>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
           </div>
         )}
 
