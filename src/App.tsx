@@ -7306,7 +7306,7 @@ const PremiumEngagementCarousel = React.memo(function PremiumEngagementCarousel(
     } else if (slide.actionType === "pay_link_share") {
       if (auth?.token && auth?.userId) copyMyPaymentLink(auth.token, auth.userId, auth.name);
     } else if (slide.actionType === "tab") {
-      const dest = CAROUSEL_DESTINATIONS[slide.actionValue || ""] || { tab: slide.actionValue || "profile" };
+      const dest = CAROUSEL_DESTINATIONS[slide.actionValue || ""] || { tab: slide.actionValue || "profile", flag: undefined as string | undefined, flagValue: undefined as string | undefined };
       globalNavigate(dest.tab, dest.flag, dest.flagValue);
     } else {
       onShowPremium("Passe Premium pour débloquer toutes les fonctionnalités de Moyo Dating !");
