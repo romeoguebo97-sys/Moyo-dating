@@ -16251,6 +16251,7 @@ function AmbassadorPortal() {
   const [ambContractSignedAt, setAmbContractSignedAt] = useState<string | null>(null);
   const [ambContractPdfUrl, setAmbContractPdfUrl] = useState<string | null>(null);
   const [ambConversions, setAmbConversions] = useState<{ id: string; plan_label?: string; commission_amount: number; status: string; created_at: string }[]>([]);
+  const [showAllAmbConversions, setShowAllAmbConversions] = useState(false);
   const [ambPayoutPending, setAmbPayoutPending] = useState<{ amount: number } | null>(null);
   const [ambInscriptions, setAmbInscriptions] = useState(0);
   const [showAmbInfo, setShowAmbInfo] = useState(false);
