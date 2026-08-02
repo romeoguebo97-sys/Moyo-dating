@@ -3551,6 +3551,17 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
   const svgWa = <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>;
   const [showLandingMenu, setShowLandingMenu] = useState(false);
   const [showHeroMenu, setShowHeroMenu] = useState(false);
+  const [heroMenuOpen, setHeroMenuOpen] = useState(false);
+  useEffect(() => {
+    if (showHeroMenu) {
+      const id = requestAnimationFrame(() => setHeroMenuOpen(true));
+      return () => cancelAnimationFrame(id);
+    }
+  }, [showHeroMenu]);
+  const closeHeroMenu = () => {
+    setHeroMenuOpen(false);
+    setTimeout(() => setShowHeroMenu(false), 350);
+  };
   const [openMenuSection, setOpenMenuSection] = useState<string | null>(null);
   const [userRating, setUserRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
@@ -3724,14 +3735,14 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
             </div>
           </div>
 
-          {/* Tiroir du menu burger — glissement depuis la droite, flou sur l'arrière-plan */}
+          {/* Tiroir du menu burger — glissement depuis la droite, flou sur l'arrière-plan, fermeture douce en marche arrière */}
           {showHeroMenu && (
             <div style={{ position: "fixed", inset: 0, zIndex: 10001, display: "flex" }}>
-              <div onClick={() => setShowHeroMenu(false)} style={{ flex: 1, backdropFilter: "blur(6px)", background: "rgba(0,0,0,0.25)", animation: "mfadeIn 0.25s ease both" }} />
-              <div style={{ width: "78%", maxWidth: 300, background: "#F0F1F5", height: "100%", boxShadow: "-12px 0 40px rgba(0,0,0,0.3)", display: "flex", flexDirection: "column", animation: "heroMenuSlideIn 0.35s cubic-bezier(0.32,0.72,0,1) both" }}>
+              <div onClick={closeHeroMenu} style={{ flex: 1, backdropFilter: "blur(6px)", background: "rgba(0,0,0,0.25)", opacity: heroMenuOpen ? 1 : 0, transition: "opacity 0.35s cubic-bezier(0.32,0.72,0,1)" }} />
+              <div style={{ width: "78%", maxWidth: 300, background: "#F0F1F5", height: "100%", boxShadow: "-12px 0 40px rgba(0,0,0,0.3)", display: "flex", flexDirection: "column", transform: heroMenuOpen ? "translateX(0)" : "translateX(100%)", transition: "transform 0.35s cubic-bezier(0.32,0.72,0,1)" }}>
                 <div style={{ background: `linear-gradient(135deg,${G.rouge},#922B21)`, padding: "calc(env(safe-area-inset-top) + 20px) 22px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
                   <div style={{ color: "#fff", fontWeight: 800, fontSize: "1rem" }}>Menu</div>
-                  <div onClick={() => setShowHeroMenu(false)} style={{ color: "rgba(255,255,255,0.75)", cursor: "pointer", padding: 4 }}>
+                  <div onClick={closeHeroMenu} style={{ color: "rgba(255,255,255,0.75)", cursor: "pointer", padding: 4 }}>
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                   </div>
                 </div>
@@ -3742,7 +3753,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                     </div>
                     <span style={{ fontSize: "0.88rem", fontWeight: 700, color: "#2C1A0E" }}>Espace Ambassadeur</span>
                   </a>
-                  <div onClick={() => { setShowHeroMenu(false); setShowMobileLanding(false); }} style={{ display: "flex", alignItems: "center", gap: 12, padding: 14, cursor: "pointer", background: "#fff", borderRadius: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+                  <div onClick={() => { closeHeroMenu(); setShowMobileLanding(false); }} style={{ display: "flex", alignItems: "center", gap: 12, padding: 14, cursor: "pointer", background: "#fff", borderRadius: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
                     <div style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
                     </div>
@@ -3767,12 +3778,11 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                     </div>
                   </div>
                 )}
+                </div>
               </div>
-            </div>
           )}
         </div>
       )}
-
       {/* ── NAV ── */}
       <nav style={{ background: G.blanc, boxShadow: "0 2px 16px rgba(44,26,14,0.07)", flexShrink: 0, position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, display: (isMobile && showMobileLanding) ? "none" : "block", paddingTop: "env(safe-area-inset-top)" }}>
         <div className="nav-inner" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px 24px", maxWidth: 1200, margin: "0 auto" }}>
@@ -5339,7 +5349,7 @@ function Login({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth
     );
   }
 
-  return <AuthLayout onBack={() => onNav("landing")} title="Bon retour !" subtitle="Retrouve tes matchs"><ErrorModal msg={errorMsg} onClose={() => setErrorMsg("")} />{toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}<Input label="Email" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="ton@email.com" icon="email" variant="line" /><Input label="Mot de passe" type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="••••••••" icon="lock" variant="line" /><div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20, marginTop: 14 }}><span onClick={() => setShowEmailForgot(true)} style={{ fontSize: "0.82rem", color: "#555", cursor: "pointer", fontWeight: 500 }}>Email oublié ?</span><span onClick={() => setShowForgot(true)} style={{ fontSize: "0.82rem", color: G.rouge, cursor: "pointer", fontWeight: 500 }}>Mot de passe oublié ?</span></div><Btn variant="authPrimary" onClick={handleLogin} loading={loading} style={{ width: "100%" }} disabled={!form.email || !form.password}>Se connecter →</Btn><p style={{ textAlign: "center", marginTop: 20, fontSize: "0.85rem", color: "#555" }}>Pas encore de compte ? <span style={{ color: G.rouge, cursor: "pointer", fontWeight: 600 }} onClick={() => onNav("signup")}>S'inscrire</span></p><p style={{ textAlign: "center", marginTop: 10, fontSize: "0.78rem" }}><a href={`${window.location.origin}/?ambassador=login`} style={{ color: "#999", textDecoration: "none" }}>Espace Ambassadeur</a></p></AuthLayout>;
+  return <AuthLayout onBack={() => onNav("landing")} title="Bon retour !" subtitle="Retrouve tes matchs"><ErrorModal msg={errorMsg} onClose={() => setErrorMsg("")} />{toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}<Input label="Email" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="ton@email.com" icon="email" variant="line" /><Input label="Mot de passe" type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="••••••••" icon="lock" variant="line" /><div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20, marginTop: 14 }}><span onClick={() => setShowEmailForgot(true)} style={{ fontSize: "0.82rem", color: "#555", cursor: "pointer", fontWeight: 500 }}>Email oublié ?</span><span onClick={() => setShowForgot(true)} style={{ fontSize: "0.82rem", color: G.rouge, cursor: "pointer", fontWeight: 500 }}>Mot de passe oublié ?</span></div><Btn variant="authPrimary" onClick={handleLogin} loading={loading} style={{ width: "100%" }} disabled={!form.email || !form.password}>Se connecter →</Btn><p style={{ textAlign: "center", marginTop: 20, fontSize: "0.85rem", color: "#555" }}>Pas encore de compte ? <span style={{ color: G.rouge, cursor: "pointer", fontWeight: 600 }} onClick={() => onNav("signup")}>S'inscrire</span></p></AuthLayout>;
 }
 
 function SignUp({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth) => void }) {
@@ -16167,6 +16177,7 @@ function AmbassadorPortal() {
   const [authMode, setAuthMode] = useState<"signup" | "login">(() => {
     try { return new URLSearchParams(window.location.search).get("ambassador") === "login" ? "login" : "signup"; } catch { return "signup"; }
   });
+  const [showIntro, setShowIntro] = useState(true);
   const [signupForm, setSignupForm] = useState({ name: "", phone: "", email: "", password: "" });
   const [signupPhotoFile, setSignupPhotoFile] = useState<File | null>(null);
   const [signupPhotoPreview, setSignupPhotoPreview] = useState<string | null>(null);
@@ -16475,6 +16486,9 @@ function AmbassadorPortal() {
         <Input label="Confirmer le mot de passe" type="password" value={newPasswordConfirm} onChange={e => setNewPasswordConfirm(e.target.value)} placeholder="Répète ton mot de passe" icon="lock" variant="line" />
         {formError && <p style={{ color: "#e74c3c", fontSize: "0.8rem", marginBottom: 12 }}>{formError}</p>}
         <Btn variant="authPrimary" onClick={submitNewPassword} loading={resetSubmitting} style={{ width: "100%" }} disabled={!newPassword || !newPasswordConfirm}>Changer mon mot de passe ✓</Btn>
+        <div style={{ textAlign: "center", marginTop: 10 }}>
+          <span onClick={() => { setResetToken(""); setAuthMode("login"); try { window.history.replaceState({}, "", window.location.pathname + window.location.search); } catch {} }} style={{ fontSize: "0.82rem", color: "#999", cursor: "pointer", fontWeight: 600 }}>Annuler</span>
+        </div>
       </div>
     );
   }
@@ -16550,8 +16564,32 @@ function AmbassadorPortal() {
         </div>
       );
     }
+    if (showIntro) {
+      return shell(
+        <div style={{ background: G.blanc, borderRadius: 22, overflow: "hidden", boxShadow: "0 4px 20px rgba(0,0,0,0.06)" }}>
+          <div style={{ position: "relative", background: `linear-gradient(135deg,${G.rouge} 0%,#922B21 100%)`, padding: "32px 22px 40px", textAlign: "center", overflow: "hidden" }}>
+            <div style={{ position: "absolute", top: -40, left: -30, width: 140, height: 140, borderRadius: "45% 55% 60% 40% / 50% 45% 55% 50%", background: "rgba(255,255,255,0.08)" }} />
+            <div style={{ position: "absolute", bottom: -50, right: -20, width: 120, height: 120, borderRadius: "50%", background: "rgba(255,255,255,0.06)" }} />
+            <div style={{ position: "relative", width: 64, height: 64, borderRadius: "50%", background: "rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="6" /><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11" /></svg>
+            </div>
+            <div style={{ position: "relative", fontWeight: 900, fontSize: "1.15rem", color: "#fff" }}>Bienvenue, Ambassadeur</div>
+          </div>
+          <div style={{ padding: "24px 22px 26px" }}>
+            <p style={{ fontSize: "0.82rem", color: "#555", lineHeight: 1.7, marginBottom: 14, textAlign: "center" }}>Ceci n'est pas un compte de rencontre : il ne sert ni à découvrir des profils, ni à matcher avec quelqu'un.</p>
+            <p style={{ fontSize: "0.82rem", color: "#555", lineHeight: 1.7, marginBottom: 22, textAlign: "center" }}>C'est un espace dédié au programme Ambassadeur : vous gagnez une commission en argent à chaque personne que vous recommandez sur Moyo Dating.</p>
+            <Btn variant="authPrimary" onClick={() => { setAuthMode("signup"); setShowIntro(false); }} style={{ width: "100%", marginBottom: 10 }}>Créer mon compte Ambassadeur</Btn>
+            <button onClick={() => { setAuthMode("login"); setShowIntro(false); }} style={{ width: "100%", background: "none", border: `1.5px solid ${G.gris}`, color: "#666", borderRadius: 50, padding: "13px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>Se connecter à mon espace Ambassadeur</button>
+          </div>
+        </div>
+      );
+    }
     return shell(
       <div style={{ background: G.blanc, borderRadius: 22, padding: 24, boxShadow: "0 4px 20px rgba(0,0,0,0.06)" }}>
+        <div onClick={() => setShowIntro(true)} style={{ display: "flex", alignItems: "center", gap: 6, color: "#999", fontSize: "0.8rem", fontWeight: 600, cursor: "pointer", marginBottom: 16 }}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
+          Retour
+        </div>
         <div style={{ display: "flex", background: G.creme, borderRadius: 14, padding: 3, marginBottom: 20 }}>
           <div onClick={() => { setAuthMode("signup"); setFormError(""); }} style={{ flex: 1, textAlign: "center", padding: "9px", borderRadius: 11, cursor: "pointer", fontSize: "0.82rem", fontWeight: 700, background: authMode === "signup" ? G.blanc : "transparent", color: authMode === "signup" ? G.brun : "#999" }}>Créer mon compte</div>
           <div onClick={() => { setAuthMode("login"); setFormError(""); }} style={{ flex: 1, textAlign: "center", padding: "9px", borderRadius: 11, cursor: "pointer", fontSize: "0.82rem", fontWeight: 700, background: authMode === "login" ? G.blanc : "transparent", color: authMode === "login" ? G.brun : "#999" }}>J'ai déjà un compte</div>
@@ -16641,6 +16679,10 @@ function AmbassadorPortal() {
     }
     return shell(
       <div style={{ background: G.blanc, borderRadius: 22, padding: 24, boxShadow: "0 4px 20px rgba(0,0,0,0.06)" }}>
+        <div onClick={() => setContractReadDone(false)} style={{ display: "flex", alignItems: "center", gap: 6, color: "#999", fontSize: "0.8rem", fontWeight: 600, cursor: "pointer", marginBottom: 16 }}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
+          Retour
+        </div>
         <div style={{ fontWeight: 800, fontSize: "1.05rem", color: G.brun, marginBottom: 4 }}>Signer mon contrat</div>
         <p style={{ fontSize: "0.8rem", color: "#888", marginBottom: 16 }}>Ces informations seront insérées dans ton exemplaire du contrat.</p>
         <Input label="Nom complet" value={contractForm.name} onChange={e => setContractForm(f => ({ ...f, name: e.target.value }))} variant="line" />
