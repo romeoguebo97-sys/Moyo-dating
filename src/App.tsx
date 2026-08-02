@@ -3550,6 +3550,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
   const NEW_FB = "https://facebook.com/MoyoCongoOfficiel";
   const svgWa = <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>;
   const [showLandingMenu, setShowLandingMenu] = useState(false);
+  const [showHeroMenu, setShowHeroMenu] = useState(false);
   const [openMenuSection, setOpenMenuSection] = useState<string | null>(null);
   const [userRating, setUserRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
@@ -3624,6 +3625,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
             @keyframes mfadeIn { from{opacity:0} to{opacity:1} }
             @keyframes mbounce { 0%,80%,100%{transform:scale(1);opacity:0.4} 40%{transform:scale(1.6);opacity:1;background:white} }
             @keyframes mbounceArrow { 0%,100%{transform:translateY(0)} 50%{transform:translateY(5px)} }
+            @keyframes heroMenuSlideIn { from{transform:translateX(100%)} to{transform:translateX(0)} }
           `}</style>
 
           {/* Corps avec photo — plein écran, sans bande blanche */}
@@ -3639,6 +3641,11 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
                 <span style={{ display: "block", fontWeight: 900, fontSize: "1.5rem", letterSpacing: "-0.02em", color: "#fff" }}>Moyo</span>
                 <span style={{ display: "block", color: "#fff", fontSize: "0.72rem", fontWeight: 700, marginTop: "0.06em" }}>Dating</span>
               </span>
+            </div>
+
+            {/* Menu burger, symétrique au logo */}
+            <div onClick={() => setShowHeroMenu(true)} style={{ position: "absolute", top: "max(26px, calc(env(safe-area-inset-top) + 4px))", right: 24, zIndex: 3, display: "flex", flexDirection: "column", gap: 5, cursor: "pointer", padding: 6, animation: "mfadeInDown 0.8s ease both" }}>
+              {[0, 1, 2].map(i => <div key={i} style={{ width: 22, height: 2, borderRadius: 2, background: "#fff", filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.35))" }} />)}
             </div>
 
             {/* Contenu principal : prend tout l'espace restant, pousse son contenu vers le bas */}
@@ -3673,7 +3680,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
               </div>
 
               {/* Boutons */}
-              <div style={{ display: "flex", flexDirection: "column", gap: 18, width: "100%", animation: "mfadeInUp 0.8s 0.5s ease both" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 18, width: "100%", marginTop: 24, animation: "mfadeInUp 0.8s 0.5s ease both" }}>
                 <button onClick={() => onNav("signup")} style={{ position: "relative", display: "block", width: "100%", textAlign: "center", background: "linear-gradient(135deg,#C0392B,#922B21)", color: "#fff", border: "1.5px solid rgba(255,255,255,0.4)", borderRadius: 50, padding: "16px 0", fontSize: "0.98rem", fontWeight: 800, cursor: "pointer", boxShadow: "0 8px 20px rgba(146,43,33,0.35)" }}>
                   <svg width="17" height="17" viewBox="0 0 24 24" fill="white" style={{ position: "absolute", left: 30, top: "50%", transform: "translateY(-50%)" }}><path d="M12 21s-6.7-4.35-9.3-8.1C1.1 10.2 1.8 6.9 4.6 5.4c2.2-1.2 4.6-.4 6 1.4l1.4 1.8 1.4-1.8c1.4-1.8 3.8-2.6 6-1.4 2.8 1.5 3.5 4.8 1.9 7.5C18.7 16.65 12 21 12 21z"/></svg>
                   Créer mon compte gratuit
@@ -3685,19 +3692,8 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
               </div>
             </div>
 
-            {/* Petit séparateur cœur + Voir notre site + Disponible sur — sous les boutons, jamais superposé */}
+            {/* Disponible sur — sous les boutons, jamais superposé */}
             <div style={{ position: "relative", zIndex: 2, flex: "0 0 auto", display: "flex", flexDirection: "column", alignItems: "center", gap: 10, padding: "38px 20px max(14px, env(safe-area-inset-bottom)) 20px", animation: "mfadeIn 1s 1s ease both" }}>
-              <div onClick={() => setShowMobileLanding(false)} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 7, cursor: "pointer" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, width: 120 }}>
-                  <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.35)" }} />
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill={G.rouge}><path d="M12 21s-6.7-4.35-9.3-8.1C1.1 10.2 1.8 6.9 4.6 5.4c2.2-1.2 4.6-.4 6 1.4l1.4 1.8 1.4-1.8c1.4-1.8 3.8-2.6 6-1.4 2.8 1.5 3.5 4.8 1.9 7.5C18.7 16.65 12 21 12 21z"/></svg>
-                  <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.35)" }} />
-                </div>
-                <div style={{ color: "#ffffff", fontSize: "0.52rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase" }}>Voir notre site</div>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "mbounceArrow 1.5s ease-in-out infinite" }}>
-                  <polyline points="6 9 12 15 18 9"/>
-                </svg>
-              </div>
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
                 <div style={{ display: "flex", gap: 7 }}>
                   {detectStorePlatform() !== "ios" && (
@@ -3727,6 +3723,53 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
               </div>
             </div>
           </div>
+
+          {/* Tiroir du menu burger — glissement depuis la droite, flou sur l'arrière-plan */}
+          {showHeroMenu && (
+            <div style={{ position: "fixed", inset: 0, zIndex: 10001, display: "flex" }}>
+              <div onClick={() => setShowHeroMenu(false)} style={{ flex: 1, backdropFilter: "blur(6px)", background: "rgba(0,0,0,0.25)", animation: "mfadeIn 0.25s ease both" }} />
+              <div style={{ width: "78%", maxWidth: 300, background: "#F0F1F5", height: "100%", boxShadow: "-12px 0 40px rgba(0,0,0,0.3)", display: "flex", flexDirection: "column", animation: "heroMenuSlideIn 0.35s cubic-bezier(0.32,0.72,0,1) both" }}>
+                <div style={{ background: `linear-gradient(135deg,${G.rouge},#922B21)`, padding: "calc(env(safe-area-inset-top) + 20px) 22px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+                  <div style={{ color: "#fff", fontWeight: 800, fontSize: "1rem" }}>Menu</div>
+                  <div onClick={() => setShowHeroMenu(false)} style={{ color: "rgba(255,255,255,0.75)", cursor: "pointer", padding: 4 }}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  </div>
+                </div>
+                <div style={{ padding: "14px 22px", flex: 1, display: "flex", flexDirection: "column", gap: 10 }}>
+                  <a href={`${window.location.origin}/?ambassador=1`} style={{ display: "flex", alignItems: "center", gap: 12, padding: 14, textDecoration: "none", background: "#fff", borderRadius: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+                    <div style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>
+                    </div>
+                    <span style={{ fontSize: "0.88rem", fontWeight: 700, color: "#2C1A0E" }}>Espace Ambassadeur</span>
+                  </a>
+                  <div onClick={() => { setShowHeroMenu(false); setShowMobileLanding(false); }} style={{ display: "flex", alignItems: "center", gap: 12, padding: 14, cursor: "pointer", background: "#fff", borderRadius: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+                    <div style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                    </div>
+                    <span style={{ fontSize: "0.88rem", fontWeight: 700, color: "#2C1A0E" }}>Consulter le site</span>
+                  </div>
+                </div>
+                {(SOCIAL_FACEBOOK || SOCIAL_INSTAGRAM || SOCIAL_TIKTOK || SOCIAL_YOUTUBE || SOCIAL_LINKEDIN) && (
+                  <div style={{ padding: "16px 22px calc(env(safe-area-inset-bottom) + 16px)", textAlign: "center" }}>
+                    <div style={{ color: "#888", fontSize: "0.72rem", fontWeight: 600, marginBottom: 10 }}>Suis-nous sur les réseaux</div>
+                    <div style={{ display: "flex", justifyContent: "center", gap: 8, flexWrap: "wrap" }}>
+                      {[
+                        [SOCIAL_FACEBOOK, svgFb, "Facebook"],
+                        [SOCIAL_INSTAGRAM, svgIg, "Instagram"],
+                        [SOCIAL_TIKTOK, svgTk, "TikTok"],
+                        [SOCIAL_YOUTUBE, svgYt, "YouTube"],
+                        [SOCIAL_LINKEDIN, svgLi, "LinkedIn"],
+                      ].map(([url, svgFn, label]: any, i) => url && (
+                        <a key={i} href={url} target="_blank" rel="noopener noreferrer" title={label} style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(139,13,47,0.08)", display: "flex", alignItems: "center", justifyContent: "center", color: "#8B0D2F", flexShrink: 0 }}>
+                          {svgFn(16)}
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -5296,7 +5339,7 @@ function Login({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth
     );
   }
 
-  return <AuthLayout onBack={() => onNav("landing")} title="Bon retour !" subtitle="Retrouve tes matchs"><ErrorModal msg={errorMsg} onClose={() => setErrorMsg("")} />{toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}<Input label="Email" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="ton@email.com" icon="email" variant="line" /><Input label="Mot de passe" type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="••••••••" icon="lock" variant="line" /><div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20, marginTop: 14 }}><span onClick={() => setShowEmailForgot(true)} style={{ fontSize: "0.82rem", color: "#555", cursor: "pointer", fontWeight: 500 }}>Email oublié ?</span><span onClick={() => setShowForgot(true)} style={{ fontSize: "0.82rem", color: G.rouge, cursor: "pointer", fontWeight: 500 }}>Mot de passe oublié ?</span></div><Btn variant="authPrimary" onClick={handleLogin} loading={loading} style={{ width: "100%" }} disabled={!form.email || !form.password}>Se connecter →</Btn><p style={{ textAlign: "center", marginTop: 20, fontSize: "0.85rem", color: "#555" }}>Pas encore de compte ? <span style={{ color: G.rouge, cursor: "pointer", fontWeight: 600 }} onClick={() => onNav("signup")}>S'inscrire</span></p></AuthLayout>;
+  return <AuthLayout onBack={() => onNav("landing")} title="Bon retour !" subtitle="Retrouve tes matchs"><ErrorModal msg={errorMsg} onClose={() => setErrorMsg("")} />{toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}<Input label="Email" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="ton@email.com" icon="email" variant="line" /><Input label="Mot de passe" type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="••••••••" icon="lock" variant="line" /><div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20, marginTop: 14 }}><span onClick={() => setShowEmailForgot(true)} style={{ fontSize: "0.82rem", color: "#555", cursor: "pointer", fontWeight: 500 }}>Email oublié ?</span><span onClick={() => setShowForgot(true)} style={{ fontSize: "0.82rem", color: G.rouge, cursor: "pointer", fontWeight: 500 }}>Mot de passe oublié ?</span></div><Btn variant="authPrimary" onClick={handleLogin} loading={loading} style={{ width: "100%" }} disabled={!form.email || !form.password}>Se connecter →</Btn><p style={{ textAlign: "center", marginTop: 20, fontSize: "0.85rem", color: "#555" }}>Pas encore de compte ? <span style={{ color: G.rouge, cursor: "pointer", fontWeight: 600 }} onClick={() => onNav("signup")}>S'inscrire</span></p><p style={{ textAlign: "center", marginTop: 10, fontSize: "0.78rem" }}><a href={`${window.location.origin}/?ambassador=login`} style={{ color: "#999", textDecoration: "none" }}>Espace Ambassadeur</a></p></AuthLayout>;
 }
 
 function SignUp({ onNav, onAuth }: { onNav: (p: string) => void; onAuth: (a: Auth) => void }) {
@@ -16121,7 +16164,9 @@ type AmbSession = { token: string; refreshToken: string; userId: string; name: s
 function AmbassadorPortal() {
   const [session, setSession] = useState<AmbSession | null>(null);
   const [sessionChecked, setSessionChecked] = useState(false);
-  const [authMode, setAuthMode] = useState<"signup" | "login">("signup");
+  const [authMode, setAuthMode] = useState<"signup" | "login">(() => {
+    try { return new URLSearchParams(window.location.search).get("ambassador") === "login" ? "login" : "signup"; } catch { return "signup"; }
+  });
   const [signupForm, setSignupForm] = useState({ name: "", phone: "", email: "", password: "" });
   const [signupPhotoFile, setSignupPhotoFile] = useState<File | null>(null);
   const [signupPhotoPreview, setSignupPhotoPreview] = useState<string | null>(null);
@@ -16256,6 +16301,7 @@ function AmbassadorPortal() {
   const [ambInscriptions, setAmbInscriptions] = useState(0);
   const [showAmbInfo, setShowAmbInfo] = useState(false);
   const [hasRealAccount, setHasRealAccount] = useState(false);
+  const [showPayoutConfirm, setShowPayoutConfirm] = useState(false);
 
   const loadStatus = async () => {
     if (!session) return;
@@ -16639,7 +16685,7 @@ function AmbassadorPortal() {
           <span style={{ width: 7, height: 7, borderRadius: "50%", background: canRequest ? "#4CAF50" : "rgba(255,255,255,0.5)", display: "inline-block" }} />
           <span style={{ fontSize: "0.76rem", color: "rgba(255,255,255,0.9)", fontWeight: 600 }}>{ambPayoutPending ? "Demande de versement en cours" : canRequest ? "Prêt à être versé" : "Pas encore atteint le minimum"}</span>
         </div>
-        <button onClick={requestPayout} disabled={!canRequest} style={{ width: "100%", background: canRequest ? "#fff" : "rgba(255,255,255,0.25)", color: canRequest ? "#8B0D2F" : "rgba(255,255,255,0.7)", border: "none", borderRadius: 14, padding: "13px", fontSize: "0.86rem", fontWeight: 800, cursor: canRequest ? "pointer" : "not-allowed" }}>
+        <button onClick={() => setShowPayoutConfirm(true)} disabled={!canRequest} style={{ width: "100%", background: canRequest ? "#fff" : "rgba(255,255,255,0.25)", color: canRequest ? "#8B0D2F" : "rgba(255,255,255,0.7)", border: "none", borderRadius: 14, padding: "13px", fontSize: "0.86rem", fontWeight: 800, cursor: canRequest ? "pointer" : "not-allowed" }}>
           {ambPayoutPending ? "Demande envoyée" : "Demander le versement"}
         </button>
         <div style={{ fontSize: "0.68rem", color: "rgba(255,255,255,0.65)", marginTop: 10, textAlign: "center" }}>Minimum de versement : {AFFILIATE_PAYOUT_MIN_FCFA.toLocaleString()} FCFA</div>
@@ -16802,6 +16848,14 @@ function AmbassadorPortal() {
             <button onClick={() => setShowAmbInfo(false)} style={{ width: "100%", background: "#8B0D2F", color: "#fff", border: "none", borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>Compris</button>
           </div>
         </div>
+      )}
+      {showPayoutConfirm && (
+        <ConfirmModal
+          msg={`Demander le versement de ${available.toLocaleString()} FCFA ?`}
+          confirmLabel="Demander le versement"
+          onConfirm={() => { setShowPayoutConfirm(false); requestPayout(); }}
+          onCancel={() => setShowPayoutConfirm(false)}
+        />
       )}
     </div>
   );
@@ -17367,6 +17421,7 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
     } catch { setToast({ msg: "Erreur lors de la demande de versement.", type: "error" }); }
   };
   const [showAmbDashboard, setShowAmbDashboard] = useState(false);
+  const [showPayoutConfirm, setShowPayoutConfirm] = useState(false);
   const [showAllAmbConversions, setShowAllAmbConversions] = useState(false);
   const [showAmbInfo, setShowAmbInfo] = useState(false);
   const [notifStatus, setNotifStatus] = useState<"default" | "granted" | "denied" | "unsupported">(() => {
@@ -18142,7 +18197,7 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
                     <span style={{ width: 7, height: 7, borderRadius: "50%", background: canRequest ? "#4CAF50" : "rgba(255,255,255,0.5)", display: "inline-block" }} />
                     <span style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.9)", fontWeight: 600 }}>{ambPayoutPending ? "Demande de versement en cours" : canRequest ? "Prêt à être versé" : "Pas encore atteint le minimum"}</span>
                   </div>
-                  <button onClick={requestAmbassadorPayout} disabled={!canRequest} style={{ width: "100%", background: canRequest ? "#fff" : "rgba(255,255,255,0.25)", color: canRequest ? "#8B0D2F" : "rgba(255,255,255,0.7)", border: "none", borderRadius: 14, padding: "14px 16px", fontSize: "0.88rem", fontWeight: 800, cursor: canRequest ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                  <button onClick={() => setShowPayoutConfirm(true)} disabled={!canRequest} style={{ width: "100%", background: canRequest ? "#fff" : "rgba(255,255,255,0.25)", color: canRequest ? "#8B0D2F" : "rgba(255,255,255,0.7)", border: "none", borderRadius: 14, padding: "14px 16px", fontSize: "0.88rem", fontWeight: 800, cursor: canRequest ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h4"/></svg>
                     {ambPayoutPending ? "Demande envoyée" : "Demander le versement"}
                   </button>
@@ -18394,6 +18449,15 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
               <button onClick={() => setShowAmbInfo(false)} style={{ width: "100%", background: "#8B0D2F", color: "#fff", border: "none", borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>Compris</button>
             </div>
           </div>
+        )}
+
+        {showPayoutConfirm && (
+          <ConfirmModal
+            msg={`Demander le versement de ${(ambStats?.pending || 0).toLocaleString()} FCFA ?`}
+            confirmLabel="Demander le versement"
+            onConfirm={() => { setShowPayoutConfirm(false); requestAmbassadorPayout(); }}
+            onCancel={() => setShowPayoutConfirm(false)}
+          />
         )}
 
 
@@ -20951,8 +21015,9 @@ export default function App() {
 
   // ── Portail Ambassadeur sans profil (lien privé) : ?ambassador=1 dans l'URL — vérifié en tout
   //    premier, avant même le chargement de la session principale, pour rester totalement isolé
-  //    du reste de l'app (jamais lié à auth, sessionLoaded, selfBan, etc.). ──
-  if (new URLSearchParams(window.location.search).get("ambassador") === "1") {
+  //    du reste de l'app (jamais lié à auth, sessionLoaded, selfBan, etc.). ?ambassador=login
+  //    ouvre directement sur l'onglet connexion (lien public depuis l'écran de connexion). ──
+  if (["1", "login"].includes(new URLSearchParams(window.location.search).get("ambassador") || "")) {
     return <AmbassadorPortal />;
   }
 

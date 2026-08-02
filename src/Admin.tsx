@@ -8057,6 +8057,21 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
       } catch { showToast("Erreur lors du traitement du versement.", "error"); }
       setPayoutActionLoading(null);
     };
+    // ── Refuse une demande de versement sans la payer : les commissions concernées restent en
+    //    attente (rien n'est perdu, l'ambassadeur pourra refaire une demande plus tard), la
+    //    demande est simplement fermée et l'ambassadeur est notifié. ──
+    const rejectPayoutRequest = async (pr: { id: string; affiliate_id: string; user_id?: string; affiliate_name?: string; amount: number }) => {
+      if (!auth) return;
+      setPayoutActionLoading(pr.id);
+      try {
+        await fetch(`${SUPABASE_URL}/rest/v1/affiliate_payout_requests?id=eq.${pr.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ status: "rejected" }) });
+        logAdminAction(auth.token, auth.userId, auth.name, `Demande de versement de ${pr.amount.toLocaleString()} FCFA refusée pour ${pr.affiliate_name || "un ambassadeur"} (commissions conservées en attente).`, pr.affiliate_id);
+        if (pr.user_id) notifyUser(pr.user_id, "payout_rejected", "Demande de versement refusée", "Ta demande de versement n'a pas été retenue cette fois-ci. Tes commissions restent disponibles, tu peux refaire une demande depuis ton tableau de bord.", "profile", "ambassador");
+        setPayoutRequests(list => list.filter(x => x.id !== pr.id));
+        showToast(`Demande de versement refusée.`, "success");
+      } catch { showToast("Erreur lors du refus.", "error"); }
+      setPayoutActionLoading(null);
+    };
     useEffect(() => { if (activeTab === "ambassadors" && ambTab === "affiliates") { loadAffiliates(); loadAffiliateConversions(); } /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [activeTab, ambTab]);
     // ── Demandes "Devenir Ambassadeur" envoyées depuis le Profil des membres ──
     const [ambassadorRequests, setAmbassadorRequests] = useState<{ id: string; user_id: string; name: string; photo_url?: string; phone?: string; created_at: string }[]>([]);
@@ -15376,7 +15391,10 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                         <div style={{ fontSize: "0.72rem", color: "#888" }}>Demandé le {new Date(pr.requested_at).toLocaleDateString("fr-FR")}</div>
                       </div>
                       <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#8B6914" }}>{pr.amount.toLocaleString()} FCFA</div>
-                      <button disabled={payoutActionLoading === pr.id} onClick={() => confirm(`Marquer ce versement de ${pr.amount.toLocaleString()} FCFA à ${pr.affiliate_name || "cet ambassadeur"} comme payé ?`, () => markPayoutPaid(pr))} style={{ background: "#8e44ad", border: "none", borderRadius: 50, padding: "8px 16px", fontSize: "0.76rem", fontWeight: 700, color: "#fff", cursor: payoutActionLoading === pr.id ? "not-allowed" : "pointer" }}>{payoutActionLoading === pr.id ? "..." : "Marquer payé"}</button>
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button disabled={payoutActionLoading === pr.id} onClick={() => confirm(`Refuser cette demande de versement de ${pr.amount.toLocaleString()} FCFA à ${pr.affiliate_name || "cet ambassadeur"} ? Ses commissions resteront en attente, il pourra refaire une demande plus tard.`, () => rejectPayoutRequest(pr))} style={{ background: "rgba(85,85,85,0.08)", border: "1.5px solid rgba(85,85,85,0.2)", borderRadius: 50, padding: "8px 16px", fontSize: "0.76rem", fontWeight: 700, color: "#555", cursor: payoutActionLoading === pr.id ? "not-allowed" : "pointer" }}>Refuser</button>
+                        <button disabled={payoutActionLoading === pr.id} onClick={() => confirm(`Marquer ce versement de ${pr.amount.toLocaleString()} FCFA à ${pr.affiliate_name || "cet ambassadeur"} comme payé ?`, () => markPayoutPaid(pr))} style={{ background: "#8e44ad", border: "none", borderRadius: 50, padding: "8px 16px", fontSize: "0.76rem", fontWeight: 700, color: "#fff", cursor: payoutActionLoading === pr.id ? "not-allowed" : "pointer" }}>{payoutActionLoading === pr.id ? "..." : "Marquer payé"}</button>
+                      </div>
                     </div>
                   ))}
                 </div>
