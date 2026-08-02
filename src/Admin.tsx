@@ -1868,7 +1868,7 @@ function SiteInfoConfig({ auth, group }: { auth: Auth; group: "contacts" | "soci
   const fields: Record<string, [string, string][]> = {
     contacts: [
       ["contact_email", "Email de contact"],
-      ["contact_whatsapp", "Numéro WhatsApp (chiffres only, ex: 243065132012)"],
+      ["contact_whatsapp", "Numéro WhatsApp (chiffres only, ex: 242065132012)"],
       ["contact_address", "Adresse postale"],
     ],
     app: [
