@@ -8194,20 +8194,30 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
     // ── Fin de contrat Ambassadeur : passe l'affilié à "removed" (l'historique des commissions
     //    reste rattaché, à purger plus tard séparément), retire le badge is_ambassador, et ne
     //    retire le Premium que s'il avait été offert par le programme (jamais un Premium payé
-    //    par la personne elle-même). ──
+    //    par la personne elle-même). Cas particulier : un compte Ambassadeur "sans profil de
+    //    rencontre" (account_type=ambassador_only) n'a aucune autre utilité une fois son statut
+    //    retiré — dans ce cas, le compte entier est supprimé (comme depuis Utilisateurs), au lieu
+    //    de laisser une fiche fantôme dans le sous-onglet "Sans profil". ──
     const confirmRemoveAffiliate = async () => {
       const aff = affiliateRemoveModal;
       if (!aff || !auth) return;
       setAffiliateRemoveLoading(true);
       try {
         await fetch(`${SUPABASE_URL}/rest/v1/affiliates?id=eq.${aff.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ status: "removed" }) });
-        const pr = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${aff.user_id}&select=premium_is_gift`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+        const pr = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${aff.user_id}&select=premium_is_gift,account_type`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
         const pd = await pr.json().catch(() => []);
         const wasGifted = Array.isArray(pd) && pd[0]?.premium_is_gift === true;
-        const patchBody: any = { is_ambassador: false };
-        if (wasGifted) { patchBody.is_premium = false; patchBody.premium_until = null; patchBody.premium_is_gift = false; }
-        await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${aff.user_id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify(patchBody) });
-        logAdminAction(auth.token, auth.userId, auth.name, `Contrat Ambassadeur terminé pour ${aff.name} : badge${wasGifted ? " et Premium offert" : ""} retiré(s), historique des commissions conservé.`, aff.user_id);
+        const isAmbassadorOnlyAccount = Array.isArray(pd) && pd[0]?.account_type === "ambassador_only";
+        if (isAmbassadorOnlyAccount) {
+          await deleteAccount({ id: aff.user_id, name: aff.name } as AdminProfile);
+          setAmbNoAccountList(list => list.filter(u => u.id !== aff.user_id));
+          logAdminAction(auth.token, auth.userId, auth.name, `Contrat Ambassadeur terminé pour ${aff.name} : compte sans profil de rencontre supprimé (n'avait aucune autre utilité).`, aff.user_id);
+        } else {
+          const patchBody: any = { is_ambassador: false };
+          if (wasGifted) { patchBody.is_premium = false; patchBody.premium_until = null; patchBody.premium_is_gift = false; }
+          await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${aff.user_id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify(patchBody) });
+          logAdminAction(auth.token, auth.userId, auth.name, `Contrat Ambassadeur terminé pour ${aff.name} : badge${wasGifted ? " et Premium offert" : ""} retiré(s), historique des commissions conservé.`, aff.user_id);
+        }
         setAffiliatesList(list => list.map(a => a.id === aff.id ? { ...a, status: "removed" } : a));
         setAffiliateProfileStatus(s => ({ ...s, [aff.user_id]: { is_ambassador: false, premium_until: wasGifted ? undefined : s[aff.user_id]?.premium_until, premium_is_gift: wasGifted ? false : s[aff.user_id]?.premium_is_gift } }));
         showToast(`${aff.name} n'est plus Ambassadeur.`, "success");
@@ -15580,7 +15590,19 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
 
           {ambTab === "no_account" && (
             <div>
-              <p style={{ fontSize: "0.8rem", color: "#888", marginBottom: 16 }}>Comptes créés via le lien privé Ambassadeur (dating.moyo-congo.com/?ambassador=1), sans profil de rencontre associé. Même circuit d'approbation que les demandes classiques.</p>
+              <p style={{ fontSize: "0.8rem", color: "#888", marginBottom: 12 }}>Comptes créés via le lien privé Ambassadeur, sans profil de rencontre associé. Même circuit d'approbation que les demandes classiques.</p>
+              <button onClick={() => {
+                const link = `${window.location.origin}/?ambassador=1`;
+                if ((navigator as any).share) {
+                  (navigator as any).share({ title: "Devenir Ambassadeur Moyo Dating", text: "Voici le lien pour créer ton compte Ambassadeur Moyo Dating (sans profil de rencontre) :", url: link }).catch(() => {});
+                } else {
+                  navigator.clipboard.writeText(link).catch(() => {});
+                  showToast("Lien copié : " + link, "success");
+                }
+              }} style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(142,68,173,0.08)", border: "1.5px solid rgba(142,68,173,0.25)", borderRadius: 50, padding: "9px 16px", fontSize: "0.78rem", fontWeight: 700, color: "#8e44ad", cursor: "pointer", marginBottom: 18 }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                Copier / partager le lien Ambassadeur
+              </button>
               {ambNoAccountLoading ? (
                 <div style={{ textAlign: "center", padding: 40 }}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2" strokeLinecap="round" style={{ animation: "pulse 0.8s ease-in-out infinite" }}><circle cx="12" cy="12" r="10" /></svg></div>
               ) : ambNoAccountList.length === 0 ? (

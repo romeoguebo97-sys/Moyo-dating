@@ -16087,6 +16087,28 @@ function AmbassadorCard({ auth, status, onRequested }: { auth: Auth; status: "no
   );
 }
 
+// ── En-tête partagée du dashboard Ambassadeur (identique pour le dashboard classique et le
+//    portail sans profil) : photo (ou silhouette par défaut via Avatar), titre, message de
+//    bienvenue, icône info. ──
+function AmbassadorDashboardHeader({ name, photoUrl, onInfoClick }: { name: string; photoUrl?: string | null; onInfoClick: () => void }) {
+  return (
+    <div style={{ position: "relative", overflow: "hidden", padding: "6px 2px 20px" }}>
+      <div style={{ position: "absolute", top: -50, right: -40, width: 180, height: 180, borderRadius: "45% 55% 60% 40% / 50% 45% 55% 50%", background: "rgba(139,13,47,0.06)", pointerEvents: "none" }} />
+      <div style={{ position: "absolute", top: 10, right: 66, width: 100, height: 100, borderRadius: "50%", background: "rgba(212,168,67,0.07)", pointerEvents: "none" }} />
+      <div style={{ position: "relative", display: "flex", alignItems: "flex-start", gap: 14 }}>
+        <Avatar url={photoUrl} size={76} border />
+        <div style={{ flex: 1, paddingTop: 2, minWidth: 0 }}>
+          <div style={{ fontWeight: 900, fontSize: "1.2rem", color: G.brun, lineHeight: 1.25 }}>Tableau de bord<br />Ambassadeur Moyo Dating</div>
+          <div style={{ display: "inline-block", marginTop: 10, background: "rgba(139,13,47,0.08)", color: "#8B0D2F", fontSize: "0.78rem", fontWeight: 700, padding: "5px 14px", borderRadius: 50 }}>Bienvenue, {name} 👋</div>
+        </div>
+        <div onClick={onInfoClick} style={{ cursor: "pointer", width: 38, height: 38, borderRadius: "50%", background: "#fff", boxShadow: "0 2px 8px rgba(0,0,0,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#8B0D2F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" /></svg>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Portail Ambassadeur sans profil de rencontre ────────────────────────────
 // Accessible uniquement via le lien privé ?ambassador=1 (jamais affiché dans l'app).
 // Compte allégé (account_type="ambassador_only") : pas d'âge, ville, photos ni bio.
@@ -16095,12 +16117,14 @@ function AmbassadorCard({ auth, status, onRequested }: { auth: Auth; status: "no
 // affiliate_payout_requests, sign-ambassador-contract), donc la gestion Admin ne
 // change pas d'un pixel. Session gérée séparément de celle de l'app principale
 // (clés localStorage dédiées), totalement isolé du reste du site. ──
-type AmbSession = { token: string; refreshToken: string; userId: string; name: string };
+type AmbSession = { token: string; refreshToken: string; userId: string; name: string; photoUrl?: string | null };
 function AmbassadorPortal() {
   const [session, setSession] = useState<AmbSession | null>(null);
   const [sessionChecked, setSessionChecked] = useState(false);
   const [authMode, setAuthMode] = useState<"signup" | "login">("signup");
   const [signupForm, setSignupForm] = useState({ name: "", phone: "", email: "", password: "" });
+  const [signupPhotoFile, setSignupPhotoFile] = useState<File | null>(null);
+  const [signupPhotoPreview, setSignupPhotoPreview] = useState<string | null>(null);
   const [loginForm, setLoginForm] = useState({ email: "", password: "" });
   const [formError, setFormError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -16188,10 +16212,11 @@ function AmbassadorPortal() {
     localStorage.setItem("moyo_amb_refresh", s.refreshToken || "");
     localStorage.setItem("moyo_amb_uid", s.userId);
     localStorage.setItem("moyo_amb_name", s.name || "");
+    localStorage.setItem("moyo_amb_photo", s.photoUrl || "");
     setSession(s);
   };
   const logout = () => {
-    ["moyo_amb_token", "moyo_amb_refresh", "moyo_amb_uid", "moyo_amb_name"].forEach(k => localStorage.removeItem(k));
+    ["moyo_amb_token", "moyo_amb_refresh", "moyo_amb_uid", "moyo_amb_name", "moyo_amb_photo"].forEach(k => localStorage.removeItem(k));
     setSession(null);
     setStatus("loading");
   };
@@ -16201,16 +16226,17 @@ function AmbassadorPortal() {
       const rt = localStorage.getItem("moyo_amb_refresh");
       const uid = localStorage.getItem("moyo_amb_uid");
       const nm = localStorage.getItem("moyo_amb_name") || "";
+      const ph = localStorage.getItem("moyo_amb_photo") || "";
       if (rt && uid) {
         const fresh = await sb.refreshSession(rt);
         if (fresh?.access_token) {
-          persistSession({ token: fresh.access_token, refreshToken: fresh.refresh_token || rt, userId: uid, name: nm });
+          persistSession({ token: fresh.access_token, refreshToken: fresh.refresh_token || rt, userId: uid, name: nm, photoUrl: ph || null });
           setSessionChecked(true);
           return;
         }
       }
       const tok = localStorage.getItem("moyo_amb_token");
-      if (tok && uid) setSession({ token: tok, refreshToken: rt || "", userId: uid, name: nm });
+      if (tok && uid) setSession({ token: tok, refreshToken: rt || "", userId: uid, name: nm, photoUrl: ph || null });
       setSessionChecked(true);
     })();
   }, []);
@@ -16226,6 +16252,8 @@ function AmbassadorPortal() {
   const [ambContractPdfUrl, setAmbContractPdfUrl] = useState<string | null>(null);
   const [ambConversions, setAmbConversions] = useState<{ id: string; plan_label?: string; commission_amount: number; status: string; created_at: string }[]>([]);
   const [ambPayoutPending, setAmbPayoutPending] = useState<{ amount: number } | null>(null);
+  const [ambInscriptions, setAmbInscriptions] = useState(0);
+  const [showAmbInfo, setShowAmbInfo] = useState(false);
 
   const loadStatus = async () => {
     if (!session) return;
@@ -16257,6 +16285,9 @@ function AmbassadorPortal() {
           const dp = await rp.json().catch(() => []);
           if (Array.isArray(dp) && dp[0]) setAmbPayoutPending({ amount: dp[0].amount });
         }
+        const ri = await fetch(`${SUPABASE_URL}/rest/v1/profiles?referred_by=eq.${session.userId}&select=id`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${session.token}`, "Prefer": "count=exact" } });
+        const crHeader = ri.headers.get("content-range");
+        setAmbInscriptions(crHeader ? (parseInt(crHeader.split("/")[1]) || 0) : 0);
         return;
       }
       const rr = await fetch(`${SUPABASE_URL}/rest/v1/ambassador_requests?user_id=eq.${session.userId}&status=eq.pending&select=id&limit=1`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${session.token}` } });
@@ -16287,19 +16318,24 @@ function AmbassadorPortal() {
       const token = loginRes?.access_token;
       const userId = loginRes?.user?.id || authRes?.user?.id;
       if (!token || !userId) { setFormError("Erreur lors de la création du compte, réessaie."); setLoading(false); return; }
-      // Compte allégé : pas d'âge, ville, photo ni bio. is_complete=false garantit qu'il
+      // Photo optionnelle : uploadée seulement si la personne en a choisi une.
+      let photoUrl: string | null = null;
+      if (signupPhotoFile) {
+        photoUrl = await sb.uploadPhoto(token, userId, signupPhotoFile);
+      }
+      // Compte allégé : pas d'âge, ville, ni bio. is_complete=false garantit qu'il
       // n'apparaîtra jamais dans Découvrir/Likes/Matchs (filtre déjà existant côté app).
       await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${userId}`, {
         method: "PATCH",
         headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${token}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
-        body: JSON.stringify({ name: signupForm.name.trim(), phone: signupForm.phone.trim(), account_type: "ambassador_only", is_complete: false }),
+        body: JSON.stringify({ name: signupForm.name.trim(), phone: signupForm.phone.trim(), account_type: "ambassador_only", is_complete: false, ...(photoUrl ? { photo_url: photoUrl } : {}) }),
       });
       await fetch(`${SUPABASE_URL}/rest/v1/ambassador_requests`, {
         method: "POST",
         headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${token}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
         body: JSON.stringify({ user_id: userId, status: "pending" }),
       });
-      persistSession({ token, refreshToken: loginRes?.refresh_token || "", userId, name: signupForm.name.trim() });
+      persistSession({ token, refreshToken: loginRes?.refresh_token || "", userId, name: signupForm.name.trim(), photoUrl });
     } catch { setFormError("Erreur réseau, réessaie."); }
     setLoading(false);
   };
@@ -16311,13 +16347,21 @@ function AmbassadorPortal() {
     try {
       const r = await sb.signIn(loginForm.email.trim().toLowerCase(), loginForm.password);
       if (!r?.access_token) { setFormError("Email ou mot de passe incorrect."); setLoading(false); return; }
-      persistSession({ token: r.access_token, refreshToken: r.refresh_token || "", userId: r.user.id, name: r.user?.user_metadata?.name || "" });
+      let name = r.user?.user_metadata?.name || "";
+      let photoUrl: string | null = null;
+      try {
+        const pr = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${r.user.id}&select=name,photo_url`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${r.access_token}` } });
+        const pd = await pr.json().catch(() => []);
+        if (Array.isArray(pd) && pd[0]) { name = pd[0].name || name; photoUrl = pd[0].photo_url || null; }
+      } catch {}
+      persistSession({ token: r.access_token, refreshToken: r.refresh_token || "", userId: r.user.id, name, photoUrl });
     } catch { setFormError("Erreur réseau, réessaie."); }
     setLoading(false);
   };
 
   // ── Signature du contrat (même edge function que le programme Ambassadeur classique) ──
   const [contractForm, setContractForm] = useState({ name: "", birth: "", address: "", phone: "", email: "", accept: false });
+  const [contractReadDone, setContractReadDone] = useState(false);
   const [contractSubmitting, setContractSubmitting] = useState(false);
   const [contractError, setContractError] = useState("");
   const submitContract = async () => {
@@ -16465,8 +16509,23 @@ function AmbassadorPortal() {
         </div>
         {authMode === "signup" ? (
           <>
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: 18 }}>
+              <label style={{ cursor: "pointer", position: "relative" }}>
+                <Avatar url={signupPhotoPreview} size={72} />
+                <div style={{ position: "absolute", bottom: -2, right: -2, width: 24, height: 24, borderRadius: "50%", background: G.rouge, display: "flex", alignItems: "center", justifyContent: "center", border: `2px solid ${G.blanc}` }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
+                </div>
+                <input type="file" accept="image/*" style={{ display: "none" }} onChange={e => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  setSignupPhotoFile(file);
+                  setSignupPhotoPreview(URL.createObjectURL(file));
+                }} />
+              </label>
+            </div>
+            <div style={{ textAlign: "center", fontSize: "0.72rem", color: "#999", marginTop: -12, marginBottom: 16 }}>Photo (facultative)</div>
             <Input label="Nom complet" value={signupForm.name} onChange={e => setSignupForm(f => ({ ...f, name: e.target.value }))} placeholder="Ex: Sarah Mbemba" icon="user" variant="line" />
-            <Input label="Téléphone" type="tel" value={signupForm.phone} onChange={e => setSignupForm(f => ({ ...f, phone: e.target.value }))} placeholder="06 xxx xx xx" variant="line" />
+            <Input label="Téléphone (WhatsApp)" type="tel" value={signupForm.phone} onChange={e => setSignupForm(f => ({ ...f, phone: e.target.value }))} placeholder="06 xxx xx xx" variant="line" />
             <Input label="Email" type="email" value={signupForm.email} onChange={e => setSignupForm(f => ({ ...f, email: e.target.value }))} placeholder="ton@email.com" icon="email" variant="line" />
             <Input label="Veuillez définir votre mot de passe" type="password" value={signupForm.password} onChange={e => setSignupForm(f => ({ ...f, password: e.target.value }))} placeholder="Minimum 6 caractères" icon="lock" hint="Au moins 6 caractères" variant="line" />
             {formError && <p style={{ color: "#e74c3c", fontSize: "0.8rem", marginBottom: 12 }}>{formError}</p>}
@@ -16517,10 +16576,24 @@ function AmbassadorPortal() {
 
   // ── Ambassadeur approuvé, contrat pas encore signé ──
   if (!ambContractSigned && !ambContractSignedAt) {
+    if (!contractReadDone) {
+      return shell(
+        <div style={{ background: G.blanc, borderRadius: 22, padding: 24, textAlign: "center", boxShadow: "0 4px 20px rgba(0,0,0,0.06)" }}>
+          <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(139,13,47,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
+            <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="#8B0D2F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+          </div>
+          <div style={{ fontWeight: 900, fontSize: "1.05rem", color: G.brun, marginBottom: 8 }}>Contrat Ambassadeur</div>
+          <p style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.6, marginBottom: 20 }}>Prends connaissance des 5 pages du contrat. Tu pourras ensuite le remplir avec tes informations et le signer électroniquement.</p>
+          <a href={`${SUPABASE_URL}/storage/v1/object/public/contracts/template.pdf?v=${Date.now()}`} target="_blank" rel="noopener noreferrer" style={{ display: "block", width: "100%", boxSizing: "border-box", background: "#fff", color: "#8B0D2F", border: "1.5px solid #8B0D2F", borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 700, textDecoration: "none", marginBottom: 10 }}>📄 Lire le contrat (PDF)</a>
+          <Btn variant="authPrimary" onClick={() => setContractReadDone(true)} style={{ width: "100%", marginBottom: 10 }}>J'ai lu, je continue →</Btn>
+          <button onClick={logout} style={{ background: "none", border: "none", color: "#999", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer" }}>Se déconnecter</button>
+        </div>
+      );
+    }
     return shell(
       <div style={{ background: G.blanc, borderRadius: 22, padding: 24, boxShadow: "0 4px 20px rgba(0,0,0,0.06)" }}>
-        <div style={{ fontWeight: 800, fontSize: "1.05rem", color: G.brun, marginBottom: 4 }}>Signature du contrat</div>
-        <p style={{ fontSize: "0.8rem", color: "#888", marginBottom: 16 }}>Ton tableau de bord sera débloqué une fois ton contrat lu et signé.</p>
+        <div style={{ fontWeight: 800, fontSize: "1.05rem", color: G.brun, marginBottom: 4 }}>Signer mon contrat</div>
+        <p style={{ fontSize: "0.8rem", color: "#888", marginBottom: 16 }}>Ces informations seront insérées dans ton exemplaire du contrat.</p>
         <Input label="Nom complet" value={contractForm.name} onChange={e => setContractForm(f => ({ ...f, name: e.target.value }))} variant="line" />
         <Input label="Date et lieu de naissance" value={contractForm.birth} onChange={e => setContractForm(f => ({ ...f, birth: e.target.value }))} placeholder="Ex: 12/05/1990 à Brazzaville" variant="line" />
         <Input label="Adresse" value={contractForm.address} onChange={e => setContractForm(f => ({ ...f, address: e.target.value }))} variant="line" />
@@ -16528,10 +16601,10 @@ function AmbassadorPortal() {
         <Input label="Email" type="email" value={contractForm.email} onChange={e => setContractForm(f => ({ ...f, email: e.target.value }))} variant="line" />
         <label style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 16, cursor: "pointer" }}>
           <input type="checkbox" checked={contractForm.accept} onChange={e => setContractForm(f => ({ ...f, accept: e.target.checked }))} style={{ marginTop: 2 }} />
-          <span style={{ fontSize: "0.78rem", color: "#666" }}>Je certifie l'exactitude de ces informations et j'accepte les conditions du programme Ambassadeur Moyo.</span>
+          <span style={{ fontSize: "0.78rem", color: "#666" }}>J'ai lu et j'accepte les termes du contrat Ambassadeur Moyo Dating.</span>
         </label>
         {contractError && <p style={{ color: "#e74c3c", fontSize: "0.8rem", marginBottom: 12 }}>{contractError}</p>}
-        <Btn variant="authPrimary" onClick={submitContract} loading={contractSubmitting} style={{ width: "100%" }}>Signer mon contrat</Btn>
+        <Btn variant="authPrimary" onClick={submitContract} loading={contractSubmitting} style={{ width: "100%" }}>Signer électroniquement</Btn>
       </div>
     );
   }
@@ -16552,40 +16625,72 @@ function AmbassadorPortal() {
   const canRequest = available >= AFFILIATE_PAYOUT_MIN_FCFA && !ambPayoutPending && !!ambAffiliateId;
   return shell(
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
-        <div>
-          <div style={{ fontWeight: 900, fontSize: "1rem", color: G.brun }}>Dashboard Ambassadeur Moyo Dating</div>
-          <div style={{ fontSize: "0.76rem", color: "#999", marginTop: 2, fontWeight: 600 }}>{session.name}</div>
-        </div>
-        <button onClick={logout} style={{ background: "none", border: "none", color: "#999", fontSize: "0.78rem", fontWeight: 600, cursor: "pointer", flexShrink: 0 }}>Déconnexion</button>
-      </div>
+      <AmbassadorDashboardHeader name={session.name} photoUrl={session.photoUrl} onInfoClick={() => setShowAmbInfo(true)} />
       <div style={{ background: "linear-gradient(135deg,#8B0D2F 0%,#6E0A25 100%)", borderRadius: 20, padding: "22px 20px", marginBottom: 20 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
           <div style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.8)", fontWeight: 600 }}>Mes gains disponibles</div>
           {ambCommissionPercent !== null && <div style={{ fontSize: "0.7rem", color: "#fff", fontWeight: 800, background: "rgba(255,255,255,0.18)", borderRadius: 50, padding: "3px 10px" }}>{ambCommissionPercent}% de commission</div>}
         </div>
         <div style={{ fontSize: "2.1rem", fontWeight: 900, color: "#fff", marginBottom: 10 }}>{available.toLocaleString()} <span style={{ fontSize: "1.1rem", fontWeight: 700 }}>FCFA</span></div>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 12 }}>
+          <span style={{ width: 7, height: 7, borderRadius: "50%", background: canRequest ? "#4CAF50" : "rgba(255,255,255,0.5)", display: "inline-block" }} />
+          <span style={{ fontSize: "0.76rem", color: "rgba(255,255,255,0.9)", fontWeight: 600 }}>{ambPayoutPending ? "Demande de versement en cours" : canRequest ? "Prêt à être versé" : "Pas encore atteint le minimum"}</span>
+        </div>
         <button onClick={requestPayout} disabled={!canRequest} style={{ width: "100%", background: canRequest ? "#fff" : "rgba(255,255,255,0.25)", color: canRequest ? "#8B0D2F" : "rgba(255,255,255,0.7)", border: "none", borderRadius: 14, padding: "13px", fontSize: "0.86rem", fontWeight: 800, cursor: canRequest ? "pointer" : "not-allowed" }}>
           {ambPayoutPending ? "Demande envoyée" : "Demander le versement"}
         </button>
         <div style={{ fontSize: "0.68rem", color: "rgba(255,255,255,0.65)", marginTop: 10, textAlign: "center" }}>Minimum de versement : {AFFILIATE_PAYOUT_MIN_FCFA.toLocaleString()} FCFA</div>
       </div>
-      {ambContractPdfUrl && (
-        <a href={ambContractPdfUrl} target="_blank" rel="noopener noreferrer" style={{ display: "block", textAlign: "center", background: "#fafafa", color: "#8B0D2F", border: "1.5px solid #eee", borderRadius: 50, padding: "11px", fontSize: "0.82rem", fontWeight: 700, textDecoration: "none", marginBottom: 20 }}>Voir mon contrat</a>
-      )}
-      {ambPromoCode && (
-        <div style={{ background: "#fafafa", borderRadius: 16, padding: 16, marginBottom: 14 }}>
-          <div style={{ fontSize: "0.85rem", fontWeight: 800, color: G.brun, marginBottom: 10 }}>Mon code promo</div>
-          <div style={{ border: `1.5px dashed #8B0D2F`, borderRadius: 10, padding: "9px 12px", fontSize: "0.85rem", fontWeight: 700, color: "#8B0D2F", textAlign: "center" }}>{ambPromoCode}</div>
+      {(ambContractPdfUrl || AMBASSADOR_RESOURCES_LINK) && (
+        <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
+          {ambContractPdfUrl && (
+            <a href={ambContractPdfUrl} target="_blank" rel="noopener noreferrer" style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, boxSizing: "border-box", background: "#fafafa", color: "#8B0D2F", border: "1.5px solid #eee", borderRadius: 50, padding: "11px", fontSize: "0.82rem", fontWeight: 700, textDecoration: "none" }}>Voir mon contrat</a>
+          )}
+          {AMBASSADOR_RESOURCES_LINK && (
+            <a href={AMBASSADOR_RESOURCES_LINK} target="_blank" rel="noopener noreferrer" style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, boxSizing: "border-box", background: "#fafafa", color: "#8B0D2F", border: "1.5px solid #eee", borderRadius: 50, padding: "11px", fontSize: "0.82rem", fontWeight: 700, textDecoration: "none" }}>Supports de com'</a>
+          )}
         </div>
       )}
-      <div style={{ background: "#fafafa", borderRadius: 16, padding: 16 }}>
+      <div style={{ fontSize: "0.95rem", fontWeight: 800, color: G.brun, marginBottom: 12 }}>Mes performances</div>
+      <div style={{ display: "flex", gap: 10, marginBottom: 26 }}>
+        <div style={{ flex: 1, background: "#fafafa", borderRadius: 16, padding: "16px 10px", textAlign: "center" }}>
+          <div style={{ fontSize: "1.3rem", fontWeight: 900, color: G.brun }}>{ambInscriptions}</div>
+          <div style={{ fontSize: "0.64rem", color: "#888", fontWeight: 600 }}>Inscriptions</div>
+        </div>
+        <div style={{ flex: 1, background: "#fafafa", borderRadius: 16, padding: "16px 10px", textAlign: "center" }}>
+          <div style={{ fontSize: "1.3rem", fontWeight: 900, color: G.brun }}>{ambStats?.count ?? 0}</div>
+          <div style={{ fontSize: "0.64rem", color: "#888", fontWeight: 600 }}>Abonnements achetés</div>
+        </div>
+        <div style={{ flex: 1, background: "#fafafa", borderRadius: 16, padding: "16px 10px", textAlign: "center" }}>
+          <div style={{ fontSize: "1.3rem", fontWeight: 900, color: G.brun }}>{ambConversions.filter(c => c.status === "pending").length}</div>
+          <div style={{ fontSize: "0.64rem", color: "#888", fontWeight: 600 }}>Commissions en attente</div>
+        </div>
+      </div>
+      {ambPromoCode && (
+        <div style={{ background: "#fafafa", borderRadius: 16, padding: "16px", marginBottom: 14 }}>
+          <div style={{ fontSize: "0.85rem", fontWeight: 800, color: G.brun, marginBottom: 10 }}>Mon code promo</div>
+          <p style={{ fontSize: "0.74rem", color: "#999", lineHeight: 1.5, marginBottom: 10 }}>Vos filleuls peuvent le saisir à l'achat de leur Premium pour gagner {AFFILIATE_PROMO_BONUS_DAYS} jour{AFFILIATE_PROMO_BONUS_DAYS > 1 ? "s" : ""} bonus. En retour, vous touchez {ambCommissionPercent ?? AFFILIATE_COMMISSION_PERCENT}% de commission sur leur achat.</p>
+          <button onClick={() => {
+            const shareText = `Utilise le code ${ambPromoCode} sur Moyo Dating pour gagner ${AFFILIATE_PROMO_BONUS_DAYS} jour${AFFILIATE_PROMO_BONUS_DAYS > 1 ? "s" : ""} Premium bonus :`;
+            if (navigator.share) navigator.share({ title: "Moyo Dating", text: shareText, url: window.location.origin });
+            else { navigator.clipboard.writeText(`${shareText} ${window.location.origin}`).catch(() => {}); setToast({ msg: "Code et lien copiés.", type: "success" }); }
+          }} style={{ width: "100%", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: "#fff", color: "#8B0D2F", borderRadius: 50, padding: "12px 24px", fontSize: "0.85rem", fontWeight: 700, border: "1.5px solid #8B0D2F", cursor: "pointer" }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8B0D2F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+            Partager mon code : {ambPromoCode}
+          </button>
+        </div>
+      )}
+      <div style={{ background: "#fafafa", borderRadius: 16, padding: "16px" }}>
         <div style={{ fontSize: "0.85rem", fontWeight: 800, color: G.brun, marginBottom: 10 }}>Mon lien d'invitation</div>
+        <p style={{ fontSize: "0.74rem", color: "#999", lineHeight: 1.5, marginBottom: 10 }}>Dès leur inscription via ce lien, vos filleuls gagnent {AFFILIATE_PROMO_BONUS_DAYS} jour{AFFILIATE_PROMO_BONUS_DAYS > 1 ? "s" : ""} bonus au premier Premium acheté, sans rien saisir, et vous percevez votre commission dès l'achat de leur Premium.</p>
         <button onClick={() => {
           const refLink = `${window.location.origin}?ref=${session.userId}`;
           if (navigator.share) navigator.share({ title: "Moyo Dating", text: "Rejoins Moyo Dating avec mon lien :", url: refLink });
           else { navigator.clipboard.writeText(refLink).catch(() => {}); setToast({ msg: "Lien copié.", type: "success" }); }
-        }} style={{ width: "100%", boxSizing: "border-box", background: "#fff", color: "#8B0D2F", borderRadius: 50, padding: "12px 24px", fontSize: "0.85rem", fontWeight: 700, border: "1.5px solid #8B0D2F", cursor: "pointer" }}>Partager mon lien</button>
+        }} style={{ width: "100%", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: "#fff", color: "#8B0D2F", borderRadius: 50, padding: "12px 24px", fontSize: "0.85rem", fontWeight: 700, border: "1.5px solid #8B0D2F", cursor: "pointer" }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8B0D2F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+          Partager mon lien
+        </button>
       </div>
       {ambConversions.length > 0 && (
         <div style={{ marginTop: 20 }}>
@@ -16602,6 +16707,45 @@ function AmbassadorPortal() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Bloc final : déconnexion + création d'un vrai compte Moyo Dating (uniquement ici, jamais
+          proposé aux ambassadeurs qui ont déjà un profil de rencontre) */}
+      <div style={{ marginTop: 26, display: "flex", flexDirection: "column", gap: 10 }}>
+        <button onClick={logout} style={{ width: "100%", background: "none", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 700, color: "#666", cursor: "pointer" }}>Déconnexion</button>
+        <a href={window.location.origin} style={{ width: "100%", boxSizing: "border-box", display: "block", textAlign: "center", background: "none", border: `1.5px solid ${G.rouge}`, borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 700, color: G.rouge, textDecoration: "none" }}>Créer ton compte Moyo Dating</a>
+      </div>
+
+      {/* ── Réseaux sociaux — identique à ce qui est affiché sous Profil dans l'app ── */}
+      {(SOCIAL_FACEBOOK || SOCIAL_INSTAGRAM || SOCIAL_TIKTOK || SOCIAL_YOUTUBE || SOCIAL_LINKEDIN) && (
+        <div style={{ marginTop: 16, background: G.blanc, borderRadius: 16, padding: "14px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", textAlign: "center" }}>
+          <div style={{ color: "#999", fontSize: "0.76rem", fontWeight: 600, marginBottom: 10 }}>Suis-nous sur les réseaux</div>
+          <div style={{ display: "flex", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
+            {[
+              [SOCIAL_FACEBOOK, "#1877F2", svgFb, "Facebook"],
+              [SOCIAL_INSTAGRAM, "#C1358B", svgIg, "Instagram"],
+              [SOCIAL_TIKTOK, "#111111", svgTk, "TikTok"],
+              [SOCIAL_YOUTUBE, "#FF0000", svgYt, "YouTube"],
+              [SOCIAL_LINKEDIN, "#0A66C2", svgLi, "LinkedIn"],
+            ].map(([url, bg, svgFn, label]: any, i) => url && (
+              <a key={i} href={url} target="_blank" rel="noopener noreferrer" title={label} style={{ width: 42, height: 42, borderRadius: "50%", background: bg, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", flexShrink: 0 }}>
+                {svgFn(19)}
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {showAmbInfo && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10002, display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }} onClick={() => setShowAmbInfo(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 20, width: "100%", maxWidth: 420, padding: "22px 20px" }}>
+            <div style={{ fontWeight: 900, fontSize: "1rem", color: G.brun, marginBottom: 10 }}>Comment ça marche</div>
+            <p style={{ fontSize: "0.82rem", color: "#666", lineHeight: 1.6, marginBottom: 14 }}>Chaque personne qui s'abonne au Premium grâce à vous vous rapporte une commission en argent, versée par Mobile Money. Elle gagne elle aussi {AFFILIATE_PROMO_BONUS_DAYS} jour{AFFILIATE_PROMO_BONUS_DAYS > 1 ? "s" : ""} de Premium en plus de sa formule, offerts par Moyo Dating. Deux façons de vous faire créditer, jamais cumulées :</p>
+            <p style={{ fontSize: "0.82rem", color: "#666", lineHeight: 1.6, marginBottom: 10 }}><strong>Lien d'invitation</strong> : à utiliser pour quelqu'un qui n'a pas encore de compte. Dès son inscription via ce lien, il est automatiquement rattaché à vous. Le jour où il passe Premium, tout se déclenche tout seul : votre commission et ses jours bonus.</p>
+            <p style={{ fontSize: "0.82rem", color: "#666", lineHeight: 1.6, marginBottom: 20 }}>{ambPromoCode ? <><strong>Code promo</strong> : à utiliser pour quelqu'un qui a déjà un compte Moyo Dating, créé sans votre lien. Il le saisit lui-même au moment de payer son Premium : ça vous crédite la commission et lui donne ses jours bonus, même si son compte n'était pas rattaché à vous au départ.</> : "Un code promo pourra aussi vous être attribué par l'équipe Moyo Dating, pour les personnes qui ont déjà un compte créé sans votre lien."}</p>
+            <button onClick={() => setShowAmbInfo(false)} style={{ width: "100%", background: "#8B0D2F", color: "#fff", border: "none", borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>Compris</button>
+          </div>
         </div>
       )}
     </div>
@@ -17923,18 +18067,9 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
           const visibleConversions = showAllAmbConversions ? ambConversions : ambConversions.slice(0, 5);
           return (
             <div style={{ position: "fixed", inset: 0, background: "#fff", zIndex: 10001, display: "flex", flexDirection: "column", overflow: "hidden", overscrollBehavior: "contain" }}>
-              {/* AppBar */}
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "calc(env(safe-area-inset-top) + 14px) 16px 14px", borderBottom: "1px solid #f1f1f1", flexShrink: 0 }}>
-                <div onClick={() => { setShowAmbDashboard(false); setShowAllAmbConversions(false); }} style={{ cursor: "pointer", padding: 4 }}>
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={G.brun} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-                </div>
-                <div style={{ textAlign: "center" }}>
-                  <div style={{ fontWeight: 900, fontSize: "1rem", color: G.brun }}>Dashboard Ambassadeur Moyo Dating</div>
-                  <div style={{ fontSize: "0.76rem", color: "#999", marginTop: 2, fontWeight: 600 }}>{auth.name}</div>
-                </div>
-                <div onClick={() => setShowAmbInfo(true)} style={{ cursor: "pointer", padding: 4 }}>
-                  <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
-                </div>
+              {/* En-tête */}
+              <div style={{ padding: "calc(env(safe-area-inset-top) + 14px) 16px 4px", borderBottom: "1px solid #f1f1f1", flexShrink: 0 }}>
+                <AmbassadorDashboardHeader name={auth.name} photoUrl={profile?.photo_url} onInfoClick={() => setShowAmbInfo(true)} />
               </div>
 
               <div style={{ flex: 1, minHeight: 0, position: "relative", overflow: "hidden" }}>
@@ -18073,6 +18208,8 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
                     Partager mon lien
                   </button>
                 </div>
+
+                <button onClick={() => { setShowAmbDashboard(false); setShowAllAmbConversions(false); }} style={{ width: "100%", marginTop: 26, background: "none", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 700, color: "#666", cursor: "pointer" }}>Revenir à l'app</button>
               </div>
               </div>
               {!ambContractSigned && (
