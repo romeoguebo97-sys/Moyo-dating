@@ -9144,13 +9144,22 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
   // ── Détail nominatif des likes en attente (pas encore un match) : qui a liké cette personne,
   //    ou qui cette personne a likée, en excluant les paires déjà matchées (même logique que
   //    loadPendingLikes). ──
-  const [pendingLikesDetail, setPendingLikesDetail] = useState<{ userId: string; userName: string; direction: "received" | "sent"; profiles: any[] } | null>(null);
+  const [pendingLikesDetail, setPendingLikesDetail] = useState<{ userId: string; userName: string; direction: "received" | "sent" | "matches"; profiles: any[] } | null>(null);
   const [pendingLikesDetailLoading, setPendingLikesDetailLoading] = useState(false);
-  const openPendingLikesDetail = async (userId: string, userName: string, direction: "received" | "sent") => {
+  const openPendingLikesDetail = async (userId: string, userName: string, direction: "received" | "sent" | "matches") => {
     setPendingLikesDetail({ userId, userName, direction, profiles: [] });
     setPendingLikesDetailLoading(true);
     try {
       const H = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` };
+      if (direction === "matches") {
+        const matchesRaw = await fetch(`${SUPABASE_URL}/rest/v1/matches?or=(user1.eq.${userId},user2.eq.${userId})&select=user1,user2&limit=500`, { headers: H }).then(r => r.json()).catch(() => []);
+        const matchedIds = Array.from(new Set((Array.isArray(matchesRaw) ? matchesRaw : []).map((m: any) => m.user1 === userId ? m.user2 : m.user1).filter(Boolean)));
+        if (matchedIds.length === 0) { setPendingLikesDetail({ userId, userName, direction, profiles: [] }); setPendingLikesDetailLoading(false); return; }
+        const profs = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=in.(${matchedIds.join(",")})&select=id,name,age,city,photo_url,phone`, { headers: H }).then(r => r.json()).catch(() => []);
+        setPendingLikesDetail({ userId, userName, direction, profiles: Array.isArray(profs) ? profs : [] });
+        setPendingLikesDetailLoading(false);
+        return;
+      }
       const q = direction === "received" ? `to_user=eq.${userId}` : `from_user=eq.${userId}`;
       const likesRaw = await fetch(`${SUPABASE_URL}/rest/v1/likes?${q}&select=from_user,to_user&limit=500`, { headers: H }).then(r => r.json()).catch(() => []);
       const otherIds: string[] = (Array.isArray(likesRaw) ? likesRaw : []).map((l: any) => direction === "received" ? l.from_user : l.to_user).filter(Boolean);
@@ -10856,7 +10865,9 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
             <div style={{ padding: "16px 20px", borderBottom: `1px solid ${G.gris}`, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, background: G.blanc, zIndex: 1 }}>
               <div>
                 <div style={{ fontWeight: 900, fontSize: "1.02rem", color: G.brun }}>{pendingLikesDetail.userName}</div>
-                <div style={{ fontSize: "0.72rem", color: pendingLikesDetail.direction === "received" ? "#e91e8c" : "#2980b9" }}>{pendingLikesDetail.direction === "received" ? "A été likée par" : "A liké"} — en attente d'un retour</div>
+                <div style={{ fontSize: "0.72rem", color: pendingLikesDetail.direction === "received" ? "#e91e8c" : pendingLikesDetail.direction === "sent" ? "#2980b9" : G.rouge }}>
+                  {pendingLikesDetail.direction === "received" ? "A été likée par — en attente d'un retour" : pendingLikesDetail.direction === "sent" ? "A liké — en attente d'un retour" : "Ses matchs (likes mutuels confirmés)"}
+                </div>
               </div>
               <button onClick={() => setPendingLikesDetail(null)} style={{ border: "none", background: G.creme, borderRadius: "50%", width: 30, height: 30, cursor: "pointer", color: "#666", flexShrink: 0 }}>✕</button>
             </div>
@@ -12902,7 +12913,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                         )}
                         {/* Nombre réel de matchs (likes mutuels confirmés) */}
                         {!!matchCount[u.id] && (
-                          <div title="Nombre réel de matchs (likes mutuels confirmés)" style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(192,57,43,0.08)", color: G.rouge, borderRadius: 50, padding: "3px 9px", fontSize: "0.66rem", fontWeight: 800, flexShrink: 0, marginLeft: 6 }}>
+                          <div onClick={() => openPendingLikesDetail(u.id, u.name, "matches")} title="Voir les matchs de cette personne (likes mutuels confirmés)" style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(192,57,43,0.08)", color: G.rouge, borderRadius: 50, padding: "3px 9px", fontSize: "0.66rem", fontWeight: 800, flexShrink: 0, marginLeft: 6, cursor: "pointer" }}>
                             <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
                             {matchCount[u.id]}
                           </div>
@@ -12997,7 +13008,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                         </div>
                       )}
                       {!!matchCount[u.id] && (
-                        <div title="Nombre réel de matchs (likes mutuels confirmés)" style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(192,57,43,0.08)", color: G.rouge, borderRadius: 50, padding: "3px 9px", fontSize: "0.7rem", fontWeight: 800, flexShrink: 0 }}>
+                        <div onClick={() => openPendingLikesDetail(u.id, u.name, "matches")} title="Voir les matchs de cette personne (likes mutuels confirmés)" style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(192,57,43,0.08)", color: G.rouge, borderRadius: 50, padding: "3px 9px", fontSize: "0.7rem", fontWeight: 800, flexShrink: 0, cursor: "pointer" }}>
                           <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
                           {matchCount[u.id]}
                         </div>
