@@ -7675,7 +7675,7 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages, onMatch }
       const bIds = new Set(blocked.map(b => b.blocked_id));
       setBlockedIds(bIds);
       while (keepLoading) {
-        let params = `?id=neq.${auth.userId}&is_visible=neq.false&is_complete=eq.true&order=is_premium.desc,is_verified.desc,created_at.desc&limit=${BATCH}&offset=${offset}`;
+        let params = `?id=neq.${auth.userId}&is_visible=neq.false&is_complete=eq.true&account_type=neq.ambassador_only&order=is_premium.desc,is_verified.desc,created_at.desc&limit=${BATCH}&offset=${offset}`;
         if (filters.city && !filters.city.startsWith("──")) params += `&city=eq.${encodeURIComponent(filters.city)}`;
         // Moyo Dating est une app de rencontre hétérosexuelle : on ne montre que le genre opposé.
         // Le filtre manuel "filters.gender" ne peut donc PAS forcer le même genre que soi.
@@ -16087,6 +16087,527 @@ function AmbassadorCard({ auth, status, onRequested }: { auth: Auth; status: "no
   );
 }
 
+// ── Portail Ambassadeur sans profil de rencontre ────────────────────────────
+// Accessible uniquement via le lien privé ?ambassador=1 (jamais affiché dans l'app).
+// Compte allégé (account_type="ambassador_only") : pas d'âge, ville, photos ni bio.
+// Réutilise exactement les mêmes tables/edge function que le programme Ambassadeur
+// classique (affiliates, ambassador_requests, affiliate_conversions,
+// affiliate_payout_requests, sign-ambassador-contract), donc la gestion Admin ne
+// change pas d'un pixel. Session gérée séparément de celle de l'app principale
+// (clés localStorage dédiées), totalement isolé du reste du site. ──
+type AmbSession = { token: string; refreshToken: string; userId: string; name: string };
+function AmbassadorPortal() {
+  const [session, setSession] = useState<AmbSession | null>(null);
+  const [sessionChecked, setSessionChecked] = useState(false);
+  const [authMode, setAuthMode] = useState<"signup" | "login">("signup");
+  const [signupForm, setSignupForm] = useState({ name: "", phone: "", email: "", password: "" });
+  const [loginForm, setLoginForm] = useState({ email: "", password: "" });
+  const [formError, setFormError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
+  // ── Mot de passe oublié : demande d'un lien, puis saisie du nouveau mot de passe si on revient
+  //    ici via le lien reçu par email (redirect_to inclut ?ambassador=1 pour boucler sur ce portail
+  //    au lieu de renvoyer vers l'app de rencontre classique). ──
+  const [showForgot, setShowForgot] = useState(false);
+  const [forgotMethod, setForgotMethod] = useState<"choice" | "email" | "whatsapp">("choice");
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotName, setForgotName] = useState("");
+  const [forgotDesiredPassword, setForgotDesiredPassword] = useState("");
+  const [forgotMatchStatus, setForgotMatchStatus] = useState<"idle" | "checking" | "match" | "no_match">("idle");
+  useEffect(() => {
+    if (!showForgot || forgotMethod !== "whatsapp") { setForgotMatchStatus("idle"); return; }
+    const email = forgotEmail.trim();
+    const name = forgotName.trim();
+    if (!email || !name) { setForgotMatchStatus("idle"); return; }
+    setForgotMatchStatus("checking");
+    const t = setTimeout(async () => {
+      try {
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/check_account_match`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY },
+          body: JSON.stringify({ p_email: email, p_name: name }),
+        });
+        const data = await r.json().catch(() => null);
+        setForgotMatchStatus(data === true ? "match" : "no_match");
+      } catch { setForgotMatchStatus("no_match"); }
+    }, 500);
+    return () => clearTimeout(t);
+  }, [showForgot, forgotMethod, forgotEmail, forgotName]);
+  const [forgotSent, setForgotSent] = useState(false);
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [resetToken, setResetToken] = useState("");
+  const [resetLinkExpired, setResetLinkExpired] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [newPasswordConfirm, setNewPasswordConfirm] = useState("");
+  const [resetSubmitting, setResetSubmitting] = useState(false);
+
+  useEffect(() => {
+    const hash = window.location.hash;
+    const params = new URLSearchParams(hash.replace("#", "?"));
+    const t = params.get("access_token");
+    const type = params.get("type");
+    const err = params.get("error") || params.get("error_code") || params.get("error_description");
+    if (t && type === "recovery") setResetToken(t);
+    else if (err) setResetLinkExpired(true);
+  }, []);
+
+  const sendForgotLink = async () => {
+    if (!forgotEmail.trim()) { setFormError("Renseigne ton email."); return; }
+    setForgotLoading(true);
+    setFormError("");
+    try {
+      await fetch(`${SUPABASE_URL}/auth/v1/recover`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY },
+        body: JSON.stringify({ email: forgotEmail.trim().toLowerCase(), redirect_to: `${APP_URL}/?ambassador=1` }),
+      });
+      setForgotSent(true);
+    } catch { setFormError("Erreur réseau, réessaie."); }
+    setForgotLoading(false);
+  };
+
+  const submitNewPassword = async () => {
+    if (newPassword.length < 6) { setFormError("Le mot de passe doit faire au moins 6 caractères."); return; }
+    if (newPassword !== newPasswordConfirm) { setFormError("Les mots de passe ne correspondent pas."); return; }
+    setResetSubmitting(true);
+    setFormError("");
+    const res = await sb.updatePassword(resetToken, newPassword);
+    if (res?.error) {
+      setFormError("Une erreur est survenue. Réessaie.");
+    } else {
+      setResetToken("");
+      try { window.history.replaceState({}, "", window.location.pathname + window.location.search); } catch {}
+      setAuthMode("login");
+      setToast({ msg: "Mot de passe modifié, connecte-toi.", type: "success" });
+    }
+    setResetSubmitting(false);
+  };
+
+  const persistSession = (s: AmbSession) => {
+    localStorage.setItem("moyo_amb_token", s.token);
+    localStorage.setItem("moyo_amb_refresh", s.refreshToken || "");
+    localStorage.setItem("moyo_amb_uid", s.userId);
+    localStorage.setItem("moyo_amb_name", s.name || "");
+    setSession(s);
+  };
+  const logout = () => {
+    ["moyo_amb_token", "moyo_amb_refresh", "moyo_amb_uid", "moyo_amb_name"].forEach(k => localStorage.removeItem(k));
+    setSession(null);
+    setStatus("loading");
+  };
+
+  useEffect(() => {
+    (async () => {
+      const rt = localStorage.getItem("moyo_amb_refresh");
+      const uid = localStorage.getItem("moyo_amb_uid");
+      const nm = localStorage.getItem("moyo_amb_name") || "";
+      if (rt && uid) {
+        const fresh = await sb.refreshSession(rt);
+        if (fresh?.access_token) {
+          persistSession({ token: fresh.access_token, refreshToken: fresh.refresh_token || rt, userId: uid, name: nm });
+          setSessionChecked(true);
+          return;
+        }
+      }
+      const tok = localStorage.getItem("moyo_amb_token");
+      if (tok && uid) setSession({ token: tok, refreshToken: rt || "", userId: uid, name: nm });
+      setSessionChecked(true);
+    })();
+  }, []);
+
+  // ── Statut + données du tableau de bord ──
+  const [status, setStatus] = useState<"loading" | "none" | "pending" | "rejected" | "ambassador">("loading");
+  const [ambStats, setAmbStats] = useState<{ pending: number; paid: number; count: number } | null>(null);
+  const [ambAffiliateId, setAmbAffiliateId] = useState<string | null>(null);
+  const [ambPromoCode, setAmbPromoCode] = useState<string | null>(null);
+  const [ambCommissionPercent, setAmbCommissionPercent] = useState<number | null>(null);
+  const [ambContractSigned, setAmbContractSigned] = useState(true);
+  const [ambContractSignedAt, setAmbContractSignedAt] = useState<string | null>(null);
+  const [ambContractPdfUrl, setAmbContractPdfUrl] = useState<string | null>(null);
+  const [ambConversions, setAmbConversions] = useState<{ id: string; plan_label?: string; commission_amount: number; status: string; created_at: string }[]>([]);
+  const [ambPayoutPending, setAmbPayoutPending] = useState<{ amount: number } | null>(null);
+
+  const loadStatus = async () => {
+    if (!session) return;
+    setStatus("loading");
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${session.userId}&select=is_ambassador`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${session.token}` } });
+      const d = await r.json().catch(() => []);
+      if (Array.isArray(d) && d[0]?.is_ambassador) {
+        setStatus("ambassador");
+        const ra = await fetch(`${SUPABASE_URL}/rest/v1/affiliates?user_id=eq.${session.userId}&select=id,promo_code,commission_percent,contract_signed,contract_signed_at,contract_pdf_url&limit=1`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${session.token}` } });
+        const da = await ra.json().catch(() => []);
+        const affId = Array.isArray(da) ? da[0]?.id : null;
+        setAmbAffiliateId(affId || null);
+        setAmbPromoCode(Array.isArray(da) ? da[0]?.promo_code || null : null);
+        setAmbCommissionPercent(Array.isArray(da) && typeof da[0]?.commission_percent === "number" ? da[0].commission_percent : AFFILIATE_COMMISSION_PERCENT);
+        setAmbContractSigned(Array.isArray(da) && da[0] ? !!da[0].contract_signed : true);
+        setAmbContractSignedAt(Array.isArray(da) ? da[0]?.contract_signed_at || null : null);
+        setAmbContractPdfUrl(Array.isArray(da) ? da[0]?.contract_pdf_url || null : null);
+        if (affId) {
+          const rc = await fetch(`${SUPABASE_URL}/rest/v1/affiliate_conversions?affiliate_id=eq.${affId}&select=id,plan_label,commission_amount,status,created_at&order=created_at.desc&limit=100`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${session.token}` } });
+          const dc = await rc.json().catch(() => []);
+          if (Array.isArray(dc)) {
+            const pending = dc.filter((c: any) => c.status === "pending").reduce((s: number, c: any) => s + (c.commission_amount || 0), 0);
+            const paid = dc.filter((c: any) => c.status === "paid").reduce((s: number, c: any) => s + (c.commission_amount || 0), 0);
+            setAmbStats({ pending, paid, count: dc.length });
+            setAmbConversions(dc);
+          }
+          const rp = await fetch(`${SUPABASE_URL}/rest/v1/affiliate_payout_requests?affiliate_id=eq.${affId}&status=eq.pending&select=amount&limit=1`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${session.token}` } });
+          const dp = await rp.json().catch(() => []);
+          if (Array.isArray(dp) && dp[0]) setAmbPayoutPending({ amount: dp[0].amount });
+        }
+        return;
+      }
+      const rr = await fetch(`${SUPABASE_URL}/rest/v1/ambassador_requests?user_id=eq.${session.userId}&status=eq.pending&select=id&limit=1`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${session.token}` } });
+      const dr = await rr.json().catch(() => []);
+      if (Array.isArray(dr) && dr.length > 0) { setStatus("pending"); return; }
+      const rj = await fetch(`${SUPABASE_URL}/rest/v1/ambassador_requests?user_id=eq.${session.userId}&status=eq.rejected&select=id&order=reviewed_at.desc&limit=1`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${session.token}` } });
+      const dj = await rj.json().catch(() => []);
+      setStatus(Array.isArray(dj) && dj[0] ? "rejected" : "none");
+    } catch { setStatus("none"); }
+  };
+  useEffect(() => { loadStatus(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [session?.userId]);
+
+  const doSignup = async () => {
+    setFormError("");
+    if (!signupForm.name.trim() || !signupForm.phone.trim() || !signupForm.email.trim() || signupForm.password.length < 6) {
+      setFormError("Merci de remplir tous les champs (mot de passe : 6 caractères minimum)."); return;
+    }
+    setLoading(true);
+    try {
+      const emailClean = signupForm.email.trim().toLowerCase();
+      const authRes = await sb.signUp(emailClean, signupForm.password, { name: signupForm.name.trim() });
+      if (authRes?.error) {
+        const msg = (authRes.error.message || "").includes("already registered") ? "Cet email est déjà utilisé." : "Impossible de créer le compte.";
+        setFormError(msg); setLoading(false); return;
+      }
+      if (authRes.user?.identities?.length === 0) { setFormError("Cet email est déjà utilisé."); setLoading(false); return; }
+      const loginRes = await sb.signIn(emailClean, signupForm.password);
+      const token = loginRes?.access_token;
+      const userId = loginRes?.user?.id || authRes?.user?.id;
+      if (!token || !userId) { setFormError("Erreur lors de la création du compte, réessaie."); setLoading(false); return; }
+      // Compte allégé : pas d'âge, ville, photo ni bio. is_complete=false garantit qu'il
+      // n'apparaîtra jamais dans Découvrir/Likes/Matchs (filtre déjà existant côté app).
+      await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${userId}`, {
+        method: "PATCH",
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${token}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
+        body: JSON.stringify({ name: signupForm.name.trim(), phone: signupForm.phone.trim(), account_type: "ambassador_only", is_complete: false }),
+      });
+      await fetch(`${SUPABASE_URL}/rest/v1/ambassador_requests`, {
+        method: "POST",
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${token}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
+        body: JSON.stringify({ user_id: userId, status: "pending" }),
+      });
+      persistSession({ token, refreshToken: loginRes?.refresh_token || "", userId, name: signupForm.name.trim() });
+    } catch { setFormError("Erreur réseau, réessaie."); }
+    setLoading(false);
+  };
+
+  const doLogin = async () => {
+    setFormError("");
+    if (!loginForm.email.trim() || !loginForm.password) { setFormError("Renseigne ton email et ton mot de passe."); return; }
+    setLoading(true);
+    try {
+      const r = await sb.signIn(loginForm.email.trim().toLowerCase(), loginForm.password);
+      if (!r?.access_token) { setFormError("Email ou mot de passe incorrect."); setLoading(false); return; }
+      persistSession({ token: r.access_token, refreshToken: r.refresh_token || "", userId: r.user.id, name: r.user?.user_metadata?.name || "" });
+    } catch { setFormError("Erreur réseau, réessaie."); }
+    setLoading(false);
+  };
+
+  // ── Signature du contrat (même edge function que le programme Ambassadeur classique) ──
+  const [contractForm, setContractForm] = useState({ name: "", birth: "", address: "", phone: "", email: "", accept: false });
+  const [contractSubmitting, setContractSubmitting] = useState(false);
+  const [contractError, setContractError] = useState("");
+  const submitContract = async () => {
+    if (!session) return;
+    setContractError("");
+    if (!contractForm.name.trim() || !contractForm.birth.trim() || !contractForm.address.trim() || !contractForm.phone.trim() || !contractForm.email.trim()) {
+      setContractError("Merci de remplir tous les champs."); return;
+    }
+    if (!contractForm.accept) { setContractError("Merci de cocher la case d'acceptation."); return; }
+    setContractSubmitting(true);
+    try {
+      const r = await fetch(`${SUPABASE_URL}/functions/v1/sign-ambassador-contract`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${session.token}` },
+        body: JSON.stringify({ user_id: session.userId, full_name: contractForm.name.trim(), birth_date_place: contractForm.birth.trim(), address: contractForm.address.trim(), phone: contractForm.phone.trim(), email: contractForm.email.trim(), accepted: contractForm.accept }),
+      });
+      const data = await r.json().catch(() => null);
+      if (!r.ok || !data?.ok) { setContractError(data?.error || "Erreur lors de la signature, réessaie."); setContractSubmitting(false); return; }
+      setAmbContractSignedAt(new Date().toISOString());
+      setToast({ msg: "Contrat signé, en attente de validation par notre équipe.", type: "success" });
+    } catch { setContractError("Erreur réseau, réessaie."); }
+    setContractSubmitting(false);
+  };
+
+  const requestPayout = async () => {
+    if (!session || !ambAffiliateId || !ambStats || ambStats.pending < AFFILIATE_PAYOUT_MIN_FCFA || ambPayoutPending) return;
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/affiliate_payout_requests`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${session.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ affiliate_id: ambAffiliateId, user_id: session.userId, affiliate_name: session.name, amount: ambStats.pending, status: "pending" }) });
+      setAmbPayoutPending({ amount: ambStats.pending });
+      setToast({ msg: "Demande de versement envoyée, elle sera traitée sous quelques jours.", type: "success" });
+    } catch { setToast({ msg: "Erreur lors de la demande de versement.", type: "error" }); }
+  };
+
+  const shell = (children: React.ReactNode) => (
+    <div style={{ minHeight: "100vh", background: G.creme, display: "flex", flexDirection: "column", alignItems: "center", padding: "40px 20px" }}>
+      {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
+      <div style={{ textAlign: "center", marginBottom: 24 }}>
+        <div style={{ fontSize: "1.6rem", fontWeight: 900, color: G.rouge }}>Moyo <span style={{ fontWeight: 700, fontSize: "0.55em", color: G.brun }}>Ambassadeur</span></div>
+      </div>
+      <div style={{ width: "100%", maxWidth: 420 }}>{children}</div>
+    </div>
+  );
+
+  if (!sessionChecked) return shell(<div style={{ textAlign: "center", color: "#999", padding: 40 }}>Chargement…</div>);
+
+  // ── Retour depuis le lien "mot de passe oublié" reçu par email ──
+  if (resetLinkExpired) {
+    return shell(
+      <div style={{ background: G.blanc, borderRadius: 22, padding: 28, textAlign: "center", boxShadow: "0 4px 20px rgba(0,0,0,0.06)" }}>
+        <div style={{ fontWeight: 800, fontSize: "1.05rem", color: G.brun, marginBottom: 8 }}>Ce lien n'est plus valide</div>
+        <p style={{ fontSize: "0.85rem", color: "#888", lineHeight: 1.6, marginBottom: 18 }}>Il a déjà été utilisé, ou il a expiré. Redemande un nouveau lien depuis l'écran de connexion.</p>
+        <button onClick={() => { setResetLinkExpired(false); setAuthMode("login"); try { window.history.replaceState({}, "", window.location.pathname + window.location.search); } catch {} }} style={{ background: "none", border: "none", color: G.rouge, fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>Retour à la connexion</button>
+      </div>
+    );
+  }
+  if (resetToken) {
+    return shell(
+      <div style={{ background: G.blanc, borderRadius: 22, padding: 24, boxShadow: "0 4px 20px rgba(0,0,0,0.06)" }}>
+        <div style={{ fontWeight: 800, fontSize: "1.05rem", color: G.brun, marginBottom: 4 }}>Nouveau mot de passe</div>
+        <p style={{ fontSize: "0.8rem", color: "#888", marginBottom: 16 }}>Choisis un nouveau mot de passe sécurisé.</p>
+        <Input label="Nouveau mot de passe" type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="Minimum 6 caractères" icon="lock" hint="Au moins 6 caractères" variant="line" />
+        <Input label="Confirmer le mot de passe" type="password" value={newPasswordConfirm} onChange={e => setNewPasswordConfirm(e.target.value)} placeholder="Répète ton mot de passe" icon="lock" variant="line" />
+        {formError && <p style={{ color: "#e74c3c", fontSize: "0.8rem", marginBottom: 12 }}>{formError}</p>}
+        <Btn variant="authPrimary" onClick={submitNewPassword} loading={resetSubmitting} style={{ width: "100%" }} disabled={!newPassword || !newPasswordConfirm}>Changer mon mot de passe ✓</Btn>
+      </div>
+    );
+  }
+
+  // ── Pas connecté : inscription / connexion ──
+  if (!session) {
+    if (showForgot) {
+      const waSupportLink = `https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent(`Bonjour, je n'arrive pas à réinitialiser mon mot de passe moi-même sur l'espace Ambassadeur Moyo Dating.\n\nPrénom : ${forgotName.trim() || "(non renseigné)"}\nEmail : ${forgotEmail.trim() || "(non renseigné)"}${forgotDesiredPassword.trim() ? `\nMot de passe souhaité : ${forgotDesiredPassword.trim()}` : ""}\n\nPouvez-vous m'aider à le changer ?`)}`;
+      return shell(
+        <div style={{ background: G.blanc, borderRadius: 22, padding: 24, boxShadow: "0 4px 20px rgba(0,0,0,0.06)" }}>
+          <div style={{ fontWeight: 800, fontSize: "1.05rem", color: G.brun, marginBottom: 4 }}>Mot de passe oublié</div>
+          {forgotMethod === "choice" && (
+            <>
+              <p style={{ color: "#666", fontSize: "0.82rem", marginBottom: 18, marginTop: 8, lineHeight: 1.5 }}>Comment veux-tu récupérer l'accès à ton compte ?</p>
+              <div onClick={() => setForgotMethod("email")} style={{ display: "flex", alignItems: "center", gap: 14, padding: 14, borderRadius: 14, border: `2px solid ${G.gris}`, cursor: "pointer", marginBottom: 10 }}>
+                <div style={{ width: 40, height: 40, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                </div>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: "0.88rem", color: "#222" }}>Recevoir un lien par email</div>
+                  <div style={{ fontSize: "0.74rem", color: "#888", marginTop: 2 }}>Rapide, tu changes toi-même ton mot de passe</div>
+                </div>
+              </div>
+              <div onClick={() => setForgotMethod("whatsapp")} style={{ display: "flex", alignItems: "center", gap: 14, padding: 14, borderRadius: 14, border: `2px solid ${G.gris}`, cursor: "pointer", marginBottom: 6 }}>
+                <div style={{ width: 40, height: 40, borderRadius: "50%", background: "rgba(37,211,102,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="#25D366"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24z"/></svg>
+                </div>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: "0.88rem", color: "#222" }}>Demander à l'équipe de le faire</div>
+                  <div style={{ fontSize: "0.74rem", color: "#888", marginTop: 2 }}>Utile si tu n'es pas à l'aise avec l'email</div>
+                </div>
+              </div>
+              <button onClick={() => { setShowForgot(false); setForgotMethod("choice"); }} style={{ width: "100%", background: "none", border: "none", color: "#999", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer", padding: 8, marginTop: 4 }}>Annuler</button>
+            </>
+          )}
+          {forgotMethod === "email" && (
+            forgotSent ? (
+              <>
+                <p style={{ fontSize: "0.82rem", color: "#888", lineHeight: 1.6, marginBottom: 18 }}>Si un compte existe avec cet email, un lien pour choisir un nouveau mot de passe vient d'être envoyé.</p>
+                <button onClick={() => { setShowForgot(false); setForgotMethod("choice"); setForgotSent(false); setForgotEmail(""); }} style={{ background: "none", border: "none", color: G.rouge, fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>Retour à la connexion</button>
+              </>
+            ) : (
+              <>
+                <Input label="Ton email" type="email" value={forgotEmail} onChange={e => setForgotEmail(e.target.value)} placeholder="ton@email.com" icon="email" variant="line" />
+                {formError && <p style={{ color: "#e74c3c", fontSize: "0.8rem", marginBottom: 12 }}>{formError}</p>}
+                <Btn variant="authPrimary" onClick={sendForgotLink} loading={forgotLoading} style={{ width: "100%", marginBottom: 10 }}>Envoyer le lien →</Btn>
+                <div style={{ textAlign: "center" }}><span onClick={() => setForgotMethod("choice")} style={{ fontSize: "0.85rem", color: "#555", cursor: "pointer" }}>← Retour</span></div>
+              </>
+            )
+          )}
+          {forgotMethod === "whatsapp" && (
+            <>
+              <p style={{ color: "#666", fontSize: "0.8rem", lineHeight: 1.5, marginBottom: 8 }}>Renseigne ton email et ton prénom pour qu'on retrouve ton compte, puis envoie ta demande sur WhatsApp, on te répond avec un nouveau mot de passe.</p>
+              <p style={{ color: "#999", fontSize: "0.74rem", lineHeight: 1.5, marginBottom: 16, fontStyle: "italic" }}>Pour la sécurité, le nom et l'email doivent être identiques à ceux de ton compte Ambassadeur.</p>
+              <Input label="Ton email" type="email" value={forgotEmail} onChange={e => setForgotEmail(e.target.value)} placeholder="ton@email.com" icon="email" variant="line" />
+              <Input label="Ton prénom" value={forgotName} onChange={e => setForgotName(e.target.value)} placeholder="Ex: Sarah" icon="user" variant="line" />
+              <Input label={<>Mot de passe souhaité <span style={{ color: "#aaa", fontSize: "0.78rem", fontWeight: 500 }}>(optionnel)</span></>} type="password" value={forgotDesiredPassword} onChange={e => setForgotDesiredPassword(e.target.value)} placeholder="Le mot de passe que tu veux" icon="lock" hint="Si tu ne remplis pas ce champ, on t'en attribuera un nouveau." variant="line" />
+              {forgotMatchStatus === "checking" && <div style={{ fontSize: "0.8rem", color: "#999", marginBottom: 12, textAlign: "center" }}>Vérification...</div>}
+              {forgotMatchStatus === "no_match" && (
+                <div style={{ background: "rgba(192,57,43,0.08)", border: "1.5px solid #C0392B", borderRadius: 12, padding: 12, marginBottom: 14 }}>
+                  <p style={{ fontSize: "0.78rem", color: "#C0392B", lineHeight: 1.5, margin: 0 }}>Nous n'avons pas trouvé de compte correspondant à ces identifiants. Vérifie ton nom et ton email.</p>
+                </div>
+              )}
+              <a href={forgotMatchStatus === "match" ? waSupportLink : undefined} target="_blank" rel="noopener noreferrer"
+                onClick={e => { if (forgotMatchStatus !== "match") e.preventDefault(); }}
+                style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", boxSizing: "border-box", background: forgotMatchStatus === "match" ? "#25D366" : "#ccc", color: "#fff", border: "none", borderRadius: 50, padding: "12px", fontSize: "0.86rem", fontWeight: 800, cursor: forgotMatchStatus === "match" ? "pointer" : "not-allowed", textDecoration: "none", marginBottom: 10 }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24z"/></svg>
+                Envoyer la demande via WhatsApp
+              </a>
+              <div style={{ textAlign: "center" }}><span onClick={() => setForgotMethod("choice")} style={{ fontSize: "0.85rem", color: "#555", cursor: "pointer" }}>← Retour</span></div>
+            </>
+          )}
+        </div>
+      );
+    }
+    return shell(
+      <div style={{ background: G.blanc, borderRadius: 22, padding: 24, boxShadow: "0 4px 20px rgba(0,0,0,0.06)" }}>
+        <div style={{ display: "flex", background: G.creme, borderRadius: 14, padding: 3, marginBottom: 20 }}>
+          <div onClick={() => { setAuthMode("signup"); setFormError(""); }} style={{ flex: 1, textAlign: "center", padding: "9px", borderRadius: 11, cursor: "pointer", fontSize: "0.82rem", fontWeight: 700, background: authMode === "signup" ? G.blanc : "transparent", color: authMode === "signup" ? G.brun : "#999" }}>Créer mon compte</div>
+          <div onClick={() => { setAuthMode("login"); setFormError(""); }} style={{ flex: 1, textAlign: "center", padding: "9px", borderRadius: 11, cursor: "pointer", fontSize: "0.82rem", fontWeight: 700, background: authMode === "login" ? G.blanc : "transparent", color: authMode === "login" ? G.brun : "#999" }}>J'ai déjà un compte</div>
+        </div>
+        {authMode === "signup" ? (
+          <>
+            <Input label="Nom complet" value={signupForm.name} onChange={e => setSignupForm(f => ({ ...f, name: e.target.value }))} placeholder="Ex: Sarah Mbemba" icon="user" variant="line" />
+            <Input label="Téléphone" type="tel" value={signupForm.phone} onChange={e => setSignupForm(f => ({ ...f, phone: e.target.value }))} placeholder="06 xxx xx xx" variant="line" />
+            <Input label="Email" type="email" value={signupForm.email} onChange={e => setSignupForm(f => ({ ...f, email: e.target.value }))} placeholder="ton@email.com" icon="email" variant="line" />
+            <Input label="Veuillez définir votre mot de passe" type="password" value={signupForm.password} onChange={e => setSignupForm(f => ({ ...f, password: e.target.value }))} placeholder="Minimum 6 caractères" icon="lock" hint="Au moins 6 caractères" variant="line" />
+            {formError && <p style={{ color: "#e74c3c", fontSize: "0.8rem", marginBottom: 12 }}>{formError}</p>}
+            <Btn variant="authPrimary" onClick={doSignup} loading={loading} style={{ width: "100%" }}>Envoyer ma demande →</Btn>
+          </>
+        ) : (
+          <>
+            <Input label="Email" type="email" value={loginForm.email} onChange={e => setLoginForm(f => ({ ...f, email: e.target.value }))} placeholder="ton@email.com" icon="email" variant="line" />
+            <Input label="Mot de passe" type="password" value={loginForm.password} onChange={e => setLoginForm(f => ({ ...f, password: e.target.value }))} placeholder="••••••••" icon="lock" variant="line" />
+            <div style={{ textAlign: "right", marginBottom: 14, marginTop: -8 }}>
+              <span onClick={() => { setShowForgot(true); setForgotMethod("choice"); setFormError(""); setForgotEmail(loginForm.email); }} style={{ fontSize: "0.8rem", color: "#555", cursor: "pointer", fontWeight: 500 }}>Mot de passe oublié ?</span>
+            </div>
+            {formError && <p style={{ color: "#e74c3c", fontSize: "0.8rem", marginBottom: 12 }}>{formError}</p>}
+            <Btn variant="authPrimary" onClick={doLogin} loading={loading} style={{ width: "100%" }}>Se connecter →</Btn>
+          </>
+        )}
+      </div>
+    );
+  }
+
+  // ── Connecté, statut en cours de chargement ──
+  if (status === "loading") return shell(<div style={{ textAlign: "center", color: "#999", padding: 40 }}>Chargement…</div>);
+
+  // ── Demande en attente ──
+  if (status === "pending") {
+    return shell(
+      <div style={{ background: G.blanc, borderRadius: 22, padding: 28, textAlign: "center", boxShadow: "0 4px 20px rgba(0,0,0,0.06)" }}>
+        <div style={{ width: 54, height: 54, borderRadius: "50%", background: "rgba(212,168,67,0.15)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={G.or} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+        </div>
+        <div style={{ fontWeight: 800, fontSize: "1.05rem", color: G.brun, marginBottom: 8 }}>Demande envoyée</div>
+        <p style={{ fontSize: "0.85rem", color: "#888", lineHeight: 1.6, marginBottom: 18 }}>Ta demande pour devenir Ambassadeur Moyo est en attente de validation par notre équipe. Reviens sur ce lien un peu plus tard.</p>
+        <button onClick={logout} style={{ background: "none", border: "none", color: "#999", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer" }}>Se déconnecter</button>
+      </div>
+    );
+  }
+
+  // ── Demande refusée ──
+  if (status === "rejected" || status === "none") {
+    return shell(
+      <div style={{ background: G.blanc, borderRadius: 22, padding: 28, textAlign: "center", boxShadow: "0 4px 20px rgba(0,0,0,0.06)" }}>
+        <div style={{ fontWeight: 800, fontSize: "1.05rem", color: G.brun, marginBottom: 8 }}>{status === "rejected" ? "Demande non retenue" : "Aucune demande en cours"}</div>
+        <p style={{ fontSize: "0.85rem", color: "#888", lineHeight: 1.6, marginBottom: 18 }}>Contacte l'équipe Moyo directement pour plus d'informations.</p>
+        <button onClick={logout} style={{ background: "none", border: "none", color: "#999", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer" }}>Se déconnecter</button>
+      </div>
+    );
+  }
+
+  // ── Ambassadeur approuvé, contrat pas encore signé ──
+  if (!ambContractSigned && !ambContractSignedAt) {
+    return shell(
+      <div style={{ background: G.blanc, borderRadius: 22, padding: 24, boxShadow: "0 4px 20px rgba(0,0,0,0.06)" }}>
+        <div style={{ fontWeight: 800, fontSize: "1.05rem", color: G.brun, marginBottom: 4 }}>Signature du contrat</div>
+        <p style={{ fontSize: "0.8rem", color: "#888", marginBottom: 16 }}>Ton tableau de bord sera débloqué une fois ton contrat lu et signé.</p>
+        <Input label="Nom complet" value={contractForm.name} onChange={e => setContractForm(f => ({ ...f, name: e.target.value }))} variant="line" />
+        <Input label="Date et lieu de naissance" value={contractForm.birth} onChange={e => setContractForm(f => ({ ...f, birth: e.target.value }))} placeholder="Ex: 12/05/1990 à Brazzaville" variant="line" />
+        <Input label="Adresse" value={contractForm.address} onChange={e => setContractForm(f => ({ ...f, address: e.target.value }))} variant="line" />
+        <Input label="Téléphone" type="tel" value={contractForm.phone} onChange={e => setContractForm(f => ({ ...f, phone: e.target.value }))} variant="line" />
+        <Input label="Email" type="email" value={contractForm.email} onChange={e => setContractForm(f => ({ ...f, email: e.target.value }))} variant="line" />
+        <label style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 16, cursor: "pointer" }}>
+          <input type="checkbox" checked={contractForm.accept} onChange={e => setContractForm(f => ({ ...f, accept: e.target.checked }))} style={{ marginTop: 2 }} />
+          <span style={{ fontSize: "0.78rem", color: "#666" }}>Je certifie l'exactitude de ces informations et j'accepte les conditions du programme Ambassadeur Moyo.</span>
+        </label>
+        {contractError && <p style={{ color: "#e74c3c", fontSize: "0.8rem", marginBottom: 12 }}>{contractError}</p>}
+        <Btn variant="authPrimary" onClick={submitContract} loading={contractSubmitting} style={{ width: "100%" }}>Signer mon contrat</Btn>
+      </div>
+    );
+  }
+
+  // ── Contrat signé, en attente de validation admin ──
+  if (!ambContractSigned && ambContractSignedAt) {
+    return shell(
+      <div style={{ background: G.blanc, borderRadius: 22, padding: 28, textAlign: "center", boxShadow: "0 4px 20px rgba(0,0,0,0.06)" }}>
+        <div style={{ fontWeight: 800, fontSize: "1.05rem", color: G.brun, marginBottom: 8 }}>Contrat signé</div>
+        <p style={{ fontSize: "0.85rem", color: "#888", lineHeight: 1.6, marginBottom: 18 }}>En attente de validation par notre équipe. Ton tableau de bord sera débloqué juste après.</p>
+        <button onClick={logout} style={{ background: "none", border: "none", color: "#999", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer" }}>Se déconnecter</button>
+      </div>
+    );
+  }
+
+  // ── Tableau de bord ──
+  const available = ambStats?.pending || 0;
+  const canRequest = available >= AFFILIATE_PAYOUT_MIN_FCFA && !ambPayoutPending && !!ambAffiliateId;
+  return shell(
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+        <div>
+          <div style={{ fontWeight: 900, fontSize: "1rem", color: G.brun }}>Dashboard Ambassadeur Moyo Dating</div>
+          <div style={{ fontSize: "0.76rem", color: "#999", marginTop: 2, fontWeight: 600 }}>{session.name}</div>
+        </div>
+        <button onClick={logout} style={{ background: "none", border: "none", color: "#999", fontSize: "0.78rem", fontWeight: 600, cursor: "pointer", flexShrink: 0 }}>Déconnexion</button>
+      </div>
+      <div style={{ background: "linear-gradient(135deg,#8B0D2F 0%,#6E0A25 100%)", borderRadius: 20, padding: "22px 20px", marginBottom: 20 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+          <div style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.8)", fontWeight: 600 }}>Mes gains disponibles</div>
+          {ambCommissionPercent !== null && <div style={{ fontSize: "0.7rem", color: "#fff", fontWeight: 800, background: "rgba(255,255,255,0.18)", borderRadius: 50, padding: "3px 10px" }}>{ambCommissionPercent}% de commission</div>}
+        </div>
+        <div style={{ fontSize: "2.1rem", fontWeight: 900, color: "#fff", marginBottom: 10 }}>{available.toLocaleString()} <span style={{ fontSize: "1.1rem", fontWeight: 700 }}>FCFA</span></div>
+        <button onClick={requestPayout} disabled={!canRequest} style={{ width: "100%", background: canRequest ? "#fff" : "rgba(255,255,255,0.25)", color: canRequest ? "#8B0D2F" : "rgba(255,255,255,0.7)", border: "none", borderRadius: 14, padding: "13px", fontSize: "0.86rem", fontWeight: 800, cursor: canRequest ? "pointer" : "not-allowed" }}>
+          {ambPayoutPending ? "Demande envoyée" : "Demander le versement"}
+        </button>
+        <div style={{ fontSize: "0.68rem", color: "rgba(255,255,255,0.65)", marginTop: 10, textAlign: "center" }}>Minimum de versement : {AFFILIATE_PAYOUT_MIN_FCFA.toLocaleString()} FCFA</div>
+      </div>
+      {ambContractPdfUrl && (
+        <a href={ambContractPdfUrl} target="_blank" rel="noopener noreferrer" style={{ display: "block", textAlign: "center", background: "#fafafa", color: "#8B0D2F", border: "1.5px solid #eee", borderRadius: 50, padding: "11px", fontSize: "0.82rem", fontWeight: 700, textDecoration: "none", marginBottom: 20 }}>Voir mon contrat</a>
+      )}
+      {ambPromoCode && (
+        <div style={{ background: "#fafafa", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+          <div style={{ fontSize: "0.85rem", fontWeight: 800, color: G.brun, marginBottom: 10 }}>Mon code promo</div>
+          <div style={{ border: `1.5px dashed #8B0D2F`, borderRadius: 10, padding: "9px 12px", fontSize: "0.85rem", fontWeight: 700, color: "#8B0D2F", textAlign: "center" }}>{ambPromoCode}</div>
+        </div>
+      )}
+      <div style={{ background: "#fafafa", borderRadius: 16, padding: 16 }}>
+        <div style={{ fontSize: "0.85rem", fontWeight: 800, color: G.brun, marginBottom: 10 }}>Mon lien d'invitation</div>
+        <button onClick={() => {
+          const refLink = `${window.location.origin}?ref=${session.userId}`;
+          if (navigator.share) navigator.share({ title: "Moyo Dating", text: "Rejoins Moyo Dating avec mon lien :", url: refLink });
+          else { navigator.clipboard.writeText(refLink).catch(() => {}); setToast({ msg: "Lien copié.", type: "success" }); }
+        }} style={{ width: "100%", boxSizing: "border-box", background: "#fff", color: "#8B0D2F", borderRadius: 50, padding: "12px 24px", fontSize: "0.85rem", fontWeight: 700, border: "1.5px solid #8B0D2F", cursor: "pointer" }}>Partager mon lien</button>
+      </div>
+      {ambConversions.length > 0 && (
+        <div style={{ marginTop: 20 }}>
+          <div style={{ fontSize: "0.85rem", fontWeight: 800, color: G.brun, marginBottom: 10 }}>Historique</div>
+          {ambConversions.slice(0, 10).map(c => (
+            <div key={c.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid #f1f1f1" }}>
+              <div>
+                <div style={{ fontSize: "0.82rem", fontWeight: 700, color: G.brun }}>{c.plan_label || "Abonnement"}</div>
+                <div style={{ fontSize: "0.7rem", color: "#aaa" }}>{new Date(c.created_at).toLocaleDateString("fr-FR")}</div>
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <div style={{ fontSize: "0.85rem", fontWeight: 800, color: G.brun }}>{c.commission_amount.toLocaleString()} FCFA</div>
+                <span style={{ fontSize: "0.66rem", fontWeight: 700, padding: "2px 9px", borderRadius: 50, background: c.status === "paid" ? "rgba(46,158,79,0.12)" : "rgba(230,126,34,0.12)", color: c.status === "paid" ? "#2E9E4F" : "#E67E22" }}>{c.status === "paid" ? "✓ Validée" : "○ En attente"}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function MatchRequestButton({ auth, onShowPremium }: { auth: Auth; onShowPremium: (msg: string) => void }) {
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ target_gender: "", target_city: "", target_age_min: "", target_age_max: "", message: "" });
@@ -17407,7 +17928,10 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
                 <div onClick={() => { setShowAmbDashboard(false); setShowAllAmbConversions(false); }} style={{ cursor: "pointer", padding: 4 }}>
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={G.brun} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
                 </div>
-                <div style={{ fontWeight: 900, fontSize: "1.05rem", color: G.brun }}>Ambassadeur</div>
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ fontWeight: 900, fontSize: "1rem", color: G.brun }}>Dashboard Ambassadeur Moyo Dating</div>
+                  <div style={{ fontSize: "0.76rem", color: "#999", marginTop: 2, fontWeight: 600 }}>{auth.name}</div>
+                </div>
                 <div onClick={() => setShowAmbInfo(true)} style={{ cursor: "pointer", padding: 4 }}>
                   <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
                 </div>
@@ -20183,6 +20707,13 @@ export default function App() {
       </div>
     </div>
   ) : null;
+
+  // ── Portail Ambassadeur sans profil (lien privé) : ?ambassador=1 dans l'URL — vérifié en tout
+  //    premier, avant même le chargement de la session principale, pour rester totalement isolé
+  //    du reste de l'app (jamais lié à auth, sessionLoaded, selfBan, etc.). ──
+  if (new URLSearchParams(window.location.search).get("ambassador") === "1") {
+    return <AmbassadorPortal />;
+  }
 
   if (!sessionLoaded) return <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: G.blanc }}><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "pulse 1s ease-in-out infinite" }}><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div>;
 

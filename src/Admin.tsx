@@ -8006,7 +8006,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
       } catch {}
       setAffiliateConversionsLoading(false);
     };
-    const [ambTab, setAmbTab] = useState<"requests" | "affiliates" | "payouts">("requests");
+    const [ambTab, setAmbTab] = useState<"requests" | "affiliates" | "payouts" | "no_account">("requests");
     const [payoutRequests, setPayoutRequests] = useState<{ id: string; affiliate_id: string; user_id: string; affiliate_name?: string; amount: number; requested_at: string }[]>([]);
     const [payoutRequestsLoading, setPayoutRequestsLoading] = useState(false);
     const [payoutActionLoading, setPayoutActionLoading] = useState<string | null>(null);
@@ -8088,6 +8088,21 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
       setAmbassadorRequestsLoading(false);
     };
     useEffect(() => { if (activeTab === "ambassadors" && ambTab === "requests") loadAmbassadorRequests(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [activeTab, ambTab]);
+
+    // ── Ambassadeurs sans profil de rencontre (compte allégé créé via le lien privé ?ambassador=1) ──
+    const [ambNoAccountList, setAmbNoAccountList] = useState<{ id: string; name: string; phone?: string | null; email?: string; is_ambassador?: boolean; created_at: string }[]>([]);
+    const [ambNoAccountLoading, setAmbNoAccountLoading] = useState(false);
+    const loadAmbassadorsNoAccount = async () => {
+      if (!auth) return;
+      setAmbNoAccountLoading(true);
+      try {
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?account_type=eq.ambassador_only&select=id,name,phone,email,is_ambassador,created_at&order=created_at.desc&limit=300`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+        const data = await r.json().catch(() => []);
+        setAmbNoAccountList(Array.isArray(data) ? data : []);
+      } catch { showToast("Erreur réseau lors du chargement des ambassadeurs sans profil.", "error"); }
+      setAmbNoAccountLoading(false);
+    };
+    useEffect(() => { if (activeTab === "ambassadors" && ambTab === "no_account") loadAmbassadorsNoAccount(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [activeTab, ambTab]);
     // Modal d'approbation : simple confirmation. Le Premium n'est plus offert automatiquement
     // à l'approbation (faille : n'importe qui pouvait candidater juste pour avoir du Premium
     // gratuit). Il est désormais accordé à vie, manuellement, depuis la ligne de l'affilié dans
@@ -15295,7 +15310,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
       {activeTab === "ambassadors" && (
         <div style={{ padding: "16px" }}>
           <div style={{ display: "flex", gap: 10, marginBottom: 16, overflowX: "auto", paddingBottom: 2 }}>
-            {([["requests", "Demandes"], ["affiliates", "Affiliés actifs"], ["payouts", "Versements"]] as ["requests" | "affiliates" | "payouts", string][]).map(([k, lbl]) => (
+            {([["requests", "Demandes"], ["affiliates", "Affiliés actifs"], ["payouts", "Versements"], ["no_account", "Sans profil"]] as ["requests" | "affiliates" | "payouts" | "no_account", string][]).map(([k, lbl]) => (
               <button key={k} onClick={() => setAmbTab(k)} style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 7, padding: "9px 18px", borderRadius: 999, cursor: "pointer", fontSize: "0.82rem", fontWeight: 800, background: ambTab === k ? "#8e44ad" : "#fff", color: ambTab === k ? "#fff" : "#555", border: ambTab === k ? "none" : `1.5px solid ${G.gris}`, boxShadow: ambTab === k ? "0 4px 12px rgba(142,68,173,0.25)" : "none" }}>
                 {lbl}
                 {k === "requests" && ambassadorRequests.length > 0 && <span style={{ background: ambTab === k ? "#fff" : "#8e44ad", color: ambTab === k ? "#8e44ad" : "#fff", borderRadius: 50, fontSize: "0.6rem", fontWeight: 800, padding: "1px 6px", lineHeight: 1.5 }}>{ambassadorRequests.length > 99 ? "99+" : ambassadorRequests.length}</span>}
@@ -15562,6 +15577,38 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               </div>
             );
           })()}
+
+          {ambTab === "no_account" && (
+            <div>
+              <p style={{ fontSize: "0.8rem", color: "#888", marginBottom: 16 }}>Comptes créés via le lien privé Ambassadeur (dating.moyo-congo.com/?ambassador=1), sans profil de rencontre associé. Même circuit d'approbation que les demandes classiques.</p>
+              {ambNoAccountLoading ? (
+                <div style={{ textAlign: "center", padding: 40 }}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2" strokeLinecap="round" style={{ animation: "pulse 0.8s ease-in-out infinite" }}><circle cx="12" cy="12" r="10" /></svg></div>
+              ) : ambNoAccountList.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "40px 20px", color: "#aaa", fontSize: "0.88rem" }}>Aucun compte Ambassadeur sans profil pour l'instant.</div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {ambNoAccountList.map(u => (
+                    <div key={u.id} style={{ background: G.blanc, borderRadius: 16, padding: "14px 16px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+                        <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(142,68,173,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>
+                        </div>
+                        <div style={{ flex: 1, minWidth: 180 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <div style={{ fontWeight: 700, fontSize: "0.9rem", color: G.brun }}>{u.name}</div>
+                            <span style={{ fontSize: "0.66rem", fontWeight: 700, padding: "2px 9px", borderRadius: 50, background: u.is_ambassador ? "rgba(46,158,79,0.12)" : "rgba(230,126,34,0.12)", color: u.is_ambassador ? "#2E9E4F" : "#E67E22" }}>{u.is_ambassador ? "🎖 Ambassadeur actif" : "⏳ En attente"}</span>
+                          </div>
+                          <div style={{ fontSize: "0.74rem", color: "#888", marginTop: 3 }}>{u.email || "—"} · {u.phone || "Téléphone non renseigné"}</div>
+                          <div style={{ fontSize: "0.7rem", color: "#aaa", marginTop: 2 }}>Créé le {new Date(u.created_at).toLocaleDateString("fr-FR")}</div>
+                        </div>
+                        <button onClick={() => { setPwResetValue(genTempPassword()); setPwResetResult(null); setPwResetModal({ id: u.id, name: u.name, phone: u.phone, email: u.email, is_ambassador: u.is_ambassador, age: 0, city: "", gender: "", bio: "", is_premium: false } as AdminProfile); }} style={{ background: "rgba(142,68,173,0.08)", border: "1.5px solid rgba(142,68,173,0.25)", borderRadius: 50, padding: "8px 14px", fontSize: "0.76rem", fontWeight: 700, color: "#8e44ad", cursor: "pointer", flexShrink: 0 }}>🔑 Mot de passe</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {ambassadorApproveModal && (
             <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10003, display: "flex", alignItems: "center", justifyContent: "center", padding: "calc(env(safe-area-inset-top) + 18px) 18px calc(env(safe-area-inset-bottom) + 18px)" }} onClick={() => setAmbassadorApproveModal(null)}>
