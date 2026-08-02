@@ -16095,14 +16095,14 @@ function AmbassadorDashboardHeader({ name, photoUrl, onInfoClick }: { name: stri
     <div style={{ position: "relative", overflow: "hidden", padding: "6px 2px 20px" }}>
       <div style={{ position: "absolute", top: -50, right: -40, width: 180, height: 180, borderRadius: "45% 55% 60% 40% / 50% 45% 55% 50%", background: "rgba(139,13,47,0.06)", pointerEvents: "none" }} />
       <div style={{ position: "absolute", top: 10, right: 66, width: 100, height: 100, borderRadius: "50%", background: "rgba(212,168,67,0.07)", pointerEvents: "none" }} />
-      <div style={{ position: "relative", display: "flex", alignItems: "flex-start", gap: 14 }}>
-        <Avatar url={photoUrl} size={76} border />
+      <div style={{ position: "relative", display: "flex", alignItems: "flex-start", gap: 12 }}>
+        <Avatar url={photoUrl} size={68} border />
         <div style={{ flex: 1, paddingTop: 2, minWidth: 0 }}>
-          <div style={{ fontWeight: 900, fontSize: "1.2rem", color: G.brun, lineHeight: 1.25 }}>Tableau de bord<br />Ambassadeur Moyo Dating</div>
-          <div style={{ display: "inline-block", marginTop: 10, background: "rgba(139,13,47,0.08)", color: "#8B0D2F", fontSize: "0.78rem", fontWeight: 700, padding: "5px 14px", borderRadius: 50 }}>Bienvenue, {name} 👋</div>
+          <div style={{ fontWeight: 900, fontSize: "1rem", color: G.brun, lineHeight: 1.25 }}>Tableau de bord<br />Ambassadeur Moyo Dating</div>
+          <div style={{ display: "inline-block", marginTop: 10, background: "rgba(139,13,47,0.08)", color: "#8B0D2F", fontSize: "0.76rem", fontWeight: 700, padding: "5px 14px", borderRadius: 50 }}>Bienvenue, {name} 👋</div>
         </div>
-        <div onClick={onInfoClick} style={{ cursor: "pointer", width: 38, height: 38, borderRadius: "50%", background: "#fff", boxShadow: "0 2px 8px rgba(0,0,0,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#8B0D2F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" /></svg>
+        <div onClick={onInfoClick} style={{ cursor: "pointer", width: 34, height: 34, borderRadius: "50%", background: "#fff", boxShadow: "0 2px 8px rgba(0,0,0,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8B0D2F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" /></svg>
         </div>
       </div>
     </div>
@@ -16254,13 +16254,15 @@ function AmbassadorPortal() {
   const [ambPayoutPending, setAmbPayoutPending] = useState<{ amount: number } | null>(null);
   const [ambInscriptions, setAmbInscriptions] = useState(0);
   const [showAmbInfo, setShowAmbInfo] = useState(false);
+  const [hasRealAccount, setHasRealAccount] = useState(false);
 
   const loadStatus = async () => {
     if (!session) return;
     setStatus("loading");
     try {
-      const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${session.userId}&select=is_ambassador`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${session.token}` } });
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${session.userId}&select=is_ambassador,is_complete`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${session.token}` } });
       const d = await r.json().catch(() => []);
+      setHasRealAccount(Array.isArray(d) && !!d[0]?.is_complete);
       if (Array.isArray(d) && d[0]?.is_ambassador) {
         setStatus("ambassador");
         const ra = await fetch(`${SUPABASE_URL}/rest/v1/affiliates?user_id=eq.${session.userId}&select=id,promo_code,commission_percent,contract_signed,contract_signed_at,contract_pdf_url&limit=1`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${session.token}` } });
@@ -16666,6 +16668,49 @@ function AmbassadorPortal() {
           <div style={{ fontSize: "0.64rem", color: "#888", fontWeight: 600 }}>Commissions en attente</div>
         </div>
       </div>
+
+      {/* Commissions récentes — identique au dashboard classique */}
+      {(() => {
+        const planIcon = (label?: string) => label?.includes("2 mois") ? "#D4A843" : label?.includes("1 mois") ? "#8B0D2F" : "#D4A843";
+        const visibleConversions = showAllAmbConversions ? ambConversions : ambConversions.slice(0, 5);
+        return (
+          <>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+              <div style={{ fontSize: "0.95rem", fontWeight: 800, color: G.brun }}>Mes commissions récentes</div>
+              {ambConversions.length > 5 && (
+                <div onClick={() => setShowAllAmbConversions(v => !v)} style={{ fontSize: "0.78rem", fontWeight: 700, color: "#8B0D2F", cursor: "pointer", display: "flex", alignItems: "center", gap: 3 }}>
+                  {showAllAmbConversions ? "Voir moins" : "Voir tout"}
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8B0D2F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
+                </div>
+              )}
+            </div>
+            {ambConversions.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "24px 0", color: "#aaa", fontSize: "0.82rem" }}>Aucune commission pour l'instant.</div>
+            ) : (
+              <div style={{ marginBottom: 26 }}>
+                {visibleConversions.map((c, i) => (
+                  <div key={c.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 0", borderBottom: i < visibleConversions.length - 1 ? "1px solid #f1f1f1" : "none" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                      <div style={{ width: 38, height: 38, borderRadius: "50%", background: `${planIcon(c.plan_label)}18`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill={planIcon(c.plan_label)} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: "0.85rem", fontWeight: 700, color: G.brun }}>Premium {c.plan_label || "?"}</div>
+                        <div style={{ fontSize: "0.72rem", color: "#999" }}>{new Date(c.created_at).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" })} • {new Date(c.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</div>
+                      </div>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ fontSize: "0.85rem", fontWeight: 800, color: "#2E9E4F", marginBottom: 4 }}>+{(c.commission_amount || 0).toLocaleString()} FCFA</div>
+                      <span style={{ fontSize: "0.66rem", fontWeight: 700, padding: "2px 9px", borderRadius: 50, background: c.status === "paid" ? "rgba(46,158,79,0.12)" : "rgba(230,126,34,0.12)", color: c.status === "paid" ? "#2E9E4F" : "#E67E22" }}>{c.status === "paid" ? "✓ Validée" : "○ En attente"}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        );
+      })()}
+
       {ambPromoCode && (
         <div style={{ background: "#fafafa", borderRadius: 16, padding: "16px", marginBottom: 14 }}>
           <div style={{ fontSize: "0.85rem", fontWeight: 800, color: G.brun, marginBottom: 10 }}>Mon code promo</div>
@@ -16692,29 +16737,14 @@ function AmbassadorPortal() {
           Partager mon lien
         </button>
       </div>
-      {ambConversions.length > 0 && (
-        <div style={{ marginTop: 20 }}>
-          <div style={{ fontSize: "0.85rem", fontWeight: 800, color: G.brun, marginBottom: 10 }}>Historique</div>
-          {ambConversions.slice(0, 10).map(c => (
-            <div key={c.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid #f1f1f1" }}>
-              <div>
-                <div style={{ fontSize: "0.82rem", fontWeight: 700, color: G.brun }}>{c.plan_label || "Abonnement"}</div>
-                <div style={{ fontSize: "0.7rem", color: "#aaa" }}>{new Date(c.created_at).toLocaleDateString("fr-FR")}</div>
-              </div>
-              <div style={{ textAlign: "right" }}>
-                <div style={{ fontSize: "0.85rem", fontWeight: 800, color: G.brun }}>{c.commission_amount.toLocaleString()} FCFA</div>
-                <span style={{ fontSize: "0.66rem", fontWeight: 700, padding: "2px 9px", borderRadius: 50, background: c.status === "paid" ? "rgba(46,158,79,0.12)" : "rgba(230,126,34,0.12)", color: c.status === "paid" ? "#2E9E4F" : "#E67E22" }}>{c.status === "paid" ? "✓ Validée" : "○ En attente"}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
 
-      {/* Bloc final : déconnexion + création d'un vrai compte Moyo Dating (uniquement ici, jamais
-          proposé aux ambassadeurs qui ont déjà un profil de rencontre) */}
+      {/* Bloc final : déconnexion + création d'un vrai compte Moyo Dating (uniquement si la
+          personne n'a pas déjà un vrai profil de rencontre — jamais proposé sinon) */}
       <div style={{ marginTop: 26, display: "flex", flexDirection: "column", gap: 10 }}>
-        <button onClick={logout} style={{ width: "100%", background: "none", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 700, color: "#666", cursor: "pointer" }}>Déconnexion</button>
-        <a href={window.location.origin} style={{ width: "100%", boxSizing: "border-box", display: "block", textAlign: "center", background: "none", border: `1.5px solid ${G.rouge}`, borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 700, color: G.rouge, textDecoration: "none" }}>Créer ton compte Moyo Dating</a>
+        <button onClick={logout} style={{ width: "100%", background: G.brun, border: "none", borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 700, color: "#fff", cursor: "pointer" }}>Déconnexion</button>
+        {!hasRealAccount && (
+          <a href={`${window.location.origin}/?signup=1`} style={{ width: "100%", boxSizing: "border-box", display: "block", textAlign: "center", background: G.rouge, borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 700, color: "#fff", textDecoration: "none" }}>Créer ton compte Moyo Dating</a>
+        )}
       </div>
 
       {/* ── Réseaux sociaux — identique à ce qui est affiché sous Profil dans l'app ── */}
@@ -19584,6 +19614,9 @@ export default function App() {
     try {
       const hash = window.location.hash;
       if (hash.includes("type=recovery") || hash.includes("error_code=") || hash.includes("error=")) return "reset-password";
+      // ?signup=1 : ouvre directement le formulaire d'inscription (utilisé par le bouton
+      // "Créer ton compte Moyo Dating" du portail Ambassadeur sans profil).
+      if (new URLSearchParams(window.location.search).get("signup") === "1") return "signup";
     } catch {}
     return "landing";
   });

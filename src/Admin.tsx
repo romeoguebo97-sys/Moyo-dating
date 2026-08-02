@@ -9528,7 +9528,9 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
         recent: `last_seen=gte.${recentThreshold}`,
       };
       const filterQs = Array.from(filters).map(f => `&${filterClauses[f]}`).join("");
-      let params = `?select=id,name,age,city,gender,is_premium,is_admin,is_verified,is_banned,is_ambassador,created_at,last_seen,premium_until,premium_is_gift,email,phone,admin_level,is_vip,share_phone_with_matches,share_socials_with_matches&order=${serverSort}&limit=${pageSize}&offset=${offset}${filterQs}`;
+      // Les comptes Ambassadeur sans profil de rencontre (account_type=ambassador_only) ont leur
+      // propre sous-onglet dans Ambassadeurs → "Sans profil" : jamais mélangés à la liste générale.
+      let params = `?select=id,name,age,city,gender,is_premium,is_admin,is_verified,is_banned,is_ambassador,created_at,last_seen,premium_until,premium_is_gift,email,phone,admin_level,is_vip,share_phone_with_matches,share_socials_with_matches&account_type=neq.ambassador_only&order=${serverSort}&limit=${pageSize}&offset=${offset}${filterQs}`;
       if (search.trim() || searchEmail.trim() || searchPhone.trim()) {
         const nameQ = search.trim() ? `name.ilike.*${encodeURIComponent(search.trim())}*` : null;
         const emailQ = searchEmail.trim() ? `email.ilike.*${encodeURIComponent(searchEmail.trim())}*` : null;
@@ -9537,7 +9539,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
         // (avec un point) n'est valide qu'à l'intérieur de or(...) — utilisée seule, elle est invalide
         // et Supabase l'ignore silencieusement, d'où le filtre qui ne trouvait jamais rien.
         const orFilter = [nameQ, emailQ, phoneQ].filter(Boolean).join(",");
-        params = `?select=id,name,age,city,gender,is_premium,is_admin,is_verified,is_banned,is_ambassador,created_at,last_seen,premium_until,premium_is_gift,email,phone,admin_level,is_vip,share_phone_with_matches,share_socials_with_matches&or=(${orFilter})&order=${serverSort}&limit=${pageSize}&offset=${offset}${filterQs}`;
+        params = `?select=id,name,age,city,gender,is_premium,is_admin,is_verified,is_banned,is_ambassador,created_at,last_seen,premium_until,premium_is_gift,email,phone,admin_level,is_vip,share_phone_with_matches,share_socials_with_matches&account_type=neq.ambassador_only&or=(${orFilter})&order=${serverSort}&limit=${pageSize}&offset=${offset}${filterQs}`;
       }
       const res = await sb.query<AdminProfile>(auth.token, "profiles", params);
       // Quand une recherche est active, on trie par pertinence (correspondance exacte / "commence par" en premier)
@@ -15546,9 +15548,21 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 <div style={{ background: G.blanc, borderRadius: 18, padding: 18, boxShadow: "0 2px 10px rgba(0,0,0,0.05)" }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
                     <div style={{ fontSize: "0.9rem", fontWeight: 800, color: G.brun }}>Historique des commissions</div>
-                    <div style={{ display: "flex", gap: 8 }}>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                       <input value={affiliateSearch} onChange={e => setAffiliateSearch(e.target.value)} placeholder="Rechercher un affilié ou un filleul..." style={{ padding: "8px 14px", borderRadius: 50, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", minWidth: 220 }} />
                       <button onClick={loadAffiliateConversions} style={{ background: G.creme, border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "8px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: "#555", fontSize: "0.78rem", fontWeight: 700 }}><IcoRefresh /> Actualiser</button>
+                      <button onClick={() => {
+                        const link = `${window.location.origin}/?ambassador=1`;
+                        if ((navigator as any).share) {
+                          (navigator as any).share({ title: "Devenir Ambassadeur Moyo Dating", text: "Voici le lien pour créer ton compte Ambassadeur Moyo Dating (sans profil de rencontre) :", url: link }).catch(() => {});
+                        } else {
+                          navigator.clipboard.writeText(link).catch(() => {});
+                          showToast("Lien copié : " + link, "success");
+                        }
+                      }} style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(142,68,173,0.08)", border: "1.5px solid rgba(142,68,173,0.25)", borderRadius: 50, padding: "8px 14px", fontSize: "0.78rem", fontWeight: 700, color: "#8e44ad", cursor: "pointer" }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                        Copier / partager le lien Ambassadeur
+                      </button>
                     </div>
                   </div>
                   {affiliateConversionsLoading ? (
@@ -15590,19 +15604,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
 
           {ambTab === "no_account" && (
             <div>
-              <p style={{ fontSize: "0.8rem", color: "#888", marginBottom: 12 }}>Comptes créés via le lien privé Ambassadeur, sans profil de rencontre associé. Même circuit d'approbation que les demandes classiques.</p>
-              <button onClick={() => {
-                const link = `${window.location.origin}/?ambassador=1`;
-                if ((navigator as any).share) {
-                  (navigator as any).share({ title: "Devenir Ambassadeur Moyo Dating", text: "Voici le lien pour créer ton compte Ambassadeur Moyo Dating (sans profil de rencontre) :", url: link }).catch(() => {});
-                } else {
-                  navigator.clipboard.writeText(link).catch(() => {});
-                  showToast("Lien copié : " + link, "success");
-                }
-              }} style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(142,68,173,0.08)", border: "1.5px solid rgba(142,68,173,0.25)", borderRadius: 50, padding: "9px 16px", fontSize: "0.78rem", fontWeight: 700, color: "#8e44ad", cursor: "pointer", marginBottom: 18 }}>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-                Copier / partager le lien Ambassadeur
-              </button>
+              <p style={{ fontSize: "0.8rem", color: "#888", marginBottom: 16 }}>Comptes créés via le lien privé Ambassadeur, sans profil de rencontre associé. Même circuit d'approbation que les demandes classiques.</p>
               {ambNoAccountLoading ? (
                 <div style={{ textAlign: "center", padding: 40 }}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2" strokeLinecap="round" style={{ animation: "pulse 0.8s ease-in-out infinite" }}><circle cx="12" cy="12" r="10" /></svg></div>
               ) : ambNoAccountList.length === 0 ? (
