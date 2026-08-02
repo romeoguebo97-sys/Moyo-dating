@@ -15427,7 +15427,21 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
 
                 {/* Ajouter un affilié */}
                 <div style={{ background: G.blanc, borderRadius: 18, padding: 18, boxShadow: "0 2px 10px rgba(0,0,0,0.05)", marginBottom: 16 }}>
-                  <div style={{ fontSize: "0.9rem", fontWeight: 800, color: G.brun, marginBottom: 10 }}>Désigner un nouvel affilié</div>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 10, flexWrap: "wrap" }}>
+                    <div style={{ fontSize: "0.9rem", fontWeight: 800, color: G.brun }}>Désigner un nouvel affilié</div>
+                    <button onClick={() => {
+                      const link = `${window.location.origin}/?ambassador=1`;
+                      if ((navigator as any).share) {
+                        (navigator as any).share({ title: "Devenir Ambassadeur Moyo Dating", text: "Voici le lien pour créer ton compte Ambassadeur Moyo Dating (sans profil de rencontre) :", url: link }).catch(() => {});
+                      } else {
+                        navigator.clipboard.writeText(link).catch(() => {});
+                        showToast("Lien copié : " + link, "success");
+                      }
+                    }} style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(142,68,173,0.08)", border: "1.5px solid rgba(142,68,173,0.25)", borderRadius: 50, padding: "8px 14px", fontSize: "0.78rem", fontWeight: 700, color: "#8e44ad", cursor: "pointer" }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                      Copier / partager le lien Ambassadeur
+                    </button>
+                  </div>
                   <div style={{ display: "flex", gap: 8, maxWidth: 460 }}>
                     <input value={affiliateAddQuery} onChange={e => setAffiliateAddQuery(e.target.value)} onKeyDown={e => { if (e.key === "Enter") runAffiliateSearch(); }} placeholder="Nom du membre..." style={{ flex: 1, boxSizing: "border-box", padding: "10px 14px", borderRadius: 12, border: `1.5px solid ${G.gris}`, fontSize: "0.85rem" }} />
                     <button onClick={runAffiliateSearch} disabled={!affiliateAddQuery.trim() || affiliateAddSearching} style={{ background: "#8e44ad", border: "none", borderRadius: 12, padding: "10px 20px", fontSize: "0.85rem", fontWeight: 700, color: "#fff", cursor: !affiliateAddQuery.trim() || affiliateAddSearching ? "not-allowed" : "pointer", flexShrink: 0 }}>{affiliateAddSearching ? "..." : "Rechercher"}</button>

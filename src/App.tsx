@@ -16402,7 +16402,7 @@ function AmbassadorPortal() {
     <div style={{ minHeight: "100vh", background: G.creme, display: "flex", flexDirection: "column", alignItems: "center", padding: "40px 20px" }}>
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
       <div style={{ textAlign: "center", marginBottom: 24 }}>
-        <div style={{ fontSize: "1.6rem", fontWeight: 900, color: G.rouge }}>Moyo <span style={{ fontWeight: 700, fontSize: "0.55em", color: G.brun }}>Ambassadeur</span></div>
+        <div style={{ fontSize: "1.6rem", fontWeight: 900 }}><span style={{ color: G.rouge }}>Moyo</span> <span style={{ color: "#000" }}>Dating</span></div>
       </div>
       <div style={{ width: "100%", maxWidth: 420 }}>{children}</div>
     </div>
@@ -16713,38 +16713,62 @@ function AmbassadorPortal() {
       })()}
 
       {ambPromoCode && (
-        <div style={{ background: "#fafafa", borderRadius: 16, padding: "16px", marginBottom: 14 }}>
-          <div style={{ fontSize: "0.85rem", fontWeight: 800, color: G.brun, marginBottom: 10 }}>Mon code promo</div>
-          <p style={{ fontSize: "0.74rem", color: "#999", lineHeight: 1.5, marginBottom: 10 }}>Vos filleuls peuvent le saisir à l'achat de leur Premium pour gagner {AFFILIATE_PROMO_BONUS_DAYS} jour{AFFILIATE_PROMO_BONUS_DAYS > 1 ? "s" : ""} bonus. En retour, vous touchez {ambCommissionPercent ?? AFFILIATE_COMMISSION_PERCENT}% de commission sur leur achat.</p>
-          <button onClick={() => {
-            const shareText = `Utilise le code ${ambPromoCode} sur Moyo Dating pour gagner ${AFFILIATE_PROMO_BONUS_DAYS} jour${AFFILIATE_PROMO_BONUS_DAYS > 1 ? "s" : ""} Premium bonus :`;
-            if (navigator.share) navigator.share({ title: "Moyo Dating", text: shareText, url: window.location.origin });
-            else { navigator.clipboard.writeText(`${shareText} ${window.location.origin}`).catch(() => {}); setToast({ msg: "Code et lien copiés.", type: "success" }); }
-          }} style={{ width: "100%", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: "#fff", color: "#8B0D2F", borderRadius: 50, padding: "12px 24px", fontSize: "0.85rem", fontWeight: 700, border: "1.5px solid #8B0D2F", cursor: "pointer" }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8B0D2F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-            Partager mon code : {ambPromoCode}
-          </button>
+        <div style={{ background: "#fff", border: "1.5px solid #F0E4E2", borderRadius: 18, padding: 20, marginBottom: 14 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+            <span style={{ color: G.brun, fontSize: "0.78rem", fontWeight: 700 }}>Ton code promo à communiquer</span>
+            <span style={{ background: "rgba(212,168,67,0.15)", color: "#8B6914", fontSize: "0.66rem", fontWeight: 700, padding: "3px 10px", borderRadius: 20 }}>+{AFFILIATE_PROMO_BONUS_DAYS}j offerts</span>
+          </div>
+          <p style={{ color: "#999", fontSize: "0.68rem", marginBottom: 14 }}>Ton filleul le saisit à l'achat, tu touches {ambCommissionPercent ?? AFFILIATE_COMMISSION_PERCENT}% de commission</p>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, background: "#FDF9F0", border: "1.5px dashed #D4A843", borderRadius: 12, padding: "12px 14px", marginBottom: 14 }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8B6914" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M20.59 13.41 13.42 20.6a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82Z"/><circle cx="7" cy="7" r="1"/></svg>
+            <div style={{ fontSize: "0.95rem", color: "#8B6914", fontWeight: 800, letterSpacing: "1px" }}>{ambPromoCode}</div>
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={() => {
+              const shareText = `Utilise le code ${ambPromoCode} sur Moyo Dating pour gagner ${AFFILIATE_PROMO_BONUS_DAYS} jour${AFFILIATE_PROMO_BONUS_DAYS > 1 ? "s" : ""} Premium bonus :`;
+              if (navigator.share) navigator.share({ title: "Moyo Dating", text: shareText, url: window.location.origin });
+              else { navigator.clipboard.writeText(`${shareText} ${window.location.origin}`).catch(() => {}); setToast({ msg: "Code et lien copiés.", type: "success" }); }
+            }} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "#D4A843", color: "#fff", border: "none", borderRadius: 50, padding: "11px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer" }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+              Partager
+            </button>
+            <button onClick={() => { navigator.clipboard.writeText(ambPromoCode).catch(() => {}); setToast({ msg: "Code copié.", type: "success" }); }} style={{ width: 44, background: "#FDF9F0", border: "none", borderRadius: 50, display: "flex", alignItems: "center", justifyContent: "center", color: "#8B6914", cursor: "pointer", flexShrink: 0 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8B6914" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            </button>
+          </div>
         </div>
       )}
-      <div style={{ background: "#fafafa", borderRadius: 16, padding: "16px" }}>
-        <div style={{ fontSize: "0.85rem", fontWeight: 800, color: G.brun, marginBottom: 10 }}>Mon lien d'invitation</div>
-        <p style={{ fontSize: "0.74rem", color: "#999", lineHeight: 1.5, marginBottom: 10 }}>Dès leur inscription via ce lien, vos filleuls gagnent {AFFILIATE_PROMO_BONUS_DAYS} jour{AFFILIATE_PROMO_BONUS_DAYS > 1 ? "s" : ""} bonus au premier Premium acheté, sans rien saisir, et vous percevez votre commission dès l'achat de leur Premium.</p>
-        <button onClick={() => {
-          const refLink = `${window.location.origin}?ref=${session.userId}`;
-          if (navigator.share) navigator.share({ title: "Moyo Dating", text: "Rejoins Moyo Dating avec mon lien :", url: refLink });
-          else { navigator.clipboard.writeText(refLink).catch(() => {}); setToast({ msg: "Lien copié.", type: "success" }); }
-        }} style={{ width: "100%", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: "#fff", color: "#8B0D2F", borderRadius: 50, padding: "12px 24px", fontSize: "0.85rem", fontWeight: 700, border: "1.5px solid #8B0D2F", cursor: "pointer" }}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8B0D2F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-          Partager mon lien
-        </button>
+      <div style={{ background: "#fff", border: "1.5px solid #F0E4E2", borderRadius: 18, padding: 20 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+          <span style={{ color: G.brun, fontSize: "0.78rem", fontWeight: 700 }}>Ton lien de parrainage à partager</span>
+          <span style={{ background: "rgba(139,13,47,0.08)", color: "#8B0D2F", fontSize: "0.66rem", fontWeight: 700, padding: "3px 10px", borderRadius: 20 }}>Automatique</span>
+        </div>
+        <p style={{ color: "#999", fontSize: "0.68rem", marginBottom: 14 }}>Rien à saisir, ta commission se déclenche toute seule</p>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, background: "#fafafa", borderRadius: 12, padding: "12px 14px", marginBottom: 14 }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8B0D2F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          <div style={{ fontSize: "0.76rem", color: "#8B0D2F", fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{window.location.origin.replace(/^https?:\/\//, "")}/?ref={session.userId.slice(0, 8)}…</div>
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={() => {
+            const refLink = `${window.location.origin}?ref=${session.userId}`;
+            if (navigator.share) navigator.share({ title: "Moyo Dating", text: "Rejoins Moyo Dating avec mon lien :", url: refLink });
+            else { navigator.clipboard.writeText(refLink).catch(() => {}); setToast({ msg: "Lien copié.", type: "success" }); }
+          }} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "#8B0D2F", color: "#fff", border: "none", borderRadius: 50, padding: "11px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer" }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+            Partager
+          </button>
+          <button onClick={() => { navigator.clipboard.writeText(`${window.location.origin}?ref=${session.userId}`).catch(() => {}); setToast({ msg: "Lien copié.", type: "success" }); }} style={{ width: 44, background: "#fafafa", border: "none", borderRadius: 50, display: "flex", alignItems: "center", justifyContent: "center", color: "#8B0D2F", cursor: "pointer", flexShrink: 0 }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8B0D2F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          </button>
+        </div>
       </div>
 
       {/* Bloc final : déconnexion + création d'un vrai compte Moyo Dating (uniquement si la
           personne n'a pas déjà un vrai profil de rencontre — jamais proposé sinon) */}
       <div style={{ marginTop: 26, display: "flex", flexDirection: "column", gap: 10 }}>
-        <button onClick={logout} style={{ width: "100%", background: G.brun, border: "none", borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 700, color: "#fff", cursor: "pointer" }}>Déconnexion</button>
+        <button onClick={logout} style={{ width: "100%", background: "none", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 700, color: "#666", cursor: "pointer" }}>Déconnexion</button>
         {!hasRealAccount && (
-          <a href={`${window.location.origin}/?signup=1`} style={{ width: "100%", boxSizing: "border-box", display: "block", textAlign: "center", background: G.rouge, borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 700, color: "#fff", textDecoration: "none" }}>Créer ton compte Moyo Dating</a>
+          <a href={`${window.location.origin}/?signup=1`} style={{ width: "100%", boxSizing: "border-box", display: "block", textAlign: "center", background: "none", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 700, color: "#666", textDecoration: "none" }}>Créer ton compte Moyo Dating</a>
         )}
       </div>
 
@@ -16754,13 +16778,13 @@ function AmbassadorPortal() {
           <div style={{ color: "#999", fontSize: "0.76rem", fontWeight: 600, marginBottom: 10 }}>Suis-nous sur les réseaux</div>
           <div style={{ display: "flex", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
             {[
-              [SOCIAL_FACEBOOK, "#1877F2", svgFb, "Facebook"],
-              [SOCIAL_INSTAGRAM, "#C1358B", svgIg, "Instagram"],
-              [SOCIAL_TIKTOK, "#111111", svgTk, "TikTok"],
-              [SOCIAL_YOUTUBE, "#FF0000", svgYt, "YouTube"],
-              [SOCIAL_LINKEDIN, "#0A66C2", svgLi, "LinkedIn"],
-            ].map(([url, bg, svgFn, label]: any, i) => url && (
-              <a key={i} href={url} target="_blank" rel="noopener noreferrer" title={label} style={{ width: 42, height: 42, borderRadius: "50%", background: bg, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", flexShrink: 0 }}>
+              [SOCIAL_FACEBOOK, svgFb, "Facebook"],
+              [SOCIAL_INSTAGRAM, svgIg, "Instagram"],
+              [SOCIAL_TIKTOK, svgTk, "TikTok"],
+              [SOCIAL_YOUTUBE, svgYt, "YouTube"],
+              [SOCIAL_LINKEDIN, svgLi, "LinkedIn"],
+            ].map(([url, svgFn, label]: any, i) => url && (
+              <a key={i} href={url} target="_blank" rel="noopener noreferrer" title={label} style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(139,13,47,0.08)", display: "flex", alignItems: "center", justifyContent: "center", color: "#8B0D2F", flexShrink: 0 }}>
                 {svgFn(19)}
               </a>
             ))}
@@ -18204,43 +18228,89 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
 
                 {/* Mon code promo — visible seulement si l'admin en a attribué un */}
                 {ambPromoCode && (
-                  <div style={{ background: "#fafafa", borderRadius: 16, padding: "16px", marginBottom: 14 }}>
-                    <div style={{ fontSize: "0.85rem", fontWeight: 800, color: G.brun, marginBottom: 10 }}>Mon code promo</div>
-                    <p style={{ fontSize: "0.74rem", color: "#999", lineHeight: 1.5, marginBottom: 10 }}>Vos filleuls peuvent le saisir à l'achat de leur Premium pour gagner {AFFILIATE_PROMO_BONUS_DAYS} jour{AFFILIATE_PROMO_BONUS_DAYS > 1 ? "s" : ""} bonus. En retour, vous touchez {ambCommissionPercent ?? AFFILIATE_COMMISSION_PERCENT}% de commission sur leur achat.</p>
-                    <button onClick={() => {
-                      const shareText = `Utilise le code ${ambPromoCode} sur Moyo Dating pour gagner ${AFFILIATE_PROMO_BONUS_DAYS} jour${AFFILIATE_PROMO_BONUS_DAYS > 1 ? "s" : ""} Premium bonus :`;
-                      if (navigator.share) {
-                        navigator.share({ title: "Moyo Dating", text: shareText, url: window.location.origin });
-                      } else {
-                        navigator.clipboard.writeText(`${shareText} ${window.location.origin}`).catch(() => {});
-                        setToast({ msg: "Code et lien copiés.", type: "success" });
-                      }
-                    }} style={{ width: "100%", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: "#fff", color: "#8B0D2F", borderRadius: 50, padding: "12px 24px", fontSize: "0.85rem", fontWeight: 700, border: "1.5px solid #8B0D2F", cursor: "pointer" }}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8B0D2F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-                      Partager mon code : {ambPromoCode}
-                    </button>
+                  <div style={{ background: "#fff", border: "1.5px solid #F0E4E2", borderRadius: 18, padding: 20, marginBottom: 14 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                      <span style={{ color: G.brun, fontSize: "0.78rem", fontWeight: 700 }}>Ton code promo à communiquer</span>
+                      <span style={{ background: "rgba(212,168,67,0.15)", color: "#8B6914", fontSize: "0.66rem", fontWeight: 700, padding: "3px 10px", borderRadius: 20 }}>+{AFFILIATE_PROMO_BONUS_DAYS}j offerts</span>
+                    </div>
+                    <p style={{ color: "#999", fontSize: "0.68rem", marginBottom: 14 }}>Ton filleul le saisit à l'achat, tu touches {ambCommissionPercent ?? AFFILIATE_COMMISSION_PERCENT}% de commission</p>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, background: "#FDF9F0", border: "1.5px dashed #D4A843", borderRadius: 12, padding: "12px 14px", marginBottom: 14 }}>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8B6914" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M20.59 13.41 13.42 20.6a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82Z"/><circle cx="7" cy="7" r="1"/></svg>
+                      <div style={{ fontSize: "0.95rem", color: "#8B6914", fontWeight: 800, letterSpacing: "1px" }}>{ambPromoCode}</div>
+                    </div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button onClick={() => {
+                        const shareText = `Utilise le code ${ambPromoCode} sur Moyo Dating pour gagner ${AFFILIATE_PROMO_BONUS_DAYS} jour${AFFILIATE_PROMO_BONUS_DAYS > 1 ? "s" : ""} Premium bonus :`;
+                        if (navigator.share) {
+                          navigator.share({ title: "Moyo Dating", text: shareText, url: window.location.origin });
+                        } else {
+                          navigator.clipboard.writeText(`${shareText} ${window.location.origin}`).catch(() => {});
+                          setToast({ msg: "Code et lien copiés.", type: "success" });
+                        }
+                      }} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "#D4A843", color: "#fff", border: "none", borderRadius: 50, padding: "11px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer" }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                        Partager
+                      </button>
+                      <button onClick={() => { navigator.clipboard.writeText(ambPromoCode).catch(() => {}); setToast({ msg: "Code copié.", type: "success" }); }} style={{ width: 44, background: "#FDF9F0", border: "none", borderRadius: 50, display: "flex", alignItems: "center", justifyContent: "center", color: "#8B6914", cursor: "pointer", flexShrink: 0 }}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8B6914" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                      </button>
+                    </div>
                   </div>
                 )}
 
                 {/* Lien d'invitation */}
-                <div style={{ background: "#fafafa", borderRadius: 16, padding: "16px" }}>
-                  <div style={{ fontSize: "0.85rem", fontWeight: 800, color: G.brun, marginBottom: 10 }}>Mon lien d'invitation</div>
-                  <p style={{ fontSize: "0.74rem", color: "#999", lineHeight: 1.5, marginBottom: 10 }}>Dès leur inscription via ce lien, vos filleuls gagnent {AFFILIATE_PROMO_BONUS_DAYS} jour{AFFILIATE_PROMO_BONUS_DAYS > 1 ? "s" : ""} bonus au premier Premium acheté, sans rien saisir, et vous percevez votre commission dès l'achat de leur Premium.</p>
-                  <button onClick={() => {
-                    const refLink = `${window.location.origin}?ref=${auth.userId}`;
-                    if (navigator.share) {
-                      navigator.share({ title: "Moyo Dating", text: "Rejoins Moyo Dating avec mon lien :", url: refLink });
-                    } else {
-                      navigator.clipboard.writeText(refLink).catch(() => {});
-                      setToast({ msg: "Lien copié.", type: "success" });
-                    }
-                  }} style={{ width: "100%", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: "#fff", color: "#8B0D2F", borderRadius: 50, padding: "12px 24px", fontSize: "0.85rem", fontWeight: 700, border: "1.5px solid #8B0D2F", cursor: "pointer" }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8B0D2F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-                    Partager mon lien
-                  </button>
+                <div style={{ background: "#fff", border: "1.5px solid #F0E4E2", borderRadius: 18, padding: 20 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                    <span style={{ color: G.brun, fontSize: "0.78rem", fontWeight: 700 }}>Ton lien de parrainage à partager</span>
+                    <span style={{ background: "rgba(139,13,47,0.08)", color: "#8B0D2F", fontSize: "0.66rem", fontWeight: 700, padding: "3px 10px", borderRadius: 20 }}>Automatique</span>
+                  </div>
+                  <p style={{ color: "#999", fontSize: "0.68rem", marginBottom: 14 }}>Rien à saisir, ta commission se déclenche toute seule</p>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, background: "#fafafa", borderRadius: 12, padding: "12px 14px", marginBottom: 14 }}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8B0D2F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                    <div style={{ fontSize: "0.76rem", color: "#8B0D2F", fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{window.location.origin.replace(/^https?:\/\//, "")}/?ref={auth.userId.slice(0, 8)}…</div>
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button onClick={() => {
+                      const refLink = `${window.location.origin}?ref=${auth.userId}`;
+                      if (navigator.share) {
+                        navigator.share({ title: "Moyo Dating", text: "Rejoins Moyo Dating avec mon lien :", url: refLink });
+                      } else {
+                        navigator.clipboard.writeText(refLink).catch(() => {});
+                        setToast({ msg: "Lien copié.", type: "success" });
+                      }
+                    }} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "#8B0D2F", color: "#fff", border: "none", borderRadius: 50, padding: "11px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer" }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                      Partager
+                    </button>
+                    <button onClick={() => { navigator.clipboard.writeText(`${window.location.origin}?ref=${auth.userId}`).catch(() => {}); setToast({ msg: "Lien copié.", type: "success" }); }} style={{ width: 44, background: "#fafafa", border: "none", borderRadius: 50, display: "flex", alignItems: "center", justifyContent: "center", color: "#8B0D2F", cursor: "pointer", flexShrink: 0 }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8B0D2F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                    </button>
+                  </div>
                 </div>
 
-                <button onClick={() => { setShowAmbDashboard(false); setShowAllAmbConversions(false); }} style={{ width: "100%", marginTop: 26, background: "none", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 700, color: "#666", cursor: "pointer" }}>Revenir à l'app</button>
+                <div style={{ marginTop: 26, display: "flex", flexDirection: "column", gap: 10 }}>
+                  <button onClick={() => { setShowAmbDashboard(false); setShowAllAmbConversions(false); }} style={{ width: "100%", background: "none", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 700, color: "#666", cursor: "pointer" }}>Revenir sur l'application</button>
+                  <button onClick={onLogout} style={{ width: "100%", background: "none", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "12px", fontSize: "0.85rem", fontWeight: 700, color: "#666", cursor: "pointer" }}>Déconnexion</button>
+                </div>
+
+                {(SOCIAL_FACEBOOK || SOCIAL_INSTAGRAM || SOCIAL_TIKTOK || SOCIAL_YOUTUBE || SOCIAL_LINKEDIN) && (
+                  <div style={{ marginTop: 16, background: G.blanc, borderRadius: 16, padding: "14px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", textAlign: "center" }}>
+                    <div style={{ color: "#999", fontSize: "0.76rem", fontWeight: 600, marginBottom: 10 }}>Suis-nous sur les réseaux</div>
+                    <div style={{ display: "flex", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
+                      {[
+                        [SOCIAL_FACEBOOK, svgFb, "Facebook"],
+                        [SOCIAL_INSTAGRAM, svgIg, "Instagram"],
+                        [SOCIAL_TIKTOK, svgTk, "TikTok"],
+                        [SOCIAL_YOUTUBE, svgYt, "YouTube"],
+                        [SOCIAL_LINKEDIN, svgLi, "LinkedIn"],
+                      ].map(([url, svgFn, label]: any, i) => url && (
+                        <a key={i} href={url} target="_blank" rel="noopener noreferrer" title={label} style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(139,13,47,0.08)", display: "flex", alignItems: "center", justifyContent: "center", color: "#8B0D2F", flexShrink: 0 }}>
+                          {svgFn(19)}
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
               </div>
               {!ambContractSigned && (
