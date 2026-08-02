@@ -7014,13 +7014,13 @@ function AppShell({ children, tab, setTab, unreadCount, notifCount, likesReceive
   </div>;
 }
 
-const ProfileListCard = memo(function ProfileListCard({ prof, liked, onLike, onBlock, onReport, onView, isPremium }: { prof: Profile; liked: boolean; onLike: () => void; onBlock: () => void; onReport: (r: string) => void; onView?: () => void; isPremium?: boolean }) {
+const ProfileListCard = memo(function ProfileListCard({ prof, liked, onLike, onBlock, onReport, onView, onPhotoTap, isPremium }: { prof: Profile; liked: boolean; onLike: () => void; onBlock: () => void; onReport: (r: string) => void; onView?: () => void; onPhotoTap?: () => void; isPremium?: boolean }) {
   const [showMenu, setShowMenu] = useState(false);
   const [showSignalerMenu, setShowSignalerMenu] = useState(false);
   return (
     <div className="profile-card" style={{ display: "flex", gap: 12, alignItems: "center", background: G.blanc, borderRadius: 16, padding: "12px", marginBottom: 10, boxShadow: "0 2px 12px rgba(44,26,14,0.07)", position: "relative" }}>
-      <div style={{ position: "relative", flexShrink: 0 }}>
-        <div style={{ width: 62, height: 62, borderRadius: 14, overflow: "hidden", background: "linear-gradient(160deg,#E8C5A0,#C47A4A)" }}>
+      <div style={{ position: "relative", flexShrink: 0 }} onClick={onPhotoTap} className={onPhotoTap ? "moyo-tap" : undefined}>
+        <div style={{ width: 62, height: 62, borderRadius: 14, overflow: "hidden", background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", cursor: onPhotoTap ? "pointer" : undefined }}>
           {prof.photo_url
             ? <img src={prof.photo_url ?? undefined} alt={prof.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
             : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
@@ -7523,6 +7523,9 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages, onMatch }
   const [showSignaler, setShowSignaler] = useState(false);
   const [showSameGender, setShowSameGender] = useState(false);
   const [viewedProfile, setViewedProfile] = useState<Profile | null>(null);
+  // ── Plein écran ouvert en tapant directement la photo en mode Liste — même composant que celui
+  //    utilisé en tapant l'avatar dans l'en-tête d'une conversation. ──
+  const [photoFullView, setPhotoFullView] = useState<Profile | null>(null);
   const [myGender, setMyGender] = useState("");
   const [filters, setFilters] = useState({ city: "", ageMin: "", ageMax: "", gender: "", religion: "" });
   // Hauteur réelle de l'en-tête, mesurée en JS (comme dans Messages) : le plein écran doit occuper
@@ -8104,7 +8107,7 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages, onMatch }
   ))}
   {/* fin fullscreen */}
 </div> : viewMode === "list" ? <div>
-  {profiles.map((prof, idx) => <ProfileListCard key={prof.id} prof={prof} liked={likedIds.has(prof.id)} onLike={() => handleLike(prof)} onBlock={async () => { await sb.insert(auth.token, "blocks", { blocker_id: auth.userId, blocked_id: prof.id }); setProfiles(prev => prev.filter(p => p.id !== prof.id)); }} onReport={(r) => handleReport(r)} isPremium={auth.isPremium} onView={() => { setViewedProfile(prof); recordView(prof.id); }} />)}
+  {profiles.map((prof, idx) => <ProfileListCard key={prof.id} prof={prof} liked={likedIds.has(prof.id)} onLike={() => handleLike(prof)} onBlock={async () => { await sb.insert(auth.token, "blocks", { blocker_id: auth.userId, blocked_id: prof.id }); setProfiles(prev => prev.filter(p => p.id !== prof.id)); }} onReport={(r) => handleReport(r)} isPremium={auth.isPremium} onView={() => { setViewedProfile(prof); recordView(prof.id); }} onPhotoTap={() => { setPhotoFullView(prof); recordView(prof.id); }} />)}
   {/* fin liste */}
 </div> : !p ? <div style={{ textAlign: "center", padding: "60px 20px", color: "#555" }}><div style={{ fontSize: "56px", height: "56px", borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></div><h3 style={{  marginBottom: 8, fontSize: "1.2rem" }}>Aucun profil disponible pour le moment.</h3><p style={{ fontSize: "0.85rem", marginBottom: 20 }}>Reviens plus tard, de nouveaux membres arrivent bientôt !</p><Btn variant="primary" onClick={() => { loadProfiles(0); }}>Actualiser</Btn></div> : <><div
   onTouchStart={(e) => { swipeStartX.current = e.touches[0].clientX; }}
@@ -8161,7 +8164,7 @@ function Discover({ auth, onShowPremium, isWide = false, onGoMessages, onMatch }
       <div key={idx} style={{ width: isActive ? 23 : 7, height: 7, borderRadius: 99, background: isActive ? G.rouge : "#E0D5CC", transition: "width 0.25s ease, background 0.25s ease" }} />
     );
   })}
-</div><div style={{ marginTop: 6 }}>{!isWide && <PremiumEngagementCarousel auth={auth} isPremium={auth.isPremium} onShowPremium={onShowPremium} onNav={undefined} />}</div></>}{viewedProfile && (
+</div><div style={{ marginTop: 6 }}>{!isWide && <PremiumEngagementCarousel auth={auth} isPremium={auth.isPremium} onShowPremium={onShowPremium} onNav={undefined} />}</div></>}{photoFullView && <FullScreenProfileView profile={photoFullView} onClose={() => setPhotoFullView(null)} />}{viewedProfile && (
     <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 400, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={() => setViewedProfile(null)}>
       <div className="moyo-sheet-in" style={{ background: G.blanc, borderRadius: "22px 22px 0 0", width: "100%", maxWidth: 500, maxHeight: "88vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
         <div style={{ height: 270, background: "linear-gradient(160deg,#E8C5A0,#C47A4A)", overflow: "hidden", position: "relative" }}>
@@ -11897,7 +11900,13 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
       history.push(now);
       try { localStorage.setItem(key, JSON.stringify(history)); } catch {}
       setToast({ msg: `Demande envoyée à ${open.partner?.name}. Elle recevra une notification et pourra choisir librement de t'offrir Premium.`, type: "success" });
-    } catch (e: any) { setToast({ msg: e?.message ? `Impossible d'envoyer la demande : ${e.message}` : "Impossible d'envoyer la demande.", type: "error" }); }
+    } catch (e: any) {
+      if (typeof e?.message === "string" && e.message.includes("FREE_MESSAGE_LIMIT_REACHED")) {
+        setToast({ msg: `Tu as envoyé tes ${freeMessageLimitFor(myGenderForLikeGuard)} messages gratuits avec ${open.partner?.name}. Passe Premium pour continuer à discuter (et pouvoir demander un cadeau) !`, type: "error" });
+      } else {
+        setToast({ msg: e?.message ? `Impossible d'envoyer la demande : ${e.message}` : "Impossible d'envoyer la demande.", type: "error" });
+      }
+    }
     setConfirmGiftRequest(false);
   };
   const unmatchPartnerNow = async () => {
@@ -12063,24 +12072,28 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
     // Supprimer la citation imbriquée si le message cité est lui-même une réponse
     const cleanQuoted = rawQuoted.replace(/^\[↩ .+? : .+?\]\n/, "").replace(/\]/g, "）").substring(0, 60);
     const prefix = replyTo ? `[↩ ${replyTo.sender_id === auth.userId ? "Toi" : open.partner?.name} : ${cleanQuoted}]\n` : "";
-    const res = await sb.insert<Message>(auth.token, "messages", { match_id: open.id, sender_id: auth.userId, content: prefix + text, is_read: false });
-    const row = res[0] as (Message & { code?: string; message?: string }) | undefined;
-    if (row && row.id) {
-      // Insertion réussie : on ajoute la vraie bulle
-      setMsgs(m => [...m, row]); setMsgCount(c => c + 1); setText(""); setReplyTo(null);
-      // Efface immédiatement mon signal "en train d'écrire" côté partenaire, au lieu d'attendre
-      // l'expiration naturelle du timestamp.
-      const myField = open.user1 === auth.userId ? "user1_typing_at" : "user2_typing_at";
-      fetch(`${SUPABASE_URL}/rest/v1/matches?id=eq.${open.id}`, {
-        method: "PATCH",
-        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
-        body: JSON.stringify({ [myField]: null }),
-      }).catch(() => {});
-    } else if (row && (row.code === "P0001" || (typeof row.message === "string" && row.message.includes("FREE_MESSAGE_LIMIT_REACHED")))) {
+    try {
+      const res = await sb.insert<Message>(auth.token, "messages", { match_id: open.id, sender_id: auth.userId, content: prefix + text, is_read: false });
+      const row = res[0];
+      if (row && row.id) {
+        // Insertion réussie : on ajoute la vraie bulle
+        setMsgs(m => [...m, row]); setMsgCount(c => c + 1); setText(""); setReplyTo(null);
+        // Efface immédiatement mon signal "en train d'écrire" côté partenaire, au lieu d'attendre
+        // l'expiration naturelle du timestamp.
+        const myField = open.user1 === auth.userId ? "user1_typing_at" : "user2_typing_at";
+        fetch(`${SUPABASE_URL}/rest/v1/matches?id=eq.${open.id}`, {
+          method: "PATCH",
+          headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
+          body: JSON.stringify({ [myField]: null }),
+        }).catch(() => {});
+      }
+    } catch (e: any) {
       // Refus du serveur : limite de messages gratuits atteinte (trigger trg_free_message_limit)
-      onShowPremium(`Tu as envoyé tes ${freeMessageLimitFor(myGenderForLikeGuard)} messages gratuits avec ${open.partner?.name}. Passe Premium !`);
+      if (typeof e?.message === "string" && e.message.includes("FREE_MESSAGE_LIMIT_REACHED")) {
+        onShowPremium(`Tu as envoyé tes ${freeMessageLimitFor(myGenderForLikeGuard)} messages gratuits avec ${open.partner?.name}. Passe Premium !`);
+      }
+      // Tout autre échec (réseau, etc.) : on ne fait rien, le champ reste rempli pour réessayer
     }
-    // Tout autre échec (réseau, etc.) : on ne fait rien, le champ reste rempli pour réessayer
     } finally {
       sendingRef.current = false;
     }

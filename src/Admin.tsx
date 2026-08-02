@@ -10215,6 +10215,11 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
   const IcoBanLg = ({ size = 13 }: { size?: number }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>;
   const IcoWarnLg = ({ size = 13 }: { size?: number }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>;
   const IcoCheck = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={G.vert} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>;
+  const IcoAward = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="6"/><path d="M8.21 13.89L7 23l5-3 5 3-1.21-9.12"/></svg>;
+  const IcoMale = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1a6ef5" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="10" cy="14" r="6"/><path d="M14.5 9.5 21 3M21 3h-6M21 3v6"/></svg>;
+  const IcoFemale = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#e91e8c" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="9" r="6"/><path d="M12 15v7M9 19h6"/></svg>;
+  const IcoDot = () => <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#27ae60", display: "inline-block" }} />;
+  const IcoClock = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f39c12" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>;
   const IcoTrash = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>;
   const IcoSearch = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>;
   const IcoRefresh = () => <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>;
@@ -12408,12 +12413,6 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
       {/* ═══════════════════════════════════════════ ONGLET UTILISATEURS */}
       {activeTab === "users" && (
         <div style={{ padding: "16px" }}>
-          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
-            <button onClick={() => { setShowEmailRecoveryModal(true); loadEmailRecoveryRequests(); }} style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(142,68,173,0.08)", border: "1.5px solid rgba(142,68,173,0.3)", borderRadius: 50, padding: "8px 16px", fontSize: "0.8rem", fontWeight: 700, color: "#8e44ad", cursor: "pointer" }}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-              Demandes "Email oublié"
-            </button>
-          </div>
           {/* Modale profil complet admin */}
           {adminViewedProfile && (
             <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: "calc(env(safe-area-inset-top) + 16px) 16px calc(env(safe-area-inset-bottom) + 16px)" }} onClick={() => setAdminViewedProfile(null)}>
@@ -12612,7 +12611,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
           )}
 
           {/* Barre de recherche : trois champs côte à côte (nom / email / téléphone) */}
-          <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
+          <div style={{ background: G.blanc, borderRadius: 18, padding: "18px 20px", marginBottom: 12, boxShadow: "0 2px 12px rgba(44,26,14,0.06)" }}>
+          <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
             <div style={{ position: "relative", flex: 1, minWidth: 200 }}>
               <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}><IcoSearch /></span>
               <input
@@ -12620,7 +12620,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 onChange={e => setUserSearch(e.target.value)}
                 onKeyDown={e => { if (e.key === "Enter") { setUserPage(0); loadUsers(userSearch, 0, usersSort, userSearchEmail, usersFilters, userSearchPhone); } }}
                 placeholder="Nom d'utilisateur…"
-                style={{ width: "100%", padding: "11px 14px 11px 38px", borderRadius: 12, border: `2px solid ${G.gris}`, fontSize: "0.9rem", background: G.blanc, color: G.brun, outline: "none", boxSizing: "border-box" }}
+                style={{ width: "100%", padding: "11px 14px 11px 38px", borderRadius: 12, border: "1.5px solid #EEE6DD", fontSize: "0.86rem", background: "#FAF8F5", color: G.brun, outline: "none", boxSizing: "border-box" }}
               />
             </div>
             <div style={{ position: "relative", flex: 1, minWidth: 200 }}>
@@ -12630,7 +12630,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 onChange={e => setUserSearchEmail(e.target.value)}
                 onKeyDown={e => { if (e.key === "Enter") { setUserPage(0); loadUsers(userSearch, 0, usersSort, userSearchEmail, usersFilters, userSearchPhone); } }}
                 placeholder="Email d'utilisateur…"
-                style={{ width: "100%", padding: "11px 14px 11px 38px", borderRadius: 12, border: `2px solid ${G.gris}`, fontSize: "0.9rem", background: G.blanc, color: G.brun, outline: "none", boxSizing: "border-box" }}
+                style={{ width: "100%", padding: "11px 14px 11px 38px", borderRadius: 12, border: "1.5px solid #EEE6DD", fontSize: "0.86rem", background: "#FAF8F5", color: G.brun, outline: "none", boxSizing: "border-box" }}
               />
             </div>
             <div style={{ position: "relative", flex: 1, minWidth: 200 }}>
@@ -12640,70 +12640,86 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 onChange={e => setUserSearchPhone(e.target.value)}
                 onKeyDown={e => { if (e.key === "Enter") { setUserPage(0); loadUsers(userSearch, 0, usersSort, userSearchEmail, usersFilters, userSearchPhone); } }}
                 placeholder="Téléphone d'utilisateur…"
-                style={{ width: "100%", padding: "11px 14px 11px 38px", borderRadius: 12, border: `2px solid ${G.gris}`, fontSize: "0.9rem", background: G.blanc, color: G.brun, outline: "none", boxSizing: "border-box" }}
+                style={{ width: "100%", padding: "11px 14px 11px 38px", borderRadius: 12, border: "1.5px solid #EEE6DD", fontSize: "0.86rem", background: "#FAF8F5", color: G.brun, outline: "none", boxSizing: "border-box" }}
               />
             </div>
           </div>
-          <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-            <Btn variant="primary" onClick={() => { setUserPage(0); loadUsers(userSearch, 0, usersSort, userSearchEmail, usersFilters, userSearchPhone); }} style={{ flex: 1, padding: "10px" }}>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <Btn variant="primary" onClick={() => { setUserPage(0); loadUsers(userSearch, 0, usersSort, userSearchEmail, usersFilters, userSearchPhone); }} style={{ flex: 1, minWidth: 140, padding: "10px" }}>
               Rechercher
             </Btn>
             <Btn variant="ghost" onClick={() => { setUserSearch(""); setUserSearchEmail(""); setUserPage(0); loadUsers("", 0, usersSort, ""); }} style={{ padding: "10px 16px" }}>
               Réinitialiser
             </Btn>
-            <button onClick={() => { setCreateProfileResult(null); setCreateProfileError(null); setShowCreateProfileModal(true); }} style={{ background: "linear-gradient(135deg,#C0392B,#922B21)", color: "#fff", border: "none", borderRadius: 12, padding: "10px 18px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+            <button onClick={() => { setCreateProfileResult(null); setCreateProfileError(null); setShowCreateProfileModal(true); }} style={{ background: "#fff", color: G.rouge, border: `1.5px solid ${G.rouge}`, borderRadius: 12, padding: "10px 16px", fontSize: "0.84rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 7, whiteSpace: "nowrap" }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
               Créer un profil
             </button>
+            <button onClick={() => { setShowEmailRecoveryModal(true); loadEmailRecoveryRequests(); }} style={{ display: "flex", alignItems: "center", gap: 7, background: "rgba(142,68,173,0.08)", border: "1.5px solid rgba(142,68,173,0.3)", borderRadius: 12, padding: "10px 16px", fontSize: "0.84rem", fontWeight: 700, color: "#8e44ad", cursor: "pointer", whiteSpace: "nowrap" }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+              Email oublié
+            </button>
           </div>
-          {/* ── Tri + Toggle vue ── */}
-          <div style={{ display: "flex", gap: 8, marginBottom: 14, alignItems: "center" }}>
-            <select
-              value={usersSort}
-              onChange={e => { const s = e.target.value as typeof usersSort; setUsersSort(s); setUserPage(0); loadUsers(userSearch, 0, s, userSearchEmail, usersFilters, userSearchPhone); }}
-              style={{ flex: 1, padding: "8px 12px", borderRadius: 10, border: `2px solid ${G.gris}`, fontSize: "0.8rem", fontWeight: 600, color: "#333", background: G.blanc, cursor: "pointer", outline: "none" }}
-            >
-              <option value="created_at.desc">📅 Plus récents</option>
-              <option value="created_at.asc">📅 Plus anciens</option>
-              <option value="name.asc">🔤 A → Z</option>
-              <option value="name.desc">🔤 Z → A</option>
-              <option value="last_seen.desc">🟢 Dernière connexion</option>
-              <option value="online">🟢 En ligne d'abord</option>
-              <option value="age.asc">🎂 Âge croissant</option>
-              <option value="age.desc">🎂 Âge décroissant</option>
-              <option value="premium">★ Premium d'abord</option>
-              <option value="lifetime">♾️ Premium à vie d'abord</option>
-              <option value="admin">⚙️ Admin d'abord</option>
-              <option value="verified">✓ Vérifiés d'abord</option>
-              <option value="banned">⛔ Bannis d'abord</option>
-              <option value="male">👨 Hommes d'abord</option>
-              <option value="female">👩 Femmes d'abord</option>
-            </select>
-            {/* Toggle grille / liste */}
-            <div style={{ display: "flex", borderRadius: 10, border: `2px solid ${G.gris}`, overflow: "hidden", flexShrink: 0 }}>
-              <div onClick={() => setUsersViewMode("grid")} style={{ padding: "7px 12px", background: usersViewMode === "grid" ? G.rouge : G.blanc, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={usersViewMode === "grid" ? G.blanc : "#888"} strokeWidth="2.2" strokeLinecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-              </div>
-              <div onClick={() => setUsersViewMode("list")} style={{ padding: "7px 12px", background: usersViewMode === "list" ? G.rouge : G.blanc, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", borderLeft: `2px solid ${G.gris}` }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={usersViewMode === "list" ? G.blanc : "#888"} strokeWidth="2.2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+          </div>
+
+          {/* Titre + tri + toggle vue */}
+          <div style={{ background: G.blanc, borderRadius: 18, padding: "16px 20px", marginBottom: 12, boxShadow: "0 2px 12px rgba(44,26,14,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+            <div>
+              <div style={{ fontWeight: 800, fontSize: "1.02rem", color: G.brun }}>Utilisateurs</div>
+              <div style={{ fontSize: "0.76rem", color: "#999", marginTop: 2 }}>{stats.users} membre{stats.users > 1 ? "s" : ""} au total</div>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <select
+                value={usersSort}
+                onChange={e => { const s = e.target.value as typeof usersSort; setUsersSort(s); setUserPage(0); loadUsers(userSearch, 0, s, userSearchEmail, usersFilters, userSearchPhone); }}
+                style={{ padding: "9px 12px", borderRadius: 10, border: "1.5px solid #EEE6DD", fontSize: "0.8rem", fontWeight: 600, color: "#333", background: "#FAF8F5", cursor: "pointer", outline: "none" }}
+              >
+                <option value="created_at.desc">📅 Plus récents</option>
+                <option value="created_at.asc">📅 Plus anciens</option>
+                <option value="name.asc">🔤 A → Z</option>
+                <option value="name.desc">🔤 Z → A</option>
+                <option value="last_seen.desc">🟢 Dernière connexion</option>
+                <option value="online">🟢 En ligne d'abord</option>
+                <option value="age.asc">🎂 Âge croissant</option>
+                <option value="age.desc">🎂 Âge décroissant</option>
+                <option value="premium">★ Premium d'abord</option>
+                <option value="lifetime">♾️ Premium à vie d'abord</option>
+                <option value="admin">⚙️ Admin d'abord</option>
+                <option value="verified">✓ Vérifiés d'abord</option>
+                <option value="banned">⛔ Bannis d'abord</option>
+                <option value="male">👨 Hommes d'abord</option>
+                <option value="female">👩 Femmes d'abord</option>
+              </select>
+              {/* Toggle grille / liste */}
+              <div style={{ display: "flex", background: "#FAF8F5", borderRadius: 10, padding: 3, gap: 2, flexShrink: 0 }}>
+                <div onClick={() => setUsersViewMode("grid")} style={{ padding: "7px 10px", borderRadius: 8, background: usersViewMode === "grid" ? G.rouge : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={usersViewMode === "grid" ? G.blanc : "#999"} strokeWidth="2.2" strokeLinecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                </div>
+                <div onClick={() => setUsersViewMode("list")} style={{ padding: "7px 10px", borderRadius: 8, background: usersViewMode === "list" ? G.rouge : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={usersViewMode === "list" ? G.blanc : "#999"} strokeWidth="2.2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                </div>
               </div>
             </div>
           </div>
+
           {/* ── Filtres réels (excluent, contrairement au tri ci-dessus) — combinables entre eux
                (ex: Femmes + En ligne), s'appliquent sur toutes les pages, pas seulement celle
                affichée. ── */}
-          <div style={{ display: "flex", gap: 6, marginBottom: 14, flexWrap: "wrap" }}>
-            {([["admin","⚙️ Admin"],["premium","★ Premium"],["verified","✓ Vérifiés"],["banned","⛔ Bannis"],["ambassador","🎖 Ambassadeurs"],["male","👨 Hommes"],["female","👩 Femmes"],["online","🟢 En ligne"],["recent","🕓 Actif < 7j"]] as [UserFilterKey, string][]).map(([key, label]) => (
+          <div style={{ background: G.blanc, borderRadius: 18, padding: "16px 20px", marginBottom: 12, boxShadow: "0 2px 12px rgba(44,26,14,0.06)" }}>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+            {([["admin", IcoShield, "Admin"], ["premium", IcoStar, "Premium"], ["verified", IcoCheck, "Vérifiés"], ["banned", IcoBan, "Bannis"], ["ambassador", IcoAward, "Ambassadeurs"], ["male", IcoMale, "Hommes"], ["female", IcoFemale, "Femmes"], ["online", IcoDot, "En ligne"], ["recent", IcoClock, "Actif < 7j"]] as [UserFilterKey, () => React.ReactElement, string][]).map(([key, Ico, label]) => (
               <div key={label} onClick={() => {
                   const next = new Set(usersFilters);
                   if (next.has(key)) next.delete(key); else next.add(key);
                   setUsersFilters(next); setUserPage(0); loadUsers(userSearch, 0, usersSort, userSearchEmail, next, userSearchPhone);
                 }}
-                style={{ fontSize: "0.72rem", fontWeight: 600, color: usersFilters.has(key) ? "#fff" : "#555", background: usersFilters.has(key) ? G.rouge : G.creme, border: `1.5px solid ${usersFilters.has(key) ? G.rouge : G.gris}`, borderRadius: 50, padding: "5px 11px", cursor: "pointer" }}>
+                style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: "0.76rem", fontWeight: 700, color: usersFilters.has(key) ? G.rouge : "#555", background: usersFilters.has(key) ? "rgba(192,57,43,0.1)" : "#FAF8F5", border: `1.5px solid ${usersFilters.has(key) ? "rgba(192,57,43,0.3)" : "#EEE6DD"}`, borderRadius: 50, padding: "7px 14px", cursor: "pointer" }}>
+                <Ico />
                 {label}
               </div>
             ))}
-            {usersFilters.size > 0 && <div onClick={() => { const empty = new Set<any>(); setUsersFilters(empty); setUserPage(0); loadUsers(userSearch, 0, usersSort, userSearchEmail, empty, userSearchPhone); }} style={{ fontSize: "0.72rem", color: "#999", fontWeight: 600, cursor: "pointer", padding: "5px 9px", textDecoration: "underline" }}>Tout afficher</div>}
+            {usersFilters.size > 0 && <div onClick={() => { const empty = new Set<any>(); setUsersFilters(empty); setUserPage(0); loadUsers(userSearch, 0, usersSort, userSearchEmail, empty, userSearchPhone); }} style={{ fontSize: "0.76rem", color: "#999", fontWeight: 600, cursor: "pointer", padding: "5px 9px", textDecoration: "underline" }}>Tout afficher</div>}
+          </div>
           </div>
 
           {usersLoading ? (
@@ -12714,47 +12730,47 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
             <div style={{ textAlign: "center", padding: 40, color: "#aaa", fontSize: "0.88rem" }}>Aucun utilisateur trouvé</div>
           ) : (
             <>
-              <div style={{ display: "flex", gap: 10, marginBottom: 12, flexWrap: "wrap", alignItems: "stretch" }}>
-                <div style={{ background: G.rouge, color: "#fff", borderRadius: 10, padding: "0 16px", fontSize: "0.78rem", fontWeight: 700, display: "flex", alignItems: "center", whiteSpace: "nowrap" }}>{displayedUsers.length} utilisateur{displayedUsers.length > 1 ? "s" : ""} affiché{displayedUsers.length > 1 ? "s" : ""}</div>
+              <div style={{ background: G.blanc, borderRadius: 18, padding: "14px 20px", marginBottom: 12, boxShadow: "0 2px 12px rgba(44,26,14,0.06)", display: "flex", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
+                <div style={{ background: G.rouge, color: "#fff", borderRadius: 50, padding: "8px 16px", fontSize: "0.78rem", fontWeight: 700, whiteSpace: "nowrap" }}>{displayedUsers.length} utilisateur{displayedUsers.length > 1 ? "s" : ""} affiché{displayedUsers.length > 1 ? "s" : ""}</div>
 
-                {/* ── Filtre profils incomplets ── */}
-                <div
-                  onClick={() => { setShowIncomplete(v => !v); setSelectedUsers(new Set()); }}
-                  style={{ display: "flex", alignItems: "center", gap: 8, background: showIncomplete ? "rgba(231,76,60,0.08)" : "#F8F8F8", border: `1.5px solid ${showIncomplete ? "#e74c3c" : G.gris}`, borderRadius: 10, padding: "8px 14px", cursor: "pointer", flex: 1, minWidth: 220 }}
-                >
-                  <div style={{ width: 18, height: 18, borderRadius: 4, border: `2px solid ${showIncomplete ? "#e74c3c" : "#bbb"}`, background: showIncomplete ? "#e74c3c" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    {showIncomplete && <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
-                  </div>
-                  <span style={{ fontSize: "0.8rem", fontWeight: 700, color: showIncomplete ? "#e74c3c" : "#555", whiteSpace: "nowrap" }}>
-                    Afficher uniquement les profils incomplets (<code style={{ fontFamily: "monospace", background: "rgba(0,0,0,0.06)", padding: "1px 5px", borderRadius: 4 }}>...</code>)
-                  </span>
-                </div>
-
-                {/* ── Barre actions groupées ── */}
-                {displayedUsers.filter(u => u.id !== auth.userId).length > 0 && (
-                  <div style={{ background: selectedUsers.size > 0 ? "rgba(231,76,60,0.06)" : "#F8F8F8", border: `1.5px solid ${selectedUsers.size > 0 ? "#e74c3c" : G.gris}`, borderRadius: 10, padding: "8px 14px", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", flex: 1, minWidth: 220 }}>
-                    <div style={{ display: "flex", gap: 6, flex: 1, flexWrap: "wrap", alignItems: "center" }}>
-                      <button
-                        onClick={() => selectedUsers.size === displayedUsers.filter(u => u.id !== auth.userId).length ? deselectAll() : selectAll(displayedUsers)}
-                        style={{ background: "transparent", border: "none", padding: 0, fontSize: "0.8rem", fontWeight: 700, cursor: "pointer", color: "#555" }}
-                      >
-                        {selectedUsers.size === displayedUsers.filter(u => u.id !== auth.userId).length && displayedUsers.length > 0 ? "✗ Tout désélectionner" : "✓ Tout sélectionner"}
-                      </button>
-                      {selectedUsers.size > 0 && (
-                        <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#e74c3c" }}>{selectedUsers.size} sélectionné(s)</span>
-                      )}
+                <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginLeft: "auto" }}>
+                  {/* ── Filtre profils incomplets ── */}
+                  <div
+                    onClick={() => { setShowIncomplete(v => !v); setSelectedUsers(new Set()); }}
+                    style={{ display: "inline-flex", alignItems: "center", gap: 8, background: showIncomplete ? "rgba(231,76,60,0.08)" : "#FAF8F5", border: `1.5px solid ${showIncomplete ? "#e74c3c" : "#EEE6DD"}`, borderRadius: 50, padding: "8px 16px", cursor: "pointer", whiteSpace: "nowrap" }}
+                  >
+                    <div style={{ width: 16, height: 16, borderRadius: 4, border: `2px solid ${showIncomplete ? "#e74c3c" : "#bbb"}`, background: showIncomplete ? "#e74c3c" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      {showIncomplete && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
                     </div>
-                    {selectedUsers.size > 0 && (
-                      <button
-                        onClick={() => confirm(`⚠️ Supprimer définitivement les ${selectedUsers.size} profil(s) sélectionné(s) ? Cette action est irréversible.`, () => bulkDelete())}
-                        disabled={bulkDeleting}
-                        style={{ background: bulkDeleting ? "#aaa" : "#c0392b", color: "#fff", border: "none", borderRadius: 8, padding: "6px 14px", fontSize: "0.78rem", fontWeight: 700, cursor: bulkDeleting ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: 6 }}
-                      >
-                        {bulkDeleting ? "Suppression..." : `Supprimer (${selectedUsers.size})`}
-                      </button>
-                    )}
+                    <span style={{ fontSize: "0.8rem", fontWeight: 700, color: showIncomplete ? "#e74c3c" : "#555" }}>
+                      Afficher uniquement les profils incomplets (<code style={{ fontFamily: "monospace", background: "rgba(0,0,0,0.06)", padding: "1px 5px", borderRadius: 4 }}>...</code>)
+                    </span>
                   </div>
-                )}
+
+                  {/* ── Sélection groupée ── */}
+                  {displayedUsers.filter(u => u.id !== auth.userId).length > 0 && (
+                    <button
+                      onClick={() => selectedUsers.size === displayedUsers.filter(u => u.id !== auth.userId).length ? deselectAll() : selectAll(displayedUsers)}
+                      style={{ display: "inline-flex", alignItems: "center", gap: 8, background: selectedUsers.size > 0 ? "rgba(231,76,60,0.08)" : "#FAF8F5", border: `1.5px solid ${selectedUsers.size > 0 ? "#e74c3c" : "#EEE6DD"}`, color: selectedUsers.size > 0 ? "#e74c3c" : "#555", borderRadius: 50, padding: "8px 16px", fontSize: "0.8rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
+                    >
+                      {selectedUsers.size === displayedUsers.filter(u => u.id !== auth.userId).length && displayedUsers.length > 0
+                        ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                        : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
+                      {selectedUsers.size === displayedUsers.filter(u => u.id !== auth.userId).length && displayedUsers.length > 0 ? "Tout désélectionner" : "Tout sélectionner"}
+                      {selectedUsers.size > 0 && <span style={{ background: "#e74c3c", color: "#fff", borderRadius: 50, padding: "1px 8px", fontSize: "0.7rem" }}>{selectedUsers.size}</span>}
+                    </button>
+                  )}
+                  {selectedUsers.size > 0 && (
+                    <button
+                      onClick={() => confirm(`⚠️ Supprimer définitivement les ${selectedUsers.size} profil(s) sélectionné(s) ? Cette action est irréversible.`, () => bulkDelete())}
+                      disabled={bulkDeleting}
+                      style={{ background: bulkDeleting ? "#aaa" : "#c0392b", color: "#fff", border: "none", borderRadius: 50, padding: "8px 16px", fontSize: "0.8rem", fontWeight: 700, cursor: bulkDeleting ? "not-allowed" : "pointer", display: "inline-flex", alignItems: "center", gap: 7, whiteSpace: "nowrap" }}
+                    >
+                      <IcoTrash />
+                      {bulkDeleting ? "Suppression..." : `Supprimer (${selectedUsers.size})`}
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* ── MODALE CONFIRMATION ÉVÉNEMENT PREMIUM (déplacée au niveau supérieur, sous-onglet Marketing) ── */}
