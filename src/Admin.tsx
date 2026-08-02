@@ -9108,8 +9108,11 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
   //    utilisateur — calculé pour la page actuellement affichée uniquement. ──
   const [pendingLikesCount, setPendingLikesCount] = useState<Record<string, number>>({});
   const [sentPendingLikesCount, setSentPendingLikesCount] = useState<Record<string, number>>({});
+  // ── Nombre réel de matchs (paires mutuelles confirmées), par utilisateur — calculé à partir des
+  //    mêmes données de matchs déjà récupérées ci-dessous, aucune requête supplémentaire. ──
+  const [matchCount, setMatchCount] = useState<Record<string, number>>({});
   const loadPendingLikes = async (pageUsers: AdminProfile[]) => {
-    if (!auth || pageUsers.length === 0) { setPendingLikesCount({}); setSentPendingLikesCount({}); return; }
+    if (!auth || pageUsers.length === 0) { setPendingLikesCount({}); setSentPendingLikesCount({}); setMatchCount({}); return; }
     try {
       const ids = pageUsers.map(u => u.id);
       const H = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` };
@@ -9118,6 +9121,13 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
         fetch(`${SUPABASE_URL}/rest/v1/matches?or=(user1.in.(${ids.join(",")}),user2.in.(${ids.join(",")}))&select=user1,user2&limit=5000`, { headers: H }).then(r => r.json()).catch(() => []),
       ]);
       const matchedPairs = new Set((Array.isArray(matchesRaw) ? matchesRaw : []).map((m: any) => [m.user1, m.user2].sort().join("_")));
+      const matches: Record<string, number> = {};
+      (Array.isArray(matchesRaw) ? matchesRaw : []).forEach((m: any) => {
+        if (!m.user1 || !m.user2) return;
+        matches[m.user1] = (matches[m.user1] || 0) + 1;
+        matches[m.user2] = (matches[m.user2] || 0) + 1;
+      });
+      setMatchCount(matches);
       const counts: Record<string, number> = {};
       const sentCounts: Record<string, number> = {};
       (Array.isArray(likesRaw) ? likesRaw : []).forEach((l: any) => {
@@ -9129,7 +9139,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
       });
       setPendingLikesCount(counts);
       setSentPendingLikesCount(sentCounts);
-    } catch { setPendingLikesCount({}); setSentPendingLikesCount({}); }
+    } catch { setPendingLikesCount({}); setSentPendingLikesCount({}); setMatchCount({}); }
   };
   // ── Détail nominatif des likes en attente (pas encore un match) : qui a liké cette personne,
   //    ou qui cette personne a likée, en excluant les paires déjà matchées (même logique que
@@ -11605,6 +11615,15 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                             onClick={() => { setPwResetValue(genTempPassword()); setPwResetResult(null); setPwResetModal(u); }} />
                           <Row label="✉️ Corriger l'email" color="#8e44ad" desc="Corriger l'adresse email de connexion (ex : faute de frappe empêchant toute connexion)." disabled={isLoading}
                             onClick={() => { setEmailEditValue(u.email || ""); setEmailEditResult(null); setEmailEditModal(u); }} />
+                          <Row label="🔄 Annuler les likes reçus" color="#e67e22" desc="Supprime tous les likes que ce membre a reçus, pour que ces personnes puissent le/la reliker. N'affecte pas ses matchs déjà formés." disabled={isLoading}
+                            onClick={() => confirm(`Annuler tous les likes reçus par ${u.name} ? Les personnes qui l'ont déjà liké(e) pourront le/la reliker. Ses matchs existants ne sont pas touchés.`, async () => {
+                              setActionLoading(u.id);
+                              try {
+                                await sb.delete(auth.token, "likes", `?to_user=eq.${u.id}`);
+                                showToast(`Likes reçus par ${u.name} annulés.`, "success");
+                              } catch { showToast("Échec de l'annulation.", "error"); }
+                              setActionLoading(null);
+                            })} />
                           <Row label="+ Super Admin" color="#8B008B" desc="Attribuer les droits Super Admin à ce membre." disabled={isLoading}
                             onClick={() => confirm(`Nommer ${u.name} Super Admin ? Il aura accès à tout, y compris les paiements.`, async () => {
                               await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${u.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ admin_level: "superadmin", is_admin: true }) });
@@ -12881,6 +12900,13 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                             {sentPendingLikesCount[u.id]}
                           </div>
                         )}
+                        {/* Nombre réel de matchs (likes mutuels confirmés) */}
+                        {!!matchCount[u.id] && (
+                          <div title="Nombre réel de matchs (likes mutuels confirmés)" style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(192,57,43,0.08)", color: G.rouge, borderRadius: 50, padding: "3px 9px", fontSize: "0.66rem", fontWeight: 800, flexShrink: 0, marginLeft: 6 }}>
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                            {matchCount[u.id]}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -12968,6 +12994,12 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                         <div onClick={() => openPendingLikesDetail(u.id, u.name, "sent")} title="Voir qui cette personne a liké (likes envoyés en attente d'un retour)" style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(41,128,185,0.08)", color: "#2980b9", borderRadius: 50, padding: "3px 9px", fontSize: "0.7rem", fontWeight: 800, flexShrink: 0, cursor: "pointer" }}>
                           <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
                           {sentPendingLikesCount[u.id]}
+                        </div>
+                      )}
+                      {!!matchCount[u.id] && (
+                        <div title="Nombre réel de matchs (likes mutuels confirmés)" style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(192,57,43,0.08)", color: G.rouge, borderRadius: 50, padding: "3px 9px", fontSize: "0.7rem", fontWeight: 800, flexShrink: 0 }}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                          {matchCount[u.id]}
                         </div>
                       )}
                       {isLoading && (
