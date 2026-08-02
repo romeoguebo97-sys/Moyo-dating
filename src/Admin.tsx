@@ -6039,6 +6039,30 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
   // ── Sélection multiple ──
   const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  // ── Confirmation par PIN admin avant une suppression en masse (sécurité anti-erreur) ──
+  const [bulkDeletePinModal, setBulkDeletePinModal] = useState(false);
+  const [bulkDeletePinInput, setBulkDeletePinInput] = useState("");
+  const [bulkDeletePinError, setBulkDeletePinError] = useState("");
+  const [bulkDeletePinLoading, setBulkDeletePinLoading] = useState(false);
+  const verifyBulkDeletePin = async () => {
+    if (bulkDeletePinInput.length < 4 || !auth) return;
+    setBulkDeletePinLoading(true);
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_admin_pin`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` },
+        body: JSON.stringify({ input_pin: bulkDeletePinInput }),
+      });
+      const ok = await r.json().catch(() => false);
+      if (r.ok && ok === true) {
+        setBulkDeletePinModal(false); setBulkDeletePinInput(""); setBulkDeletePinError("");
+        bulkDelete();
+      } else {
+        setBulkDeletePinError("PIN incorrect. Réessayez."); setBulkDeletePinInput("");
+      }
+    } catch { setBulkDeletePinError("Erreur réseau. Réessayez."); }
+    setBulkDeletePinLoading(false);
+  };
   const [showIncomplete, setShowIncomplete] = useState(false);
   const toggleSelectUser = (id: string) => setSelectedUsers(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const selectAll = (userList: AdminProfile[]) => setSelectedUsers(new Set(userList.filter(u => u.id !== auth.userId).map(u => u.id)));
@@ -6375,7 +6399,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
         if (Array.isArray(d) && d[0]?.name) giftSenderName = d[0].name;
       } catch {}
     }
-    await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: targetId, admin_id: auth.userId, reason: p.gift_for ? `🎁 Vous avez reçu 1 mois de Premium en cadeau offert par ${giftSenderName || "un membre Moyo Dating"} ! Actualisez l'application pour profiter de toutes les fonctionnalités Premium 🌟` : "Votre abonnement Premium est maintenant actif ! Actualisez l'application pour profiter de toutes les fonctionnalités Premium 🌟", warning_number: 0, acknowledged: false }) });
+    await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: targetId, admin_id: auth.userId, reason: p.gift_for ? `🎁 Vous avez reçu ${planLabelForAmount(p.amount)} de Premium en cadeau offert par ${giftSenderName || "un membre Moyo Dating"} ! Actualisez l'application pour profiter de toutes les fonctionnalités Premium 🌟` : "Votre abonnement Premium est maintenant actif ! Actualisez l'application pour profiter de toutes les fonctionnalités Premium 🌟", warning_number: 0, acknowledged: false }) });
     // Si cadeau, notifier aussi l'acheteur
     if (p.gift_for) {
       await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: p.user_id, admin_id: auth.userId, reason: `Votre cadeau Premium pour ${p.gift_for_name || "votre match"} a bien été activé !`, warning_number: 0, acknowledged: false }) });
@@ -11195,6 +11219,29 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
         </div>
       )}
 
+      {bulkDeletePinModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", zIndex: 10003, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <div style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 340, boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}>
+            <div style={{ background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, padding: "22px 20px 16px", textAlign: "center" }}>
+              <div style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px" }}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              </div>
+              <div style={{ color: "#fff", fontWeight: 800, fontSize: "0.95rem" }}>Confirmation requise</div>
+              <div style={{ color: "rgba(255,255,255,0.8)", fontSize: "0.75rem", marginTop: 4 }}>Supprimer {selectedUsers.size} profil{selectedUsers.size > 1 ? "s" : ""} définitivement</div>
+            </div>
+            <div style={{ padding: "20px 20px 24px" }}>
+              <div style={{ fontSize: "0.78rem", color: "#666", textAlign: "center", marginBottom: 14, lineHeight: 1.5 }}>Entrez votre PIN admin pour confirmer cette suppression irréversible.</div>
+              <input value={bulkDeletePinInput} onChange={e => { setBulkDeletePinInput(e.target.value.replace(/\D/g, "").slice(0, 4)); setBulkDeletePinError(""); }} onKeyDown={e => e.key === "Enter" && verifyBulkDeletePin()} type="password" inputMode="numeric" maxLength={4} placeholder="• • • •" style={{ width: "100%", boxSizing: "border-box", textAlign: "center", padding: "14px", borderRadius: 12, border: `2px solid ${bulkDeletePinError ? "#e74c3c" : bulkDeletePinInput.length === 4 ? G.rouge : G.gris}`, fontSize: "1.4rem", letterSpacing: 8, outline: "none", fontFamily: "inherit" }} autoFocus />
+              {bulkDeletePinError && <div style={{ color: "#e74c3c", fontSize: "0.76rem", fontWeight: 600, textAlign: "center", marginTop: 8 }}>{bulkDeletePinError}</div>}
+              <button onClick={verifyBulkDeletePin} disabled={bulkDeletePinInput.length < 4 || bulkDeletePinLoading} style={{ width: "100%", marginTop: 14, background: bulkDeletePinInput.length === 4 ? `linear-gradient(135deg,${G.rouge},${G.rougeDark})` : "#ddd", color: bulkDeletePinInput.length === 4 ? "#fff" : "#aaa", border: "none", borderRadius: 50, padding: "13px", fontSize: "0.9rem", fontWeight: 700, cursor: bulkDeletePinInput.length === 4 ? "pointer" : "not-allowed" }}>
+                {bulkDeletePinLoading ? "Vérification…" : "Confirmer la suppression"}
+              </button>
+              <button onClick={() => { setBulkDeletePinModal(false); setBulkDeletePinInput(""); setBulkDeletePinError(""); }} style={{ width: "100%", marginTop: 8, background: "transparent", color: "#888", border: "none", fontSize: "0.82rem", cursor: "pointer", padding: "8px" }}>Annuler</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {renameCatModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10002, display: "flex", alignItems: "center", justifyContent: "center", padding: "calc(env(safe-area-inset-top) + 18px) 18px calc(env(safe-area-inset-bottom) + 18px)" }} onClick={() => { setRenameCatModal(null); setRenameCatName(""); }}>
           <div onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 540, boxShadow: "0 24px 64px rgba(0,0,0,0.3)", overflow: "hidden" }}>
@@ -12033,7 +12080,9 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
             ["payments", "Budget", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "payments" ? "#27ae60" : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-2"/><path d="M21 12v-2a2 2 0 0 0-2-2H6"/><circle cx="16" cy="12" r="1"/></svg>],
             ["groupe", "Groupe Premium", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "groupe" ? G.or : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>],
             ["logs", "Historique", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "logs" ? "#8e44ad" : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="12 8 12 12 14 14"/><circle cx="12" cy="12" r="10"/></svg>],
-          ] as [string, string, () => React.ReactElement][]).map(([key, label, Icon]) => (
+          ] as [string, string, () => React.ReactElement][])
+            .filter(([key]) => key !== "payments" || (auth as any)?.adminLevel === "superadmin" || auth?.userId === SUPER_ADMIN_ID)
+            .map(([key, label, Icon]) => (
             <div
               key={key}
               onClick={() => {
@@ -12792,7 +12841,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   )}
                   {selectedUsers.size > 0 && (
                     <button
-                      onClick={() => confirm(`⚠️ Supprimer définitivement les ${selectedUsers.size} profil(s) sélectionné(s) ? Cette action est irréversible.`, () => bulkDelete())}
+                      onClick={() => confirm(`⚠️ Supprimer définitivement les ${selectedUsers.size} profil(s) sélectionné(s) ? Cette action est irréversible.`, () => { setBulkDeletePinInput(""); setBulkDeletePinError(""); setBulkDeletePinModal(true); })}
                       disabled={bulkDeleting}
                       style={{ background: bulkDeleting ? "#aaa" : "#c0392b", color: "#fff", border: "none", borderRadius: 50, padding: "8px 16px", fontSize: "0.8rem", fontWeight: 700, cursor: bulkDeleting ? "not-allowed" : "pointer", display: "inline-flex", alignItems: "center", gap: 7, whiteSpace: "nowrap" }}
                     >
