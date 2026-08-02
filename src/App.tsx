@@ -3568,6 +3568,19 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
   const [ratingSubmitted, setRatingSubmitted] = useState(false);
   const [ratingComment, setRatingComment] = useState("");
   const toggleSection = (s: string) => setOpenMenuSection(prev => prev === s ? null : s);
+  // ── Lien externe direct vers une section précise du menu (ex: #confidentialite depuis le lien
+  //    "Politique de confidentialité" de l'inscription) : "confidentialite" n'est qu'un identifiant
+  //    interne, pas un vrai ancrage HTML — sans ce useEffect, arriver sur ce lien n'ouvrait rien
+  //    du tout. On détecte le hash au chargement et on ouvre le menu directement dessus. ──
+  useEffect(() => {
+    try {
+      const hash = window.location.hash.replace("#", "");
+      if (hash && landingMenuSections.some(s => s.id === hash)) {
+        setShowLandingMenu(true);
+        setOpenMenuSection(hash);
+      }
+    } catch {}
+  }, []);
 
   const landingMenuSections = [
     { id: "conseils", title: "Conseils pour bien rencontrer", emoji: "💡", items: [
@@ -3818,9 +3831,9 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
           <div onClick={() => setShowLandingMenu(false)} style={{ flex: 1, background: "rgba(0,0,0,0.5)" }} />
           <div style={{ width: "85%", maxWidth: 360, background: G.blanc, height: "100%", overflowY: "auto", boxShadow: "-8px 0 32px rgba(0,0,0,0.2)", display: "flex", flexDirection: "column" }}>
             {/* Header vert */}
-            <div style={{ background: `linear-gradient(160deg,${G.vert},#0D2E1C)`, padding: "24px 20px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+            <div style={{ background: `linear-gradient(160deg,${G.vert},#0D2E1C)`, padding: "calc(env(safe-area-inset-top) + 20px) 20px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
               <div style={{ color: "#fff", fontSize: "1.1rem", fontWeight: 700 }}>Menu</div>
-              <div onClick={() => setShowLandingMenu(false)} style={{ color: "rgba(255,255,255,0.7)", fontSize: "1.5rem", cursor: "pointer", lineHeight: 1 }}>✕</div>
+              <div onClick={() => setShowLandingMenu(false)} style={{ color: "rgba(255,255,255,0.7)", fontSize: "1.5rem", cursor: "pointer", lineHeight: 1, padding: 8 }}>✕</div>
             </div>
             <div style={{ padding: "8px 0", flex: 1 }}>
               {landingMenuSections.map(s => (
@@ -3952,7 +3965,7 @@ function Landing({ onNav }: { onNav: (p: string) => void }) {
       )}
 
       {/* ── HERO ── */}
-      <div style={{ background: `linear-gradient(150deg,#F2F2F0 0%,#EEEEEC 60%,rgba(26,92,58,0.08) 100%)`, overflow: "hidden", position: "relative", paddingTop: 72 }}>
+      <div style={{ background: `linear-gradient(150deg,#F2F2F0 0%,#EEEEEC 60%,rgba(26,92,58,0.08) 100%)`, overflow: "hidden", position: "relative", paddingTop: "calc(env(safe-area-inset-top) + 100px)" }}>
 
         {/* ── PHOTOS ARRIÈRE-PLAN style Tinder ── */}
         <div style={{ position: "absolute", inset: 0, display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gridTemplateRows: "repeat(3, 1fr)", gap: 4, opacity: 0.35, zIndex: 0, pointerEvents: "none" }}>
@@ -16456,8 +16469,14 @@ function AmbassadorPortal() {
   };
 
   const shell = (children: React.ReactNode) => (
-    <div style={{ minHeight: "100vh", background: G.creme, display: "flex", flexDirection: "column", alignItems: "center", padding: "40px 20px" }}>
+    <div style={{ minHeight: "100vh", background: G.creme, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 20px" }}>
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
+      <div style={{ width: "100%", maxWidth: 420, display: "flex", justifyContent: "flex-start", marginBottom: 6 }}>
+        <a href={window.location.origin} style={{ display: "flex", alignItems: "center", gap: 6, color: "#999", fontSize: "0.8rem", fontWeight: 600, textDecoration: "none" }}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
+          Retour à l'accueil
+        </a>
+      </div>
       <div style={{ textAlign: "center", marginBottom: 24 }}>
         <div style={{ fontSize: "1.6rem", fontWeight: 900 }}><span style={{ color: G.rouge }}>Moyo</span> <span style={{ color: "#000" }}>Dating</span></div>
       </div>
@@ -16590,10 +16609,7 @@ function AmbassadorPortal() {
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
           Retour
         </div>
-        <div style={{ display: "flex", background: G.creme, borderRadius: 14, padding: 3, marginBottom: 20 }}>
-          <div onClick={() => { setAuthMode("signup"); setFormError(""); }} style={{ flex: 1, textAlign: "center", padding: "9px", borderRadius: 11, cursor: "pointer", fontSize: "0.82rem", fontWeight: 700, background: authMode === "signup" ? G.blanc : "transparent", color: authMode === "signup" ? G.brun : "#999" }}>Créer mon compte</div>
-          <div onClick={() => { setAuthMode("login"); setFormError(""); }} style={{ flex: 1, textAlign: "center", padding: "9px", borderRadius: 11, cursor: "pointer", fontSize: "0.82rem", fontWeight: 700, background: authMode === "login" ? G.blanc : "transparent", color: authMode === "login" ? G.brun : "#999" }}>J'ai déjà un compte</div>
-        </div>
+        <div style={{ fontWeight: 800, fontSize: "1.05rem", color: G.brun, marginBottom: 18 }}>{authMode === "signup" ? "Créer mon compte Ambassadeur" : "Me connecter à mon espace Ambassadeur"}</div>
         {authMode === "signup" ? (
           <>
             <div style={{ display: "flex", justifyContent: "center", marginBottom: 18 }}>
