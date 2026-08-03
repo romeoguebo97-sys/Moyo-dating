@@ -9807,6 +9807,16 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
         sb.delete(auth.token, "payment_requests", `?user_id=eq.${user.id}`),
         sb.delete(auth.token, "user_warnings", `?user_id=eq.${user.id}`),
         sb.delete(auth.token, "reports", `?reporter_id=eq.${user.id}`),
+        // ── Tables ajoutées après un blocage réel en production : ces tables référencent aussi
+        //    profiles.id par clé étrangère et empêchaient la suppression du profil tant qu'elles
+        //    n'étaient pas vidées d'abord (erreur 23503 "violates foreign key constraint"). ──
+        sb.delete(auth.token, "user_notifications", `?user_id=eq.${user.id}`),
+        sb.delete(auth.token, "appointments", `?user_id=eq.${user.id}`),
+        sb.delete(auth.token, "group_members", `?user_id=eq.${user.id}`),
+        sb.delete(auth.token, "survey_responses", `?user_id=eq.${user.id}`),
+        sb.delete(auth.token, "email_verifications", `?user_id=eq.${user.id}`),
+        sb.delete(auth.token, "feature_requests", `?user_id=eq.${user.id}`),
+        sb.delete(auth.token, "match_requests", `?user_id=eq.${user.id}`),
       ]);
 
       // ── Étape 2 : supprimer les matchs et leurs messages ──
@@ -9886,6 +9896,8 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
         sb.delete(auth.token, "feature_requests", `?user_id=eq.${user.id}`),
         sb.delete(auth.token, "status_status_views", `?viewer_id=eq.${user.id}`),
         sb.delete(auth.token, "status_status_likes", `?liker_id=eq.${user.id}`),
+        sb.delete(auth.token, "user_notifications", `?user_id=eq.${user.id}`),
+        sb.delete(auth.token, "email_verifications", `?user_id=eq.${user.id}`),
       ]);
       const myStatuses = await sb.query<{ id: string }>(auth.token, "statuses", `?user_id=eq.${user.id}&select=id`).catch(() => []);
       if (Array.isArray(myStatuses) && myStatuses.length > 0) {
