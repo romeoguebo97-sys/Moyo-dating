@@ -3259,8 +3259,8 @@ function RelationalProfilesCard({ auth }: { auth: Auth }) {
     try {
       const [withList, total, withRel, nudge] = await Promise.all([
         fetch(`${SUPABASE_URL}/rest/v1/profiles?relational_profile=not.is.null&select=id,name,age,city,gender,photo_url,is_premium,relational_profile&order=name.asc&limit=300`, { headers: H }).then(r => r.json()).catch(() => []),
-        countOf(""),
-        countOf("&relational_profile=not.is.null"),
+        countOf("&account_type=neq.ambassador_only"),
+        countOf("&relational_profile=not.is.null&account_type=neq.ambassador_only"),
         fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.relational_nudge&select=value`, { headers: H }).then(r => r.json()).catch(() => []),
       ]);
       setList(Array.isArray(withList) ? withList : []);
@@ -4454,24 +4454,24 @@ function NotifBellPanel({ auth, autoShortcuts, onToggleAutoShortcut, onNavigate,
       countOf(`match_requests?status=eq.pending&select=id`),
       countOf(`ambassador_requests?status=eq.pending&select=id`),
       countOf(`affiliate_payout_requests?status=eq.pending&select=id`),
-      countOf(`profiles?is_banned=eq.false&select=id`),
-      countOf(`profiles?is_banned=eq.false&is_verified=eq.true&select=id`),
-      countOf(`profiles?is_banned=eq.false&is_premium=eq.true&select=id`),
-      countOf(`profiles?is_banned=eq.false&or=(phone.is.null,phone.eq.)&select=id`),
+      countOf(`profiles?is_banned=eq.false&account_type=neq.ambassador_only&select=id`),
+      countOf(`profiles?is_banned=eq.false&account_type=neq.ambassador_only&is_verified=eq.true&select=id`),
+      countOf(`profiles?is_banned=eq.false&account_type=neq.ambassador_only&is_premium=eq.true&select=id`),
+      countOf(`profiles?is_banned=eq.false&account_type=neq.ambassador_only&or=(phone.is.null,phone.eq.)&select=id`),
       fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(feature_ambassador_program,feature_group_premium,maintenance_mode)&select=key,value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } }).then(r => r.json()).catch(() => []),
       countOf(`affiliates?status=eq.active&select=id`),
       countOf(`affiliates?contract_signed=eq.false&contract_signed_at=not.is.null&contract_signed_at=lt.${d(0.75)}&select=id`),
       countOf(`payment_requests?status=eq.approved&created_at=gte.${d(7)}&select=id`),
       countOf(`payment_requests?status=eq.approved&created_at=gte.${d(14)}&created_at=lt.${d(7)}&select=id`),
-      countOf(`profiles?created_at=gte.${d(7)}&select=id`),
-      countOf(`profiles?created_at=gte.${d(14)}&created_at=lt.${d(7)}&select=id`),
+      countOf(`profiles?created_at=gte.${d(7)}&account_type=neq.ambassador_only&select=id`),
+      countOf(`profiles?created_at=gte.${d(14)}&created_at=lt.${d(7)}&account_type=neq.ambassador_only&select=id`),
       fetch(`${SUPABASE_URL}/rest/v1/broadcasts?select=created_at&order=created_at.desc&limit=1`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } }).then(r => r.json()).catch(() => []),
       countOf(`matches?created_at=gte.${d(7)}&select=id`),
       countOf(`match_proposals?status=eq.pending&created_at=lt.${d(0.75)}&expires_at=gt.${new Date().toISOString()}&select=id`),
       countOf(`appointments?status=eq.en_attente&created_at=lt.${d(0.75)}&select=id`),
       countOf(`reports?status=not.in.(reviewed,rejected,banned,archived,auto_log_archived)&reason=ilike.*SUPPORT*&created_at=lt.${d(0.75)}&select=id`),
-      countOf(`profiles?is_banned=eq.false&last_seen=lt.${d(14)}&select=id`),
-      countOf(`profiles?warning_count=gte.1&select=id`),
+      countOf(`profiles?is_banned=eq.false&account_type=neq.ambassador_only&last_seen=lt.${d(14)}&select=id`),
+      countOf(`profiles?warning_count=gte.1&account_type=neq.ambassador_only&select=id`),
     ]);
 
     const settingsMap: Record<string, string> = {};
@@ -8225,6 +8225,16 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
         const isAmbassadorOnlyAccount = Array.isArray(pd) && pd[0]?.account_type === "ambassador_only";
         if (isAmbassadorOnlyAccount) {
           await deleteAccount({ id: aff.user_id, name: aff.name } as AdminProfile);
+          // ── Vérification : deleteAccount() gère ses propres erreurs en interne et ne les
+          //    remonte jamais ici, donc on ne peut pas se fier à son simple retour. On re-vérifie
+          //    directement que le profil a bien disparu avant d'annoncer un succès. ──
+          const check = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${aff.user_id}&select=id`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+          const checkData = await check.json().catch(() => null);
+          if (Array.isArray(checkData) && checkData.length > 0) {
+            showToast(`La suppression du compte de ${aff.name} a échoué (le profil existe encore). Vérifie les droits Supabase ou réessaie.`, "error");
+            setAffiliateRemoveLoading(false);
+            return;
+          }
           setAmbNoAccountList(list => list.filter(u => u.id !== aff.user_id));
           logAdminAction(auth.token, auth.userId, auth.name, `Contrat Ambassadeur terminé pour ${aff.name} : compte sans profil de rencontre supprimé (n'avait aucune autre utilité).`, aff.user_id);
         } else {
@@ -15658,6 +15668,18 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                           <div style={{ fontSize: "0.7rem", color: "#aaa", marginTop: 2 }}>Créé le {new Date(u.created_at).toLocaleDateString("fr-FR")}</div>
                         </div>
                         <button onClick={() => { setPwResetValue(genTempPassword()); setPwResetResult(null); setPwResetModal({ id: u.id, name: u.name, phone: u.phone, email: u.email, is_ambassador: u.is_ambassador, age: 0, city: "", gender: "", bio: "", is_premium: false } as AdminProfile); }} style={{ background: "rgba(142,68,173,0.08)", border: "1.5px solid rgba(142,68,173,0.25)", borderRadius: 50, padding: "8px 14px", fontSize: "0.76rem", fontWeight: 700, color: "#8e44ad", cursor: "pointer", flexShrink: 0 }}>🔑 Mot de passe</button>
+                        {u.phone && (
+                          <button onClick={() => window.open(`https://wa.me/${u.phone!.replace(/\D/g, "")}`, "_blank")} style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(37,211,102,0.1)", border: "1.5px solid rgba(37,211,102,0.3)", borderRadius: 50, padding: "8px 14px", fontSize: "0.76rem", fontWeight: 700, color: "#1a9e4f", cursor: "pointer", flexShrink: 0 }}>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="#25D366"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24z"/></svg>
+                            WhatsApp
+                          </button>
+                        )}
+                        <button onClick={() => confirm(`Supprimer définitivement le compte de ${u.name} ? Cette action est irréversible.`, async () => {
+                          await deleteAccount({ id: u.id, name: u.name } as AdminProfile);
+                          const check = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${u.id}&select=id`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth!.token}` } });
+                          const checkData = await check.json().catch(() => null);
+                          if (!Array.isArray(checkData) || checkData.length === 0) setAmbNoAccountList(list => list.filter(x => x.id !== u.id));
+                        })} style={{ background: "rgba(231,76,60,0.08)", border: "1.5px solid rgba(231,76,60,0.25)", borderRadius: 50, padding: "8px 14px", fontSize: "0.76rem", fontWeight: 700, color: "#E74C3C", cursor: "pointer", flexShrink: 0 }}>🗑️ Supprimer le compte</button>
                       </div>
                     </div>
                   ))}
