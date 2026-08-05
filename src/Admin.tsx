@@ -463,6 +463,268 @@ function AdminAppointments({ auth, showToast, onOpenProfile }: { auth: any; show
   );
 }
 
+// ── Gestion des Événements Moyo Dating : création/édition, publication, inscrits, annulations.
+//    Même circuit de paiement que les rendez-vous (payment_requests kind="event"), validé dans
+//    Budget → activatePayment. Places restantes = capacity - spots_taken (compteur simple, pas
+//    de vue SQL séparée). ──
+function AdminEvents({ auth, showToast }: { auth: any; showToast: (m: string, t?: string) => void }) {
+  const emptyForm = { id: "", title: "", description: "", cover_image_url: "", location_name: "", address: "", city: "", event_date: "", capacity: "", price: "0", status: "draft" };
+  const [view, setView] = useState<"list" | "form" | "registrants">("list");
+  const [events, setEvents] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [form, setForm] = useState(emptyForm);
+  const [saving, setSaving] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
+  const coverFileRef = useRef<HTMLInputElement>(null);
+  const [selectedEvent, setSelectedEvent] = useState<any>(null);
+  const [registrants, setRegistrants] = useState<any[]>([]);
+  const [registrantsLoading, setRegistrantsLoading] = useState(false);
+  const [cancelTarget, setCancelTarget] = useState<any>(null);
+  const [deleteTarget, setDeleteTarget] = useState<any>(null);
+  const [busy, setBusy] = useState(false);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/events?order=event_date.desc&limit=200`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      const d = await r.json().catch(() => null);
+      if (!Array.isArray(d)) { showToast("Erreur chargement des événements : " + (d?.message || d?.code || "vérifie la table events"), "error"); setEvents([]); setLoading(false); return; }
+      setEvents(d);
+    } catch { showToast("Erreur réseau (événements).", "error"); }
+    setLoading(false);
+  };
+  useEffect(() => { load(); }, []);
+
+  const openCreate = () => { setForm(emptyForm); setView("form"); };
+  const openEdit = (e: any) => { setForm({ id: e.id, title: e.title || "", description: e.description || "", cover_image_url: e.cover_image_url || "", location_name: e.location_name || "", address: e.address || "", city: e.city || "", event_date: e.event_date ? e.event_date.slice(0, 16) : "", capacity: e.capacity != null ? String(e.capacity) : "", price: String(e.price ?? 0), status: e.status }); setView("form"); };
+
+  const onPickCover = (ev: React.ChangeEvent<HTMLInputElement>) => {
+    const file = ev.target.files?.[0]; ev.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { showToast("Choisis une image.", "error"); return; }
+    setUploadingCover(true);
+    (async () => {
+      try {
+        const path = `event-${Date.now()}.${file.name.split(".").pop() || "jpg"}`;
+        const r = await fetch(`${SUPABASE_URL}/storage/v1/object/events/${path}`, { method: "POST", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": file.type, "x-upsert": "true" }, body: file });
+        if (!r.ok) throw new Error();
+        setForm(f => ({ ...f, cover_image_url: `${SUPABASE_URL}/storage/v1/object/public/events/${path}` }));
+      } catch { showToast("Échec de l'upload. Vérifie que le bucket Storage \"events\" existe et est public.", "error"); }
+      setUploadingCover(false);
+    })();
+  };
+
+  const saveEvent = async (publish: boolean) => {
+    if (!form.title.trim() || !form.event_date) { showToast("Titre et date sont obligatoires.", "error"); return; }
+    setSaving(true);
+    try {
+      const body: any = {
+        title: form.title.trim(), description: form.description.trim() || null, cover_image_url: form.cover_image_url || null,
+        location_name: form.location_name.trim() || null, address: form.address.trim() || null, city: form.city.trim() || null,
+        event_date: new Date(form.event_date).toISOString(), capacity: form.capacity.trim() ? parseInt(form.capacity) : null,
+        price: parseInt(form.price) || 0, status: publish ? "published" : "draft",
+      };
+      if (form.id) {
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/events?id=eq.${form.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" }, body: JSON.stringify(body) });
+        const b = await r.json().catch(() => null);
+        if (!r.ok || !Array.isArray(b) || !b[0]) { showToast("Échec de l'enregistrement.", "error"); setSaving(false); return; }
+        setEvents(prev => prev.map(e => e.id === form.id ? b[0] : e));
+      } else {
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/events`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" }, body: JSON.stringify({ ...body, created_by: auth.userId, spots_taken: 0 }) });
+        const b = await r.json().catch(() => null); const row = Array.isArray(b) ? b[0] : null;
+        if (!r.ok || !row) { showToast("Échec de la création.", "error"); setSaving(false); return; }
+        setEvents(prev => [row, ...prev]);
+      }
+      showToast(publish ? "Événement publié." : "Brouillon enregistré.", "success");
+      setView("list");
+    } catch { showToast("Erreur réseau.", "error"); }
+    setSaving(false);
+  };
+
+  const cancelEvent = async (e: any) => {
+    setBusy(true);
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/events?id=eq.${e.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ status: "cancelled" }) });
+      setEvents(prev => prev.map(x => x.id === e.id ? { ...x, status: "cancelled" } : x));
+      // Prévient tous les inscrits confirmés ou en attente de paiement.
+      const rr = await fetch(`${SUPABASE_URL}/rest/v1/event_registrations?event_id=eq.${e.id}&status=in.(confirmed,pending_payment)&select=user_id`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      const regs = await rr.json().catch(() => []);
+      if (Array.isArray(regs)) {
+        for (const reg of regs) {
+          fetch(`${SUPABASE_URL}/rest/v1/user_notifications`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ user_id: reg.user_id, type: "event_cancelled", title: "Événement annulé", body: `L'événement "${e.title}" a été annulé.`, nav_tab: "profile", nav_sub: "events" }) }).catch(() => {});
+          fetch(`${SUPABASE_URL}/functions/v1/push-notify`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ mode: "user_push", user_id: reg.user_id, title: "Événement annulé", body: `"${e.title}" a été annulé.` }) }).catch(() => {});
+        }
+      }
+      showToast("Événement annulé, inscrits prévenus.", "success");
+    } catch { showToast("Erreur lors de l'annulation.", "error"); }
+    setBusy(false); setCancelTarget(null);
+  };
+
+  const deleteEvent = async (e: any) => {
+    setBusy(true);
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/event_registrations?event_id=eq.${e.id}`, { method: "DELETE", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/events?id=eq.${e.id}`, { method: "DELETE", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      if (!r.ok) { showToast("Suppression refusée par la base.", "error"); setBusy(false); setDeleteTarget(null); return; }
+      setEvents(prev => prev.filter(x => x.id !== e.id));
+      showToast("🗑 Événement supprimé.", "success");
+    } catch { showToast("Erreur réseau.", "error"); }
+    setBusy(false); setDeleteTarget(null);
+  };
+
+  const openRegistrants = async (e: any) => {
+    setSelectedEvent(e); setView("registrants"); setRegistrantsLoading(true);
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/event_registrations?event_id=eq.${e.id}&select=id,status,registered_at,attended,user_id&order=registered_at.asc`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      const d = await r.json().catch(() => []);
+      const list = Array.isArray(d) ? d : [];
+      const ids = [...new Set(list.map((x: any) => x.user_id))];
+      const profs: Record<string, any> = {};
+      for (let i = 0; i < ids.length; i += 50) {
+        const batch = ids.slice(i, i + 50);
+        if (batch.length === 0) continue;
+        const pr = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=in.(${batch.join(",")})&select=id,name,phone,email`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+        const pd = await pr.json().catch(() => []); if (Array.isArray(pd)) pd.forEach((p: any) => { profs[p.id] = p; });
+      }
+      setRegistrants(list.map((x: any) => ({ ...x, profile: profs[x.user_id] })));
+    } catch { setRegistrants([]); }
+    setRegistrantsLoading(false);
+  };
+
+  const markAttended = async (reg: any) => {
+    await fetch(`${SUPABASE_URL}/rest/v1/event_registrations?id=eq.${reg.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ status: "attended", attended: true }) });
+    setRegistrants(prev => prev.map(r => r.id === reg.id ? { ...r, status: "attended", attended: true } : r));
+  };
+  const cancelRegistration = async (reg: any) => {
+    await fetch(`${SUPABASE_URL}/rest/v1/event_registrations?id=eq.${reg.id}`, { method: "DELETE", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+    if (reg.status === "confirmed" && selectedEvent) {
+      const newSpots = Math.max(0, (selectedEvent.spots_taken || 1) - 1);
+      await fetch(`${SUPABASE_URL}/rest/v1/events?id=eq.${selectedEvent.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ spots_taken: newSpots }) });
+      setSelectedEvent((prev: any) => prev ? { ...prev, spots_taken: newSpots } : prev);
+      setEvents(prev => prev.map(e => e.id === selectedEvent.id ? { ...e, spots_taken: newSpots } : e));
+    }
+    setRegistrants(prev => prev.filter(r => r.id !== reg.id));
+    showToast("Inscription annulée.", "success");
+  };
+
+  const statusInfo = (s: string): { label: string; color: string } => s === "published" ? { label: "Publié", color: "#27ae60" } : s === "cancelled" ? { label: "Annulé", color: "#c0392b" } : s === "draft" ? { label: "Brouillon", color: "#999" } : { label: s, color: "#999" };
+  const regStatusInfo = (s: string): { label: string; color: string } => s === "confirmed" ? { label: "Confirmé", color: "#27ae60" } : s === "pending_payment" ? { label: "Paiement en attente", color: "#b9770e" } : s === "attended" ? { label: "Présent", color: "#1a5c3a" } : { label: s, color: "#999" };
+
+  if (view === "form") {
+    return (
+      <div>
+        <div onClick={() => setView("list")} style={{ display: "flex", alignItems: "center", gap: 6, color: "#999", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer", marginBottom: 16 }}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
+          Retour à la liste
+        </div>
+        <div style={{ fontWeight: 800, fontSize: "1.05rem", color: "#2C1A0E", marginBottom: 16 }}>{form.id ? "Modifier l'événement" : "Créer un événement"}</div>
+        <div style={{ maxWidth: 520, display: "flex", flexDirection: "column", gap: 14 }}>
+          <div>
+            <div style={{ fontSize: "0.8rem", fontWeight: 700, marginBottom: 6 }}>Photo de couverture</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ width: 80, height: 60, borderRadius: 10, background: form.cover_image_url ? `url(${form.cover_image_url}) center/cover` : "#f1f1f1", flexShrink: 0 }} />
+              <input ref={coverFileRef} type="file" accept="image/*" onChange={onPickCover} style={{ display: "none" }} />
+              <Btn variant="ghost" onClick={() => coverFileRef.current?.click()} loading={uploadingCover} style={{ fontSize: "0.78rem", padding: "8px 14px" }}>{uploadingCover ? "Envoi..." : "Choisir une image"}</Btn>
+            </div>
+          </div>
+          <div><div style={{ fontSize: "0.8rem", fontWeight: 700, marginBottom: 6 }}>Titre</div><input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Ex: Soirée Speed Dating Brazzaville" style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: "1.5px solid #eee", fontSize: "0.85rem" }} /></div>
+          <div><div style={{ fontSize: "0.8rem", fontWeight: 700, marginBottom: 6 }}>Description</div><textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: "1.5px solid #eee", fontSize: "0.85rem", minHeight: 70, resize: "vertical" }} /></div>
+          <div style={{ display: "flex", gap: 10 }}>
+            <div style={{ flex: 1 }}><div style={{ fontSize: "0.8rem", fontWeight: 700, marginBottom: 6 }}>Date et heure</div><input type="datetime-local" value={form.event_date} onChange={e => setForm(f => ({ ...f, event_date: e.target.value }))} style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: "1.5px solid #eee", fontSize: "0.85rem" }} /></div>
+            <div style={{ flex: 1 }}><div style={{ fontSize: "0.8rem", fontWeight: 700, marginBottom: 6 }}>Capacité (vide = illimité)</div><input type="number" min="0" value={form.capacity} onChange={e => setForm(f => ({ ...f, capacity: e.target.value }))} placeholder="30" style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: "1.5px solid #eee", fontSize: "0.85rem" }} /></div>
+          </div>
+          <div><div style={{ fontSize: "0.8rem", fontWeight: 700, marginBottom: 6 }}>Lieu</div><input value={form.location_name} onChange={e => setForm(f => ({ ...f, location_name: e.target.value }))} placeholder="Ex: Restaurant Le Manguier" style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: "1.5px solid #eee", fontSize: "0.85rem" }} /></div>
+          <div style={{ display: "flex", gap: 10 }}>
+            <div style={{ flex: 1 }}><div style={{ fontSize: "0.8rem", fontWeight: 700, marginBottom: 6 }}>Adresse</div><input value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: "1.5px solid #eee", fontSize: "0.85rem" }} /></div>
+            <div style={{ flex: 1 }}><div style={{ fontSize: "0.8rem", fontWeight: 700, marginBottom: 6 }}>Ville</div><input value={form.city} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} placeholder="Brazzaville" style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: "1.5px solid #eee", fontSize: "0.85rem" }} /></div>
+          </div>
+          <div><div style={{ fontSize: "0.8rem", fontWeight: 700, marginBottom: 6 }}>Prix (FCFA, 0 = gratuit)</div><input type="number" min="0" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: "1.5px solid #eee", fontSize: "0.85rem" }} /></div>
+          <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+            <Btn variant="ghost" onClick={() => saveEvent(false)} loading={saving} style={{ flex: 1 }}>Enregistrer en brouillon</Btn>
+            <Btn variant="primary" onClick={() => saveEvent(true)} loading={saving} style={{ flex: 1 }}>Publier</Btn>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (view === "registrants" && selectedEvent) {
+    return (
+      <div>
+        <div onClick={() => setView("list")} style={{ display: "flex", alignItems: "center", gap: 6, color: "#999", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer", marginBottom: 16 }}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
+          Retour à la liste
+        </div>
+        <div style={{ fontWeight: 800, fontSize: "1.05rem", color: "#2C1A0E", marginBottom: 4 }}>{selectedEvent.title}</div>
+        <div style={{ fontSize: "0.8rem", color: "#888", marginBottom: 16 }}>{registrants.length} inscription(s){selectedEvent.capacity != null ? ` — ${selectedEvent.spots_taken || 0}/${selectedEvent.capacity} places` : ""}</div>
+        {registrantsLoading ? <div style={{ textAlign: "center", padding: 30, color: "#999" }}>Chargement…</div>
+          : registrants.length === 0 ? <div style={{ textAlign: "center", padding: 30, color: "#999", fontSize: "0.85rem" }}>Aucun inscrit pour l'instant.</div>
+          : registrants.map(r => { const si = regStatusInfo(r.status); return (
+            <div key={r.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: "#fff", borderRadius: 14, marginBottom: 8, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: "0.86rem", color: "#2C1A0E" }}>{r.profile?.name || r.user_id.slice(0, 8)}</div>
+                <div style={{ fontSize: "0.74rem", color: "#999" }}>{r.profile?.phone || r.profile?.email || ""}</div>
+              </div>
+              <span style={{ background: si.color + "1a", color: si.color, borderRadius: 50, padding: "3px 10px", fontSize: "0.7rem", fontWeight: 700, flexShrink: 0 }}>{si.label}</span>
+              {r.status === "confirmed" && <Btn variant="ghost" onClick={() => markAttended(r)} style={{ fontSize: "0.74rem", padding: "6px 10px", flexShrink: 0 }}>Marquer présent</Btn>}
+              <span onClick={() => cancelRegistration(r)} style={{ fontSize: "0.72rem", fontWeight: 700, color: "#c0392b", cursor: "pointer", flexShrink: 0 }}>Annuler</span>
+            </div>
+          ); })}
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+        <div style={{ fontWeight: 800, fontSize: "1.1rem", color: "#2C1A0E" }}>📅 Événements</div>
+        <Btn variant="primary" onClick={openCreate} style={{ fontSize: "0.82rem", padding: "9px 16px" }}>+ Créer un événement</Btn>
+      </div>
+      {loading ? <div style={{ textAlign: "center", padding: 40 }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "pulse 1s ease-in-out infinite" }}><circle cx="12" cy="12" r="10" /></svg></div>
+        : events.length === 0 ? <div style={{ textAlign: "center", padding: 40, color: "#999", fontSize: "0.85rem" }}>Aucun événement pour l'instant.</div>
+        : events.map(e => { const si = statusInfo(e.status); const left = e.capacity != null ? Math.max(0, e.capacity - (e.spots_taken || 0)) : null; return (
+          <div key={e.id} style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 16px", background: "#fff", borderRadius: 16, marginBottom: 10, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+            <div style={{ width: 56, height: 56, borderRadius: 12, background: e.cover_image_url ? `url(${e.cover_image_url}) center/cover` : "linear-gradient(135deg,#C0392B,#922B21)", flexShrink: 0 }} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontWeight: 700, fontSize: "0.9rem", color: "#2C1A0E" }}>{e.title}</span>
+                <span style={{ background: si.color + "1a", color: si.color, borderRadius: 50, padding: "2px 9px", fontSize: "0.66rem", fontWeight: 700 }}>{si.label}</span>
+              </div>
+              <div style={{ fontSize: "0.76rem", color: "#888" }}>{new Date(e.event_date).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })} · {e.price > 0 ? `${e.price.toLocaleString("fr-FR")} FCFA` : "Gratuit"}{left !== null ? ` · ${left} place(s) restante(s)` : ""}</div>
+            </div>
+            <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+              <Btn variant="ghost" onClick={() => openRegistrants(e)} style={{ fontSize: "0.74rem", padding: "6px 12px" }}>Inscrits</Btn>
+              <Btn variant="ghost" onClick={() => openEdit(e)} style={{ fontSize: "0.74rem", padding: "6px 12px" }}>Modifier</Btn>
+              {e.status !== "cancelled" && <span onClick={() => setCancelTarget(e)} style={{ fontSize: "0.74rem", fontWeight: 700, color: "#b9770e", cursor: "pointer", alignSelf: "center" }}>Annuler</span>}
+              <span onClick={() => setDeleteTarget(e)} style={{ fontSize: "0.74rem", fontWeight: 700, color: "#c0392b", cursor: "pointer", alignSelf: "center" }}>Supprimer</span>
+            </div>
+          </div>
+        ); })}
+
+      {cancelTarget && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10020, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={() => !busy && setCancelTarget(null)}>
+        <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 20, width: "100%", maxWidth: 380, padding: "22px 20px" }}>
+          <div style={{ fontWeight: 800, fontSize: "1rem", color: "#2C1A0E", marginBottom: 8 }}>Annuler "{cancelTarget.title}" ?</div>
+          <div style={{ fontSize: "0.84rem", color: "#666", lineHeight: 1.5, marginBottom: 18 }}>Tous les inscrits (confirmés ou en attente de paiement) seront prévenus automatiquement.</div>
+          <div style={{ display: "flex", gap: 10 }}>
+            <Btn variant="ghost" onClick={() => setCancelTarget(null)} style={{ flex: 1 }}>Retour</Btn>
+            <button onClick={() => cancelEvent(cancelTarget)} disabled={busy} style={{ flex: 1, background: busy ? "#e0b070" : "#b9770e", color: "#fff", border: "none", borderRadius: 12, padding: "12px", fontSize: "0.85rem", fontWeight: 800, cursor: busy ? "not-allowed" : "pointer" }}>{busy ? "…" : "Confirmer l'annulation"}</button>
+          </div>
+        </div>
+      </div>}
+      {deleteTarget && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10020, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={() => !busy && setDeleteTarget(null)}>
+        <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 20, width: "100%", maxWidth: 380, padding: "22px 20px" }}>
+          <div style={{ fontWeight: 800, fontSize: "1rem", color: "#2C1A0E", marginBottom: 8 }}>Supprimer "{deleteTarget.title}" ?</div>
+          <div style={{ fontSize: "0.84rem", color: "#666", lineHeight: 1.5, marginBottom: 18 }}>Supprime aussi toutes les inscriptions liées. Action irréversible — préfère "Annuler" si tu veux juste stopper l'événement en gardant l'historique.</div>
+          <div style={{ display: "flex", gap: 10 }}>
+            <Btn variant="ghost" onClick={() => setDeleteTarget(null)} style={{ flex: 1 }}>Retour</Btn>
+            <button onClick={() => deleteEvent(deleteTarget)} disabled={busy} style={{ flex: 1, background: busy ? "#d99" : "#c0392b", color: "#fff", border: "none", borderRadius: 12, padding: "12px", fontSize: "0.85rem", fontWeight: 800, cursor: busy ? "not-allowed" : "pointer" }}>{busy ? "…" : "Supprimer"}</button>
+          </div>
+        </div>
+      </div>}
+    </div>
+  );
+}
+
 function SwitchBtn({ on, onToggle }: { on: boolean; onToggle: () => void }) {
   return (
     <button onClick={onToggle} style={{ flexShrink: 0, width: 48, height: 26, borderRadius: 13, border: "none", cursor: "pointer", background: on ? "#27ae60" : "#e74c3c", position: "relative", transition: "background 0.2s" }}>
@@ -679,6 +941,15 @@ export function AdminDesktopPage() {
   const [editingModal, setEditingModal] = React.useState<string | null>(null);
   const [editingValue, setEditingValue] = React.useState("");
   const [matchProposalExpiryDaysCfg, setMatchProposalExpiryDaysCfg] = React.useState("30");
+  // ── La photo dans auth.photoUrl est figée au moment de la connexion (session en cache) : si
+  //    l'admin change sa photo de profil ailleurs dans l'app sans se reconnecter, elle ne se met
+  //    jamais à jour ici. On récupère la vraie photo actuelle séparément, en direct. ──
+  const [myPhotoUrl, setMyPhotoUrl] = React.useState<string | null | undefined>(undefined);
+  React.useEffect(() => {
+    if (!auth) return;
+    fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${auth.userId}&select=photo_url`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } })
+      .then(r => r.json()).then(rows => { if (Array.isArray(rows) && rows[0]) setMyPhotoUrl(rows[0].photo_url || null); }).catch(() => {});
+  }, [auth?.userId]);
   React.useEffect(() => {
     if (!auth) return;
     fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=eq.match_proposal_expiry_days&select=value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } })
@@ -799,6 +1070,7 @@ export function AdminDesktopPage() {
     affiliatePayoutMinFcfa: "10000",
     affiliatePromoBonusDays: "3",
     featureAmbassadorProgram: "true",
+    featureEvents: "true",
   });
   const [editingConfig, setEditingConfig] = React.useState<string | null>(null);
   const [editingConfigValue, setEditingConfigValue] = React.useState("");
@@ -838,7 +1110,7 @@ export function AdminDesktopPage() {
       "disabled_builtin_contact_words",
       "auto_mod_contact_reply",
       "affiliate_commission_percent","affiliate_payable_delay_days",
-      "feature_ambassador_program","affiliate_payout_min_fcfa","affiliate_promo_bonus_days",
+      "feature_ambassador_program","affiliate_payout_min_fcfa","affiliate_promo_bonus_days","feature_events",
     ];
     fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(${allKeys.join(",")})&select=key,value`, {
       headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` },
@@ -889,6 +1161,7 @@ export function AdminDesktopPage() {
         affiliatePayoutMinFcfa: map["affiliate_payout_min_fcfa"] || c.affiliatePayoutMinFcfa,
         affiliatePromoBonusDays: map["affiliate_promo_bonus_days"] || c.affiliatePromoBonusDays,
         featureAmbassadorProgram: map["feature_ambassador_program"] || c.featureAmbassadorProgram,
+        featureEvents: map["feature_events"] || c.featureEvents,
         appointmentsEnabled: map["appointments_enabled"] || c.appointmentsEnabled,
         phoneAppointmentsEnabled: map["phone_appointments_enabled"] || c.phoneAppointmentsEnabled,
         physicalAppointmentsEnabled: map["physical_appointments_enabled"] || c.physicalAppointmentsEnabled,
@@ -970,8 +1243,8 @@ export function AdminDesktopPage() {
         <div style={{ flex: 1 }} />
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{ width: 32, height: 32, borderRadius: "50%", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, overflow: "hidden" }}>
-            {auth.photoUrl
-              ? <img src={auth.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            {(myPhotoUrl !== undefined ? myPhotoUrl : auth.photoUrl)
+              ? <img src={(myPhotoUrl !== undefined ? myPhotoUrl : auth.photoUrl) as string} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
               : <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>}
           </div>
           <div style={{ fontSize: "0.85rem", fontWeight: 700, color: G.brun }}>{auth.name}</div>
@@ -1333,6 +1606,7 @@ export function AdminDesktopPage() {
                 ["feature_group_photos", "featureGroupPhotos" as keyof typeof appConfig, "Photos dans le Groupe"],
                 ["feature_photo_retouch", "featurePhotoRetouch" as keyof typeof appConfig, "Retouche photo Premium"],
                 ["feature_ambassador_program", "featureAmbassadorProgram" as keyof typeof appConfig, "Programme Ambassadeur (bouton \"Devenir Ambassadeur\")"],
+                ["feature_events", "featureEvents" as keyof typeof appConfig, "Événements Moyo Dating (carte Profil)"],
                 ["feature_moderation_insults", "featureModerationInsults" as keyof typeof appConfig, "Modération auto (insultes, menaces, arnaques, sexuel)"],
                 ["feature_moderation_contact", "featureModerationContact" as keyof typeof appConfig, "Blocage partage de contact (comptes gratuits)"],
                 ["support_reply_push_enabled", "supportReplyPushEnabled" as keyof typeof appConfig, "Notifications push Assistance (1er avertissement + réponses admin)"],
@@ -2880,7 +3154,7 @@ function AssistantPhotoConfig({ auth }: { auth: Auth }) {
 export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () => void }) {
   const [rules, setRules] = React.useState({ blockSameGenderLike: true });
   const [modalTexts, setModalTexts] = React.useState({ sameGenderHomme: "Eh frère, reste du bon côté ! 😂", sameGenderFemme: "Eh soeur, reste du bon côté ! 😂", sameGenderSub: "Moyo Dating c'est pour les rencontres hétérosexuelles 😄", signupSuccess: "Ton compte est prêt ! Connecte-toi maintenant.", matchTitle: "C'est un Match !", matchSubtitle: "Toi et {name} vous plaisez mutuellement !", premiumDefault: "Passe Premium pour débloquer toutes les fonctionnalités de Moyo Dating !", likesEpuises: "Tu as utilisé tes {n} likes gratuits aujourd'hui. Passe Premium pour liker sans limite !" });
-  const [appConfig, setAppConfig] = React.useState({ limitLikes: "5", limitMessages: "3", limitMessagesFemme: "100", limitMatchRequests: "2", limitStatusBoosts: "2", limitGiftRequestsMonth: "2", limitPhotoSizeMb: "5", matchWelcomeMessage: "Vous avez un nouveau match ! Dites bonjour 👋", premiumPriceFcfa: "3500", premiumPriceEur: "10", eurToFcfaRate: "655.957", premiumDurationDays: "31", premiumPriceWeekFcfa: "1200", premiumPrice2monthFcfa: "5900", premiumDaysWeek: "7", premiumDays2month: "62", likesNotifDelayHours: "24", featureStatuses: "true", featureGiftPremium: "true", featureAssistant: "true", featureGroupPremium: "true", featureSocials: "true", requireSignupPayment: "false", featureGroupPhotos: "true", featurePhotoRetouch: "true", maintenanceMode: "false", maintenanceMessage: "Moyo Dating est en maintenance. Nous revenons très vite ! 🔧", customBannedWords: "", contactBannedWords: "", autoModContactReply: AUTO_MOD_CONTACT_REPLY, featureModerationInsults: "true", featureModerationContact: "true", disabledBuiltinWords: "", disabledBuiltinContactWords: "", affiliateCommissionPercent: "15", affiliatePayableDelayDays: "15", featureAmbassadorProgram: "true", affiliatePayoutMinFcfa: "10000", affiliatePromoBonusDays: "3", supportReplyPushEnabled: "true" });
+  const [appConfig, setAppConfig] = React.useState({ limitLikes: "5", limitMessages: "3", limitMessagesFemme: "100", limitMatchRequests: "2", limitStatusBoosts: "2", limitGiftRequestsMonth: "2", limitPhotoSizeMb: "5", matchWelcomeMessage: "Vous avez un nouveau match ! Dites bonjour 👋", premiumPriceFcfa: "3500", premiumPriceEur: "10", eurToFcfaRate: "655.957", premiumDurationDays: "31", premiumPriceWeekFcfa: "1200", premiumPrice2monthFcfa: "5900", premiumDaysWeek: "7", premiumDays2month: "62", likesNotifDelayHours: "24", featureStatuses: "true", featureGiftPremium: "true", featureAssistant: "true", featureGroupPremium: "true", featureSocials: "true", requireSignupPayment: "false", featureGroupPhotos: "true", featurePhotoRetouch: "true", maintenanceMode: "false", maintenanceMessage: "Moyo Dating est en maintenance. Nous revenons très vite ! 🔧", customBannedWords: "", contactBannedWords: "", autoModContactReply: AUTO_MOD_CONTACT_REPLY, featureModerationInsults: "true", featureModerationContact: "true", disabledBuiltinWords: "", disabledBuiltinContactWords: "", affiliateCommissionPercent: "15", affiliatePayableDelayDays: "15", featureAmbassadorProgram: "true", affiliatePayoutMinFcfa: "10000", affiliatePromoBonusDays: "3", supportReplyPushEnabled: "true", featureEvents: "true" });
   const [editingModal, setEditingModal] = React.useState<string | null>(null);
   const [editingValue, setEditingValue] = React.useState("");
   const [editingConfig, setEditingConfig] = React.useState<string | null>(null);
@@ -2939,7 +3213,7 @@ export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () =
   };
 
   React.useEffect(() => {
-    const allKeys = ["rule_block_same_gender_like","modal_same_gender_homme","modal_same_gender_femme","modal_same_gender_sub","modal_signup_success","modal_match_title","modal_match_subtitle","modal_premium_default","modal_likes_epuises","limit_likes_free","limit_messages_free","limit_messages_free_femme","limit_match_requests","limit_status_boosts","limit_gift_requests_month","limit_photo_size_mb","match_welcome_message","match_proposal_expiry_days","premium_price_fcfa","premium_price_week_fcfa","premium_price_2month_fcfa","premium_days_week","premium_days_2month","premium_duration_days","feature_statuses","feature_gift_premium","feature_assistant","feature_group_premium","feature_socials","require_signup_payment","feature_photo_retouch","feature_moderation_insults","feature_moderation_contact","support_reply_push_enabled","maintenance_mode","maintenance_message","custom_banned_words","contact_banned_words","disabled_builtin_words","disabled_builtin_contact_words","auto_mod_contact_reply","poll_badges_ms","poll_admin_badge_ms","poll_stats_ms","poll_broadcast_ms","poll_support_ms","affiliate_commission_percent","affiliate_payable_delay_days","feature_ambassador_program","affiliate_payout_min_fcfa","affiliate_promo_bonus_days"];
+    const allKeys = ["rule_block_same_gender_like","modal_same_gender_homme","modal_same_gender_femme","modal_same_gender_sub","modal_signup_success","modal_match_title","modal_match_subtitle","modal_premium_default","modal_likes_epuises","limit_likes_free","limit_messages_free","limit_messages_free_femme","limit_match_requests","limit_status_boosts","limit_gift_requests_month","limit_photo_size_mb","match_welcome_message","match_proposal_expiry_days","premium_price_fcfa","premium_price_week_fcfa","premium_price_2month_fcfa","premium_days_week","premium_days_2month","premium_duration_days","feature_statuses","feature_gift_premium","feature_assistant","feature_group_premium","feature_socials","require_signup_payment","feature_photo_retouch","feature_moderation_insults","feature_moderation_contact","support_reply_push_enabled","maintenance_mode","maintenance_message","custom_banned_words","contact_banned_words","disabled_builtin_words","disabled_builtin_contact_words","auto_mod_contact_reply","poll_badges_ms","poll_admin_badge_ms","poll_stats_ms","poll_broadcast_ms","poll_support_ms","affiliate_commission_percent","affiliate_payable_delay_days","feature_ambassador_program","affiliate_payout_min_fcfa","affiliate_promo_bonus_days","feature_events"];
     fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(${allKeys.join(",")})&select=key,value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } })
       .then(r => r.json()).then(data => {
         if (!Array.isArray(data)) return;
@@ -2949,7 +3223,7 @@ export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () =
         if (map["rule_block_same_gender_like"]) setRules(r => ({ ...r, blockSameGenderLike: map["rule_block_same_gender_like"] === "true" }));
         setModalTexts(t => ({ sameGenderHomme: map["modal_same_gender_homme"] || t.sameGenderHomme, sameGenderFemme: map["modal_same_gender_femme"] || t.sameGenderFemme, sameGenderSub: map["modal_same_gender_sub"] || t.sameGenderSub, signupSuccess: map["modal_signup_success"] || t.signupSuccess, matchTitle: map["modal_match_title"] || t.matchTitle, matchSubtitle: map["modal_match_subtitle"] || t.matchSubtitle, premiumDefault: map["modal_premium_default"] || t.premiumDefault, likesEpuises: map["modal_likes_epuises"] || t.likesEpuises }));
         setAppConfig(c => ({ limitLikes: map["limit_likes_free"] || c.limitLikes, limitMessages: map["limit_messages_free"] || c.limitMessages, limitMessagesFemme: map["limit_messages_free_femme"] || c.limitMessagesFemme, limitMatchRequests: map["limit_match_requests"] || c.limitMatchRequests, limitStatusBoosts: map["limit_status_boosts"] || c.limitStatusBoosts, limitGiftRequestsMonth: map["limit_gift_requests_month"] || c.limitGiftRequestsMonth, limitPhotoSizeMb: map["limit_photo_size_mb"] || c.limitPhotoSizeMb, matchWelcomeMessage: map["match_welcome_message"] || c.matchWelcomeMessage, premiumPriceFcfa: map["premium_price_fcfa"] || c.premiumPriceFcfa, premiumPriceWeekFcfa: map["premium_price_week_fcfa"] || c.premiumPriceWeekFcfa, premiumPrice2monthFcfa: map["premium_price_2month_fcfa"] || c.premiumPrice2monthFcfa, premiumDaysWeek: map["premium_days_week"] || c.premiumDaysWeek, premiumDays2month: map["premium_days_2month"] || c.premiumDays2month, premiumPriceEur: map["premium_price_eur"] || c.premiumPriceEur, eurToFcfaRate: map["eur_to_fcfa_rate"] || c.eurToFcfaRate, premiumDurationDays: map["premium_duration_days"] || c.premiumDurationDays, likesNotifDelayHours: map["likes_notification_delay_hours"] || c.likesNotifDelayHours, featureStatuses: map["feature_statuses"] || c.featureStatuses, featureGiftPremium: map["feature_gift_premium"] || c.featureGiftPremium, featureAssistant: map["feature_assistant"] || c.featureAssistant, featureGroupPremium: map["feature_group_premium"] || c.featureGroupPremium, featureSocials: map["feature_socials"] || c.featureSocials, requireSignupPayment: map["require_signup_payment"] || c.requireSignupPayment,
-        featureGroupPhotos: map["feature_group_photos"] || c.featureGroupPhotos, featurePhotoRetouch: map["feature_photo_retouch"] || c.featurePhotoRetouch, maintenanceMode: map["maintenance_mode"] || c.maintenanceMode, maintenanceMessage: map["maintenance_message"] || c.maintenanceMessage, customBannedWords: map["custom_banned_words"] || c.customBannedWords, contactBannedWords: map["contact_banned_words"] || c.contactBannedWords, autoModContactReply: map["auto_mod_contact_reply"] || c.autoModContactReply, featureModerationInsults: map["feature_moderation_insults"] || c.featureModerationInsults, featureModerationContact: map["feature_moderation_contact"] || c.featureModerationContact, disabledBuiltinWords: map["disabled_builtin_words"] !== undefined ? map["disabled_builtin_words"] : c.disabledBuiltinWords, disabledBuiltinContactWords: map["disabled_builtin_contact_words"] !== undefined ? map["disabled_builtin_contact_words"] : c.disabledBuiltinContactWords, affiliateCommissionPercent: map["affiliate_commission_percent"] || c.affiliateCommissionPercent, affiliatePayableDelayDays: map["affiliate_payable_delay_days"] || c.affiliatePayableDelayDays, featureAmbassadorProgram: map["feature_ambassador_program"] || c.featureAmbassadorProgram, affiliatePayoutMinFcfa: map["affiliate_payout_min_fcfa"] || c.affiliatePayoutMinFcfa, affiliatePromoBonusDays: map["affiliate_promo_bonus_days"] || c.affiliatePromoBonusDays, supportReplyPushEnabled: map["support_reply_push_enabled"] || c.supportReplyPushEnabled }));
+        featureGroupPhotos: map["feature_group_photos"] || c.featureGroupPhotos, featurePhotoRetouch: map["feature_photo_retouch"] || c.featurePhotoRetouch, maintenanceMode: map["maintenance_mode"] || c.maintenanceMode, maintenanceMessage: map["maintenance_message"] || c.maintenanceMessage, customBannedWords: map["custom_banned_words"] || c.customBannedWords, contactBannedWords: map["contact_banned_words"] || c.contactBannedWords, autoModContactReply: map["auto_mod_contact_reply"] || c.autoModContactReply, featureModerationInsults: map["feature_moderation_insults"] || c.featureModerationInsults, featureModerationContact: map["feature_moderation_contact"] || c.featureModerationContact, disabledBuiltinWords: map["disabled_builtin_words"] !== undefined ? map["disabled_builtin_words"] : c.disabledBuiltinWords, disabledBuiltinContactWords: map["disabled_builtin_contact_words"] !== undefined ? map["disabled_builtin_contact_words"] : c.disabledBuiltinContactWords, affiliateCommissionPercent: map["affiliate_commission_percent"] || c.affiliateCommissionPercent, affiliatePayableDelayDays: map["affiliate_payable_delay_days"] || c.affiliatePayableDelayDays, featureAmbassadorProgram: map["feature_ambassador_program"] || c.featureAmbassadorProgram, affiliatePayoutMinFcfa: map["affiliate_payout_min_fcfa"] || c.affiliatePayoutMinFcfa, affiliatePromoBonusDays: map["affiliate_promo_bonus_days"] || c.affiliatePromoBonusDays, supportReplyPushEnabled: map["support_reply_push_enabled"] || c.supportReplyPushEnabled, featureEvents: map["feature_events"] || c.featureEvents }));
         if (map["custom_banned_words"] !== undefined) buildCustomBannedRegex(map["custom_banned_words"]);
         if (map["contact_banned_words"] !== undefined) buildContactBannedRegex(map["contact_banned_words"]);
       }).catch(() => {});
@@ -3106,7 +3380,7 @@ export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () =
         </div>
       </OffCanvasSection>
       <OffCanvasSection title="Fonctionnalités">
-        {([["feature_statuses","featureStatuses" as keyof typeof appConfig,"Statuts (Stories)"],["feature_gift_premium","featureGiftPremium" as keyof typeof appConfig,"Cadeau Premium"],["feature_assistant","featureAssistant" as keyof typeof appConfig,"Assistant IA"],["feature_group_premium","featureGroupPremium" as keyof typeof appConfig,"Groupe Premium"],["feature_socials","featureSocials" as keyof typeof appConfig,"Réseaux sociaux (Facebook, TikTok, Insta, Snap)"],["feature_group_photos","featureGroupPhotos" as keyof typeof appConfig,"Photos dans le Groupe"],["feature_photo_retouch","featurePhotoRetouch" as keyof typeof appConfig,"Retouche photo Premium"],["feature_ambassador_program","featureAmbassadorProgram" as keyof typeof appConfig,"Programme Ambassadeur (bouton \"Devenir Ambassadeur\")"],["feature_moderation_insults","featureModerationInsults" as keyof typeof appConfig,"Modération auto (insultes, menaces, arnaques, sexuel)"],["feature_moderation_contact","featureModerationContact" as keyof typeof appConfig,"Blocage partage de contact (comptes gratuits)"],["support_reply_push_enabled","supportReplyPushEnabled" as keyof typeof appConfig,"Notifications push Assistance (1er avertissement + réponses admin)"],["maintenance_mode","maintenanceMode" as keyof typeof appConfig,"Mode maintenance"]] as [string, keyof typeof appConfig, string][]).map(([key,ck,label]) => (
+        {([["feature_statuses","featureStatuses" as keyof typeof appConfig,"Statuts (Stories)"],["feature_gift_premium","featureGiftPremium" as keyof typeof appConfig,"Cadeau Premium"],["feature_assistant","featureAssistant" as keyof typeof appConfig,"Assistant IA"],["feature_group_premium","featureGroupPremium" as keyof typeof appConfig,"Groupe Premium"],["feature_socials","featureSocials" as keyof typeof appConfig,"Réseaux sociaux (Facebook, TikTok, Insta, Snap)"],["feature_group_photos","featureGroupPhotos" as keyof typeof appConfig,"Photos dans le Groupe"],["feature_photo_retouch","featurePhotoRetouch" as keyof typeof appConfig,"Retouche photo Premium"],["feature_ambassador_program","featureAmbassadorProgram" as keyof typeof appConfig,"Programme Ambassadeur (bouton \"Devenir Ambassadeur\")"],["feature_events","featureEvents" as keyof typeof appConfig,"Événements Moyo Dating (carte Profil)"],["feature_moderation_insults","featureModerationInsults" as keyof typeof appConfig,"Modération auto (insultes, menaces, arnaques, sexuel)"],["feature_moderation_contact","featureModerationContact" as keyof typeof appConfig,"Blocage partage de contact (comptes gratuits)"],["support_reply_push_enabled","supportReplyPushEnabled" as keyof typeof appConfig,"Notifications push Assistance (1er avertissement + réponses admin)"],["maintenance_mode","maintenanceMode" as keyof typeof appConfig,"Mode maintenance"]] as [string, keyof typeof appConfig, string][]).map(([key,ck,label]) => (
           <div key={key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: G.creme, borderRadius: 12 }}>
             <div style={{ fontSize: "0.83rem", fontWeight: 600, color: key === "maintenance_mode" ? G.rouge : "#1a1a1a" }}>{label}</div>
             <SwitchBtn on={appConfig[ck] === "true"} onToggle={async () => { const v = appConfig[ck] !== "true" ? "true" : "false"; setAppConfig(c => ({ ...c, [ck]: v })); await patch(key, v); }} />
@@ -3433,6 +3707,7 @@ function PaymentCard({ p, isPending, isApproved, isRejected, onActivate, onRejec
               {p.gift_for && <span style={{ background: "rgba(212,168,67,0.15)", color: "#B8860B", borderRadius: 50, padding: "2px 8px", fontSize: "0.65rem", fontWeight: 700 }}>Cadeau pour {p.gift_for_name || "un match"}</span>}
               {p.promo_code_used && <span style={{ background: "rgba(142,68,173,0.12)", color: "#8e44ad", borderRadius: 50, padding: "2px 8px", fontSize: "0.65rem", fontWeight: 700 }}>Code promo : {p.promo_code_used}</span>}
               {p.kind === "appointment" && <span style={{ background: "rgba(26,92,58,0.12)", color: G.vert, borderRadius: 50, padding: "2px 8px", fontSize: "0.65rem", fontWeight: 700 }}>🗓 Rendez-vous agence</span>}
+              {p.kind === "event" && <span style={{ background: "rgba(192,57,43,0.12)", color: G.rouge, borderRadius: 50, padding: "2px 8px", fontSize: "0.65rem", fontWeight: 700 }}>🎉 Événement{p.event_registrations?.events?.title ? ` : ${p.event_registrations.events.title}` : ""}</span>}
             </div>
             <div style={{ fontSize: "0.7rem", color: "#888" }}>{new Date(p.created_at).toLocaleString("fr-FR")} · {formatMoney(p.amount, paymentCurrency(p))}</div>
             <div style={{ fontSize: "0.62rem", color: "#bbb", fontFamily: "monospace", marginTop: 2 }}>{p.user_id}</div>
@@ -3480,7 +3755,7 @@ function PaymentCard({ p, isPending, isApproved, isRejected, onActivate, onRejec
       {isPending && (
         <div style={{ display: "flex", gap: 8 }}>
           {verified === null && <button onClick={() => setVerified(match ? "match" : "mismatch")} disabled={!adminRef.trim() || (!!screenshotUrl && !manualClientRef.trim())} style={{ flex: 1, background: (adminRef.trim() && (!screenshotUrl || manualClientRef.trim())) ? "linear-gradient(135deg,#2980b9,#1a6091)" : "#ddd", color: (adminRef.trim() && (!screenshotUrl || manualClientRef.trim())) ? "#fff" : "#aaa", border: "none", borderRadius: 50, padding: "10px", fontSize: "0.82rem", fontWeight: 700, cursor: (adminRef.trim() && (!screenshotUrl || manualClientRef.trim())) ? "pointer" : "not-allowed" }}>🔍 Vérifier</button>}
-          {verified === "match" && <button onClick={() => onActivate(p)} style={{ flex: 1, background: "linear-gradient(135deg,#27ae60,#1e8449)", color: "#fff", border: "none", borderRadius: 50, padding: "10px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer" }}>{p.kind === "appointment" ? "✓ Valider le paiement RDV" : "✓ Activer Premium"}</button>}
+          {verified === "match" && <button onClick={() => onActivate(p)} style={{ flex: 1, background: "linear-gradient(135deg,#27ae60,#1e8449)", color: "#fff", border: "none", borderRadius: 50, padding: "10px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer" }}>{p.kind === "appointment" ? "✓ Valider le paiement RDV" : p.kind === "event" ? "✓ Valider l'inscription" : "✓ Activer Premium"}</button>}
           {verified === "mismatch" && <button onClick={() => onReject(p)} style={{ flex: 1, background: "rgba(231,76,60,0.08)", color: "#e74c3c", border: "1.5px solid rgba(231,76,60,0.2)", borderRadius: 50, padding: "10px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer" }}>✕ Rejeter & notifier</button>}
           {verified !== null && <button onClick={() => { setVerified(null); setAdminRef(""); setManualClientRef(""); }} style={{ background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 50, padding: "10px 14px", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer" }}>↩</button>}
         </div>
@@ -6297,7 +6572,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
   const loadPayments = async () => {
     setPaymentsLoading(true);
     try {
-      const r = await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?select=id,user_id,operator,tx_ref,amount,status,created_at,approved_at,gift_for,gift_for_name,archived,currency,kind,appointment_id,promo_code_used&status=neq.deleted&archived=eq.false&order=created_at.desc&limit=100`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?select=id,user_id,operator,tx_ref,amount,status,created_at,approved_at,gift_for,gift_for_name,archived,currency,kind,appointment_id,promo_code_used,event_registration_id,event_registrations(event_id,events(title))&status=neq.deleted&archived=eq.false&order=created_at.desc&limit=100`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
       const data = await r.json().catch(() => []);
       if (Array.isArray(data)) {
         setPayments(data);
@@ -6317,6 +6592,32 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
       logAdminAction(auth.token, auth.userId, auth.name, `Paiement RDV agence validé - réf: ${p.tx_ref}`, p.user_id);
       await fetch(`${SUPABASE_URL}/rest/v1/user_warnings`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" }, body: JSON.stringify({ user_id: p.user_id, admin_id: auth.userId, reason: "Votre paiement pour le rendez-vous à l'agence a bien été reçu. Notre équipe vous confirmera un créneau prochainement. 🗓", warning_number: 0, acknowledged: false }) });
       showToast("Paiement du rendez-vous validé.", "success");
+      loadPayments();
+      return;
+    }
+    // ── Paiement d'une inscription à un ÉVÉNEMENT : confirme l'inscription et incrémente le
+    //    compteur de places prises. Ne touche pas non plus au Premium. ──
+    if (p.kind === "event") {
+      const regId = (p as any).event_registration_id;
+      if (regId) {
+        const rr = await fetch(`${SUPABASE_URL}/rest/v1/event_registrations?id=eq.${regId}&select=event_id`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+        const rd = await rr.json().catch(() => []);
+        const eventId = Array.isArray(rd) && rd[0]?.event_id;
+        await fetch(`${SUPABASE_URL}/rest/v1/event_registrations?id=eq.${regId}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ status: "confirmed" }) }).catch(() => {});
+        if (eventId) {
+          const er = await fetch(`${SUPABASE_URL}/rest/v1/events?id=eq.${eventId}&select=title,spots_taken`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+          const ed = await er.json().catch(() => []); const ev = Array.isArray(ed) ? ed[0] : null;
+          if (ev) {
+            await fetch(`${SUPABASE_URL}/rest/v1/events?id=eq.${eventId}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ spots_taken: (ev.spots_taken || 0) + 1 }) }).catch(() => {});
+            fetch(`${SUPABASE_URL}/rest/v1/user_notifications`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ user_id: p.user_id, type: "event_confirmed", title: "✅ Inscription confirmée", body: `Ton inscription à "${ev.title}" est confirmée.`, nav_tab: "profile", nav_sub: "events" }) }).catch(() => {});
+            fetch(`${SUPABASE_URL}/functions/v1/push-notify`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ mode: "user_push", user_id: p.user_id, title: "✅ Inscription confirmée", body: `Ton inscription à "${ev.title}" est confirmée.` }) }).catch(() => {});
+          }
+        }
+      }
+      await fetch(`${SUPABASE_URL}/rest/v1/payment_requests?id=eq.${p.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ status: "approved", approved_at: new Date().toISOString() }) });
+      fetch(`${SUPABASE_URL}/rest/v1/payment_verification_requests?transaction_id=eq.${encodeURIComponent(p.tx_ref)}&status=eq.pending`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ status: "verified_manually" }) }).catch(() => {});
+      logAdminAction(auth.token, auth.userId, auth.name, `Paiement événement validé - réf: ${p.tx_ref}`, p.user_id);
+      showToast("Paiement de l'événement validé, inscription confirmée.", "success");
       loadPayments();
       return;
     }
@@ -12141,6 +12442,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
             ["ambassadors", "Ambassadeurs", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "ambassadors" ? "#8e44ad" : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>],
             ["reviews", "Réputation", () => <svg width="16" height="16" viewBox="0 0 24 24" fill={activeTab === "reviews" ? G.or : "#999"} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>],
             ["appointments", "Rendez-vous", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "appointments" ? G.vert : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>],
+            ["events", "Événements", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "events" ? G.rouge : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></svg>],
             ["payments", "Budget", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "payments" ? "#27ae60" : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-2"/><path d="M21 12v-2a2 2 0 0 0-2-2H6"/><circle cx="16" cy="12" r="1"/></svg>],
             ["groupe", "Groupe Premium", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "groupe" ? G.or : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>],
             ["logs", "Historique", () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === "logs" ? "#8e44ad" : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="12 8 12 12 14 14"/><circle cx="12" cy="12" r="10"/></svg>],
@@ -16025,6 +16327,12 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
       {activeTab === "appointments" && (
         <div style={{ padding: "16px" }}>
           <AdminAppointments auth={auth!} showToast={showToast} onOpenProfile={openAffiliateProfile} />
+        </div>
+      )}
+
+      {activeTab === "events" && (
+        <div style={{ padding: "16px" }}>
+          <AdminEvents auth={auth!} showToast={showToast} />
         </div>
       )}
 

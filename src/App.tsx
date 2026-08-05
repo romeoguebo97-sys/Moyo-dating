@@ -449,6 +449,7 @@ let autoWarnContactTriggeredThisSession = false;
 let APPOINTMENTS_ENABLED = true;
 let APPT_PHONE_ENABLED = true;
 let APPT_PHYSICAL_ENABLED = true;
+let FEATURE_EVENTS = true;
 export let APPOINTMENT_PHYSICAL_PRICE = 10000;
 // Coordonnées de paiement (modifiables depuis Config admin)
 export let PAY_MTN_NUMBER = "065132012";
@@ -511,7 +512,7 @@ export function dedupeMatchesByCouple<T extends { user1?: string; user2?: string
 }
 
 // Charger les settings dynamiques depuis Supabase au démarrage
-fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_messages_free_femme,limit_match_requests,limit_status_boosts,limit_gift_requests_month,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,pay_wero_enabled,pay_paypal_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,feature_show_likes_views_free,feature_group_premium,feature_socials,require_signup_payment,feature_group_photos,feature_photo_retouch,feature_moderation_insults,feature_moderation_contact,premium_screen_variant,custom_banned_words,contact_banned_words,disabled_builtin_words,disabled_builtin_contact_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,pay_wero_number,pay_paypal_number,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,social_linkedin,store_link_android,store_link_ios,plan_week_enabled,plan_month_enabled,plan_2month_enabled,discover_default_mode,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,auto_warn_ban_contact_enabled,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price,privacy_notice_enabled,premium_boost_enabled,assistant_photo_url,broadcast_enabled,modal_match_title,modal_match_subtitle,referral_bonus_week_days,referral_bonus_month_days,referral_bonus_2month_days,affiliate_commission_percent,affiliate_payable_delay_days,privacy_notice_step1_text,privacy_notice_step2_text,ban_screen_text,pay_link_enabled,feature_ambassador_program,affiliate_payout_min_fcfa,affiliate_promo_bonus_days,support_reply_push_enabled,ambassador_resources_link)&select=key,value`, {
+fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messages_free,limit_messages_free_femme,limit_match_requests,limit_status_boosts,limit_gift_requests_month,premium_duration_days,premium_price_fcfa,premium_price_week_fcfa,premium_price_2month_fcfa,premium_days_week,premium_days_2month,premium_price_eur,eur_to_fcfa_rate,likes_notification_delay_hours,maintenance_mode,maintenance_message,poll_badges_ms,poll_admin_badge_ms,poll_stats_ms,poll_broadcast_ms,poll_support_ms,pay_mtn_enabled,pay_airtel_enabled,pay_cb_enabled,pay_wero_enabled,pay_paypal_enabled,rule_block_same_gender_like,feature_statuses,feature_gift_premium,feature_assistant,feature_show_likes_views_free,feature_group_premium,feature_socials,require_signup_payment,feature_group_photos,feature_photo_retouch,feature_moderation_insults,feature_moderation_contact,premium_screen_variant,custom_banned_words,contact_banned_words,disabled_builtin_words,disabled_builtin_contact_words,pay_mtn_number,pay_mtn_responsable,pay_airtel_number,pay_airtel_responsable,pay_wero_number,pay_paypal_number,contact_email,contact_whatsapp,contact_address,social_facebook,social_instagram,social_tiktok,social_youtube,social_linkedin,store_link_android,store_link_ios,plan_week_enabled,plan_month_enabled,plan_2month_enabled,discover_default_mode,landing_members_count,landing_title_start,landing_title_highlight,landing_title_end,landing_slogan,premium_stat_couples,premium_stat_members,landing_stat_members,landing_stat_couples,landing_stat_cities,auto_mod_contact_reply,auto_warn_ban_contact_enabled,appointments_enabled,phone_appointments_enabled,physical_appointments_enabled,appointment_physical_price,privacy_notice_enabled,premium_boost_enabled,assistant_photo_url,broadcast_enabled,modal_match_title,modal_match_subtitle,referral_bonus_week_days,referral_bonus_month_days,referral_bonus_2month_days,affiliate_commission_percent,affiliate_payable_delay_days,privacy_notice_step1_text,privacy_notice_step2_text,ban_screen_text,pay_link_enabled,feature_ambassador_program,affiliate_payout_min_fcfa,affiliate_promo_bonus_days,support_reply_push_enabled,ambassador_resources_link,feature_events)&select=key,value`, {
   headers: { "apikey": SUPABASE_KEY },
 }).then(r => r.json()).then((data: { key: string; value: string }[]) => {
   if (!Array.isArray(data)) return;
@@ -541,6 +542,7 @@ fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(limit_likes_free,limit_messa
   if (map["appointments_enabled"] !== undefined) APPOINTMENTS_ENABLED = map["appointments_enabled"] !== "false";
   if (map["phone_appointments_enabled"] !== undefined) APPT_PHONE_ENABLED = map["phone_appointments_enabled"] !== "false";
   if (map["physical_appointments_enabled"] !== undefined) APPT_PHYSICAL_ENABLED = map["physical_appointments_enabled"] !== "false";
+  if (map["feature_events"] !== undefined) FEATURE_EVENTS = map["feature_events"] !== "false";
   if (map["appointment_physical_price"]) APPOINTMENT_PHYSICAL_PRICE = parseInt(map["appointment_physical_price"]) || 10000;
   if (map["feature_assistant"] !== undefined) FEATURE_ASSISTANT = map["feature_assistant"] !== "false";
   if (map["feature_show_likes_views_free"] !== undefined) FEATURE_SHOW_LIKES_VIEWS_FREE = map["feature_show_likes_views_free"] === "true";
@@ -1251,6 +1253,244 @@ function AppointmentsButton({ auth, onShowPremium }: { auth: any; onShowPremium:
         <div style={{ display: "flex", gap: 10 }}>
           <button onClick={() => setConfirmDel(null)} disabled={deleting} style={{ flex: 1, background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 12, padding: "12px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>Annuler</button>
           <button onClick={() => deleteMine(confirmDel)} disabled={deleting} style={{ flex: 1, background: deleting ? "#d99" : "#e74c3c", color: "#fff", border: "none", borderRadius: 12, padding: "12px", fontSize: "0.85rem", fontWeight: 800, cursor: deleting ? "not-allowed" : "pointer" }}>{deleting ? "Suppression…" : "Supprimer"}</button>
+        </div>
+      </div>
+    </div>}
+  </>);
+}
+
+// ── Événements Moyo Dating — même principe que AppointmentsButton juste au-dessus : composant
+//    autonome (carte Profil + modal), inscription payante via le même circuit Mobile Money que
+//    "Rendez-vous à l'agence" (payment_requests, kind="event", validé manuellement dans Budget).
+//    Places restantes = events.capacity - events.spots_taken, incrémenté à chaque inscription
+//    confirmée (gratuite tout de suite, payante une fois le paiement validé par l'admin). ──
+type MoyoEvent = { id: string; title: string; description?: string; cover_image_url?: string | null; location_name?: string; city?: string; event_date: string; capacity?: number | null; spots_taken: number; price: number };
+function EventsButton({ auth }: { auth: Auth }) {
+  const [open, setOpen] = useState(false);
+  const [view, setView] = useState<"browse" | "detail" | "mine">("browse");
+  const [events, setEvents] = useState<MoyoEvent[]>([]);
+  const [eventsLoading, setEventsLoading] = useState(false);
+  const [selected, setSelected] = useState<MoyoEvent | null>(null);
+  const [mine, setMine] = useState<any[]>([]);
+  const [mineLoading, setMineLoading] = useState(false);
+  const [payView, setPayView] = useState(false);
+  const [operator, setOperator] = useState<"MTN" | "Airtel">("MTN");
+  const [txRef, setTxRef] = useState("");
+  const [sending, setSending] = useState(false);
+  const [err, setErr] = useState("");
+  const [sent, setSent] = useState(false);
+  const [confirmCancel, setConfirmCancel] = useState<any>(null);
+  const [cancelling, setCancelling] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    const y = window.scrollY;
+    const body = document.body;
+    const prev = { position: body.style.position, top: body.style.top, width: body.style.width, overflow: body.style.overflow };
+    body.style.position = "fixed"; body.style.top = `-${y}px`; body.style.width = "100%"; body.style.overflow = "hidden";
+    return () => {
+      body.style.position = prev.position; body.style.top = prev.top; body.style.width = prev.width; body.style.overflow = prev.overflow;
+      window.scrollTo(0, y);
+    };
+  }, [open]);
+
+  const loadEvents = async () => {
+    setEventsLoading(true);
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/events?status=eq.published&event_date=gte.${new Date().toISOString()}&select=id,title,description,cover_image_url,location_name,city,event_date,capacity,spots_taken,price&order=event_date.asc`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      const d = await r.json().catch(() => []); setEvents(Array.isArray(d) ? d : []);
+    } catch { setEvents([]); }
+    setEventsLoading(false);
+  };
+  const loadMine = async () => {
+    setMineLoading(true);
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/event_registrations?user_id=eq.${auth.userId}&select=id,status,registered_at,event_id,events(title,event_date,location_name,city,price)&order=registered_at.desc`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      const d = await r.json().catch(() => []); setMine(Array.isArray(d) ? d : []);
+    } catch { setMine([]); }
+    setMineLoading(false);
+  };
+
+  const spotsLeft = (e: MoyoEvent) => e.capacity == null ? null : Math.max(0, e.capacity - (e.spots_taken || 0));
+
+  const registerFree = async () => {
+    if (!selected) return;
+    setSending(true); setErr("");
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/event_registrations`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" }, body: JSON.stringify({ event_id: selected.id, user_id: auth.userId, status: "confirmed" }) });
+      const body = await r.json().catch(() => null);
+      if (!r.ok) { setErr(Array.isArray(body) ? body[0]?.message : body?.message || "Inscription impossible. Réessaie."); setSending(false); return; }
+      await fetch(`${SUPABASE_URL}/rest/v1/events?id=eq.${selected.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ spots_taken: (selected.spots_taken || 0) + 1 }) });
+      setSent(true);
+    } catch { setErr("Erreur réseau."); }
+    setSending(false);
+  };
+  const payAndRegister = async () => {
+    if (!selected) return;
+    if (!txRef.trim()) { setErr("Entre la référence (ID) de ton paiement Mobile Money."); return; }
+    setSending(true); setErr("");
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/event_registrations`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" }, body: JSON.stringify({ event_id: selected.id, user_id: auth.userId, status: "pending_payment" }) });
+      const body = await r.json().catch(() => null); const row = Array.isArray(body) ? body[0] : body;
+      if (!r.ok || !row?.id) { setErr(row?.message || "Inscription impossible. Réessaie."); setSending(false); return; }
+      await fetch(`${SUPABASE_URL}/rest/v1/payment_requests`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ user_id: auth.userId, operator, tx_ref: txRef.trim(), amount: selected.price, status: "pending", kind: "event", event_registration_id: row.id }) });
+      setPayView(false); setSent(true);
+    } catch { setErr("Erreur réseau."); }
+    setSending(false);
+  };
+  const cancelRegistration = async (reg: any) => {
+    setCancelling(true);
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/event_registrations?id=eq.${reg.id}&user_id=eq.${auth.userId}`, { method: "DELETE", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      if (reg.status === "confirmed" && reg.events?.spots_taken != null) {
+        await fetch(`${SUPABASE_URL}/rest/v1/events?id=eq.${reg.event_id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` }, body: JSON.stringify({ spots_taken: Math.max(0, (reg.events.spots_taken || 1) - 1) }) }).catch(() => {});
+      }
+      setMine(prev => prev.filter(x => x.id !== reg.id));
+    } catch {}
+    setCancelling(false); setConfirmCancel(null);
+  };
+  const regStatusInfo = (s: string) => s === "confirmed" ? { label: "Confirmé", color: "#27ae60" } : s === "pending_payment" ? { label: "Paiement en attente", color: "#b9770e" } : s === "attended" ? { label: "Présent", color: G.vert } : { label: s, color: "#999" };
+
+  if (!FEATURE_EVENTS) return null;
+
+  return (<>
+    <div style={{ background: G.blanc, borderRadius: 18, padding: "15px 18px", boxShadow: "0 2px 10px rgba(0,0,0,0.06)", border: `1.5px solid rgba(192,57,43,0.18)`, marginTop: 0 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+        <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></svg>
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontWeight: 800, fontSize: "1rem", color: G.brun, marginBottom: 3 }}>Événements Moyo Dating</div>
+          <div style={{ fontSize: "0.78rem", color: "#888", lineHeight: 1.4 }}>Rencontrez d'autres membres en vrai</div>
+        </div>
+      </div>
+      <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+        <button onClick={() => { setOpen(true); setView("browse"); loadEvents(); }} style={{ flex: 1, background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: "#fff", border: "none", borderRadius: 10, padding: "10px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer" }}>Voir les événements</button>
+        <button onClick={() => { setOpen(true); setView("mine"); loadMine(); }} style={{ flex: 1, background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer" }}>Mes inscriptions</button>
+      </div>
+    </div>
+
+    {open && <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10005, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }} onClick={() => setOpen(false)}>
+      <div className="moyo-sheet-in" onClick={e => e.stopPropagation()} style={{ background: G.creme, borderRadius: "24px 24px 0 0", width: "100%", maxWidth: 500, maxHeight: "92vh", overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}>
+        <div style={{ position: "sticky", top: 0, background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, padding: "18px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 2 }}>
+          <div style={{ color: "#fff", fontWeight: 800, fontSize: "1.05rem" }}>{view === "detail" ? "Détail de l'événement" : "Événements Moyo"}</div>
+          <div onClick={() => setOpen(false)} style={{ background: "rgba(255,255,255,0.2)", borderRadius: "50%", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#fff", fontWeight: 700 }}>✕</div>
+        </div>
+
+        {view !== "detail" && (
+          <div style={{ display: "flex", gap: 8, padding: "12px 16px 0" }}>
+            {([["browse", "À venir"], ["mine", "Mes inscriptions"]] as [string, string][]).map(([k, lbl]) => (
+              <button key={k} onClick={() => { setView(k as any); if (k === "mine") loadMine(); else loadEvents(); }} style={{ flex: 1, background: view === k ? G.rouge : G.blanc, color: view === k ? "#fff" : "#666", border: `1.5px solid ${view === k ? G.rouge : G.gris}`, borderRadius: 50, padding: "8px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer" }}>{lbl}</button>
+            ))}
+          </div>
+        )}
+
+        {view === "browse" && (
+          <div style={{ padding: 16 }}>
+            {eventsLoading ? <div style={{ textAlign: "center", padding: 30, color: "#999" }}>Chargement…</div>
+              : events.length === 0 ? <div style={{ textAlign: "center", padding: 30, color: "#999", fontSize: "0.85rem" }}>Aucun événement à venir pour l'instant.</div>
+              : events.map(e => {
+                const left = spotsLeft(e);
+                const full = left !== null && left <= 0;
+                return (
+                  <div key={e.id} onClick={() => { if (full) return; setSelected(e); setView("detail"); setPayView(false); setSent(false); setErr(""); setTxRef(""); }} style={{ background: G.blanc, borderRadius: 16, overflow: "hidden", marginBottom: 12, boxShadow: "0 2px 10px rgba(0,0,0,0.06)", cursor: full ? "default" : "pointer", opacity: full ? 0.6 : 1 }}>
+                    <div style={{ height: 90, background: e.cover_image_url ? `url(${e.cover_image_url}) center/cover` : `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, display: "flex", alignItems: "flex-end", padding: 10 }}>
+                      <span style={{ background: "rgba(255,255,255,0.2)", backdropFilter: "blur(4px)", color: "#fff", fontSize: "0.66rem", fontWeight: 700, padding: "3px 10px", borderRadius: 20 }}>{full ? "Complet" : left !== null ? `${left} place${left > 1 ? "s" : ""} restante${left > 1 ? "s" : ""}` : "Places disponibles"}</span>
+                    </div>
+                    <div style={{ padding: 14 }}>
+                      <div style={{ fontWeight: 800, fontSize: "0.92rem", color: G.brun, marginBottom: 4 }}>{e.title}</div>
+                      <div style={{ fontSize: "0.76rem", color: "#888", display: "flex", alignItems: "center", gap: 5, marginBottom: 2 }}>📅 {new Date(e.event_date).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })}</div>
+                      {e.location_name && <div style={{ fontSize: "0.76rem", color: "#888", display: "flex", alignItems: "center", gap: 5, marginBottom: 10 }}>📍 {e.location_name}{e.city ? `, ${e.city}` : ""}</div>}
+                      <div style={{ fontWeight: 800, fontSize: "0.9rem", color: G.rouge }}>{e.price > 0 ? `${e.price.toLocaleString("fr-FR")} FCFA` : "Gratuit"}</div>
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+        )}
+
+        {view === "detail" && selected && (
+          <div style={{ padding: 16 }}>
+            {sent ? (
+              <div style={{ textAlign: "center", padding: "30px 10px" }}>
+                <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(39,174,96,0.12)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#27ae60" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+                <div style={{ fontWeight: 800, color: G.brun, fontSize: "1rem", marginBottom: 6 }}>{selected.price > 0 ? "Inscription envoyée !" : "Inscription confirmée !"}</div>
+                <div style={{ fontSize: "0.83rem", color: "#666", lineHeight: 1.5, marginBottom: 18 }}>{selected.price > 0 ? "Ton paiement est en attente de validation par notre équipe. Tu recevras une confirmation dès que c'est bon." : "Rendez-vous à l'événement ! Tu peux suivre ton inscription dans \"Mes inscriptions\"."}</div>
+                <button onClick={() => { setView("mine"); loadMine(); }} style={{ background: G.rouge, color: "#fff", border: "none", borderRadius: 10, padding: "11px 22px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>Voir mes inscriptions</button>
+              </div>
+            ) : payView ? (
+              <div>
+                <div style={{ background: "rgba(192,57,43,0.06)", border: "1px solid rgba(192,57,43,0.2)", borderRadius: 12, padding: "12px 14px", marginBottom: 14 }}>
+                  <div style={{ fontSize: "0.8rem", color: "#555", lineHeight: 1.5 }}>{selected.title}</div>
+                  <div style={{ fontSize: "1.35rem", fontWeight: 800, color: G.rouge, marginTop: 4 }}>{selected.price.toLocaleString("fr-FR")} FCFA</div>
+                </div>
+                <div style={{ fontSize: "0.8rem", fontWeight: 700, color: G.brun, marginBottom: 6 }}>Opérateur Mobile Money</div>
+                <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+                  {(["MTN", "Airtel"] as const).map(op => (
+                    <button key={op} onClick={() => setOperator(op)} style={{ flex: 1, background: operator === op ? G.rouge : G.blanc, color: operator === op ? "#fff" : "#666", border: `1.5px solid ${operator === op ? G.rouge : G.gris}`, borderRadius: 10, padding: "12px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer" }}>{op} MoMo</button>
+                  ))}
+                </div>
+                <div style={{ background: G.blanc, border: `1.5px dashed ${G.gris}`, borderRadius: 12, padding: "12px 14px", marginBottom: 14, textAlign: "center" }}>
+                  <div style={{ fontSize: "0.72rem", color: "#888" }}>Envoie {selected.price.toLocaleString("fr-FR")} FCFA au numéro</div>
+                  <div style={{ fontSize: "1.2rem", fontWeight: 800, color: G.brun, letterSpacing: 1 }}>{operator === "MTN" ? PAY_MTN_NUMBER : PAY_AIRTEL_NUMBER}</div>
+                </div>
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ fontSize: "0.8rem", fontWeight: 700, color: G.brun, marginBottom: 6 }}>Référence (ID) de ton paiement</div>
+                  <input value={txRef} onChange={e => setTxRef(e.target.value)} placeholder="Ex : 7753031542" style={APPT_INPUT} />
+                </div>
+                {err && <div style={{ background: "rgba(231,76,60,0.08)", border: "1.5px solid #e74c3c", borderRadius: 10, padding: "10px 12px", marginBottom: 12, fontSize: "0.8rem", color: "#c0392b", lineHeight: 1.5 }}>{err}</div>}
+                <button onClick={payAndRegister} disabled={sending} style={{ width: "100%", background: sending ? "#e0a89f" : `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: "#fff", border: "none", borderRadius: 12, padding: "14px", fontSize: "0.92rem", fontWeight: 800, cursor: sending ? "not-allowed" : "pointer" }}>{sending ? "Envoi…" : "J'ai payé, envoyer mon inscription"}</button>
+                <button onClick={() => { setPayView(false); setErr(""); }} style={{ width: "100%", marginTop: 8, background: "none", border: "none", color: "#888", fontSize: "0.8rem", fontWeight: 600, cursor: "pointer" }}>← Retour</button>
+              </div>
+            ) : (<>
+              <div onClick={() => setView("browse")} style={{ display: "flex", alignItems: "center", gap: 6, color: "#999", fontSize: "0.8rem", fontWeight: 600, cursor: "pointer", marginBottom: 14 }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+                Retour à la liste
+              </div>
+              {selected.cover_image_url && <div style={{ height: 140, borderRadius: 14, background: `url(${selected.cover_image_url}) center/cover`, marginBottom: 14 }} />}
+              <div style={{ fontWeight: 800, fontSize: "1.05rem", color: G.brun, marginBottom: 10 }}>{selected.title}</div>
+              {selected.description && <div style={{ fontSize: "0.82rem", color: "#666", lineHeight: 1.6, marginBottom: 14 }}>{selected.description}</div>}
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.82rem", color: "#555" }}>📅 {new Date(selected.event_date).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })}</div>
+                {selected.location_name && <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.82rem", color: "#555" }}>📍 {selected.location_name}{selected.city ? `, ${selected.city}` : ""}</div>}
+                <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.82rem", color: "#555" }}>👥 {spotsLeft(selected) !== null ? `${spotsLeft(selected)} places restantes` : "Places disponibles"}</div>
+              </div>
+              {err && <div style={{ background: "rgba(231,76,60,0.08)", border: "1.5px solid #e74c3c", borderRadius: 10, padding: "10px 12px", marginBottom: 12, fontSize: "0.8rem", color: "#c0392b", lineHeight: 1.5 }}>{err}</div>}
+              <button onClick={() => selected.price > 0 ? setPayView(true) : registerFree()} disabled={sending} style={{ width: "100%", background: sending ? "#e0a89f" : `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: "#fff", border: "none", borderRadius: 12, padding: "14px", fontSize: "0.92rem", fontWeight: 800, cursor: sending ? "not-allowed" : "pointer" }}>{sending ? "Envoi…" : selected.price > 0 ? `S'inscrire — ${selected.price.toLocaleString("fr-FR")} FCFA` : "S'inscrire gratuitement"}</button>
+            </>)}
+          </div>
+        )}
+
+        {view === "mine" && (
+          <div style={{ padding: 16 }}>
+            {mineLoading ? <div style={{ textAlign: "center", padding: 30, color: "#999" }}>Chargement…</div>
+              : mine.length === 0 ? <div style={{ textAlign: "center", padding: 30, color: "#999", fontSize: "0.85rem" }}>Aucune inscription pour l'instant.</div>
+              : mine.map(r => { const si = regStatusInfo(r.status); const ev = r.events; return (
+                <div key={r.id} style={{ background: G.blanc, borderRadius: 14, padding: 14, marginBottom: 10, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                    <span style={{ fontWeight: 700, color: G.brun, fontSize: "0.88rem" }}>{ev?.title || "Événement"}</span>
+                    <span style={{ background: si.color + "1a", color: si.color, borderRadius: 50, padding: "3px 10px", fontSize: "0.7rem", fontWeight: 700 }}>{si.label}</span>
+                  </div>
+                  {ev?.event_date && <div style={{ fontSize: "0.78rem", color: "#888" }}>📅 {new Date(ev.event_date).toLocaleDateString("fr-FR", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })}</div>}
+                  {ev?.location_name && <div style={{ fontSize: "0.78rem", color: "#888" }}>📍 {ev.location_name}{ev.city ? `, ${ev.city}` : ""}</div>}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8, gap: 8 }}>
+                    <div style={{ fontSize: "0.68rem", color: "#aaa" }}>Inscrit le {new Date(r.registered_at).toLocaleDateString("fr-FR")}</div>
+                    {r.status !== "attended" && <button onClick={() => setConfirmCancel(r)} style={{ background: "rgba(231,76,60,0.08)", border: "1.5px solid rgba(231,76,60,0.25)", borderRadius: 50, padding: "5px 12px", fontSize: "0.68rem", fontWeight: 700, color: "#e74c3c", cursor: "pointer", flexShrink: 0 }}>Annuler</button>}
+                  </div>
+                </div>
+              ); })}
+          </div>
+        )}
+      </div>
+    </div>}
+
+    {confirmCancel && <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10020, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, overscrollBehavior: "contain", touchAction: "none" }} onClick={() => !cancelling && setConfirmCancel(null)}>
+      <div className="moyo-card-in" onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 360, padding: "22px 20px", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
+        <div style={{ fontWeight: 800, fontSize: "1rem", color: G.brun, marginBottom: 8 }}>Annuler cette inscription ?</div>
+        <div style={{ fontSize: "0.84rem", color: "#666", lineHeight: 1.5, marginBottom: 18 }}>Ta place sera libérée pour quelqu'un d'autre. Cette action est définitive.</div>
+        <div style={{ display: "flex", gap: 10 }}>
+          <button onClick={() => setConfirmCancel(null)} disabled={cancelling} style={{ flex: 1, background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 12, padding: "12px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>Retour</button>
+          <button onClick={() => cancelRegistration(confirmCancel)} disabled={cancelling} style={{ flex: 1, background: cancelling ? "#d99" : "#e74c3c", color: "#fff", border: "none", borderRadius: 12, padding: "12px", fontSize: "0.85rem", fontWeight: 800, cursor: cancelling ? "not-allowed" : "pointer" }}>{cancelling ? "Annulation…" : "Annuler l'inscription"}</button>
         </div>
       </div>
     </div>}
@@ -17057,6 +17297,7 @@ function MatchRequestButton({ auth, onShowPremium }: { auth: Auth; onShowPremium
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
       </div>
       <div id="moyo-appointment-card"><AppointmentsButton auth={auth} onShowPremium={onShowPremium} /></div>
+      <div style={{ marginTop: 14 }}><EventsButton auth={auth} /></div>
       {/* ── Modal confirmation suppression du profil relationnel ── */}
       {showDeleteRel && (
         <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10004, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={() => !deletingRel && setShowDeleteRel(false)}>
@@ -19509,7 +19750,7 @@ function UserWarningModal({ warning, onAcknowledge }: {
   );
 }
 
-export type PaymentRequest = { id: string; user_id: string; operator: string; tx_ref: string; amount: number; status: string; created_at: string; approved_at?: string; gift_for?: string; gift_for_name?: string; archived?: boolean; currency?: string; kind?: string; appointment_id?: string; promo_code_used?: string; profile?: { name: string; photo_url?: string | null; gender?: string } };
+export type PaymentRequest = { id: string; user_id: string; operator: string; tx_ref: string; amount: number; status: string; created_at: string; approved_at?: string; gift_for?: string; gift_for_name?: string; archived?: boolean; currency?: string; kind?: string; appointment_id?: string; event_registration_id?: string; event_registrations?: { event_id: string; events?: { title: string } } | null; promo_code_used?: string; profile?: { name: string; photo_url?: string | null; gender?: string } };
 
 export function logAdminAction(token: string, adminId: string, adminName: string, action: string, targetUserId?: string) {
   try {
