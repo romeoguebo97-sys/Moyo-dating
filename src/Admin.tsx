@@ -728,7 +728,7 @@ function AdminEvents({ auth, showToast }: { auth: any; showToast: (m: string, t?
               <div style={{ height: 150, background: form.cover_image_url ? `url(${form.cover_image_url}) center/cover` : "linear-gradient(135deg,#C0392B,#922B21)" }} />
               <div style={{ padding: 18 }}>
                 <span style={{ display: "inline-block", background: "rgba(192,57,43,0.1)", color: "#C0392B", fontSize: "0.66rem", fontWeight: 800, letterSpacing: "0.03em", padding: "3px 10px", borderRadius: 6, marginBottom: 10 }}>ÉVÉNEMENT</span>
-                <div style={{ fontWeight: 900, fontSize: "1.1rem", color: "#2C1A0E", marginBottom: 12, lineHeight: 1.3 }}>{form.title || "Titre de l'événement"}</div>
+                <div style={{ fontWeight: 900, fontSize: "1.1rem", color: "#2C1A0E", marginBottom: 12, lineHeight: 1.3, wordBreak: "break-word", overflowWrap: "break-word" }}>{form.title || "Titre de l'événement"}</div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.8rem", color: "#555", marginBottom: 8 }}>
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
                   {previewDate ? previewDate.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }) : "jj / mm / aaaa"}
@@ -12296,6 +12296,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                               onClick={() => sendNudge("PHONE_NUDGE", "Complète ton profil !", "La demande de téléphone")} />
                             <Row label="Inciter à devenir Ambassadeur" color="#8B0D2F" desc={(u as any).is_ambassador ? "Déjà Ambassadeur, action non pertinente pour ce membre." : "Afficher à ce membre l'écran de la campagne Ambassadeur."} disabled={isLoading || !!(u as any).is_ambassador}
                               onClick={() => sendNudge("AMBASSADOR_NUDGE", "Gagne de l'argent en recommandant Moyo Dating à ton entourage. Chaque personne qui s'abonne au Premium grâce à toi te rapporte une vraie commission, versée par Mobile Money.", "La campagne Ambassadeur")} />
+                            <Row label="Inciter aux Événements" color="#C0392B" desc="Afficher à ce membre l'écran des événements à venir." disabled={isLoading}
+                              onClick={() => sendNudge("EVENTS_NUDGE", "Rencontre d'autres membres Moyo Dating en vrai ! Découvre nos prochains événements et réserve ta place.", "L'incitation Événements")} />
                           </>
                         );
                       })()}

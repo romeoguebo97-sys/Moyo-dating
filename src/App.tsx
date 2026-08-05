@@ -1585,7 +1585,7 @@ function EventsButton({ auth }: { auth: Auth }) {
                       <span style={{ background: "rgba(255,255,255,0.2)", backdropFilter: "blur(4px)", color: "#fff", fontSize: "0.66rem", fontWeight: 700, padding: "3px 10px", borderRadius: 20 }}>{full ? "Complet" : left !== null ? `${left} place${left > 1 ? "s" : ""} restante${left > 1 ? "s" : ""}` : "Places disponibles"}</span>
                     </div>
                     <div style={{ padding: 14 }}>
-                      <div style={{ fontWeight: 800, fontSize: "0.92rem", color: G.brun, marginBottom: 4 }}>{e.title}</div>
+                      <div style={{ fontWeight: 800, fontSize: "0.92rem", color: G.brun, marginBottom: 4, wordBreak: "break-word", overflowWrap: "break-word" }}>{e.title}</div>
                       <div style={{ fontSize: "0.76rem", color: "#888", display: "flex", alignItems: "center", gap: 5, marginBottom: 2 }}>{icCal} {new Date(e.event_date).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })}</div>
                       {e.location_name && <div style={{ fontSize: "0.76rem", color: "#888", display: "flex", alignItems: "center", gap: 5, marginBottom: 10 }}>{icPin} {e.location_name}{e.city ? `, ${e.city}` : ""}</div>}
                       <div style={{ fontWeight: 800, fontSize: "0.9rem", color: G.rouge }}>{e.price > 0 ? `${e.price.toLocaleString("fr-FR")} FCFA` : "Gratuit"}</div>
@@ -1614,8 +1614,8 @@ function EventsButton({ auth }: { auth: Auth }) {
                 {selected.cover_image_url && <div style={{ height: 150, background: `url(${selected.cover_image_url}) center/cover` }} />}
                 <div style={{ padding: 20 }}>
                   <span style={{ display: "inline-block", background: "rgba(192,57,43,0.08)", color: G.rouge, fontSize: "0.66rem", fontWeight: 800, letterSpacing: "0.03em", padding: "4px 11px", borderRadius: 7, marginBottom: 11 }}>ÉVÉNEMENT</span>
-                  <div style={{ fontWeight: 900, fontSize: "1.15rem", color: G.brun, marginBottom: 5, letterSpacing: "-0.01em" }}>{selected.title}</div>
-                  {selected.description && <div style={{ fontSize: "0.82rem", color: "#666", lineHeight: 1.6, marginBottom: 14 }}>{selected.description}</div>}
+                  <div style={{ fontWeight: 900, fontSize: "1.15rem", color: G.brun, marginBottom: 5, letterSpacing: "-0.01em", wordBreak: "break-word", overflowWrap: "break-word" }}>{selected.title}</div>
+                  {selected.description && <div style={{ fontSize: "0.82rem", color: "#666", lineHeight: 1.6, marginBottom: 14, wordBreak: "break-word", overflowWrap: "break-word" }}>{selected.description}</div>}
                   <div style={{ display: "flex", alignItems: "center", gap: 9, fontSize: "0.8rem", color: "#555", marginBottom: 9 }}>
                     <div style={{ width: 26, height: 26, borderRadius: 8, background: "rgba(192,57,43,0.06)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{icCal}</div>
                     {new Date(selected.event_date).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })} · {new Date(selected.event_date).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
@@ -1624,7 +1624,7 @@ function EventsButton({ auth }: { auth: Auth }) {
                     <div style={{ display: "flex", alignItems: "flex-start", gap: 9, fontSize: "0.8rem", color: "#555", marginBottom: 18 }}>
                       <div style={{ width: 26, height: 26, borderRadius: 8, background: "rgba(192,57,43,0.06)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>{icPin}</div>
                       <div>
-                        <div style={{ fontWeight: 700, color: G.brun }}>{selected.city || selected.location_name}</div>
+                        <div style={{ fontWeight: 700, color: G.brun, wordBreak: "break-word", overflowWrap: "break-word" }}>{selected.city || selected.location_name}</div>
                         {selected.city && <div style={{ color: "#999", fontSize: "0.76rem", marginTop: 1 }}>{selected.location_name}</div>}
                       </div>
                     </div>
@@ -1660,7 +1660,7 @@ function EventsButton({ auth }: { auth: Auth }) {
               : mine.map(r => { const si = regStatusInfo(r.status); const ev = r.events; return (
                 <div key={r.id} style={{ background: G.blanc, borderRadius: 14, padding: 14, marginBottom: 10, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                    <span style={{ fontWeight: 700, color: G.brun, fontSize: "0.88rem" }}>{ev?.title || "Événement"}</span>
+                    <span style={{ fontWeight: 700, color: G.brun, fontSize: "0.88rem", wordBreak: "break-word", overflowWrap: "break-word" }}>{ev?.title || "Événement"}</span>
                     <span style={{ background: si.color + "1a", color: si.color, borderRadius: 50, padding: "3px 10px", fontSize: "0.7rem", fontWeight: 700 }}>{si.label}</span>
                   </div>
                   {ev?.event_date && <div style={{ fontSize: "0.78rem", color: "#888", display: "flex", alignItems: "center", gap: 5 }}>{icCal} {new Date(ev.event_date).toLocaleDateString("fr-FR", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })}</div>}
