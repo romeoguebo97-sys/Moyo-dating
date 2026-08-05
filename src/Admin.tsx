@@ -468,7 +468,7 @@ function AdminAppointments({ auth, showToast, onOpenProfile }: { auth: any; show
 //    Budget → activatePayment. Places restantes = capacity - spots_taken (compteur simple, pas
 //    de vue SQL séparée). ──
 function AdminEvents({ auth, showToast }: { auth: any; showToast: (m: string, t?: string) => void }) {
-  const emptyForm = { id: "", title: "", description: "", cover_image_url: "", location_name: "", address: "", city: "", event_date: "", capacity: "", price: "0", status: "draft" };
+  const emptyForm = { id: "", title: "", description: "", cover_image_url: "", location_name: "", address: "", city: "", event_date_only: "", event_time_only: "", capacity: "", price: "0", status: "draft" };
   const [view, setView] = useState<"list" | "form" | "registrants">("list");
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -496,7 +496,7 @@ function AdminEvents({ auth, showToast }: { auth: any; showToast: (m: string, t?
   useEffect(() => { load(); }, []);
 
   const openCreate = () => { setForm(emptyForm); setView("form"); };
-  const openEdit = (e: any) => { setForm({ id: e.id, title: e.title || "", description: e.description || "", cover_image_url: e.cover_image_url || "", location_name: e.location_name || "", address: e.address || "", city: e.city || "", event_date: e.event_date ? e.event_date.slice(0, 16) : "", capacity: e.capacity != null ? String(e.capacity) : "", price: String(e.price ?? 0), status: e.status }); setView("form"); };
+  const openEdit = (e: any) => { const d = e.event_date ? new Date(e.event_date) : null; const pad = (n: number) => String(n).padStart(2, "0"); setForm({ id: e.id, title: e.title || "", description: e.description || "", cover_image_url: e.cover_image_url || "", location_name: e.location_name || "", address: e.address || "", city: e.city || "", event_date_only: d ? `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` : "", event_time_only: d ? `${pad(d.getHours())}:${pad(d.getMinutes())}` : "", capacity: e.capacity != null ? String(e.capacity) : "", price: String(e.price ?? 0), status: e.status }); setView("form"); };
 
   const onPickCover = (ev: React.ChangeEvent<HTMLInputElement>) => {
     const file = ev.target.files?.[0]; ev.target.value = "";
@@ -515,13 +515,13 @@ function AdminEvents({ auth, showToast }: { auth: any; showToast: (m: string, t?
   };
 
   const saveEvent = async (publish: boolean) => {
-    if (!form.title.trim() || !form.event_date) { showToast("Titre et date sont obligatoires.", "error"); return; }
+    if (!form.title.trim() || !form.event_date_only || !form.event_time_only) { showToast("Titre, date et heure sont obligatoires.", "error"); return; }
     setSaving(true);
     try {
       const body: any = {
         title: form.title.trim(), description: form.description.trim() || null, cover_image_url: form.cover_image_url || null,
         location_name: form.location_name.trim() || null, address: form.address.trim() || null, city: form.city.trim() || null,
-        event_date: new Date(form.event_date).toISOString(), capacity: form.capacity.trim() ? parseInt(form.capacity) : null,
+        event_date: new Date(`${form.event_date_only}T${form.event_time_only}`).toISOString(), capacity: form.capacity.trim() ? parseInt(form.capacity) : null,
         price: parseInt(form.price) || 0, status: publish ? "published" : "draft",
       };
       if (form.id) {
@@ -611,37 +611,159 @@ function AdminEvents({ auth, showToast }: { auth: any; showToast: (m: string, t?
   const regStatusInfo = (s: string): { label: string; color: string } => s === "confirmed" ? { label: "Confirmé", color: "#27ae60" } : s === "pending_payment" ? { label: "Paiement en attente", color: "#b9770e" } : s === "attended" ? { label: "Présent", color: "#1a5c3a" } : { label: s, color: "#999" };
 
   if (view === "form") {
+    const sectionIcon = (path: React.ReactNode) => (
+      <div style={{ width: 30, height: 30, borderRadius: 9, background: "rgba(192,57,43,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{path}</svg>
+      </div>
+    );
+    const label = (text: string, required?: boolean) => <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#2C1A0E", marginBottom: 6 }}>{text}{required && <span style={{ color: "#C0392B" }}> *</span>}</div>;
+    const inputStyle: React.CSSProperties = { width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: "1.5px solid #eee", fontSize: "0.85rem", fontFamily: "inherit" };
+    const card: React.CSSProperties = { background: "#fff", borderRadius: 16, padding: 20, marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" };
+    const previewDate = form.event_date_only ? new Date(`${form.event_date_only}T${form.event_time_only || "00:00"}`) : null;
+    const isUpcoming = previewDate ? previewDate.getTime() > Date.now() : true;
+
     return (
       <div>
-        <div onClick={() => setView("list")} style={{ display: "flex", alignItems: "center", gap: 6, color: "#999", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer", marginBottom: 16 }}>
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
-          Retour à la liste
-        </div>
-        <div style={{ fontWeight: 800, fontSize: "1.05rem", color: "#2C1A0E", marginBottom: 16 }}>{form.id ? "Modifier l'événement" : "Créer un événement"}</div>
-        <div style={{ maxWidth: 520, display: "flex", flexDirection: "column", gap: 14 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16, flexWrap: "wrap", gap: 12 }}>
           <div>
-            <div style={{ fontSize: "0.8rem", fontWeight: 700, marginBottom: 6 }}>Photo de couverture</div>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <div style={{ width: 80, height: 60, borderRadius: 10, background: form.cover_image_url ? `url(${form.cover_image_url}) center/cover` : "#f1f1f1", flexShrink: 0 }} />
-              <input ref={coverFileRef} type="file" accept="image/*" onChange={onPickCover} style={{ display: "none" }} />
-              <Btn variant="ghost" onClick={() => coverFileRef.current?.click()} loading={uploadingCover} style={{ fontSize: "0.78rem", padding: "8px 14px" }}>{uploadingCover ? "Envoi..." : "Choisir une image"}</Btn>
+            <div onClick={() => setView("list")} style={{ display: "flex", alignItems: "center", gap: 6, color: "#999", fontSize: "0.8rem", fontWeight: 600, cursor: "pointer", marginBottom: 10 }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
+              Retour à la liste
+            </div>
+            <div style={{ fontWeight: 900, fontSize: "1.3rem", color: "#2C1A0E" }}>{form.id ? "Modifier l'événement" : "Créer un événement"}</div>
+            <div style={{ fontSize: "0.82rem", color: "#999", marginTop: 3 }}>Créez un événement attractif et informatif pour permettre aux membres de Moyo de réserver leur place.</div>
+          </div>
+          <div style={{ display: "flex", gap: 10, flexShrink: 0 }}>
+            <button onClick={() => saveEvent(false)} disabled={saving} style={{ display: "flex", alignItems: "center", gap: 8, background: "#fff", color: "#555", border: "1.5px solid #e5e5e5", borderRadius: 12, padding: "12px 18px", fontSize: "0.85rem", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><polyline points="17 21 17 13 7 13 7 21" /><polyline points="7 3 7 8 15 8" /></svg>
+              Enregistrer en brouillon
+            </button>
+            <button onClick={() => saveEvent(true)} disabled={saving} style={{ display: "flex", alignItems: "center", gap: 8, background: "linear-gradient(135deg,#C0392B,#922B21)", color: "#fff", border: "none", borderRadius: 12, padding: "12px 20px", fontSize: "0.85rem", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer", boxShadow: "0 4px 14px rgba(192,57,43,0.3)" }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></svg>
+              {saving ? "…" : "Publier l'événement"}
+            </button>
+          </div>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 320px", gap: 20, alignItems: "start" }}>
+          <div>
+            <div style={card}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+                {sectionIcon(<><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="M21 15l-5-5L5 21" /></>)}
+                <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#2C1A0E" }}>1. Couverture de l'événement</div>
+              </div>
+              <div onClick={() => coverFileRef.current?.click()} style={{ border: "2px dashed #e5d5d0", borderRadius: 14, padding: "34px 20px", textAlign: "center", cursor: "pointer", background: form.cover_image_url ? `url(${form.cover_image_url}) center/cover` : "#fafafa", position: "relative", minHeight: 120 }}>
+                <input ref={coverFileRef} type="file" accept="image/*" onChange={onPickCover} style={{ display: "none" }} />
+                {!form.cover_image_url && (<>
+                  <div style={{ width: 48, height: 48, borderRadius: 12, background: "rgba(192,57,43,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="M21 15l-5-5L5 21" /></svg>
+                  </div>
+                  <div style={{ fontWeight: 700, fontSize: "0.88rem", color: "#2C1A0E", marginBottom: 4 }}>{uploadingCover ? "Envoi en cours..." : "Glissez une image ici"}</div>
+                  <div style={{ fontSize: "0.76rem", color: "#aaa", marginBottom: 12 }}>ou</div>
+                  <span style={{ display: "inline-block", background: "linear-gradient(135deg,#C0392B,#922B21)", color: "#fff", borderRadius: 10, padding: "9px 18px", fontSize: "0.8rem", fontWeight: 700 }}>Choisir une image</span>
+                  <div style={{ fontSize: "0.7rem", color: "#bbb", marginTop: 12 }}>Format recommandé : 1600 x 600 px (JPG, PNG)</div>
+                </>)}
+              </div>
+            </div>
+
+            <div style={card}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+                {sectionIcon(<><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="9" y1="15" x2="15" y2="15" /></>)}
+                <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#2C1A0E" }}>2. Informations générales</div>
+              </div>
+              <div style={{ marginBottom: 14 }}>
+                {label("Titre de l'événement", true)}
+                <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Ex : Soirée Gospel Live" style={inputStyle} />
+              </div>
+              <div>
+                {label("Description", true)}
+                <textarea value={form.description} maxLength={1000} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Décrivez votre événement, les activités, le programme, les invités spéciaux…" style={{ ...inputStyle, minHeight: 90, resize: "vertical" }} />
+                <div style={{ textAlign: "right", fontSize: "0.7rem", color: "#bbb", marginTop: 4 }}>{form.description.length}/1000</div>
+              </div>
+            </div>
+
+            <div style={card}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+                {sectionIcon(<><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></>)}
+                <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#2C1A0E" }}>3. Date, heure & capacité</div>
+              </div>
+              <div style={{ display: "flex", gap: 12 }}>
+                <div style={{ flex: 1 }}>{label("Date", true)}<input type="date" value={form.event_date_only} onChange={e => setForm(f => ({ ...f, event_date_only: e.target.value }))} style={inputStyle} /></div>
+                <div style={{ flex: 1 }}>{label("Heure", true)}<input type="time" value={form.event_time_only} onChange={e => setForm(f => ({ ...f, event_time_only: e.target.value }))} style={inputStyle} /></div>
+                <div style={{ flex: 1 }}>{label("Capacité (vide = illimité)")}<input type="number" min="0" value={form.capacity} onChange={e => setForm(f => ({ ...f, capacity: e.target.value }))} placeholder="Ex : 100" style={inputStyle} /></div>
+              </div>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+              <div style={card}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+                  {sectionIcon(<><path d="M20.59 13.41 13.42 20.6a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82Z" /><circle cx="7" cy="7" r="1" /></>)}
+                  <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#2C1A0E" }}>4. Tarification</div>
+                </div>
+                {label("Prix (FCFA, 0 = gratuit)")}
+                <input type="number" min="0" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} placeholder="0" style={inputStyle} />
+                <div style={{ fontSize: "0.72rem", color: "#bbb", marginTop: 6 }}>Laissez 0 pour un événement gratuit</div>
+              </div>
+              <div style={card}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+                  {sectionIcon(<><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></>)}
+                  <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#2C1A0E" }}>5. Lieu de l'événement</div>
+                </div>
+                <div style={{ marginBottom: 12 }}>{label("Nom du lieu", true)}<input value={form.location_name} onChange={e => setForm(f => ({ ...f, location_name: e.target.value }))} placeholder="Ex : Palais des Congrès" style={inputStyle} /></div>
+                <div style={{ marginBottom: 12 }}>{label("Adresse", true)}<input value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} placeholder="Ex : Avenue Amilcar Cabral, Centre-ville" style={inputStyle} /></div>
+                <div>{label("Ville", true)}<input value={form.city} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} placeholder="Ex : Brazzaville" style={inputStyle} /></div>
+              </div>
             </div>
           </div>
-          <div><div style={{ fontSize: "0.8rem", fontWeight: 700, marginBottom: 6 }}>Titre</div><input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Ex: Soirée Speed Dating Brazzaville" style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: "1.5px solid #eee", fontSize: "0.85rem" }} /></div>
-          <div><div style={{ fontSize: "0.8rem", fontWeight: 700, marginBottom: 6 }}>Description</div><textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: "1.5px solid #eee", fontSize: "0.85rem", minHeight: 70, resize: "vertical" }} /></div>
-          <div style={{ display: "flex", gap: 10 }}>
-            <div style={{ flex: 1 }}><div style={{ fontSize: "0.8rem", fontWeight: 700, marginBottom: 6 }}>Date et heure</div><input type="datetime-local" value={form.event_date} onChange={e => setForm(f => ({ ...f, event_date: e.target.value }))} style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: "1.5px solid #eee", fontSize: "0.85rem" }} /></div>
-            <div style={{ flex: 1 }}><div style={{ fontSize: "0.8rem", fontWeight: 700, marginBottom: 6 }}>Capacité (vide = illimité)</div><input type="number" min="0" value={form.capacity} onChange={e => setForm(f => ({ ...f, capacity: e.target.value }))} placeholder="30" style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: "1.5px solid #eee", fontSize: "0.85rem" }} /></div>
-          </div>
-          <div><div style={{ fontSize: "0.8rem", fontWeight: 700, marginBottom: 6 }}>Lieu</div><input value={form.location_name} onChange={e => setForm(f => ({ ...f, location_name: e.target.value }))} placeholder="Ex: Restaurant Le Manguier" style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: "1.5px solid #eee", fontSize: "0.85rem" }} /></div>
-          <div style={{ display: "flex", gap: 10 }}>
-            <div style={{ flex: 1 }}><div style={{ fontSize: "0.8rem", fontWeight: 700, marginBottom: 6 }}>Adresse</div><input value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: "1.5px solid #eee", fontSize: "0.85rem" }} /></div>
-            <div style={{ flex: 1 }}><div style={{ fontSize: "0.8rem", fontWeight: 700, marginBottom: 6 }}>Ville</div><input value={form.city} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} placeholder="Brazzaville" style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: "1.5px solid #eee", fontSize: "0.85rem" }} /></div>
-          </div>
-          <div><div style={{ fontSize: "0.8rem", fontWeight: 700, marginBottom: 6 }}>Prix (FCFA, 0 = gratuit)</div><input type="number" min="0" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: "1.5px solid #eee", fontSize: "0.85rem" }} /></div>
-          <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
-            <Btn variant="ghost" onClick={() => saveEvent(false)} loading={saving} style={{ flex: 1 }}>Enregistrer en brouillon</Btn>
-            <Btn variant="primary" onClick={() => saveEvent(true)} loading={saving} style={{ flex: 1 }}>Publier</Btn>
+
+          <div>
+            <div style={{ background: "#fff", borderRadius: 18, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.05)", marginBottom: 16 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "14px 18px", borderBottom: "1px solid #f1f1f1" }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
+                <div style={{ fontWeight: 800, fontSize: "0.85rem", color: "#2C1A0E" }}>Aperçu de l'événement</div>
+              </div>
+              <div style={{ height: 150, background: form.cover_image_url ? `url(${form.cover_image_url}) center/cover` : "linear-gradient(135deg,#C0392B,#922B21)" }} />
+              <div style={{ padding: 18 }}>
+                <span style={{ display: "inline-block", background: "rgba(192,57,43,0.1)", color: "#C0392B", fontSize: "0.66rem", fontWeight: 800, letterSpacing: "0.03em", padding: "3px 10px", borderRadius: 6, marginBottom: 10 }}>ÉVÉNEMENT</span>
+                <div style={{ fontWeight: 900, fontSize: "1.1rem", color: "#2C1A0E", marginBottom: 12, lineHeight: 1.3 }}>{form.title || "Titre de l'événement"}</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.8rem", color: "#555", marginBottom: 8 }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
+                  {previewDate ? previewDate.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }) : "jj / mm / aaaa"}
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: 6 }}><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
+                  {form.event_time_only || "--:--"}
+                </div>
+                {(form.location_name || form.city) && (
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: "0.8rem", color: "#555", marginBottom: 14 }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: 1, flexShrink: 0 }}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>
+                    <div>
+                      <div style={{ fontWeight: 700 }}>{form.city || form.location_name}</div>
+                      {form.location_name && form.city && <div style={{ color: "#999", fontSize: "0.76rem" }}>{form.location_name}{form.address ? `, ${form.address}` : ""}</div>}
+                    </div>
+                  </div>
+                )}
+                <div style={{ borderTop: "1px solid #f1f1f1", paddingTop: 12, display: "flex", flexDirection: "column", gap: 10 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.8rem", color: "#888" }}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>Capacité</div>
+                    <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#2C1A0E" }}>{form.capacity ? `${form.capacity} places` : "Illimitée"}</div>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.8rem", color: "#888" }}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41 13.42 20.6a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82Z" /><circle cx="7" cy="7" r="1" /></svg>Prix</div>
+                    <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#2C1A0E" }}>{parseInt(form.price) > 0 ? `${parseInt(form.price).toLocaleString("fr-FR")} FCFA` : "Gratuit"}</div>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.8rem", color: "#888" }}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>Statut</div>
+                    <span style={{ background: isUpcoming ? "rgba(212,168,67,0.15)" : "rgba(153,153,153,0.15)", color: isUpcoming ? "#8B6914" : "#888", fontSize: "0.7rem", fontWeight: 700, padding: "3px 10px", borderRadius: 50 }}>{isUpcoming ? "À venir" : "Passé"}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div style={{ background: "rgba(212,168,67,0.08)", border: "1px solid rgba(212,168,67,0.25)", borderRadius: 14, padding: 16, display: "flex", gap: 10 }}>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#B9770E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}><circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" /></svg>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: "0.8rem", color: "#2C1A0E", marginBottom: 3 }}>Conseil</div>
+                <div style={{ fontSize: "0.76rem", color: "#8B6914", lineHeight: 1.5 }}>Un titre accrocheur et une belle image augmentent vos chances de remplir votre événement.</div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -971,6 +1093,7 @@ export function AdminDesktopPage() {
     verification_prompt_enabled: false,
     premium_nudge_enabled: false,
     ambassador_nudge_enabled: false,
+    events_nudge_enabled: false,
     mm_auto_propose_enabled: false,
     spontaneous_auto_propose_enabled: false,
     auto_warn_ban_contact_enabled: false,
@@ -982,7 +1105,7 @@ export function AdminDesktopPage() {
   });
   React.useEffect(() => {
     if (!auth) return;
-    const keys: AutoShortcutKey[] = ["phone_completion_prompt_enabled", "verification_prompt_enabled", "premium_nudge_enabled", "ambassador_nudge_enabled", "mm_auto_propose_enabled", "spontaneous_auto_propose_enabled", "auto_warn_ban_contact_enabled", "promo_active", "broadcast_enabled", "premium_event_active", "proposal_reminder_enabled", "appointment_reminder_enabled"];
+    const keys: AutoShortcutKey[] = ["phone_completion_prompt_enabled", "verification_prompt_enabled", "premium_nudge_enabled", "ambassador_nudge_enabled", "events_nudge_enabled", "mm_auto_propose_enabled", "spontaneous_auto_propose_enabled", "auto_warn_ban_contact_enabled", "promo_active", "broadcast_enabled", "premium_event_active", "proposal_reminder_enabled", "appointment_reminder_enabled"];
     fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(${keys.join(",")})&select=key,value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } })
       .then(r => r.json()).then(rows => {
         if (!Array.isArray(rows)) return;
@@ -3169,6 +3292,7 @@ export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () =
     verification_prompt_enabled: false,
     premium_nudge_enabled: false,
     ambassador_nudge_enabled: false,
+    events_nudge_enabled: false,
     mm_auto_propose_enabled: false,
     spontaneous_auto_propose_enabled: false,
     auto_warn_ban_contact_enabled: false,
@@ -3180,7 +3304,7 @@ export function MobileAdminConfig({ auth, onClose }: { auth: Auth; onClose: () =
   });
   React.useEffect(() => {
     if (!auth) return;
-    const keys: AutoShortcutKeyM[] = ["phone_completion_prompt_enabled", "verification_prompt_enabled", "premium_nudge_enabled", "ambassador_nudge_enabled", "mm_auto_propose_enabled", "spontaneous_auto_propose_enabled", "auto_warn_ban_contact_enabled", "promo_active", "broadcast_enabled", "premium_event_active", "proposal_reminder_enabled", "appointment_reminder_enabled"];
+    const keys: AutoShortcutKeyM[] = ["phone_completion_prompt_enabled", "verification_prompt_enabled", "premium_nudge_enabled", "ambassador_nudge_enabled", "events_nudge_enabled", "mm_auto_propose_enabled", "spontaneous_auto_propose_enabled", "auto_warn_ban_contact_enabled", "promo_active", "broadcast_enabled", "premium_event_active", "proposal_reminder_enabled", "appointment_reminder_enabled"];
     fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(${keys.join(",")})&select=key,value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } })
       .then(r => r.json()).then(rows => {
         if (!Array.isArray(rows)) return;
@@ -3914,6 +4038,7 @@ export function AdminPinGate({ auth, onBack, onBadgeCount, autoShortcuts: autoSh
     verification_prompt_enabled: false,
     premium_nudge_enabled: false,
     ambassador_nudge_enabled: false,
+    events_nudge_enabled: false,
     mm_auto_propose_enabled: false,
     spontaneous_auto_propose_enabled: false,
     auto_warn_ban_contact_enabled: false,
@@ -3925,7 +4050,7 @@ export function AdminPinGate({ auth, onBack, onBadgeCount, autoShortcuts: autoSh
   });
   useEffect(() => {
     if (autoShortcutsProp || !auth) return;
-    const keys: AutoShortcutKeyShared[] = ["phone_completion_prompt_enabled", "verification_prompt_enabled", "premium_nudge_enabled", "ambassador_nudge_enabled", "mm_auto_propose_enabled", "spontaneous_auto_propose_enabled", "auto_warn_ban_contact_enabled", "promo_active", "broadcast_enabled", "premium_event_active", "proposal_reminder_enabled", "appointment_reminder_enabled"];
+    const keys: AutoShortcutKeyShared[] = ["phone_completion_prompt_enabled", "verification_prompt_enabled", "premium_nudge_enabled", "ambassador_nudge_enabled", "events_nudge_enabled", "mm_auto_propose_enabled", "spontaneous_auto_propose_enabled", "auto_warn_ban_contact_enabled", "promo_active", "broadcast_enabled", "premium_event_active", "proposal_reminder_enabled", "appointment_reminder_enabled"];
     fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(${keys.join(",")})&select=key,value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } })
       .then(r => r.json()).then(rows => {
         if (!Array.isArray(rows)) return;
@@ -4660,7 +4785,7 @@ function AdminHelpModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-type AutoShortcutKeyShared = "phone_completion_prompt_enabled" | "verification_prompt_enabled" | "premium_nudge_enabled" | "ambassador_nudge_enabled" | "mm_auto_propose_enabled" | "spontaneous_auto_propose_enabled" | "auto_warn_ban_contact_enabled" | "promo_active" | "broadcast_enabled" | "premium_event_active" | "proposal_reminder_enabled" | "appointment_reminder_enabled";
+type AutoShortcutKeyShared = "phone_completion_prompt_enabled" | "verification_prompt_enabled" | "premium_nudge_enabled" | "ambassador_nudge_enabled" | "events_nudge_enabled" | "mm_auto_propose_enabled" | "spontaneous_auto_propose_enabled" | "auto_warn_ban_contact_enabled" | "promo_active" | "broadcast_enabled" | "premium_event_active" | "proposal_reminder_enabled" | "appointment_reminder_enabled";
 // ── Panneau de la cloche de notifications : agrège tout ce qui est en attente sur la
 //    plateforme (chaque ligne disparaît d'elle-même dès que réglée, puisque ce n'est que le
 //    reflet de vraies données en attente ailleurs) + des suggestions basées sur des règles
@@ -5037,7 +5162,19 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
 
   // ── Onglet actif ──
   const [activeTab, setActiveTab] = useState<"stats" | "users" | "reports" | "reviews" | "payments" | "logs" | "matches" | "messagerie" | "marketing" | "ambassadors" | "appointments" | "groupe">("stats");
-  const [reviewsSubTab, setReviewsSubTab] = useState<"avis" | "sondage">("avis");
+  const [reviewsSubTab, setReviewsSubTab] = useState<"avis" | "sondage" | "departs">("avis");
+  const [deleteFeedback, setDeleteFeedback] = useState<{ id: string; user_name: string; user_email: string | null; reason: string; comment: string | null; created_at: string }[]>([]);
+  const [deleteFeedbackLoading, setDeleteFeedbackLoading] = useState(false);
+  const loadDeleteFeedback = async () => {
+    if (!auth) return;
+    setDeleteFeedbackLoading(true);
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/account_deletion_feedback?select=id,user_name,user_email,reason,comment,created_at&order=created_at.desc&limit=300`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+      const d = await r.json().catch(() => []);
+      setDeleteFeedback(Array.isArray(d) ? d : []);
+    } catch { setDeleteFeedback([]); }
+    setDeleteFeedbackLoading(false);
+  };
   // ── SONDAGES ──
   const DEFAULT_SURVEY_QUESTIONS = [
     { id: "q1", text: "Êtes-vous satisfait(e) de votre expérience sur Moyo Dating ?", type: "single", options: ["Très satisfait(e)", "Satisfait(e)", "Moyen", "Insatisfait(e)"] },
@@ -7703,7 +7840,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
       default: return base;
     }
   };
-  const [mktTab, setMktTab] = useState<"statuts" | "features" | "event" | "events_admin" | "promo" | "phoneprompt" | "premiumnudge" | "ambassadornudge" | "referrals" | "inactive" | "carousel">("statuts");
+  const [mktTab, setMktTab] = useState<"statuts" | "features" | "event" | "events_admin" | "promo" | "phoneprompt" | "premiumnudge" | "ambassadornudge" | "eventsnudge" | "referrals" | "inactive" | "carousel">("statuts");
   // ── Carrousel d'engagement (Découvrir/Likes/Vues) — gestion complète depuis l'admin ──
   const [carouselAudience, setCarouselAudience] = useState<"free" | "premium">("free");
   const [carouselSlides, setCarouselSlides] = useState<CarouselSlideDB[]>([]);
@@ -7984,6 +8121,8 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
     const [premiumNudgeMessage, setPremiumNudgeMessage] = useState("Passe Premium pour multiplier tes chances de rencontre !");
     const [ambassadorNudgeTarget, setAmbassadorNudgeTarget] = useState("all");
     const [ambassadorNudgeMessage, setAmbassadorNudgeMessage] = useState("Gagne de l'argent en recommandant Moyo Dating à ton entourage. Chaque personne qui s'abonne au Premium grâce à toi te rapporte une vraie commission, versée par Mobile Money.");
+    const [eventsNudgeTarget, setEventsNudgeTarget] = useState("all");
+    const [eventsNudgeMessage, setEventsNudgeMessage] = useState("Rencontre d'autres membres Moyo Dating en vrai ! Découvre nos prochains événements et réserve ta place.");
     // ── Suivi parrainage : historique des bonus crédités (table referral_credits) ──
     const [referralCredits, setReferralCredits] = useState<{ id: string; parrain_id: string; parrain_name: string; filleul_id: string; filleul_name: string; bonus_days: number; created_at: string }[]>([]);
     const [referralCreditsLoading, setReferralCreditsLoading] = useState(false);
@@ -8584,7 +8723,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
       if (!auth) return;
       (async () => {
         try {
-          const r = await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(phone_completion_prompt_enabled,verification_prompt_enabled,premium_nudge_enabled,premium_nudge_target,premium_nudge_message,ambassador_nudge_target,ambassador_nudge_message)&select=key,value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+          const r = await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(phone_completion_prompt_enabled,verification_prompt_enabled,premium_nudge_enabled,premium_nudge_target,premium_nudge_message,ambassador_nudge_target,ambassador_nudge_message,events_nudge_target,events_nudge_message)&select=key,value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
           const rows = await r.json().catch(() => []);
           const map: Record<string, string> = {};
           (Array.isArray(rows) ? rows : []).forEach((row: any) => { map[row.key] = row.value; });
@@ -8592,6 +8731,8 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
           if (map["premium_nudge_message"] !== undefined) setPremiumNudgeMessage(map["premium_nudge_message"]);
           if (map["ambassador_nudge_target"] !== undefined) setAmbassadorNudgeTarget(map["ambassador_nudge_target"]);
           if (map["ambassador_nudge_message"] !== undefined) setAmbassadorNudgeMessage(map["ambassador_nudge_message"]);
+          if (map["events_nudge_target"] !== undefined) setEventsNudgeTarget(map["events_nudge_target"]);
+          if (map["events_nudge_message"] !== undefined) setEventsNudgeMessage(map["events_nudge_message"]);
         } catch {}
         try {
           const r2 = await fetch(`${SUPABASE_URL}/rest/v1/profiles?or=(phone.is.null,phone.eq.)&is_banned=eq.false&select=id`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "count=exact" } });
@@ -8609,6 +8750,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
     const toggleVerifyPrompt = () => onToggleAutoShortcut("verification_prompt_enabled");
     const togglePremiumNudge = () => onToggleAutoShortcut("premium_nudge_enabled");
     const toggleAmbassadorNudge = () => onToggleAutoShortcut("ambassador_nudge_enabled");
+    const toggleEventsNudge = () => onToggleAutoShortcut("events_nudge_enabled");
     const savePremiumNudgeSetting = async (key: string, value: string) => {
       if (!auth) return;
       try {
@@ -10118,6 +10260,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
         sb.delete(auth.token, "email_verifications", `?user_id=eq.${user.id}`),
         sb.delete(auth.token, "feature_requests", `?user_id=eq.${user.id}`),
         sb.delete(auth.token, "match_requests", `?user_id=eq.${user.id}`),
+        sb.delete(auth.token, "event_registrations", `?user_id=eq.${user.id}`),
       ]);
 
       // ── Étape 2 : supprimer les matchs et leurs messages ──
@@ -10190,6 +10333,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
         sb.delete(auth.token, "match_proposals", `?user1_id=eq.${user.id}`),
         sb.delete(auth.token, "match_proposals", `?user2_id=eq.${user.id}`),
         sb.delete(auth.token, "match_requests", `?user_id=eq.${user.id}`),
+        sb.delete(auth.token, "event_registrations", `?user_id=eq.${user.id}`),
         sb.delete(auth.token, "appointments", `?user_id=eq.${user.id}`),
         sb.delete(auth.token, "group_members", `?user_id=eq.${user.id}`),
         sb.delete(auth.token, "group_messages", `?sender_id=eq.${user.id}`),
@@ -14528,13 +14672,13 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
       {activeTab === "marketing" && (
         <div style={{ padding: "16px" }}>
           <div style={{ display: "flex", gap: 10, marginBottom: 16, overflowX: "auto", paddingBottom: 2 }}>
-            {([["statuts", "Statuts Moyo Dating", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>], ["features", "Mises en avant", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>], ["event", "Campagnes Premium", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>], ["events_admin", "Events", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></svg>], ["promo", "Promotion", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/><line x1="9" y1="9" x2="9" y2="9"/></svg>], ["phoneprompt", "Profil incomplet", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>], ["premiumnudge", "Inciter au Premium", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>], ["ambassadornudge", "Inciter à devenir Ambassadeur", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>], ["referrals", "Suivi parrainage", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>], ["inactive", "Relance inactifs", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>], ["carousel", "Carrousel Découvrir", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/></svg>]] as [("statuts" | "features" | "event" | "events_admin" | "promo" | "phoneprompt" | "premiumnudge" | "ambassadornudge" | "referrals" | "inactive" | "carousel"), string, React.ReactElement][]).map(([k, lbl, ico]) => (
+            {([["statuts", "Statuts Moyo Dating", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>], ["features", "Mises en avant", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>], ["event", "Campagnes Premium", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>], ["events_admin", "Events", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></svg>], ["promo", "Promotion", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/><line x1="9" y1="9" x2="9" y2="9"/></svg>], ["phoneprompt", "Profil incomplet", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>], ["premiumnudge", "Inciter au Premium", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>], ["ambassadornudge", "Inciter à devenir Ambassadeur", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>], ["eventsnudge", "Inciter aux Événements", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></svg>], ["referrals", "Suivi parrainage", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>], ["inactive", "Relance inactifs", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>], ["carousel", "Carrousel Découvrir", <svg key="i" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/></svg>]] as [("statuts" | "features" | "event" | "events_admin" | "promo" | "phoneprompt" | "premiumnudge" | "ambassadornudge" | "eventsnudge" | "referrals" | "inactive" | "carousel"), string, React.ReactElement][]).map(([k, lbl, ico]) => (
               <button key={k} onClick={() => setMktTab(k)} style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 7, padding: "9px 18px", borderRadius: 999, cursor: "pointer", fontSize: "0.82rem", fontWeight: 800, background: mktTab === k ? "#E67E22" : "#fff", color: mktTab === k ? "#fff" : "#555", border: mktTab === k ? "none" : `1.5px solid ${G.gris}`, boxShadow: mktTab === k ? "0 4px 12px rgba(230,126,34,0.25)" : "none" }}>{ico}{lbl}{k === "features" && featurePendingCount > 0 && <span style={{ background: mktTab === k ? "#fff" : "#E67E22", color: mktTab === k ? "#E67E22" : "#fff", borderRadius: 50, fontSize: "0.6rem", fontWeight: 800, padding: "1px 6px", lineHeight: 1.5 }}>{featurePendingCount > 99 ? "99+" : featurePendingCount}</span>}</button>
             ))}
           </div>
 
           {/* ── Cartes KPI (contextuelles selon le sous-onglet, masquées sur Événement Premium) ── */}
-          {mktTab !== "event" && mktTab !== "events_admin" && mktTab !== "promo" && mktTab !== "phoneprompt" && mktTab !== "premiumnudge" && mktTab !== "ambassadornudge" && mktTab !== "referrals" && mktTab !== "inactive" && mktTab !== "carousel" && (
+          {mktTab !== "event" && mktTab !== "events_admin" && mktTab !== "promo" && mktTab !== "phoneprompt" && mktTab !== "premiumnudge" && mktTab !== "ambassadornudge" && mktTab !== "eventsnudge" && mktTab !== "referrals" && mktTab !== "inactive" && mktTab !== "carousel" && (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: 12, marginBottom: 16 }}>
             {(mktTab === "statuts" ? [
               { ic: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>, bg: "rgba(192,57,43,0.12)", label: "Statuts actifs", value: officialStatuses.length, sub: "En ligne actuellement", subColor: G.rouge },
@@ -14886,6 +15030,32 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               <div>
                 <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#999", marginBottom: 6 }}>Message affiché dans la fenêtre</div>
                 <textarea value={ambassadorNudgeMessage} onChange={e => setAmbassadorNudgeMessage(e.target.value)} onBlur={() => savePremiumNudgeSetting("ambassador_nudge_message", ambassadorNudgeMessage)} rows={3} style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.85rem", fontFamily: "inherit", resize: "vertical" }} />
+              </div>
+            </div>
+          )}
+
+          {mktTab === "eventsnudge" && (
+            <div style={{ background: G.blanc, borderRadius: 18, padding: 20, boxShadow: "0 2px 10px rgba(0,0,0,0.05)", maxWidth: 640 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                <div>
+                  <div style={{ fontSize: "0.95rem", fontWeight: 800, color: G.brun }}>Inciter aux Événements</div>
+                  <div style={{ fontSize: "0.78rem", color: "#888", marginTop: 4, lineHeight: 1.5 }}>Affiche une fenêtre au groupe ciblé, une fois par jour maximum, pour proposer de découvrir les événements. Le bouton ouvre directement la liste des événements dans Profil. Inactif si les Événements sont désactivés (Fonctionnalités).</div>
+                </div>
+                <SwitchBtn on={autoShortcuts.events_nudge_enabled} onToggle={toggleEventsNudge} />
+              </div>
+              <div style={{ marginBottom: 14 }}>
+                <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#999", marginBottom: 6 }}>Cible</div>
+                <select value={eventsNudgeTarget} onChange={e => { setEventsNudgeTarget(e.target.value); savePremiumNudgeSetting("events_nudge_target", e.target.value); }} style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.85rem", background: G.blanc }}>
+                  <option value="all">Tous les membres</option>
+                  <option value="femmes">Femmes uniquement</option>
+                  <option value="hommes">Hommes uniquement</option>
+                  <option value="nouveaux">Nouveaux inscrits (moins de 7 jours)</option>
+                  <option value="inactifs">Inactifs (plus de 14 jours sans connexion)</option>
+                </select>
+              </div>
+              <div>
+                <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#999", marginBottom: 6 }}>Message affiché dans la fenêtre</div>
+                <textarea value={eventsNudgeMessage} onChange={e => setEventsNudgeMessage(e.target.value)} onBlur={() => savePremiumNudgeSetting("events_nudge_message", eventsNudgeMessage)} rows={3} style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.85rem", fontFamily: "inherit", resize: "vertical" }} />
               </div>
             </div>
           )}
@@ -16043,6 +16213,10 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
               Sondage
             </button>
+            <button onClick={() => { setReviewsSubTab("departs"); loadDeleteFeedback(); }} style={{ flex: 1, padding: "9px", borderRadius: 10, border: `1.5px solid ${reviewsSubTab === "departs" ? "#C0392B" : G.gris}`, background: reviewsSubTab === "departs" ? "#C0392B" : "#fff", color: reviewsSubTab === "departs" ? "#fff" : "#666", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+              Départs
+            </button>
           </div>
           {reviewsSubTab === "sondage" ? (
             <div>
@@ -16078,6 +16252,48 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   </div>
                 );
               })}
+            </div>
+          ) : reviewsSubTab === "departs" ? (
+            <div>
+              <div style={{ fontSize: "0.78rem", color: "#888", marginBottom: 16, lineHeight: 1.5 }}>Motifs indiqués par les membres qui ont supprimé leur compte, saisis juste avant la suppression.</div>
+              {(() => {
+                const counts: Record<string, number> = {};
+                deleteFeedback.forEach(f => { counts[f.reason] = (counts[f.reason] || 0) + 1; });
+                const total = deleteFeedback.length;
+                const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+                return total > 0 && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
+                    {sorted.map(([reason, n]) => (
+                      <div key={reason} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <div style={{ flex: 1, fontSize: "0.8rem", color: G.brun }}>{reason}</div>
+                        <div style={{ width: 140, height: 8, borderRadius: 4, background: "#f1f1f1", overflow: "hidden", flexShrink: 0 }}>
+                          <div style={{ width: `${(n / total) * 100}%`, height: "100%", background: "#C0392B" }} />
+                        </div>
+                        <div style={{ width: 30, textAlign: "right", fontSize: "0.78rem", fontWeight: 700, color: G.brun, flexShrink: 0 }}>{n}</div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+              {deleteFeedbackLoading ? (
+                <div style={{ textAlign: "center", padding: 40, color: "#aaa" }}>Chargement…</div>
+              ) : deleteFeedback.length === 0 ? (
+                <div style={{ background: G.blanc, borderRadius: 14, padding: 32, textAlign: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+                  <p style={{ color: "#999", fontSize: "0.86rem" }}>Aucun départ enregistré pour l'instant.</p>
+                </div>
+              ) : deleteFeedback.map(f => (
+                <div key={f.id} style={{ background: G.blanc, borderRadius: 14, padding: 16, marginBottom: 10, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, marginBottom: 6 }}>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>{f.user_name || "Ancien membre"}</div>
+                      {f.user_email && <div style={{ fontSize: "0.74rem", color: "#999" }}>{f.user_email}</div>}
+                    </div>
+                    <div style={{ fontSize: "0.7rem", color: "#bbb", flexShrink: 0 }}>{new Date(f.created_at).toLocaleDateString("fr-FR")}</div>
+                  </div>
+                  <span style={{ display: "inline-block", background: "rgba(192,57,43,0.08)", color: "#C0392B", fontSize: "0.72rem", fontWeight: 700, padding: "3px 10px", borderRadius: 50, marginBottom: 8 }}>{f.reason}</span>
+                  {f.comment && <div style={{ fontSize: "0.82rem", color: "#555", lineHeight: 1.5, background: G.creme, borderRadius: 10, padding: "10px 12px", marginTop: 4 }}>{f.comment}</div>}
+                </div>
+              ))}
             </div>
           ) : reviewsLoading ? (
             <div style={{ textAlign: "center", padding: 60 }}>

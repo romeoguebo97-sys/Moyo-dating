@@ -1029,6 +1029,137 @@ export function DateTimePicker({ date, hour, minute, onChange }: { date: string;
 // Vrai modal de choix de date/heure (remplace le prompt navigateur)
 
 // Carte + modal côté utilisateur (formulaire de demande + « Mes rendez-vous »)
+// ── Écran de paiement Mobile Money partagé — même style visuel (jaune MTN / rouge Airtel, code à
+//    composer, puis saisie de la référence) que celui du Premium, pour rester familier, mais
+//    générique : un seul composant réutilisé par Rendez-vous ET Événements au lieu de deux copies
+//    distinctes. Ne touche jamais à payment_requests/premium directement — l'appelant fournit
+//    juste le montant, le motif affiché, et onSubmit(operator, txRef) pour ses propres écritures. ──
+function MobileMoneyPayment({ amount, description, onSubmit, onCancel }: { amount: number; description: string; onSubmit: (operator: "MTN" | "Airtel", txRef: string) => Promise<boolean>; onCancel: () => void }) {
+  const mtnLogo = (h = 18) => <svg viewBox="0 0 120 60" width={h * 2} height={h} xmlns="http://www.w3.org/2000/svg"><rect width="120" height="60" fill="#FFCC00" rx="8" /><ellipse cx="60" cy="30" rx="52" ry="24" fill="none" stroke="#1a1a1a" strokeWidth="5" /><text x="60" y="39" textAnchor="middle" fontFamily="Arial Black, sans-serif" fontWeight="900" fontSize="24" fill="#1a1a1a">MTN</text></svg>;
+  const airtelLogo = (h = 22) => <img src={`${SUPABASE_URL}/storage/v1/object/public/assets/airtel-logo.png`} alt="Airtel" style={{ height: h, width: "auto", display: "block", borderRadius: 6 }} />;
+  const [step, setStep] = useState<"choose" | "pay" | "confirm" | "sent">("choose");
+  const [operator, setOperator] = useState<"MTN" | "Airtel" | null>(null);
+  const [txRef, setTxRef] = useState("");
+  const [err, setErr] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const OP = operator === "MTN"
+    ? { name: "MTN MoMo", main: "#FFCC00", onColor: "#1a1a1a", numBg: "#F5A623", numColor: "#fff", responsable: PAY_MTN_RESPONSABLE, ussd: `*105*1*1*${PAY_MTN_NUMBER}*${amount}#`, logo: mtnLogo(20), subColor: "rgba(0,0,0,0.65)", placeholder: "Ex : 7753031542" }
+    : { name: "Airtel Money", main: "#FF0100", onColor: "#fff", numBg: "#FF0100", numColor: "#fff", responsable: PAY_AIRTEL_RESPONSABLE, ussd: `*128*2*1*1*${PAY_AIRTEL_NUMBER}*${amount}#`, logo: airtelLogo(22), subColor: "rgba(255,255,255,0.9)", placeholder: "Ex de l'ID : PP260523.2232.A52074" };
+
+  useEffect(() => {
+    const body = document.body, html = document.documentElement;
+    const prevB = body.style.overflow, prevH = html.style.overflow;
+    body.style.overflow = "hidden"; html.style.overflow = "hidden";
+    return () => { body.style.overflow = prevB; html.style.overflow = prevH; };
+  }, []);
+
+  if (step === "choose") {
+    return (
+      <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 99000, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
+        <div className="moyo-sheet-in" style={{ background: "#f6f6f7", width: "100%", maxWidth: 460, maxHeight: "92vh", display: "flex", flexDirection: "column", overscrollBehavior: "contain" }}>
+          <div style={{ background: G.brun, padding: "calc(env(safe-area-inset-top) + 16px) 18px 14px", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div style={{ color: "#fff", fontWeight: 800, fontSize: "1.05rem" }}>Paiement</div>
+            <div onClick={onCancel} style={{ cursor: "pointer", background: "rgba(255,255,255,0.2)", borderRadius: "50%", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 700 }}>✕</div>
+          </div>
+          <div style={{ padding: 16 }}>
+            <div style={{ background: G.blanc, borderRadius: 16, padding: 16, marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
+              <div style={{ fontSize: "0.82rem", color: "#666" }}>{description}</div>
+              <div style={{ fontSize: "1.35rem", fontWeight: 800, color: G.brun, marginTop: 4 }}>{amount.toLocaleString("fr-FR")} FCFA</div>
+            </div>
+            <div style={{ fontSize: "0.82rem", fontWeight: 700, color: G.brun, marginBottom: 8 }}>Choisis ton opérateur Mobile Money</div>
+            {(["MTN", "Airtel"] as const).map(op => (
+              <div key={op} onClick={() => { setOperator(op); setStep("pay"); }} style={{ display: "flex", alignItems: "center", gap: 12, padding: 14, background: G.blanc, borderRadius: 14, marginBottom: 10, cursor: "pointer", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
+                {op === "MTN" ? mtnLogo(20) : airtelLogo(24)}
+                <div style={{ fontWeight: 700, fontSize: "0.9rem", color: G.brun }}>{op === "MTN" ? "MTN MoMo" : "Airtel Money"}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (step === "pay" && operator) {
+    return (
+      <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 99000, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
+        <div className="moyo-sheet-in" style={{ background: "#f6f6f7", width: "100%", maxWidth: 460, maxHeight: "92vh", display: "flex", flexDirection: "column", overscrollBehavior: "contain" }}>
+          <div style={{ background: OP.main, padding: "calc(env(safe-area-inset-top) + 16px) 18px 14px", flexShrink: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div onClick={() => setStep("choose")} style={{ cursor: "pointer", background: OP.onColor === "#fff" ? "rgba(255,255,255,0.22)" : "rgba(0,0,0,0.1)", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={OP.onColor} strokeWidth="2.5" strokeLinecap="round"><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" /></svg>
+              </div>
+              {OP.logo}
+              <div style={{ fontWeight: 800, fontSize: "1.15rem", color: OP.onColor }}>{OP.name}</div>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 8, marginLeft: 4, fontSize: "0.82rem", color: OP.subColor, fontWeight: 600 }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={OP.onColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.8 }}><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+              Paiement sécurisé • {amount.toLocaleString("fr-FR")} FCFA
+            </div>
+          </div>
+          <div style={{ flex: 1, overflowY: "auto", padding: 16, overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}>
+            <div style={{ background: G.blanc, borderRadius: 16, padding: 18, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+                <div style={{ width: 26, height: 26, borderRadius: "50%", background: OP.numBg, color: OP.numColor, fontWeight: 800, fontSize: "0.85rem", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>1</div>
+                <div style={{ fontWeight: 800, fontSize: "1.02rem", color: "#1a1a2e" }}>Effectuez votre paiement</div>
+              </div>
+              <div style={{ fontSize: "0.86rem", color: "#666", lineHeight: 1.55, marginBottom: 16 }}>Votre paiement {OP.name} sera reçu et traité par notre responsable des finances.<br /><span style={{ fontWeight: 700, color: "#444" }}>{OP.responsable}</span></div>
+              <div style={{ background: "#f2f2f3", borderRadius: 12, padding: 13, textAlign: "center" }}>
+                <div style={{ fontSize: "0.78rem", color: "#999", marginBottom: 6 }}>Composez ce code depuis votre mobile</div>
+                <div style={{ fontSize: "1.05rem", fontWeight: 800, color: "#1a1a2e", fontFamily: "monospace", letterSpacing: 0.5 }}>{OP.ussd}</div>
+              </div>
+            </div>
+          </div>
+          <div style={{ padding: "14px 16px", background: G.blanc, borderTop: "1px solid #eee", flexShrink: 0 }}>
+            <button onClick={() => setStep("confirm")} style={{ width: "100%", background: OP.main, color: OP.onColor, border: "none", borderRadius: 50, padding: 15, fontSize: "0.95rem", fontWeight: 800, cursor: "pointer" }}>J'ai payé, suivant →</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (step === "confirm" && operator) {
+    const submit = async () => {
+      if (!txRef.trim()) { setErr("Entre la référence (ID) de ton paiement."); return; }
+      setLoading(true); setErr("");
+      const ok = await onSubmit(operator, txRef.trim());
+      setLoading(false);
+      if (ok) setStep("sent"); else setErr("Échec de l'envoi. Réessaie.");
+    };
+    return (
+      <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 99000, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
+        <div className="moyo-sheet-in" style={{ background: "#f6f6f7", width: "100%", maxWidth: 460, maxHeight: "92vh", display: "flex", flexDirection: "column", overscrollBehavior: "contain" }}>
+          <div style={{ background: OP.main, padding: "calc(env(safe-area-inset-top) + 16px) 18px 14px", flexShrink: 0, display: "flex", alignItems: "center", gap: 12 }}>
+            <div onClick={() => setStep("pay")} style={{ cursor: "pointer", background: OP.onColor === "#fff" ? "rgba(255,255,255,0.22)" : "rgba(0,0,0,0.1)", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={OP.onColor} strokeWidth="2.5" strokeLinecap="round"><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" /></svg>
+            </div>
+            <div style={{ fontWeight: 800, fontSize: "1.05rem", color: OP.onColor }}>Confirmer le paiement</div>
+          </div>
+          <div style={{ padding: 16 }}>
+            <div style={{ fontSize: "0.8rem", fontWeight: 700, color: G.brun, marginBottom: 6 }}>Référence (ID) de ton paiement</div>
+            <input value={txRef} onChange={e => setTxRef(e.target.value)} placeholder={OP.placeholder} style={{ width: "100%", boxSizing: "border-box", padding: "12px 14px", borderRadius: 12, border: "1.5px solid #ddd", fontSize: "0.9rem" }} />
+            {err && <div style={{ background: "rgba(231,76,60,0.08)", border: "1.5px solid #e74c3c", borderRadius: 10, padding: "10px 12px", marginTop: 12, fontSize: "0.8rem", color: "#c0392b", lineHeight: 1.5 }}>{err}</div>}
+            <button onClick={submit} disabled={loading} style={{ width: "100%", marginTop: 16, background: loading ? "#ccc" : OP.main, color: OP.onColor, border: "none", borderRadius: 50, padding: 15, fontSize: "0.95rem", fontWeight: 800, cursor: loading ? "not-allowed" : "pointer" }}>{loading ? "Envoi…" : "Confirmer et envoyer"}</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", zIndex: 99000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+      <div className="moyo-card-in" style={{ background: G.blanc, borderRadius: 20, padding: "32px 26px", width: "100%", maxWidth: 340, textAlign: "center" }}>
+        <div style={{ width: 60, height: 60, borderRadius: "50%", background: "rgba(212,168,67,0.14)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#D4A843" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+        </div>
+        <div style={{ fontSize: "1.15rem", fontWeight: 800, color: G.brun, marginBottom: 8 }}>Demande envoyée</div>
+        <p style={{ fontSize: "0.85rem", color: "#8a8a8a", lineHeight: 1.5, marginBottom: 20 }}>Notre équipe vérifie ton paiement, ça ne prend généralement pas longtemps.</p>
+        <Btn variant="primary" onClick={onCancel} style={{ width: "100%" }}>Terminer</Btn>
+      </div>
+    </div>
+  );
+}
+
 function AppointmentsButton({ auth, onShowPremium }: { auth: any; onShowPremium: (msg: string) => void }) {
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<"new" | "list">("new");
@@ -1043,8 +1174,6 @@ function AppointmentsButton({ auth, onShowPremium }: { auth: any; onShowPremium:
   const [err, setErr] = useState("");
   const [sent, setSent] = useState(false);
   const [payView, setPayView] = useState(false);
-  const [operator, setOperator] = useState<"MTN" | "Airtel">("MTN");
-  const [txRef, setTxRef] = useState("");
   const [confirmDel, setConfirmDel] = useState<any>(null);
   // ── Ouverture directe depuis le carrousel (même principe que "Deviens Ambassadeur") : évite
   //    de faire cliquer une seconde fois sur la carte une fois arrivé sur le Profil. ──
@@ -1118,16 +1247,15 @@ function AppointmentsButton({ auth, onShowPremium }: { auth: any; onShowPremium:
     // Physique → étape de paiement Mobile Money
     setErr(""); setPayView(true);
   };
-  const payAndCreate = async () => {
-    if (!txRef.trim()) { setErr("Entrez la référence (ID) de votre paiement Mobile Money."); return; }
-    setSending(true); setErr("");
-    const row = await createAppointment({ price: APPOINTMENT_PHYSICAL_PRICE, payment_status: "en_attente_validation", operator, tx_ref: txRef.trim() });
-    if (!row) { setSending(false); return; }
+  const payAndCreate = async (operator: "MTN" | "Airtel", txRef: string): Promise<boolean> => {
+    const row = await createAppointment({ price: APPOINTMENT_PHYSICAL_PRICE, payment_status: "en_attente_validation", operator, tx_ref: txRef });
+    if (!row) return false;
     // Demande de paiement RDV -> validée dans Budget, MAIS distincte du Premium (kind = "appointment")
     try {
-      await fetch(`${SUPABASE_URL}/rest/v1/payment_requests`, { method: "POST", headers: { "Content-Type": "application/json", apikey: SUPABASE_KEY, Authorization: `Bearer ${auth.token}`, Prefer: "return=representation" }, body: JSON.stringify({ user_id: auth.userId, operator, tx_ref: txRef.trim(), amount: APPOINTMENT_PHYSICAL_PRICE, status: "pending", kind: "appointment", appointment_id: row.id }) });
+      await fetch(`${SUPABASE_URL}/rest/v1/payment_requests`, { method: "POST", headers: { "Content-Type": "application/json", apikey: SUPABASE_KEY, Authorization: `Bearer ${auth.token}`, Prefer: "return=representation" }, body: JSON.stringify({ user_id: auth.userId, operator, tx_ref: txRef, amount: APPOINTMENT_PHYSICAL_PRICE, status: "pending", kind: "appointment", appointment_id: row.id }) });
     } catch {}
-    setSending(false); setPayView(false); setSent(true);
+    setPayView(false); setSent(true);
+    return true;
   };
 
   if (!APPOINTMENTS_ENABLED) return null;
@@ -1144,15 +1272,14 @@ function AppointmentsButton({ auth, onShowPremium }: { auth: any; onShowPremium:
           <div style={{ fontSize: "0.78rem", color: "#888", lineHeight: 1.4 }}>Étudier votre cas, améliorer votre profil, être accompagné</div>
         </div>
       </div>
-      <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-        <button onClick={() => { setOpen(true); setView("new"); setSent(false); setPayView(false); setTxRef(""); setErr(""); }} style={{ flex: 1, background: `linear-gradient(135deg,${G.vert},#0f3d25)`, color: "#fff", border: "none", borderRadius: 10, padding: "10px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer" }}>Demander un rendez-vous</button>
-        <button onClick={() => { setOpen(true); setView("list"); loadList(); }} style={{ flex: 1, background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer" }}>Mes rendez-vous</button>
+      <div style={{ marginTop: 12 }}>
+        <button onClick={() => { setOpen(true); setView("new"); setSent(false); setPayView(false); setErr(""); }} style={{ width: "100%", background: `linear-gradient(135deg,${G.vert},#0f3d25)`, color: "#fff", border: "none", borderRadius: 10, padding: "11px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>Rendez-vous / Mes rendez-vous</button>
       </div>
     </div>
 
-    {open && <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10005, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }} onClick={() => setOpen(false)}>
-      <div className="moyo-sheet-in" onClick={e => e.stopPropagation()} style={{ background: G.creme, borderRadius: "24px 24px 0 0", width: "100%", maxWidth: 500, maxHeight: "92vh", overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}>
-        <div style={{ position: "sticky", top: 0, background: `linear-gradient(135deg,${G.vert},#0f3d25)`, padding: "18px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 2 }}>
+    {open && <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: G.creme, zIndex: 10005, display: "flex", flexDirection: "column", overscrollBehavior: "contain" }}>
+      <div onClick={e => e.stopPropagation()} style={{ display: "flex", flexDirection: "column", height: "100%", overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}>
+        <div style={{ position: "sticky", top: 0, background: `linear-gradient(135deg,${G.vert},#0f3d25)`, padding: "calc(env(safe-area-inset-top) + 16px) 20px 18px", display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 2 }}>
           <div style={{ color: "#fff", fontWeight: 800, fontSize: "1.05rem" }}>Rendez-vous Moyo</div>
           <div onClick={() => setOpen(false)} style={{ background: "rgba(255,255,255,0.2)", borderRadius: "50%", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#fff", fontWeight: 700 }}>✕</div>
         </div>
@@ -1169,30 +1296,6 @@ function AppointmentsButton({ auth, onShowPremium }: { auth: any; onShowPremium:
                 <div style={{ fontWeight: 800, color: G.brun, fontSize: "1rem", marginBottom: 6 }}>Demande envoyée !</div>
                 <div style={{ fontSize: "0.83rem", color: "#666", lineHeight: 1.5, marginBottom: 18 }}>Votre demande de rendez-vous est en attente. Notre équipe vous confirmera un créneau prochainement.</div>
                 <button onClick={() => { setView("list"); loadList(); }} style={{ background: G.vert, color: "#fff", border: "none", borderRadius: 10, padding: "11px 22px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>Voir mes rendez-vous</button>
-              </div>
-            ) : payView ? (
-              <div>
-                <div style={{ background: "rgba(26,92,58,0.06)", border: "1px solid rgba(26,92,58,0.2)", borderRadius: 12, padding: "12px 14px", marginBottom: 14 }}>
-                  <div style={{ fontSize: "0.8rem", color: "#555", lineHeight: 1.5 }}>Rendez-vous à l'agence, service payant</div>
-                  <div style={{ fontSize: "1.35rem", fontWeight: 800, color: G.vert, marginTop: 4 }}>{APPOINTMENT_PHYSICAL_PRICE.toLocaleString("fr-FR")} FCFA</div>
-                </div>
-                <div style={{ fontSize: "0.8rem", fontWeight: 700, color: G.brun, marginBottom: 6 }}>Opérateur Mobile Money</div>
-                <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-                  {(["MTN", "Airtel"] as const).map(op => (
-                    <button key={op} onClick={() => setOperator(op)} style={{ flex: 1, background: operator === op ? G.vert : G.blanc, color: operator === op ? "#fff" : "#666", border: `1.5px solid ${operator === op ? G.vert : G.gris}`, borderRadius: 10, padding: "12px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer" }}>{op} MoMo</button>
-                  ))}
-                </div>
-                <div style={{ background: G.blanc, border: `1.5px dashed ${G.gris}`, borderRadius: 12, padding: "12px 14px", marginBottom: 14, textAlign: "center" }}>
-                  <div style={{ fontSize: "0.72rem", color: "#888" }}>Envoyez {APPOINTMENT_PHYSICAL_PRICE.toLocaleString("fr-FR")} FCFA au numéro</div>
-                  <div style={{ fontSize: "1.2rem", fontWeight: 800, color: G.brun, letterSpacing: 1 }}>{operator === "MTN" ? PAY_MTN_NUMBER : PAY_AIRTEL_NUMBER}</div>
-                </div>
-                <div style={{ marginBottom: 14 }}>
-                  <div style={{ fontSize: "0.8rem", fontWeight: 700, color: G.brun, marginBottom: 6 }}>Référence (ID) de votre paiement</div>
-                  <input value={txRef} onChange={e => setTxRef(e.target.value)} placeholder="Ex : 7753031542" style={APPT_INPUT} />
-                </div>
-                {err && <div style={{ background: "rgba(231,76,60,0.08)", border: "1.5px solid #e74c3c", borderRadius: 10, padding: "10px 12px", marginBottom: 12, fontSize: "0.8rem", color: "#c0392b", lineHeight: 1.5 }}>{err}</div>}
-                <button onClick={payAndCreate} disabled={sending} style={{ width: "100%", background: sending ? "#9bb8a8" : `linear-gradient(135deg,${G.vert},#0f3d25)`, color: "#fff", border: "none", borderRadius: 12, padding: "14px", fontSize: "0.92rem", fontWeight: 800, cursor: sending ? "not-allowed" : "pointer" }}>{sending ? "Envoi…" : "J'ai payé, envoyer la demande"}</button>
-                <button onClick={() => { setPayView(false); setErr(""); }} style={{ width: "100%", marginTop: 8, background: "none", border: "none", color: "#888", fontSize: "0.8rem", fontWeight: 600, cursor: "pointer" }}>← Retour</button>
               </div>
             ) : (<>
               {!onlyType && <div style={{ marginBottom: 14 }}>
@@ -1246,6 +1349,13 @@ function AppointmentsButton({ auth, onShowPremium }: { auth: any; onShowPremium:
       </div>
     </div>}
 
+    {payView && <MobileMoneyPayment
+      amount={APPOINTMENT_PHYSICAL_PRICE}
+      description="Rendez-vous à l'agence, service payant"
+      onSubmit={payAndCreate}
+      onCancel={() => setPayView(false)}
+    />}
+
     {confirmDel && <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10020, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, overscrollBehavior: "contain", touchAction: "none" }} onClick={() => !deleting && setConfirmDel(null)}>
       <div className="moyo-card-in" onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 360, padding: "22px 20px", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
         <div style={{ fontWeight: 800, fontSize: "1rem", color: G.brun, marginBottom: 8 }}>Supprimer ce rendez-vous ?</div>
@@ -1274,13 +1384,23 @@ function EventsButton({ auth }: { auth: Auth }) {
   const [mine, setMine] = useState<any[]>([]);
   const [mineLoading, setMineLoading] = useState(false);
   const [payView, setPayView] = useState(false);
-  const [operator, setOperator] = useState<"MTN" | "Airtel">("MTN");
-  const [txRef, setTxRef] = useState("");
   const [sending, setSending] = useState(false);
   const [err, setErr] = useState("");
   const [sent, setSent] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState<any>(null);
   const [cancelling, setCancelling] = useState(false);
+
+  // ── Ouverture directe depuis le carrousel (même principe que Rendez-vous/Ambassadeur) ──
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem("moyo_open_events") === "1") {
+        sessionStorage.removeItem("moyo_open_events");
+        setView("browse");
+        setOpen(true);
+        loadEvents();
+      }
+    } catch {}
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -1325,18 +1445,17 @@ function EventsButton({ auth }: { auth: Auth }) {
     } catch { setErr("Erreur réseau."); }
     setSending(false);
   };
-  const payAndRegister = async () => {
-    if (!selected) return;
-    if (!txRef.trim()) { setErr("Entre la référence (ID) de ton paiement Mobile Money."); return; }
-    setSending(true); setErr("");
+  const payAndRegister = async (operator: "MTN" | "Airtel", txRef: string): Promise<boolean> => {
+    if (!selected) return false;
+    setErr("");
     try {
       const r = await fetch(`${SUPABASE_URL}/rest/v1/event_registrations`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=representation" }, body: JSON.stringify({ event_id: selected.id, user_id: auth.userId, status: "pending_payment" }) });
       const body = await r.json().catch(() => null); const row = Array.isArray(body) ? body[0] : body;
-      if (!r.ok || !row?.id) { setErr(row?.message || "Inscription impossible. Réessaie."); setSending(false); return; }
-      await fetch(`${SUPABASE_URL}/rest/v1/payment_requests`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ user_id: auth.userId, operator, tx_ref: txRef.trim(), amount: selected.price, status: "pending", kind: "event", event_registration_id: row.id }) });
+      if (!r.ok || !row?.id) return false;
+      await fetch(`${SUPABASE_URL}/rest/v1/payment_requests`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" }, body: JSON.stringify({ user_id: auth.userId, operator, tx_ref: txRef, amount: selected.price, status: "pending", kind: "event", event_registration_id: row.id }) });
       setPayView(false); setSent(true);
-    } catch { setErr("Erreur réseau."); }
-    setSending(false);
+      return true;
+    } catch { return false; }
   };
   const cancelRegistration = async (reg: any) => {
     setCancelling(true);
@@ -1364,15 +1483,14 @@ function EventsButton({ auth }: { auth: Auth }) {
           <div style={{ fontSize: "0.78rem", color: "#888", lineHeight: 1.4 }}>Rencontrez d'autres membres en vrai</div>
         </div>
       </div>
-      <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-        <button onClick={() => { setOpen(true); setView("browse"); loadEvents(); }} style={{ flex: 1, background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: "#fff", border: "none", borderRadius: 10, padding: "10px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer" }}>Voir les événements</button>
-        <button onClick={() => { setOpen(true); setView("mine"); loadMine(); }} style={{ flex: 1, background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "10px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer" }}>Mes inscriptions</button>
+      <div style={{ marginTop: 12 }}>
+        <button onClick={() => { setOpen(true); setView("browse"); loadEvents(); }} style={{ width: "100%", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: "#fff", border: "none", borderRadius: 10, padding: "11px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>Événements / Mes inscriptions</button>
       </div>
     </div>
 
-    {open && <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10005, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }} onClick={() => setOpen(false)}>
-      <div className="moyo-sheet-in" onClick={e => e.stopPropagation()} style={{ background: G.creme, borderRadius: "24px 24px 0 0", width: "100%", maxWidth: 500, maxHeight: "92vh", overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}>
-        <div style={{ position: "sticky", top: 0, background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, padding: "18px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 2 }}>
+    {open && <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: G.creme, zIndex: 10005, display: "flex", flexDirection: "column", overscrollBehavior: "contain" }}>
+      <div onClick={e => e.stopPropagation()} style={{ display: "flex", flexDirection: "column", height: "100%", overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}>
+        <div style={{ position: "sticky", top: 0, background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, padding: "calc(env(safe-area-inset-top) + 16px) 20px 18px", display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 2 }}>
           <div style={{ color: "#fff", fontWeight: 800, fontSize: "1.05rem" }}>{view === "detail" ? "Détail de l'événement" : "Événements Moyo"}</div>
           <div onClick={() => setOpen(false)} style={{ background: "rgba(255,255,255,0.2)", borderRadius: "50%", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#fff", fontWeight: 700 }}>✕</div>
         </div>
@@ -1393,7 +1511,7 @@ function EventsButton({ auth }: { auth: Auth }) {
                 const left = spotsLeft(e);
                 const full = left !== null && left <= 0;
                 return (
-                  <div key={e.id} onClick={() => { if (full) return; setSelected(e); setView("detail"); setPayView(false); setSent(false); setErr(""); setTxRef(""); }} style={{ background: G.blanc, borderRadius: 16, overflow: "hidden", marginBottom: 12, boxShadow: "0 2px 10px rgba(0,0,0,0.06)", cursor: full ? "default" : "pointer", opacity: full ? 0.6 : 1 }}>
+                  <div key={e.id} onClick={() => { if (full) return; setSelected(e); setView("detail"); setPayView(false); setSent(false); setErr(""); }} style={{ background: G.blanc, borderRadius: 16, overflow: "hidden", marginBottom: 12, boxShadow: "0 2px 10px rgba(0,0,0,0.06)", cursor: full ? "default" : "pointer", opacity: full ? 0.6 : 1 }}>
                     <div style={{ height: 90, background: e.cover_image_url ? `url(${e.cover_image_url}) center/cover` : `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, display: "flex", alignItems: "flex-end", padding: 10 }}>
                       <span style={{ background: "rgba(255,255,255,0.2)", backdropFilter: "blur(4px)", color: "#fff", fontSize: "0.66rem", fontWeight: 700, padding: "3px 10px", borderRadius: 20 }}>{full ? "Complet" : left !== null ? `${left} place${left > 1 ? "s" : ""} restante${left > 1 ? "s" : ""}` : "Places disponibles"}</span>
                     </div>
@@ -1417,30 +1535,6 @@ function EventsButton({ auth }: { auth: Auth }) {
                 <div style={{ fontWeight: 800, color: G.brun, fontSize: "1rem", marginBottom: 6 }}>{selected.price > 0 ? "Inscription envoyée !" : "Inscription confirmée !"}</div>
                 <div style={{ fontSize: "0.83rem", color: "#666", lineHeight: 1.5, marginBottom: 18 }}>{selected.price > 0 ? "Ton paiement est en attente de validation par notre équipe. Tu recevras une confirmation dès que c'est bon." : "Rendez-vous à l'événement ! Tu peux suivre ton inscription dans \"Mes inscriptions\"."}</div>
                 <button onClick={() => { setView("mine"); loadMine(); }} style={{ background: G.rouge, color: "#fff", border: "none", borderRadius: 10, padding: "11px 22px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>Voir mes inscriptions</button>
-              </div>
-            ) : payView ? (
-              <div>
-                <div style={{ background: "rgba(192,57,43,0.06)", border: "1px solid rgba(192,57,43,0.2)", borderRadius: 12, padding: "12px 14px", marginBottom: 14 }}>
-                  <div style={{ fontSize: "0.8rem", color: "#555", lineHeight: 1.5 }}>{selected.title}</div>
-                  <div style={{ fontSize: "1.35rem", fontWeight: 800, color: G.rouge, marginTop: 4 }}>{selected.price.toLocaleString("fr-FR")} FCFA</div>
-                </div>
-                <div style={{ fontSize: "0.8rem", fontWeight: 700, color: G.brun, marginBottom: 6 }}>Opérateur Mobile Money</div>
-                <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-                  {(["MTN", "Airtel"] as const).map(op => (
-                    <button key={op} onClick={() => setOperator(op)} style={{ flex: 1, background: operator === op ? G.rouge : G.blanc, color: operator === op ? "#fff" : "#666", border: `1.5px solid ${operator === op ? G.rouge : G.gris}`, borderRadius: 10, padding: "12px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer" }}>{op} MoMo</button>
-                  ))}
-                </div>
-                <div style={{ background: G.blanc, border: `1.5px dashed ${G.gris}`, borderRadius: 12, padding: "12px 14px", marginBottom: 14, textAlign: "center" }}>
-                  <div style={{ fontSize: "0.72rem", color: "#888" }}>Envoie {selected.price.toLocaleString("fr-FR")} FCFA au numéro</div>
-                  <div style={{ fontSize: "1.2rem", fontWeight: 800, color: G.brun, letterSpacing: 1 }}>{operator === "MTN" ? PAY_MTN_NUMBER : PAY_AIRTEL_NUMBER}</div>
-                </div>
-                <div style={{ marginBottom: 14 }}>
-                  <div style={{ fontSize: "0.8rem", fontWeight: 700, color: G.brun, marginBottom: 6 }}>Référence (ID) de ton paiement</div>
-                  <input value={txRef} onChange={e => setTxRef(e.target.value)} placeholder="Ex : 7753031542" style={APPT_INPUT} />
-                </div>
-                {err && <div style={{ background: "rgba(231,76,60,0.08)", border: "1.5px solid #e74c3c", borderRadius: 10, padding: "10px 12px", marginBottom: 12, fontSize: "0.8rem", color: "#c0392b", lineHeight: 1.5 }}>{err}</div>}
-                <button onClick={payAndRegister} disabled={sending} style={{ width: "100%", background: sending ? "#e0a89f" : `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: "#fff", border: "none", borderRadius: 12, padding: "14px", fontSize: "0.92rem", fontWeight: 800, cursor: sending ? "not-allowed" : "pointer" }}>{sending ? "Envoi…" : "J'ai payé, envoyer mon inscription"}</button>
-                <button onClick={() => { setPayView(false); setErr(""); }} style={{ width: "100%", marginTop: 8, background: "none", border: "none", color: "#888", fontSize: "0.8rem", fontWeight: 600, cursor: "pointer" }}>← Retour</button>
               </div>
             ) : (<>
               <div onClick={() => setView("browse")} style={{ display: "flex", alignItems: "center", gap: 6, color: "#999", fontSize: "0.8rem", fontWeight: 600, cursor: "pointer", marginBottom: 14 }}>
@@ -1483,6 +1577,13 @@ function EventsButton({ auth }: { auth: Auth }) {
         )}
       </div>
     </div>}
+
+    {payView && selected && <MobileMoneyPayment
+      amount={selected.price}
+      description={selected.title}
+      onSubmit={payAndRegister}
+      onCancel={() => setPayView(false)}
+    />}
 
     {confirmCancel && <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10020, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, overscrollBehavior: "contain", touchAction: "none" }} onClick={() => !cancelling && setConfirmCancel(null)}>
       <div className="moyo-card-in" onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: 20, width: "100%", maxWidth: 360, padding: "22px 20px", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
@@ -7484,6 +7585,7 @@ export const CAROUSEL_DESTINATIONS: Record<string, { label: string; tab: string;
   statuses: { label: "Passer sur les Statuts Moyo (ouvre directement la demande)", tab: "profile", flag: "moyo_open_statuses_request", flagValue: "1" },
   photo_retouch: { label: "Améliorer ma photo de profil", tab: "profile", flag: "moyo_scroll_to", flagValue: "photo_retouch" },
   appointment: { label: "Rendez-vous avec l'équipe Moyo (ouvre directement la demande)", tab: "profile", flag: "moyo_open_appointment_request", flagValue: "1" },
+  events: { label: "Événements Moyo Dating (ouvre directement la liste)", tab: "profile", flag: "moyo_open_events", flagValue: "1" },
   rating: { label: "Noter Moyo Dating (ouvre directement l'avis)", tab: "profile", flag: "moyo_open_rating", flagValue: "1" },
 };
 
@@ -17787,6 +17889,9 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
   const [errorMsg, setErrorMsg] = useState("");
   const [uploadLoading, setUploadLoading] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
+  const [showDeleteReasons, setShowDeleteReasons] = useState(false);
+  const [deleteReason, setDeleteReason] = useState("");
+  const [deleteComment, setDeleteComment] = useState("");
   const [showLogout, setShowLogout] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [pwForm, setPwForm] = useState({ newPw: "", confirmPw: "" });
@@ -17993,6 +18098,18 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
         });
       } catch {}
 
+      // ── Étape 0bis : motif de départ (choisi sur l'écran "Avant de partir…"), envoyé à
+      //    Admin → Réputation → Départs, AVANT suppression (le compte disparaît juste après). ──
+      if (deleteReason) {
+        try {
+          await fetch(`${SUPABASE_URL}/rest/v1/account_deletion_feedback`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" },
+            body: JSON.stringify({ user_name: auth.name, user_email: auth.email || null, reason: deleteReason, comment: deleteComment.trim() || null }),
+          });
+        } catch {}
+      }
+
       // ── Étape 1 : supprimer toutes les données associées en cascade ──
       // NOTE : payment_requests n'est PLUS supprimé ici. Les paiements déjà encaissés doivent
       // rester dans l'historique des recettes (Budget → Résultat net) même après suppression du
@@ -18007,6 +18124,16 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
         sb.delete(auth.token, "dismissed_cards", `?user_id=eq.${auth.userId}`),
         sb.delete(auth.token, "app_ratings", `?user_id=eq.${auth.userId}`),
         sb.delete(auth.token, "statuses", `?user_id=eq.${auth.userId}`),
+        // ── Tables ajoutées après un blocage réel en production côté admin (erreur 23503
+        //    "violates foreign key constraint") : même cause possible ici. ──
+        sb.delete(auth.token, "user_notifications", `?user_id=eq.${auth.userId}`),
+        sb.delete(auth.token, "appointments", `?user_id=eq.${auth.userId}`),
+        sb.delete(auth.token, "group_members", `?user_id=eq.${auth.userId}`),
+        sb.delete(auth.token, "survey_responses", `?user_id=eq.${auth.userId}`),
+        sb.delete(auth.token, "email_verifications", `?user_id=eq.${auth.userId}`),
+        sb.delete(auth.token, "feature_requests", `?user_id=eq.${auth.userId}`),
+        sb.delete(auth.token, "match_requests", `?user_id=eq.${auth.userId}`),
+        sb.delete(auth.token, "event_registrations", `?user_id=eq.${auth.userId}`),
       ]);
 
       // ── Étape 2 : supprimer les matchs et leurs messages ──
@@ -19532,7 +19659,7 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
             </div>
             <div style={{ fontWeight: 700, fontSize: "0.82rem", color: G.rouge, textAlign: "center", lineHeight: 1.25 }}>Se déconnecter</div>
           </div>}
-          {(!isWideProfile || ["delete","main"].includes(activeSection)) && <div onClick={() => setShowDelete(true)} style={{ flex: 1, background: "#FFF8F8", borderRadius: 16, padding: "15px 12px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, cursor: "pointer", boxShadow: "0 1px 4px rgba(231,76,60,0.07)", border: `1.5px solid #FFD6D6`, minHeight: 82 }}>
+          {(!isWideProfile || ["delete","main"].includes(activeSection)) && <div onClick={() => { setDeleteReason(""); setDeleteComment(""); setShowDeleteReasons(true); }} style={{ flex: 1, background: "#FFF8F8", borderRadius: 16, padding: "15px 12px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, cursor: "pointer", boxShadow: "0 1px 4px rgba(231,76,60,0.07)", border: `1.5px solid #FFD6D6`, minHeight: 82 }}>
             <div style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(231,76,60,0.10)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
             </div>
@@ -19638,6 +19765,46 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
           </div>
         </div>
       )}
+
+      {showDeleteReasons && (() => {
+        const reasons = [
+          "J'ai trouvé la personne que je cherchais 💕",
+          "Je n'ai pas trouvé ce que je cherchais",
+          "L'application ne me convient pas / bugs",
+          "Trop cher",
+          "Autre raison",
+        ];
+        return (
+          <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: G.creme, zIndex: 10030, display: "flex", flexDirection: "column", overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch" }}>
+            <div style={{ position: "sticky", top: 0, background: G.creme, padding: "calc(env(safe-area-inset-top) + 16px) 20px 12px", zIndex: 2 }}>
+              <div onClick={() => setShowDeleteReasons(false)} style={{ display: "flex", alignItems: "center", gap: 6, color: "#999", fontSize: "0.85rem", fontWeight: 600, cursor: "pointer" }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
+                Annuler
+              </div>
+            </div>
+            <div style={{ padding: "10px 22px 40px", maxWidth: 460, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
+              <div style={{ fontWeight: 900, fontSize: "1.3rem", color: G.brun, marginBottom: 8, textAlign: "center" }}>Avant de partir…</div>
+              <p style={{ fontSize: "0.86rem", color: "#666", lineHeight: 1.6, textAlign: "center", marginBottom: 26 }}>Ton avis nous aide à améliorer Moyo Dating. Peux-tu nous dire pourquoi tu supprimes ton compte ?</p>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 18 }}>
+                {reasons.map(r => (
+                  <div key={r} onClick={() => setDeleteReason(r)} style={{ display: "flex", alignItems: "center", gap: 12, padding: 14, background: deleteReason === r ? "rgba(192,57,43,0.06)" : G.blanc, border: `1.5px solid ${deleteReason === r ? G.rouge : "#eee"}`, borderRadius: 14, cursor: "pointer" }}>
+                    <div style={{ width: 20, height: 20, borderRadius: "50%", border: `2px solid ${deleteReason === r ? G.rouge : "#ccc"}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      {deleteReason === r && <div style={{ width: 10, height: 10, borderRadius: "50%", background: G.rouge }} />}
+                    </div>
+                    <span style={{ fontSize: "0.87rem", color: G.brun, fontWeight: deleteReason === r ? 700 : 500 }}>{r}</span>
+                  </div>
+                ))}
+              </div>
+              <div style={{ marginBottom: 26 }}>
+                <div style={{ fontSize: "0.8rem", fontWeight: 700, color: G.brun, marginBottom: 6 }}>Un commentaire ? (facultatif)</div>
+                <textarea value={deleteComment} onChange={e => setDeleteComment(e.target.value)} maxLength={500} placeholder="Dis-nous en plus si tu veux…" style={{ width: "100%", boxSizing: "border-box", padding: "12px 14px", borderRadius: 12, border: "1.5px solid #eee", fontSize: "0.85rem", minHeight: 90, resize: "vertical", fontFamily: "inherit" }} />
+              </div>
+              <Btn variant="danger" disabled={!deleteReason} onClick={() => { setShowDeleteReasons(false); setShowDelete(true); }} style={{ width: "100%" }}>Envoyer et supprimer mon compte</Btn>
+              {!deleteReason && <div style={{ textAlign: "center", fontSize: "0.75rem", color: "#bbb", marginTop: 10 }}>Choisis un motif pour continuer</div>}
+            </div>
+          </div>
+        );
+      })()}
 
       {showDelete && (
         <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 400, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
@@ -20154,6 +20321,8 @@ export default function App() {
   const [premiumNudgeMessage, setPremiumNudgeMessage] = useState("");
   const [ambassadorNudgeOpen, setAmbassadorNudgeOpen] = useState(false);
   const [ambassadorNudgeMessage, setAmbassadorNudgeMessage] = useState("");
+  const [eventsNudgeOpen, setEventsNudgeOpen] = useState(false);
+  const [eventsNudgeMessage, setEventsNudgeMessage] = useState("");
   const [showAmbWelcomeGlobal, setShowAmbWelcomeGlobal] = useState(false);
   // ── Fenêtre "Super promo" : offre Premium 1 mois à prix réduit, ciblée par segment,
   //    affichée au max une fois par jour. Le prix/l'expiration/le message viennent de
@@ -20623,6 +20792,10 @@ export default function App() {
             setAmbassadorNudgeMessage(w.reason.replace("[AMBASSADOR_NUDGE]", "").trim() || "Gagne de l'argent en recommandant Moyo Dating à ton entourage. Chaque personne qui s'abonne au Premium grâce à toi te rapporte une vraie commission, versée par Mobile Money.");
             setAmbassadorNudgeOpen(true);
             fetch(`${SUPABASE_URL}/rest/v1/user_warnings?id=eq.${w.id}`, { method: "PATCH", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json" }, body: JSON.stringify({ acknowledged: true }) }).catch(() => {});
+          } else if (typeof w.reason === "string" && w.reason.startsWith("[EVENTS_NUDGE]")) {
+            setEventsNudgeMessage(w.reason.replace("[EVENTS_NUDGE]", "").trim() || "Rencontre d'autres membres Moyo Dating en vrai ! Découvre nos prochains événements et réserve ta place.");
+            setEventsNudgeOpen(true);
+            fetch(`${SUPABASE_URL}/rest/v1/user_warnings?id=eq.${w.id}`, { method: "PATCH", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json" }, body: JSON.stringify({ acknowledged: true }) }).catch(() => {});
           } else {
             setPendingWarning({ id: w.id, warning_number: w.warning_number, reason: w.reason });
           }
@@ -21046,6 +21219,10 @@ export default function App() {
           } else if (typeof w.reason === "string" && w.reason.startsWith("[AMBASSADOR_NUDGE]")) {
             setAmbassadorNudgeMessage(w.reason.replace("[AMBASSADOR_NUDGE]", "").trim() || "Gagne de l'argent en recommandant Moyo Dating à ton entourage. Chaque personne qui s'abonne au Premium grâce à toi te rapporte une vraie commission, versée par Mobile Money.");
             setAmbassadorNudgeOpen(true);
+            fetch(`${SUPABASE_URL}/rest/v1/user_warnings?id=eq.${w.id}`, { method: "PATCH", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json" }, body: JSON.stringify({ acknowledged: true }) }).catch(() => {});
+          } else if (typeof w.reason === "string" && w.reason.startsWith("[EVENTS_NUDGE]")) {
+            setEventsNudgeMessage(w.reason.replace("[EVENTS_NUDGE]", "").trim() || "Rencontre d'autres membres Moyo Dating en vrai ! Découvre nos prochains événements et réserve ta place.");
+            setEventsNudgeOpen(true);
             fetch(`${SUPABASE_URL}/rest/v1/user_warnings?id=eq.${w.id}`, { method: "PATCH", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json" }, body: JSON.stringify({ acknowledged: true }) }).catch(() => {});
           } else {
             setPendingWarning(prev => prev?.id === w.id ? prev : { id: w.id, warning_number: w.warning_number, reason: w.reason });
@@ -21530,7 +21707,7 @@ export default function App() {
     })()}
 
     {/* ── Fenêtre : incitation à passer Premium (dismissible, "Plus tard") ── */}
-    {premiumNudgeOpen && !phonePromptOpen && !verifyPromptOpen && !superPromoOpen && !ambassadorNudgeOpen && (() => {
+    {premiumNudgeOpen && !phonePromptOpen && !verifyPromptOpen && !superPromoOpen && !ambassadorNudgeOpen && !eventsNudgeOpen && (() => {
       const gold = G.or;
       return (
         <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 19000, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
@@ -21566,7 +21743,7 @@ export default function App() {
       );
     })()}
 
-    {ambassadorNudgeOpen && !phonePromptOpen && !verifyPromptOpen && !superPromoOpen && !premiumNudgeOpen && (() => {
+    {ambassadorNudgeOpen && !phonePromptOpen && !verifyPromptOpen && !superPromoOpen && !premiumNudgeOpen && !eventsNudgeOpen && (() => {
       const brand = "#8B0D2F";
       return (
         <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 19000, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
@@ -21598,6 +21775,43 @@ export default function App() {
             </div>
             <Btn variant="primary" style={{ width: "100%", marginBottom: 12 }} onClick={() => { setAmbassadorNudgeOpen(false); try { sessionStorage.setItem("moyo_open_ambassador_request", "1"); } catch {} setTab("profile"); }}>Je deviens Ambassadeur →</Btn>
             <button onClick={() => setAmbassadorNudgeOpen(false)} style={{ width: "100%", background: "none", border: "none", color: "#999", fontSize: "0.85rem", fontWeight: 600, cursor: "pointer", padding: "8px 12px" }}>Peut-être plus tard</button>
+          </div>
+        </div>
+      );
+    })()}
+
+    {eventsNudgeOpen && !phonePromptOpen && !verifyPromptOpen && !superPromoOpen && !premiumNudgeOpen && !ambassadorNudgeOpen && (() => {
+      const brand = G.rouge;
+      return (
+        <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 19000, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
+          <div onClick={e => e.stopPropagation()} className="moyo-sheet-in" style={{ background: "#FCFBF8", borderRadius: 0, width: "100%", maxWidth: 460, height: "100%", maxHeight: "100vh", overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y", boxShadow: "0 30px 80px rgba(0,0,0,0.4)", position: "relative", display: "flex", flexDirection: "column", justifyContent: "center", padding: "calc(env(safe-area-inset-top) + 18px) 22px calc(env(safe-area-inset-bottom) + 26px)" }}>
+            <div onClick={() => setEventsNudgeOpen(false)} style={{ position: "fixed", top: "calc(env(safe-area-inset-top) + 16px)", right: "max(16px, calc((100vw - 460px) / 2 + 16px))", cursor: "pointer", background: "#eceae5", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 19001 }}>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#777" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+            </div>
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: 14 }}>
+              <div style={{ width: 54, height: 54, borderRadius: "50%", background: "rgba(192,57,43,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <svg width="27" height="27" viewBox="0 0 24 24" fill="none" stroke={brand} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></svg>
+              </div>
+            </div>
+            <div style={{ textAlign: "center", fontSize: "1.2rem", fontWeight: 800, color: "#1a1a2e", lineHeight: 1.2, marginBottom: 9, padding: "0 6px" }}>Événements Moyo Dating</div>
+            <div style={{ textAlign: "center", fontSize: "0.87rem", color: "#8a8a8a", lineHeight: 1.5, marginBottom: 22, padding: "0 8px" }}>{eventsNudgeMessage}</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 22 }}>
+              {[
+                "Rencontrez d'autres membres en vrai",
+                "Soirées et sorties organisées par Moyo",
+                "Places limitées, réservation en quelques secondes",
+                "Suivez vos inscriptions directement dans l'app",
+              ].map((txt, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div style={{ width: 22, height: 22, borderRadius: "50%", background: "rgba(192,57,43,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={brand} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  </div>
+                  <span style={{ fontSize: "0.85rem", color: "#3a2e2e", fontWeight: 600 }}>{txt}</span>
+                </div>
+              ))}
+            </div>
+            <Btn variant="primary" style={{ width: "100%", marginBottom: 12 }} onClick={() => { setEventsNudgeOpen(false); try { sessionStorage.setItem("moyo_open_events", "1"); } catch {} setTab("profile"); }}>Voir les événements →</Btn>
+            <button onClick={() => setEventsNudgeOpen(false)} style={{ width: "100%", background: "none", border: "none", color: "#999", fontSize: "0.85rem", fontWeight: 600, cursor: "pointer", padding: "8px 12px" }}>Peut-être plus tard</button>
           </div>
         </div>
       );
