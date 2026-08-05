@@ -1058,7 +1058,7 @@ export function AdminDesktopPage() {
     sameGenderFemme: "Eh sœur, reste du bon côté ! 😂",
     matchTitle: "C'est un Match !",
     matchSubtitle: "Toi et {name} vous plaisez mutuellement !",
-    premiumDefault: "Passe Premium pour débloquer toutes les fonctionnalités de Moyo Dating !",
+    premiumDefault: "Passe Premium pour débloquer toutes les fonctionnalités de Moy0o Dating !",
     likesEpuises: "Tu as utilisé tes {n} likes gratuits aujourd'hui. Passe Premium pour liker sans limite !",
     sameGenderSub: "Moyo Dating c'est pour les rencontres hétérosexuelles 😄",
     signupSuccess: "Ton compte est prêt ! Connecte-toi maintenant.",
