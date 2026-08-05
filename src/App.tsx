@@ -339,7 +339,7 @@ function activePlansCount(): number { return [PLAN_WEEK_ENABLED, PLAN_MONTH_ENAB
 // (limites, prix, bonus de parrainage...).
 function getLandingFaqItems(): { icon: string; titre: string; desc: string }[] {
   return [
-    { icon: "Q", titre: "Moy0o Dating est-il gratuit ?", desc: `Oui, l'inscription est gratuite. ${FREE_LIMITS.likes} likes/jour et ${FREE_LIMITS.messages} messages/match. Premium : ${activePlansText()}.` },
+    { icon: "Q", titre: "Moyo Dating est-il gratuit ?", desc: `Oui, l'inscription est gratuite. ${FREE_LIMITS.likes} likes/jour et ${FREE_LIMITS.messages} messages/match. Premium : ${activePlansText()}.` },
     { icon: "Q", titre: "Comment naviguer entre les profils ?", desc: "3 modes disponibles : Vue carte (swipe gauche/droite ou boutons ←→), Vue liste (défilement vertical), Plein écran (immersion totale, footer masqué). Passez d'un mode à l'autre via les boutons en haut de l'écran Découvrir." },
     { icon: "Q", titre: "Les profils défilent-ils en boucle ?", desc: "Oui. Moyo Dating parcourt tous les membres disponibles en boucle continue. Vous verrez chaque profil une fois avant de revenir au premier. Aucune répétition prématurée." },
     { icon: "Q", titre: "Combien de likes par jour en gratuit ?", desc: `${FREE_LIMITS.likes} likes par jour. Le compteur ❤️ X/${FREE_LIMITS.likes} s'affiche en haut à côté de 'Découvrir' et se met à jour en temps réel à chaque like. Premium : likes illimités, pas de compteur affiché.` },
@@ -19922,11 +19922,12 @@ export function Profile({ auth, onLogout, onShowPremium, darkMode, onToggleDark,
                 ))}
               </div>
               <div style={{ marginBottom: 26 }}>
-                <div style={{ fontSize: "0.8rem", fontWeight: 700, color: G.brun, marginBottom: 6 }}>Un commentaire ? (facultatif)</div>
-                <textarea value={deleteComment} onChange={e => setDeleteComment(e.target.value)} maxLength={500} placeholder="Dis-nous en plus si tu veux…" style={{ width: "100%", boxSizing: "border-box", padding: "12px 14px", borderRadius: 12, border: "1.5px solid #eee", fontSize: "0.85rem", minHeight: 90, resize: "vertical", fontFamily: "inherit" }} />
+                <div style={{ fontSize: "0.8rem", fontWeight: 700, color: G.brun, marginBottom: 6 }}>{deleteReason === "Autre raison" ? "Précise ta raison" : "Un commentaire ? (facultatif)"}{deleteReason === "Autre raison" && <span style={{ color: G.rouge }}> *</span>}</div>
+                <textarea value={deleteComment} onChange={e => setDeleteComment(e.target.value)} maxLength={500} placeholder={deleteReason === "Autre raison" ? "Dis-nous pourquoi…" : "Dis-nous en plus si tu veux…"} style={{ width: "100%", boxSizing: "border-box", padding: "12px 14px", borderRadius: 12, border: `1.5px solid ${deleteReason === "Autre raison" && !deleteComment.trim() ? "#f0c4c0" : "#eee"}`, fontSize: "0.85rem", minHeight: 90, resize: "vertical", fontFamily: "inherit" }} />
               </div>
-              <Btn variant="danger" disabled={!deleteReason} onClick={() => { setShowDeleteReasons(false); setShowDelete(true); }} style={{ width: "100%" }}>Envoyer et supprimer mon compte</Btn>
+              <Btn variant="danger" disabled={!deleteReason || (deleteReason === "Autre raison" && !deleteComment.trim())} onClick={() => { setShowDeleteReasons(false); setShowDelete(true); }} style={{ width: "100%" }}>Envoyer et supprimer mon compte</Btn>
               {!deleteReason && <div style={{ textAlign: "center", fontSize: "0.75rem", color: "#bbb", marginTop: 10 }}>Choisis un motif pour continuer</div>}
+              {deleteReason === "Autre raison" && !deleteComment.trim() && <div style={{ textAlign: "center", fontSize: "0.75rem", color: "#bbb", marginTop: 10 }}>Précise ta raison pour continuer</div>}
             </div>
           </div>
         );

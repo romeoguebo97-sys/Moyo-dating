@@ -1058,7 +1058,7 @@ export function AdminDesktopPage() {
     sameGenderFemme: "Eh sœur, reste du bon côté ! 😂",
     matchTitle: "C'est un Match !",
     matchSubtitle: "Toi et {name} vous plaisez mutuellement !",
-    premiumDefault: "Passe Premium pour débloquer toutes les fonctionnalités de Moy0o Dating !",
+    premiumDefault: "Passe Premium pour débloquer toutes les fonctionnalités de Moyo Dating !",
     likesEpuises: "Tu as utilisé tes {n} likes gratuits aujourd'hui. Passe Premium pour liker sans limite !",
     sameGenderSub: "Moyo Dating c'est pour les rencontres hétérosexuelles 😄",
     signupSuccess: "Ton compte est prêt ! Connecte-toi maintenant.",
@@ -14943,125 +14943,101 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
             </div>
           )}
 
-          {mktTab === "inciter" && (
-            <div style={{ background: G.blanc, borderRadius: 18, padding: 20, boxShadow: "0 2px 10px rgba(0,0,0,0.05)", maxWidth: 640, marginTop: 14 }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-                <div>
-                  <div style={{ fontSize: "0.95rem", fontWeight: 800, color: G.brun }}>Demander le numéro de téléphone</div>
-                  <div style={{ fontSize: "0.78rem", color: "#888", marginTop: 4, lineHeight: 1.5 }}>Une fois activé, tout membre sans numéro de téléphone enregistré voit une fenêtre bloquante lui demandant de le renseigner avant de pouvoir continuer à utiliser l'app. Une seule fois par personne — dès qu'il l'a renseigné, il ne la revoit plus.</div>
+          {mktTab === "inciter" && (() => {
+            const cardStyle: React.CSSProperties = { background: G.blanc, borderRadius: 16, padding: 20, boxShadow: "0 2px 10px rgba(0,0,0,0.05)", display: "flex", flexDirection: "column" };
+            const iconCircle = (bg: string, icon: React.ReactNode) => (
+              <div style={{ width: 42, height: 42, borderRadius: "50%", background: bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{icon}</div>
+            );
+            const cardHeader = (icon: React.ReactNode, title: string, on: boolean, onToggle: () => void) => (
+              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10, marginBottom: 10 }}>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+                  {icon}
+                  <div style={{ fontSize: "0.95rem", fontWeight: 800, color: G.brun, marginTop: 8 }}>{title}</div>
                 </div>
-                <SwitchBtn on={autoShortcuts.phone_completion_prompt_enabled} onToggle={togglePhonePrompt} />
+                <SwitchBtn on={on} onToggle={onToggle} />
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, background: G.creme, borderRadius: 12, padding: "12px 16px", marginTop: 8 }}>
-                <div style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(230,126,34,0.14)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#E67E22" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-                </div>
-                <div>
-                  <div style={{ fontSize: "1.3rem", fontWeight: 900, color: G.brun, lineHeight: 1.1 }}>{phonePromptMissingCount === null ? "…" : phonePromptMissingCount}</div>
-                  <div style={{ fontSize: "0.76rem", color: "#888", fontWeight: 600 }}>membres actifs sans numéro renseigné actuellement</div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {mktTab === "inciter" && (
-            <div style={{ background: G.blanc, borderRadius: 18, padding: 20, boxShadow: "0 2px 10px rgba(0,0,0,0.05)", maxWidth: 640, marginTop: 14 }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-                <div>
-                  <div style={{ fontSize: "0.95rem", fontWeight: 800, color: G.brun }}>Inciter à certifier son compte</div>
-                  <div style={{ fontSize: "0.78rem", color: "#888", marginTop: 4, lineHeight: 1.5 }}>Une fois activé, tout membre non vérifié voit une fenêtre l'invitant à demander la certification gratuite de son compte. Le bouton envoie la même demande WhatsApp que le bouton "Faire vérifier mon compte" dans son Profil. La fenêtre se ferme dès qu'il clique — la vérification reste ensuite à valider manuellement, comme d'habitude, depuis sa fiche.</div>
-                </div>
-                <SwitchBtn on={autoShortcuts.verification_prompt_enabled} onToggle={toggleVerifyPrompt} />
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, background: G.creme, borderRadius: 12, padding: "12px 16px", marginTop: 8 }}>
-                <div style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(26,115,232,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="#1a73e8" stroke="none"><path d="M9 12l2 2 4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>
-                </div>
-                <div>
-                  <div style={{ fontSize: "1.3rem", fontWeight: 900, color: G.brun, lineHeight: 1.1 }}>{verifyPromptMissingCount === null ? "…" : verifyPromptMissingCount}</div>
-                  <div style={{ fontSize: "0.76rem", color: "#888", fontWeight: 600 }}>membres actifs non certifiés actuellement</div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {mktTab === "inciter" && (
-            <div style={{ background: G.blanc, borderRadius: 18, padding: 20, boxShadow: "0 2px 10px rgba(0,0,0,0.05)", maxWidth: 640, marginTop: 14 }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-                <div>
-                  <div style={{ fontSize: "0.95rem", fontWeight: 800, color: G.brun }}>Inciter à passer Premium</div>
-                  <div style={{ fontSize: "0.78rem", color: "#888", marginTop: 4, lineHeight: 1.5 }}>Une fenêtre non bloquante s'affiche (une fois par jour maximum) au groupe ciblé, avec un bouton "Passer Premium →" et un bouton "Plus tard" plus discret pour fermer sans y donner suite.</div>
-                </div>
-                <SwitchBtn on={autoShortcuts.premium_nudge_enabled} onToggle={togglePremiumNudge} />
-              </div>
-              <div style={{ marginBottom: 14 }}>
-                <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#999", marginBottom: 6 }}>Cible</div>
-                <select value={premiumNudgeTarget} onChange={e => { setPremiumNudgeTarget(e.target.value); savePremiumNudgeSetting("premium_nudge_target", e.target.value); }} style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.85rem", background: G.blanc }}>
-                  <option value="all">Tous les membres gratuits</option>
+            );
+            const targetSelect = (value: string, onChange: (v: string) => void, firstLabel: string) => (
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ fontSize: "0.7rem", fontWeight: 700, color: "#999", marginBottom: 5 }}>Cible</div>
+                <select value={value} onChange={e => onChange(e.target.value)} style={{ width: "100%", padding: "9px 10px", borderRadius: 9, border: `1.5px solid ${G.gris}`, fontSize: "0.8rem", background: G.blanc }}>
+                  <option value="all">{firstLabel}</option>
                   <option value="femmes">Femmes uniquement</option>
                   <option value="hommes">Hommes uniquement</option>
                   <option value="nouveaux">Nouveaux inscrits (moins de 7 jours)</option>
                   <option value="inactifs">Inactifs (plus de 14 jours sans connexion)</option>
                 </select>
               </div>
-              <div>
-                <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#999", marginBottom: 6 }}>Message affiché dans la fenêtre</div>
-                <textarea value={premiumNudgeMessage} onChange={e => setPremiumNudgeMessage(e.target.value)} onBlur={() => savePremiumNudgeSetting("premium_nudge_message", premiumNudgeMessage)} rows={3} style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.85rem", fontFamily: "inherit", resize: "vertical" }} />
+            );
+            const messageArea = (value: string, onChange: (v: string) => void, onSave: () => void) => (
+              <div style={{ position: "relative" }}>
+                <div style={{ fontSize: "0.7rem", fontWeight: 700, color: "#999", marginBottom: 5 }}>Message affiché dans la fenêtre</div>
+                <textarea value={value} onChange={e => onChange(e.target.value)} onBlur={onSave} rows={3} style={{ width: "100%", boxSizing: "border-box", padding: "9px 30px 9px 10px", borderRadius: 9, border: `1.5px solid ${G.gris}`, fontSize: "0.8rem", fontFamily: "inherit", resize: "vertical" }} />
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ position: "absolute", right: 10, bottom: 10, pointerEvents: "none" }}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>
               </div>
-            </div>
-          )}
+            );
+            return (
+              <div style={{ maxWidth: 1120 }}>
+                <div style={{ fontWeight: 900, fontSize: "1.4rem", color: G.brun, marginBottom: 4 }}>Centre d'incitation</div>
+                <div style={{ fontSize: "0.85rem", color: "#999", marginBottom: 20 }}>Activez les campagnes pour engager vos membres et booster vos conversions.</div>
 
-          {mktTab === "inciter" && (
-            <div style={{ background: G.blanc, borderRadius: 18, padding: 20, boxShadow: "0 2px 10px rgba(0,0,0,0.05)", maxWidth: 640, marginTop: 14 }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-                <div>
-                  <div style={{ fontSize: "0.95rem", fontWeight: 800, color: G.brun }}>Inciter à devenir Ambassadeur</div>
-                  <div style={{ fontSize: "0.78rem", color: "#888", marginTop: 4, lineHeight: 1.5 }}>Affiche une fenêtre au groupe ciblé, une fois par jour maximum, pour proposer de devenir Ambassadeur. Le bouton ouvre directement l'écran de demande dans Profil. Inactif si le programme Ambassadeur est désactivé (Fonctionnalités).</div>
-                </div>
-                <SwitchBtn on={autoShortcuts.ambassador_nudge_enabled} onToggle={toggleAmbassadorNudge} />
-              </div>
-              <div style={{ marginBottom: 14 }}>
-                <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#999", marginBottom: 6 }}>Cible</div>
-                <select value={ambassadorNudgeTarget} onChange={e => { setAmbassadorNudgeTarget(e.target.value); savePremiumNudgeSetting("ambassador_nudge_target", e.target.value); }} style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.85rem", background: G.blanc }}>
-                  <option value="all">Tous les membres (non ambassadeurs)</option>
-                  <option value="femmes">Femmes uniquement</option>
-                  <option value="hommes">Hommes uniquement</option>
-                  <option value="nouveaux">Nouveaux inscrits (moins de 7 jours)</option>
-                  <option value="inactifs">Inactifs (plus de 14 jours sans connexion)</option>
-                </select>
-              </div>
-              <div>
-                <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#999", marginBottom: 6 }}>Message affiché dans la fenêtre</div>
-                <textarea value={ambassadorNudgeMessage} onChange={e => setAmbassadorNudgeMessage(e.target.value)} onBlur={() => savePremiumNudgeSetting("ambassador_nudge_message", ambassadorNudgeMessage)} rows={3} style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.85rem", fontFamily: "inherit", resize: "vertical" }} />
-              </div>
-            </div>
-          )}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 16, marginBottom: 18 }}>
+                  <div style={cardStyle}>
+                    {cardHeader(iconCircle("rgba(230,126,34,0.13)", <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#E67E22" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>), "Demander le numéro de téléphone", autoShortcuts.phone_completion_prompt_enabled, togglePhonePrompt)}
+                    <div style={{ fontSize: "0.78rem", color: "#888", lineHeight: 1.5, marginBottom: 14 }}>Une fois activé, tout membre sans numéro de téléphone enregistré voit une fenêtre lui demandant de le renseigner avant de pouvoir continuer à utiliser l'app.</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, background: G.creme, borderRadius: 12, padding: "12px 16px", marginTop: "auto" }}>
+                      {iconCircle("rgba(230,126,34,0.14)", <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E67E22" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>)}
+                      <div>
+                        <div style={{ fontSize: "1.3rem", fontWeight: 900, color: G.brun, lineHeight: 1.1 }}>{phonePromptMissingCount === null ? "…" : phonePromptMissingCount}</div>
+                        <div style={{ fontSize: "0.72rem", color: "#888", fontWeight: 600 }}>membres actifs sans numéro renseigné actuellement</div>
+                      </div>
+                    </div>
+                  </div>
 
-          {mktTab === "inciter" && (
-            <div style={{ background: G.blanc, borderRadius: 18, padding: 20, boxShadow: "0 2px 10px rgba(0,0,0,0.05)", maxWidth: 640, marginTop: 14 }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-                <div>
-                  <div style={{ fontSize: "0.95rem", fontWeight: 800, color: G.brun }}>Inciter aux Événements</div>
-                  <div style={{ fontSize: "0.78rem", color: "#888", marginTop: 4, lineHeight: 1.5 }}>Affiche une fenêtre au groupe ciblé, une fois par jour maximum, pour proposer de découvrir les événements. Le bouton ouvre directement la liste des événements dans Profil. Inactif si les Événements sont désactivés (Fonctionnalités).</div>
+                  <div style={cardStyle}>
+                    {cardHeader(iconCircle("rgba(26,115,232,0.12)", <svg width="19" height="19" viewBox="0 0 24 24" fill="#1a73e8" stroke="none"><path d="M9 12l2 2 4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>), "Inciter à certifier son compte", autoShortcuts.verification_prompt_enabled, toggleVerifyPrompt)}
+                    <div style={{ fontSize: "0.78rem", color: "#888", lineHeight: 1.5, marginBottom: 14 }}>Une fois activé, tout membre non vérifié voit une fenêtre l'invitant à demander la certification gratuite de son compte.</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, background: G.creme, borderRadius: 12, padding: "12px 16px", marginTop: "auto" }}>
+                      {iconCircle("rgba(26,115,232,0.12)", <svg width="16" height="16" viewBox="0 0 24 24" fill="#1a73e8" stroke="none"><path d="M9 12l2 2 4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>)}
+                      <div>
+                        <div style={{ fontSize: "1.3rem", fontWeight: 900, color: G.brun, lineHeight: 1.1 }}>{verifyPromptMissingCount === null ? "…" : verifyPromptMissingCount}</div>
+                        <div style={{ fontSize: "0.72rem", color: "#888", fontWeight: 600 }}>membres actifs non certifiés actuellement</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={cardStyle}>
+                    {cardHeader(iconCircle("rgba(212,168,67,0.15)", <svg width="19" height="19" viewBox="0 0 24 24" fill="#D4A843" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>), "Inciter à passer Premium", autoShortcuts.premium_nudge_enabled, togglePremiumNudge)}
+                    <div style={{ fontSize: "0.78rem", color: "#888", lineHeight: 1.5, marginBottom: 14 }}>Une fenêtre non bloquante s'affiche (une fois par jour maximum) au groupe ciblé, avec un bouton "Passer Premium".</div>
+                    {targetSelect(premiumNudgeTarget, v => { setPremiumNudgeTarget(v); savePremiumNudgeSetting("premium_nudge_target", v); }, "Tous les membres gratuits")}
+                    {messageArea(premiumNudgeMessage, setPremiumNudgeMessage, () => savePremiumNudgeSetting("premium_nudge_message", premiumNudgeMessage))}
+                  </div>
+
+                  <div style={cardStyle}>
+                    {cardHeader(iconCircle("rgba(155,89,182,0.13)", <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#9B59B6" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>), "Inciter à devenir Ambassadeur", autoShortcuts.ambassador_nudge_enabled, toggleAmbassadorNudge)}
+                    <div style={{ fontSize: "0.78rem", color: "#888", lineHeight: 1.5, marginBottom: 14 }}>Affiche une fenêtre au groupe ciblé, une fois par jour maximum, pour proposer de devenir Ambassadeur.</div>
+                    {targetSelect(ambassadorNudgeTarget, v => { setAmbassadorNudgeTarget(v); savePremiumNudgeSetting("ambassador_nudge_target", v); }, "Tous les membres (non ambassadeurs)")}
+                    {messageArea(ambassadorNudgeMessage, setAmbassadorNudgeMessage, () => savePremiumNudgeSetting("ambassador_nudge_message", ambassadorNudgeMessage))}
+                  </div>
+
+                  <div style={cardStyle}>
+                    {cardHeader(iconCircle("rgba(192,57,43,0.1)", <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>), "Inciter aux Événements", autoShortcuts.events_nudge_enabled, toggleEventsNudge)}
+                    <div style={{ fontSize: "0.78rem", color: "#888", lineHeight: 1.5, marginBottom: 14 }}>Affiche une fenêtre au groupe ciblé, une fois par jour maximum, pour proposer de découvrir les événements.</div>
+                    {targetSelect(eventsNudgeTarget, v => { setEventsNudgeTarget(v); savePremiumNudgeSetting("events_nudge_target", v); }, "Tous les membres")}
+                    {messageArea(eventsNudgeMessage, setEventsNudgeMessage, () => savePremiumNudgeSetting("events_nudge_message", eventsNudgeMessage))}
+                  </div>
                 </div>
-                <SwitchBtn on={autoShortcuts.events_nudge_enabled} onToggle={toggleEventsNudge} />
+
+                <div style={{ background: "rgba(192,57,43,0.05)", border: "1px solid rgba(192,57,43,0.15)", borderRadius: 16, padding: "18px 22px", display: "flex", alignItems: "center", gap: 14 }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M9 21h6"/><path d="M12 3a6 6 0 0 0-4 10.47V16a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.53A6 6 0 0 0 12 3z"/></svg>
+                  <div>
+                    <div style={{ fontWeight: 800, fontSize: "0.85rem", color: G.brun, marginBottom: 2 }}>Conseil</div>
+                    <div style={{ fontSize: "0.78rem", color: "#a05a52" }}>Activez progressivement vos campagnes et analysez les résultats pour maximiser vos conversions.</div>
+                  </div>
+                </div>
               </div>
-              <div style={{ marginBottom: 14 }}>
-                <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#999", marginBottom: 6 }}>Cible</div>
-                <select value={eventsNudgeTarget} onChange={e => { setEventsNudgeTarget(e.target.value); savePremiumNudgeSetting("events_nudge_target", e.target.value); }} style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.85rem", background: G.blanc }}>
-                  <option value="all">Tous les membres</option>
-                  <option value="femmes">Femmes uniquement</option>
-                  <option value="hommes">Hommes uniquement</option>
-                  <option value="nouveaux">Nouveaux inscrits (moins de 7 jours)</option>
-                  <option value="inactifs">Inactifs (plus de 14 jours sans connexion)</option>
-                </select>
-              </div>
-              <div>
-                <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#999", marginBottom: 6 }}>Message affiché dans la fenêtre</div>
-                <textarea value={eventsNudgeMessage} onChange={e => setEventsNudgeMessage(e.target.value)} onBlur={() => savePremiumNudgeSetting("events_nudge_message", eventsNudgeMessage)} rows={3} style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.85rem", fontFamily: "inherit", resize: "vertical" }} />
-              </div>
-            </div>
-          )}
+            );
+          })()}
 
           {mktTab === "carousel" && (
             <div>
@@ -16291,7 +16267,15 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                       <div style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>{f.user_name || "Ancien membre"}</div>
                       {f.user_email && <div style={{ fontSize: "0.74rem", color: "#999" }}>{f.user_email}</div>}
                     </div>
-                    <div style={{ fontSize: "0.7rem", color: "#bbb", flexShrink: 0 }}>{new Date(f.created_at).toLocaleDateString("fr-FR")}</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+                      <div style={{ fontSize: "0.7rem", color: "#bbb" }}>{new Date(f.created_at).toLocaleDateString("fr-FR")}</div>
+                      <div onClick={() => confirm(`Supprimer cette ligne de départ (${f.user_name || "ancien membre"}) ?`, async () => {
+                        await fetch(`${SUPABASE_URL}/rest/v1/account_deletion_feedback?id=eq.${f.id}`, { method: "DELETE", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth!.token}` } });
+                        setDeleteFeedback(list => list.filter(x => x.id !== f.id));
+                      })} style={{ cursor: "pointer", color: "#ccc", padding: 2 }} title="Supprimer">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                      </div>
+                    </div>
                   </div>
                   <span style={{ display: "inline-block", background: "rgba(192,57,43,0.08)", color: "#C0392B", fontSize: "0.72rem", fontWeight: 700, padding: "3px 10px", borderRadius: 50, marginBottom: 8 }}>{f.reason}</span>
                   {f.comment && <div style={{ fontSize: "0.82rem", color: "#555", lineHeight: 1.5, background: G.creme, borderRadius: 10, padding: "10px 12px", marginTop: 4 }}>{f.comment}</div>}
