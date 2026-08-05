@@ -1,4 +1,4 @@
-const CACHE_NAME = 'moyo-dating-v1';
+const CACHE_NAME = 'moyo-dating-v2';
 
 const STATIC_ASSETS = [
   '/',
