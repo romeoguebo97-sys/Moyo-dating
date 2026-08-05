@@ -1034,18 +1034,22 @@ export function DateTimePicker({ date, hour, minute, onChange }: { date: string;
 //    générique : un seul composant réutilisé par Rendez-vous ET Événements au lieu de deux copies
 //    distinctes. Ne touche jamais à payment_requests/premium directement — l'appelant fournit
 //    juste le montant, le motif affiché, et onSubmit(operator, txRef) pour ses propres écritures. ──
-function MobileMoneyPayment({ amount, description, onSubmit, onCancel }: { amount: number; description: string; onSubmit: (operator: "MTN" | "Airtel", txRef: string) => Promise<boolean>; onCancel: () => void }) {
+function MobileMoneyPayment({ auth, amount, description, onSubmit, onCancel }: { auth: Auth; amount: number; description: string; onSubmit: (operator: "MTN" | "Airtel", txRef: string) => Promise<boolean>; onCancel: () => void }) {
   const mtnLogo = (h = 18) => <svg viewBox="0 0 120 60" width={h * 2} height={h} xmlns="http://www.w3.org/2000/svg"><rect width="120" height="60" fill="#FFCC00" rx="8" /><ellipse cx="60" cy="30" rx="52" ry="24" fill="none" stroke="#1a1a1a" strokeWidth="5" /><text x="60" y="39" textAnchor="middle" fontFamily="Arial Black, sans-serif" fontWeight="900" fontSize="24" fill="#1a1a1a">MTN</text></svg>;
   const airtelLogo = (h = 22) => <img src={`${SUPABASE_URL}/storage/v1/object/public/assets/airtel-logo.png`} alt="Airtel" style={{ height: h, width: "auto", display: "block", borderRadius: 6 }} />;
+  const gold = "#D4A843";
   const [step, setStep] = useState<"choose" | "pay" | "confirm" | "sent">("choose");
   const [operator, setOperator] = useState<"MTN" | "Airtel" | null>(null);
+  const [proofMode, setProofMode] = useState<"id" | "screenshot">("id");
   const [txRef, setTxRef] = useState("");
+  const [screenshotFile, setScreenshotFile] = useState<File | null>(null);
+  const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null);
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
 
   const OP = operator === "MTN"
-    ? { name: "MTN MoMo", main: "#FFCC00", onColor: "#1a1a1a", numBg: "#F5A623", numColor: "#fff", responsable: PAY_MTN_RESPONSABLE, ussd: `*105*1*1*${PAY_MTN_NUMBER}*${amount}#`, logo: mtnLogo(20), subColor: "rgba(0,0,0,0.65)", placeholder: "Ex : 7753031542" }
-    : { name: "Airtel Money", main: "#FF0100", onColor: "#fff", numBg: "#FF0100", numColor: "#fff", responsable: PAY_AIRTEL_RESPONSABLE, ussd: `*128*2*1*1*${PAY_AIRTEL_NUMBER}*${amount}#`, logo: airtelLogo(22), subColor: "rgba(255,255,255,0.9)", placeholder: "Ex de l'ID : PP260523.2232.A52074" };
+    ? { name: "MTN MoMo", main: "#FFCC00", onColor: "#1a1a1a", ussd: `*105*1*1*${PAY_MTN_NUMBER}*${amount}#`, logo: mtnLogo(20), responsable: PAY_MTN_RESPONSABLE, placeholder: "Ex : 7753031542" }
+    : { name: "Airtel Money", main: "#FF0100", onColor: "#fff", ussd: `*128*2*1*1*${PAY_AIRTEL_NUMBER}*${amount}#`, logo: airtelLogo(22), responsable: PAY_AIRTEL_RESPONSABLE, placeholder: "Ex de l'ID : PP260523.2232.A52074" };
 
   useEffect(() => {
     const body = document.body, html = document.documentElement;
@@ -1054,92 +1058,157 @@ function MobileMoneyPayment({ amount, description, onSubmit, onCancel }: { amoun
     return () => { body.style.overflow = prevB; html.style.overflow = prevH; };
   }, []);
 
+  const navCircle = (onClick: () => void, path: React.ReactNode) => (
+    <div onClick={onClick} style={{ cursor: "pointer", background: "#eceae5", borderRadius: "50%", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#777" strokeWidth="2.5" strokeLinecap="round">{path}</svg>
+    </div>
+  );
+  const backIc = <line x1="19" y1="12" x2="5" y2="12" />;
+  const backIc2 = <polyline points="12 19 5 12 12 5" />;
+  const closeIc = <><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></>;
+
+  // ── Étape 1 sur 3 : choix de l'opérateur ──
   if (step === "choose") {
     return (
       <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 99000, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
-        <div onClick={e => e.stopPropagation()} className="moyo-sheet-in" style={{ background: "#FCFBF8", width: "100%", maxWidth: 460, height: "100%", maxHeight: "100vh", overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y", boxShadow: "0 30px 80px rgba(0,0,0,0.4)", position: "relative", padding: "calc(env(safe-area-inset-top) + 18px) 20px 16px" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", marginBottom: 18 }}>
-            <div onClick={onCancel} style={{ cursor: "pointer", background: "#eceae5", borderRadius: "50%", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#777" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+        <div onClick={e => e.stopPropagation()} className="moyo-sheet-in" style={{ background: "#FCFBF8", width: "100%", maxWidth: 460, height: "100%", maxHeight: "100vh", overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y", boxShadow: "0 30px 80px rgba(0,0,0,0.4)", display: "flex", flexDirection: "column" }}>
+          <div style={{ padding: "calc(env(safe-area-inset-top) + 18px) 20px 0", flexShrink: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 22 }}>
+              {navCircle(onCancel, <><line x1="19" y1="12" x2="5" y2="12" /></>)}
+              <div style={{ fontSize: "0.68rem", fontWeight: 800, color: "#c8c0ac", letterSpacing: 1 }}>ÉTAPE 1 SUR 3</div>
+              {navCircle(onCancel, closeIc)}
+            </div>
+            <div style={{ fontSize: "1.3rem", fontWeight: 800, color: G.brun, marginBottom: 6 }}>Comment veux-tu payer ?</div>
+            <div style={{ fontSize: "0.85rem", color: "#8a8a8a", lineHeight: 1.4, marginBottom: 22 }}>{description} · {amount.toLocaleString("fr-FR")} FCFA</div>
+          </div>
+          <div style={{ flex: 1, padding: "0 20px" }}>
+            <div onClick={() => { setOperator("MTN"); setStep("pay"); }} className="moyo-tactile" style={{ background: G.blanc, border: "2px solid #ece9e2", borderRadius: 16, padding: "16px 18px", marginBottom: 12, display: "flex", alignItems: "center", gap: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.04)", cursor: "pointer" }}>
+              {mtnLogo(24)}
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: "0.95rem", fontWeight: 800, color: G.brun }}>MTN MoMo</div>
+                <div style={{ fontSize: "0.72rem", color: "#9a9a9a" }}>Congo</div>
+              </div>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6" /></svg>
+            </div>
+            <div onClick={() => { setOperator("Airtel"); setStep("pay"); }} className="moyo-tactile" style={{ background: G.blanc, border: "2px solid #ece9e2", borderRadius: 16, padding: "16px 18px", marginBottom: 12, display: "flex", alignItems: "center", gap: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.04)", cursor: "pointer" }}>
+              {airtelLogo(26)}
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: "0.95rem", fontWeight: 800, color: G.brun }}>Airtel Money</div>
+                <div style={{ fontSize: "0.72rem", color: "#9a9a9a" }}>Congo</div>
+              </div>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6" /></svg>
             </div>
           </div>
-          <div style={{ background: G.blanc, borderRadius: 16, padding: 16, marginBottom: 20, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
-            <div style={{ fontSize: "0.82rem", color: "#666" }}>{description}</div>
-            <div style={{ fontSize: "1.35rem", fontWeight: 800, color: G.brun, marginTop: 4 }}>{amount.toLocaleString("fr-FR")} FCFA</div>
-          </div>
-          <div style={{ fontSize: "1.2rem", fontWeight: 800, color: G.brun, marginBottom: 18 }}>Comment veux-tu payer ?</div>
-          <div style={{ textAlign: "center", fontSize: "0.66rem", fontWeight: 800, color: "#a8a8a8", letterSpacing: 1, marginBottom: 7 }}>PAYEZ AVEC</div>
-          <button onClick={() => { setOperator("MTN"); setStep("pay"); }} style={{ width: "100%", background: "#FFCC00", color: G.brun, border: "none", borderRadius: 14, padding: "13px", fontSize: "1rem", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 8 }}>
-            {mtnLogo(18)} MTN MoMo
-          </button>
-          <button onClick={() => { setOperator("Airtel"); setStep("pay"); }} style={{ width: "100%", background: G.blanc, color: "#FF0100", border: "2px solid #FF0100", borderRadius: 14, padding: "11px", fontSize: "1rem", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 12 }}>
-            {airtelLogo(20)} Airtel Money
-          </button>
         </div>
       </div>
     );
   }
 
+  // ── Étape 2 sur 3 : effectuer le paiement ──
   if (step === "pay" && operator) {
     return (
-      <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 99000, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
-        <div className="moyo-sheet-in" style={{ background: "#f6f6f7", width: "100%", maxWidth: 460, height: "100%", maxHeight: "100vh", display: "flex", flexDirection: "column", overscrollBehavior: "contain" }}>
-          <div style={{ background: OP.main, padding: "calc(env(safe-area-inset-top) + 16px) 18px 14px", flexShrink: 0 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <div onClick={() => setStep("choose")} style={{ cursor: "pointer", background: OP.onColor === "#fff" ? "rgba(255,255,255,0.22)" : "rgba(0,0,0,0.1)", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={OP.onColor} strokeWidth="2.5" strokeLinecap="round"><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" /></svg>
-              </div>
-              {OP.logo}
-              <div style={{ fontWeight: 800, fontSize: "1.15rem", color: OP.onColor }}>{OP.name}</div>
+      <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 99000, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
+        <div onClick={e => e.stopPropagation()} className="moyo-sheet-in" style={{ background: "#FCFBF8", width: "100%", maxWidth: 460, height: "100%", maxHeight: "100vh", display: "flex", flexDirection: "column" }}>
+          <div style={{ padding: "calc(env(safe-area-inset-top) + 18px) 20px 0", flexShrink: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
+              {navCircle(() => setStep("choose"), backIc)}
+              <div style={{ fontSize: "0.68rem", fontWeight: 800, color: "#c8c0ac", letterSpacing: 1 }}>ÉTAPE 2 SUR 3</div>
+              {navCircle(onCancel, closeIc)}
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 8, marginLeft: 4, fontSize: "0.82rem", color: OP.subColor, fontWeight: 600 }}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={OP.onColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.8 }}><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
-              Paiement sécurisé • {amount.toLocaleString("fr-FR")} FCFA
+            <div style={{ fontSize: "1.2rem", fontWeight: 800, color: G.brun, marginBottom: 3 }}>Effectue ton paiement</div>
+            <div style={{ fontSize: "0.74rem", color: "#8a7a5a", marginBottom: 20, lineHeight: 1.4 }}>
+              Effectue ton paiement {OP.name}, qui sera reçu et traité par notre Responsable des finances : <strong style={{ color: G.brun }}>{OP.responsable}</strong>
             </div>
           </div>
-          <div style={{ flex: 1, overflowY: "auto", padding: 16, overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}>
-            <div style={{ background: G.blanc, borderRadius: 16, padding: 18, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-                <div style={{ width: 26, height: 26, borderRadius: "50%", background: OP.numBg, color: OP.numColor, fontWeight: 800, fontSize: "0.85rem", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>1</div>
-                <div style={{ fontWeight: 800, fontSize: "1.02rem", color: "#1a1a2e" }}>Effectuez votre paiement</div>
+          <div style={{ flex: 1, overflowY: "auto", padding: "0 20px 20px" }}>
+            <div style={{ background: G.blanc, border: "1.5px solid #ece9e2", borderRadius: 16, padding: 16, marginTop: 8, boxShadow: "0 1px 4px rgba(0,0,0,0.03)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                <div style={{ width: 22, height: 22, borderRadius: "50%", background: G.rouge, color: "#fff", fontSize: "0.72rem", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>1</div>
+                <div style={{ fontSize: "0.92rem", fontWeight: 800, color: G.brun }}>Compose ce code depuis ton mobile</div>
               </div>
-              <div style={{ fontSize: "0.86rem", color: "#666", lineHeight: 1.55, marginBottom: 16 }}>Votre paiement {OP.name} sera reçu et traité par notre responsable des finances.<br /><span style={{ fontWeight: 700, color: "#444" }}>{OP.responsable}</span></div>
-              <div style={{ background: "#f2f2f3", borderRadius: 12, padding: 13, textAlign: "center" }}>
-                <div style={{ fontSize: "0.78rem", color: "#999", marginBottom: 6 }}>Composez ce code depuis votre mobile</div>
-                <div style={{ fontSize: "1.05rem", fontWeight: 800, color: "#1a1a2e", fontFamily: "monospace", letterSpacing: 0.5 }}>{OP.ussd}</div>
+              <div style={{ background: "#F0EDE6", borderRadius: 10, padding: 13, textAlign: "center" }}>
+                <div style={{ fontSize: "1rem", fontWeight: 800, color: G.brun, fontFamily: "monospace" }}>{OP.ussd}</div>
               </div>
             </div>
           </div>
-          <div style={{ padding: "14px 16px", background: G.blanc, borderTop: "1px solid #eee", flexShrink: 0 }}>
-            <button onClick={() => setStep("confirm")} style={{ width: "100%", background: OP.main, color: OP.onColor, border: "none", borderRadius: 50, padding: 15, fontSize: "0.95rem", fontWeight: 800, cursor: "pointer" }}>J'ai payé, suivant →</button>
+          <div style={{ padding: "16px 20px", paddingBottom: "calc(20px + env(safe-area-inset-bottom))", flexShrink: 0 }}>
+            <button onClick={() => setStep("confirm")} style={{ width: "100%", background: gold, color: "#fff", border: "none", borderRadius: 14, padding: 15, fontSize: "1rem", fontWeight: 800, cursor: "pointer" }}>J'ai payé, suivant →</button>
           </div>
         </div>
       </div>
     );
   }
 
+  // ── Étape 3 sur 3 : confirmer (ID de transaction ou capture d'écran) ──
   if (step === "confirm" && operator) {
-    const submit = async () => {
-      if (!txRef.trim()) { setErr("Entre la référence (ID) de ton paiement."); return; }
+    const submitId = async () => {
       setLoading(true); setErr("");
       const ok = await onSubmit(operator, txRef.trim());
       setLoading(false);
       if (ok) setStep("sent"); else setErr("Échec de l'envoi. Réessaie.");
     };
+    const submitScreenshot = async () => {
+      if (!screenshotFile) return;
+      setLoading(true); setErr("");
+      try {
+        const ext = (screenshotFile.name.split(".").pop() || "jpg").toLowerCase();
+        const path = `${auth.userId}/${Date.now()}.${ext}`;
+        const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/payment-proofs/${path}`, { method: "POST", headers: { "Authorization": `Bearer ${auth.token}`, "apikey": SUPABASE_KEY, "Content-Type": screenshotFile.type || "image/jpeg", "x-upsert": "true" }, body: screenshotFile });
+        if (!uploadRes.ok) throw new Error();
+        const screenshotUrl = `${SUPABASE_URL}/storage/v1/object/public/payment-proofs/${path}`;
+        const ok = await onSubmit(operator, `[capture] ${screenshotUrl}`);
+        setLoading(false);
+        if (ok) setStep("sent"); else setErr("Échec de l'envoi. Réessaie.");
+      } catch { setLoading(false); setErr("Envoi impossible, réessaie dans un instant."); }
+    };
     return (
-      <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 99000, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
-        <div className="moyo-sheet-in" style={{ background: "#f6f6f7", width: "100%", maxWidth: 460, height: "100%", maxHeight: "100vh", display: "flex", flexDirection: "column", overscrollBehavior: "contain" }}>
-          <div style={{ background: OP.main, padding: "calc(env(safe-area-inset-top) + 16px) 18px 14px", flexShrink: 0, display: "flex", alignItems: "center", gap: 12 }}>
-            <div onClick={() => setStep("pay")} style={{ cursor: "pointer", background: OP.onColor === "#fff" ? "rgba(255,255,255,0.22)" : "rgba(0,0,0,0.1)", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={OP.onColor} strokeWidth="2.5" strokeLinecap="round"><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" /></svg>
+      <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 99000, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
+        <div onClick={e => e.stopPropagation()} className="moyo-sheet-in" style={{ background: "#FCFBF8", width: "100%", maxWidth: 460, height: "100%", maxHeight: "100vh", overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y", boxShadow: "0 30px 80px rgba(0,0,0,0.4)" }}>
+          <div style={{ padding: "calc(env(safe-area-inset-top) + 18px) 20px 0" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
+              {navCircle(() => setStep("pay"), backIc)}
+              <div style={{ fontSize: "0.68rem", fontWeight: 800, color: "#c8c0ac", letterSpacing: 1 }}>ÉTAPE 3 SUR 3</div>
+              {navCircle(onCancel, closeIc)}
             </div>
-            <div style={{ fontWeight: 800, fontSize: "1.05rem", color: OP.onColor }}>Confirmer le paiement</div>
+            <div style={{ fontSize: "1.2rem", fontWeight: 800, color: G.brun, marginBottom: 16 }}>Comment veux-tu confirmer ?</div>
           </div>
-          <div style={{ padding: 16 }}>
-            <div style={{ fontSize: "0.8rem", fontWeight: 700, color: G.brun, marginBottom: 6 }}>Référence (ID) de ton paiement</div>
-            <input value={txRef} onChange={e => setTxRef(e.target.value)} placeholder={OP.placeholder} style={{ width: "100%", boxSizing: "border-box", padding: "12px 14px", borderRadius: 12, border: "1.5px solid #ddd", fontSize: "0.9rem" }} />
-            {err && <div style={{ background: "rgba(231,76,60,0.08)", border: "1.5px solid #e74c3c", borderRadius: 10, padding: "10px 12px", marginTop: 12, fontSize: "0.8rem", color: "#c0392b", lineHeight: 1.5 }}>{err}</div>}
-            <button onClick={submit} disabled={loading} style={{ width: "100%", marginTop: 16, background: loading ? "#ccc" : OP.main, color: OP.onColor, border: "none", borderRadius: 50, padding: 15, fontSize: "0.95rem", fontWeight: 800, cursor: loading ? "not-allowed" : "pointer" }}>{loading ? "Envoi…" : "Confirmer et envoyer"}</button>
+          <div style={{ padding: "0 20px 20px" }}>
+            <div style={{ display: "flex", background: "#F0EDE6", borderRadius: 50, padding: 4, marginBottom: 16 }}>
+              <div onClick={() => setProofMode("id")} className="moyo-tactile" style={{ flex: 1, textAlign: "center", padding: "9px 4px", borderRadius: 50, cursor: "pointer", background: proofMode === "id" ? gold : "transparent", color: proofMode === "id" ? "#fff" : "#8a8a8a", fontWeight: 800, fontSize: "0.76rem" }}>Envoyer l'ID</div>
+              <div onClick={() => setProofMode("screenshot")} className="moyo-tactile" style={{ flex: 1, textAlign: "center", padding: "9px 4px", borderRadius: 50, cursor: "pointer", background: proofMode === "screenshot" ? gold : "transparent", color: proofMode === "screenshot" ? "#fff" : "#8a8a8a", fontWeight: 800, fontSize: "0.76rem" }}>Capture d'écran</div>
+            </div>
+            {proofMode === "id" ? (
+              <>
+                <div style={{ fontSize: "0.82rem", color: "#666", lineHeight: 1.5, marginBottom: 12 }}>Après ton paiement, tu reçois un SMS de <b>{OP.name}</b> avec un numéro de transaction (ID). Entre-le dans la case ci-dessous pour confirmer :</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, border: `1.5px solid ${txRef ? OP.main : "#e2e2e2"}`, borderRadius: 12, padding: "12px 14px", marginBottom: 16 }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" /><line x1="1" y1="10" x2="23" y2="10" /></svg>
+                  <input value={txRef} onChange={e => { setTxRef(e.target.value); setErr(""); }} placeholder={OP.placeholder} style={{ flex: 1, minWidth: 0, border: "none", outline: "none", fontSize: "0.9rem", fontFamily: "inherit", fontWeight: 600, color: G.brun, background: "transparent" }} />
+                </div>
+                {err && <div style={{ color: "#C0392B", fontSize: "0.78rem", marginBottom: 12 }}>{err}</div>}
+                <button onClick={submitId} disabled={!txRef.trim() || loading} style={{ width: "100%", background: txRef.trim() ? gold : "#dcdcdc", color: "#fff", border: "none", borderRadius: 14, padding: 15, fontSize: "1rem", fontWeight: 800, cursor: txRef.trim() ? "pointer" : "not-allowed" }}>{loading ? "Vérification…" : "Confirmer mon paiement"}</button>
+              </>
+            ) : (
+              <>
+                <div style={{ fontSize: "0.82rem", color: "#666", lineHeight: 1.5, marginBottom: 12 }}>Envoie la capture d'écran du message que <b>{OP.name}</b> t'a envoyé après ton paiement :</div>
+                <input type="file" accept="image/*" id="moyo-events-screenshot" style={{ display: "none" }} onChange={e => {
+                  const f = e.target.files?.[0]; if (!f) return;
+                  setScreenshotFile(f); setScreenshotPreview(URL.createObjectURL(f));
+                }} />
+                {screenshotPreview ? (
+                  <div onClick={() => document.getElementById("moyo-events-screenshot")?.click()} style={{ borderRadius: 14, overflow: "hidden", marginBottom: 16, cursor: "pointer", position: "relative" }}>
+                    <img src={screenshotPreview} style={{ width: "100%", maxHeight: 220, objectFit: "cover", display: "block" }} />
+                    <div style={{ position: "absolute", bottom: 8, right: 8, background: "rgba(0,0,0,0.6)", color: "#fff", fontSize: "0.7rem", fontWeight: 700, padding: "4px 10px", borderRadius: 50 }}>Changer</div>
+                  </div>
+                ) : (
+                  <div onClick={() => document.getElementById("moyo-events-screenshot")?.click()} style={{ border: "2px dashed #ddd", borderRadius: 14, padding: "28px 16px", textAlign: "center", cursor: "pointer", marginBottom: 16 }}>
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ margin: "0 auto 8px" }}><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" /></svg>
+                    <div style={{ fontSize: "0.82rem", color: "#999", fontWeight: 600 }}>Touche pour choisir une image</div>
+                  </div>
+                )}
+                {err && <div style={{ color: "#C0392B", fontSize: "0.78rem", marginBottom: 12 }}>{err}</div>}
+                <button onClick={submitScreenshot} disabled={!screenshotFile || loading} style={{ width: "100%", background: screenshotFile ? gold : "#dcdcdc", color: "#fff", border: "none", borderRadius: 14, padding: 15, fontSize: "1rem", fontWeight: 800, cursor: screenshotFile ? "pointer" : "not-allowed" }}>{loading ? "Envoi…" : "Envoyer la capture"}</button>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -1318,7 +1387,7 @@ function AppointmentsButton({ auth, onShowPremium }: { auth: any; onShowPremium:
               </div>
               <div style={{ marginBottom: 14 }}><div style={{ fontSize: "0.8rem", fontWeight: 700, color: G.brun, marginBottom: 6 }}>Message complémentaire (facultatif)</div><textarea value={message} onChange={e => setMessage(e.target.value)} placeholder="Une précision pour l'équipe…" style={{ ...APPT_INPUT, minHeight: 50, resize: "vertical" }} /></div>
               {err && <div style={{ background: "rgba(231,76,60,0.08)", border: "1.5px solid #e74c3c", borderRadius: 10, padding: "10px 12px", marginBottom: 12, fontSize: "0.8rem", color: "#c0392b", lineHeight: 1.5 }}>{err}</div>}
-              <button onClick={submit} disabled={sending} style={{ width: "100%", background: sending ? "#c4c4c1" : "#8A8A87", color: "#fff", border: "none", borderRadius: 12, padding: "14px", fontSize: "0.92rem", fontWeight: 800, cursor: sending ? "not-allowed" : "pointer" }}>{sending ? "Envoi…" : type === "physique" ? "Continuer vers le paiement" : "Envoyer ma demande"}</button>
+              <button onClick={submit} disabled={sending} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: sending ? "#e0a89f" : `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: "#fff", border: "none", borderRadius: 50, padding: "15px", fontSize: "0.92rem", fontWeight: 700, cursor: sending ? "not-allowed" : "pointer", boxShadow: sending ? "none" : "0 6px 18px rgba(192,57,43,0.3)" }}>{sending ? "Envoi…" : <>{type === "physique" ? "Continuer vers le paiement" : "Envoyer ma demande"} <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></>}</button>
             </>)}
           </div>
         ) : (
@@ -1348,6 +1417,7 @@ function AppointmentsButton({ auth, onShowPremium }: { auth: any; onShowPremium:
     </div>}
 
     {payView && <MobileMoneyPayment
+      auth={auth}
       amount={APPOINTMENT_PHYSICAL_PRICE}
       description="Rendez-vous à l'agence, service payant"
       onSubmit={payAndCreate}
@@ -1536,41 +1606,49 @@ function EventsButton({ auth }: { auth: Auth }) {
                 <button onClick={() => { setView("mine"); loadMine(); }} style={{ background: "#8A8A87", color: "#fff", border: "none", borderRadius: 10, padding: "11px 22px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>Voir mes inscriptions</button>
               </div>
             ) : (<>
-              <div onClick={() => setView("browse")} style={{ display: "flex", alignItems: "center", gap: 6, color: "#999", fontSize: "0.8rem", fontWeight: 600, cursor: "pointer", marginBottom: 14 }}>
+              <div onClick={() => setView("browse")} style={{ display: "flex", alignItems: "center", gap: 6, color: "#999", fontSize: "0.8rem", fontWeight: 600, cursor: "pointer", marginBottom: 12 }}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
                 Retour à la liste
               </div>
-              {selected.cover_image_url && <div style={{ height: 150, borderRadius: 14, background: `url(${selected.cover_image_url}) center/cover`, marginBottom: 14 }} />}
-              <span style={{ display: "inline-block", background: "rgba(192,57,43,0.08)", color: G.rouge, fontSize: "0.66rem", fontWeight: 800, letterSpacing: "0.03em", padding: "3px 10px", borderRadius: 6, marginBottom: 10 }}>ÉVÉNEMENT</span>
-              <div style={{ fontWeight: 900, fontSize: "1.1rem", color: G.brun, marginBottom: 12 }}>{selected.title}</div>
-              {selected.description && <div style={{ fontSize: "0.82rem", color: "#666", lineHeight: 1.6, marginBottom: 14 }}>{selected.description}</div>}
-              <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.8rem", color: "#555", marginBottom: 8 }}>
-                {icCal} {new Date(selected.event_date).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })} {new Date(selected.event_date).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
-              </div>
-              {selected.location_name && (
-                <div style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: "0.8rem", color: "#555", marginBottom: 14 }}>
-                  {icPin}
-                  <div>
-                    <div style={{ fontWeight: 700 }}>{selected.city || selected.location_name}</div>
-                    {selected.city && <div style={{ color: "#999", fontSize: "0.76rem" }}>{selected.location_name}</div>}
+              <div style={{ background: G.blanc, borderRadius: 20, overflow: "hidden", boxShadow: "0 8px 28px rgba(0,0,0,0.09)", border: "1px solid #f2f2f0" }}>
+                {selected.cover_image_url && <div style={{ height: 150, background: `url(${selected.cover_image_url}) center/cover` }} />}
+                <div style={{ padding: 20 }}>
+                  <span style={{ display: "inline-block", background: "rgba(192,57,43,0.08)", color: G.rouge, fontSize: "0.66rem", fontWeight: 800, letterSpacing: "0.03em", padding: "4px 11px", borderRadius: 7, marginBottom: 11 }}>ÉVÉNEMENT</span>
+                  <div style={{ fontWeight: 900, fontSize: "1.15rem", color: G.brun, marginBottom: 5, letterSpacing: "-0.01em" }}>{selected.title}</div>
+                  {selected.description && <div style={{ fontSize: "0.82rem", color: "#666", lineHeight: 1.6, marginBottom: 14 }}>{selected.description}</div>}
+                  <div style={{ display: "flex", alignItems: "center", gap: 9, fontSize: "0.8rem", color: "#555", marginBottom: 9 }}>
+                    <div style={{ width: 26, height: 26, borderRadius: 8, background: "rgba(192,57,43,0.06)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{icCal}</div>
+                    {new Date(selected.event_date).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })} · {new Date(selected.event_date).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
                   </div>
-                </div>
-              )}
-              <div style={{ borderTop: "1px solid #f1f1f1", paddingTop: 12, marginBottom: 18, display: "flex", flexDirection: "column", gap: 10 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.8rem", color: "#888" }}>{icUsers} Capacité</div>
-                  <div style={{ fontWeight: 700, fontSize: "0.85rem", color: G.brun }}>{spotsLeft(selected) !== null ? `${spotsLeft(selected)} places` : "Illimitée"}</div>
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.8rem", color: "#888" }}>
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M20.59 13.41 13.42 20.6a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82Z" /><circle cx="7" cy="7" r="1" /></svg>
-                    Prix
+                  {selected.location_name && (
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: 9, fontSize: "0.8rem", color: "#555", marginBottom: 18 }}>
+                      <div style={{ width: 26, height: 26, borderRadius: 8, background: "rgba(192,57,43,0.06)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>{icPin}</div>
+                      <div>
+                        <div style={{ fontWeight: 700, color: G.brun }}>{selected.city || selected.location_name}</div>
+                        {selected.city && <div style={{ color: "#999", fontSize: "0.76rem", marginTop: 1 }}>{selected.location_name}</div>}
+                      </div>
+                    </div>
+                  )}
+                  <div style={{ background: "#FAFAF9", borderRadius: 14, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 11, marginBottom: 20 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 7, color: "#999", fontSize: "0.78rem", fontWeight: 600 }}>{icUsers} Capacité</div>
+                      <div style={{ fontWeight: 800, fontSize: "0.85rem", color: G.brun }}>{spotsLeft(selected) !== null ? `${spotsLeft(selected)} places` : "Illimitée"}</div>
+                    </div>
+                    <div style={{ height: 1, background: "#eee" }} />
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 7, color: "#999", fontSize: "0.78rem", fontWeight: 600 }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41 13.42 20.6a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82Z" /><circle cx="7" cy="7" r="1" /></svg>
+                        Prix
+                      </div>
+                      <div style={{ fontWeight: 800, fontSize: "0.85rem", color: G.brun }}>{selected.price > 0 ? `${selected.price.toLocaleString("fr-FR")} FCFA` : "Gratuit"}</div>
+                    </div>
                   </div>
-                  <div style={{ fontWeight: 700, fontSize: "0.85rem", color: G.brun }}>{selected.price > 0 ? `${selected.price.toLocaleString("fr-FR")} FCFA` : "Gratuit"}</div>
+                  {err && <div style={{ background: "rgba(231,76,60,0.08)", border: "1.5px solid #e74c3c", borderRadius: 10, padding: "10px 12px", marginBottom: 12, fontSize: "0.8rem", color: "#c0392b", lineHeight: 1.5 }}>{err}</div>}
+                  <button onClick={() => selected.price > 0 ? setPayView(true) : registerFree()} disabled={sending} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: sending ? "#e0a89f" : `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: "#fff", border: "none", borderRadius: 50, padding: "15px", fontSize: "0.92rem", fontWeight: 700, cursor: sending ? "not-allowed" : "pointer", boxShadow: sending ? "none" : "0 6px 18px rgba(192,57,43,0.3)" }}>
+                    {sending ? "Envoi…" : <>{selected.price > 0 ? `S'inscrire : ${selected.price.toLocaleString("fr-FR")} FCFA` : "S'inscrire gratuitement"} <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></>}
+                  </button>
                 </div>
               </div>
-              {err && <div style={{ background: "rgba(231,76,60,0.08)", border: "1.5px solid #e74c3c", borderRadius: 10, padding: "10px 12px", marginBottom: 12, fontSize: "0.8rem", color: "#c0392b", lineHeight: 1.5 }}>{err}</div>}
-              <button onClick={() => selected.price > 0 ? setPayView(true) : registerFree()} disabled={sending} style={{ width: "100%", background: sending ? "#c4c4c1" : "#8A8A87", color: "#fff", border: "none", borderRadius: 12, padding: "14px", fontSize: "0.92rem", fontWeight: 800, cursor: sending ? "not-allowed" : "pointer" }}>{sending ? "Envoi…" : selected.price > 0 ? `S'inscrire : ${selected.price.toLocaleString("fr-FR")} FCFA` : "S'inscrire gratuitement"}</button>
             </>)}
           </div>
         )}
@@ -1599,6 +1677,7 @@ function EventsButton({ auth }: { auth: Auth }) {
     </div>}
 
     {payView && selected && <MobileMoneyPayment
+      auth={auth}
       amount={selected.price}
       description={selected.title}
       onSubmit={payAndRegister}
@@ -17479,35 +17558,62 @@ function MatchRequestButton({ auth, onShowPremium }: { auth: Auth; onShowPremium
                 </div>
               ) : (
                 <>
-                  <div style={{ fontSize: "0.82rem", color: "#555", background: G.blanc, border: "1px solid #f0f0f0", borderRadius: 10, padding: "10px 12px", marginBottom: 14, lineHeight: 1.6 }}>
-                    Votre demande utilise votre <strong>profil relationnel</strong>. Notre équipe recherchera la personne qui vous correspond le mieux.
-                  </div>
-                  {(() => {
-                    const opp = myGender === "Homme" ? "Femme" : myGender === "Femme" ? "Homme" : "-";
-                    const rows: [string, string][] = [
-                      ["Recherche", `${opp !== "-" ? opp + " · " : ""}${relProfile?.city || "-"} · ${relProfile?.age_min || "?"}-${relProfile?.age_max || "?"} ans`],
-                      ["Projet", relProfile?.project || "-"],
-                      ["Religion", relProfile?.religion || "-"],
-                    ];
-                    if (Array.isArray(relProfile?.qualities) && relProfile.qualities.length) rows.push(["Qualités", relProfile.qualities.join(", ")]);
-                    if (Array.isArray(relProfile?.interests) && relProfile.interests.length) rows.push(["Centres d'intérêt", relProfile.interests.join(", ")]);
-                    return (
-                      <div style={{ border: `1.5px solid ${G.gris}`, borderRadius: 12, padding: "12px 14px", marginBottom: 14 }}>
-                        {rows.map(([k, v], i) => (
-                          <div key={i} style={{ display: "flex", gap: 10, padding: "5px 0", borderBottom: i < rows.length - 1 ? `1px solid ${G.creme}` : "none" }}>
-                            <span style={{ fontSize: "0.74rem", color: "#999", flex: "0 0 88px" }}>{k}</span>
-                            <span style={{ fontSize: "0.8rem", color: G.brun, fontWeight: 600, flex: 1 }}>{v}</span>
-                          </div>
-                        ))}
-                        <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
-                          <button onClick={() => { setShowModal(false); setShowWizard(true); setWStep(1); }} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, background: "#fafafa", border: "1.5px solid #eee", color: "#666", borderRadius: 12, padding: "11px", fontSize: "0.84rem", fontWeight: 800, cursor: "pointer" }}>
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>
-                            Modifier mon profil relationnel
-                          </button>
+                  <div style={{ background: G.blanc, borderRadius: 20, overflow: "hidden", boxShadow: "0 8px 28px rgba(0,0,0,0.09)", border: "1px solid #f2f2f0", marginBottom: 20 }}>
+                    <div style={{ padding: "16px 18px" }}>
+                      <div style={{ display: "flex", alignItems: "flex-start", gap: 10, fontSize: "0.8rem", color: "#666", lineHeight: 1.6, marginBottom: 16 }}>
+                        <div style={{ width: 26, height: 26, borderRadius: 8, background: "rgba(192,57,43,0.06)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>
                         </div>
+                        <div>Votre demande utilise votre <strong style={{ color: G.brun }}>profil relationnel</strong>. Notre équipe recherchera la personne qui vous correspond le mieux.</div>
                       </div>
-                    );
-                  })()}
+                      {(() => {
+                        const opp = myGender === "Homme" ? "Femme" : myGender === "Femme" ? "Homme" : "-";
+                        const searchLine = `${opp !== "-" ? opp + " · " : ""}${relProfile?.city || "-"} · ${relProfile?.age_min || "?"}-${relProfile?.age_max || "?"} ans`;
+                        const rows: [string, string][] = [
+                          ["Projet", relProfile?.project || "-"],
+                          ["Religion", relProfile?.religion || "-"],
+                        ];
+                        const qualities = Array.isArray(relProfile?.qualities) ? relProfile.qualities : [];
+                        const interests = Array.isArray(relProfile?.interests) ? relProfile.interests : [];
+                        return (<>
+                          <div style={{ background: `linear-gradient(135deg,rgba(192,57,43,0.06),rgba(192,57,43,0.02))`, border: `1px solid rgba(192,57,43,0.15)`, borderRadius: 14, padding: "13px 15px", marginBottom: 12 }}>
+                            <div style={{ fontSize: "0.68rem", color: G.rouge, fontWeight: 700, marginBottom: 4, letterSpacing: "0.02em" }}>RECHERCHE</div>
+                            <div style={{ fontSize: "0.98rem", fontWeight: 800, color: G.brun }}>{searchLine}</div>
+                          </div>
+                          <div style={{ background: "#FAFAF9", borderRadius: 14, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 11 }}>
+                            {rows.map(([k, v], i) => (<React.Fragment key={i}>
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+                                <span style={{ fontSize: "0.76rem", color: "#999", fontWeight: 600 }}>{k}</span>
+                                <span style={{ fontSize: "0.82rem", color: G.brun, fontWeight: 700 }}>{v}</span>
+                              </div>
+                              {(i < rows.length - 1 || qualities.length > 0 || interests.length > 0) && <div style={{ height: 1, background: "#eee" }} />}
+                            </React.Fragment>))}
+                            {qualities.length > 0 && (<>
+                              <div>
+                                <span style={{ fontSize: "0.76rem", color: "#999", fontWeight: 600, display: "block", marginBottom: 7 }}>Qualités</span>
+                                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                                  {qualities.map((q: string, i: number) => <span key={i} style={{ background: "rgba(212,168,67,0.13)", color: "#8B6914", fontSize: "0.7rem", fontWeight: 700, padding: "4px 10px", borderRadius: 20 }}>{q}</span>)}
+                                </div>
+                              </div>
+                              {interests.length > 0 && <div style={{ height: 1, background: "#eee" }} />}
+                            </>)}
+                            {interests.length > 0 && (
+                              <div>
+                                <span style={{ fontSize: "0.76rem", color: "#999", fontWeight: 600, display: "block", marginBottom: 7 }}>Centres d'intérêt</span>
+                                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                                  {interests.map((it: string, i: number) => <span key={i} style={{ background: "rgba(139,13,47,0.08)", color: "#8B0D2F", fontSize: "0.7rem", fontWeight: 700, padding: "4px 10px", borderRadius: 20 }}>{it}</span>)}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </>);
+                      })()}
+                    </div>
+                    <button onClick={() => { setShowModal(false); setShowWizard(true); setWStep(1); }} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 7, background: "#FAFAF9", border: "none", borderTop: "1px solid #f0f0f0", color: "#666", padding: "13px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer" }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>
+                      Modifier mon profil relationnel
+                    </button>
+                  </div>
                   <div style={{ marginBottom: 20 }}>
                     <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 700, color: "#555", marginBottom: 6 }}>Message (optionnel)</label>
                     <textarea value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value.slice(0, 300) }))} placeholder="Décrivez ce que vous recherchez..." rows={3} maxLength={300} style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.82rem", outline: "none", resize: "none", boxSizing: "border-box", fontFamily: "inherit" }} />
@@ -17539,8 +17645,8 @@ function MatchRequestButton({ auth, onShowPremium }: { auth: Auth; onShowPremium
                       setSent(true);
                     } catch {}
                     setLoading(false);
-                  }} disabled={loading} style={{ width: "100%", background: loading ? "#c4c4c1" : "#8A8A87", color: "#fff", border: "none", borderRadius: 50, padding: "14px", fontSize: "0.95rem", fontWeight: 700, cursor: "pointer" }}>
-                    {loading ? "Envoi en cours..." : "Envoyer ma demande"}
+                  }} disabled={loading} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: loading ? "#e0a89f" : `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: "#fff", border: "none", borderRadius: 50, padding: "15px", fontSize: "0.95rem", fontWeight: 700, cursor: loading ? "not-allowed" : "pointer", boxShadow: loading ? "none" : "0 6px 18px rgba(192,57,43,0.3)" }}>
+                    {loading ? "Envoi en cours..." : <>Envoyer ma demande <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></>}
                   </button>
                 </>
               )}
@@ -17610,9 +17716,9 @@ function MatchRequestButton({ auth, onShowPremium }: { auth: Auth; onShowPremium
         const canNext = wStep === 1 ? step1ok : step2ok;
         const oppGender = myGender === "Homme" ? "une femme" : myGender === "Femme" ? "un homme" : "le genre opposé";
         return (
-          <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 10003, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, overscrollBehavior: "contain", touchAction: "none" }}>
-            <div className="moyo-card-in" style={{ background: G.blanc, borderRadius: 22, width: "100%", maxWidth: 440, maxHeight: "92vh", overflow: "hidden", display: "flex", flexDirection: "column", boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
-              <div style={{ background: G.blanc, borderBottom: "1px solid #f0f0f0", padding: "18px 20px 14px", flexShrink: 0 }}>
+          <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: G.creme, zIndex: 10003, display: "flex", flexDirection: "column", overscrollBehavior: "contain" }}>
+            <div className="moyo-card-in" style={{ background: G.blanc, borderRadius: 0, width: "100%", height: "100%", maxHeight: "100vh", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+              <div style={{ background: G.blanc, borderBottom: "1px solid #f0f0f0", padding: "calc(env(safe-area-inset-top) + 18px) 20px 14px", flexShrink: 0 }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                   <div style={{ fontWeight: 800, fontSize: "0.98rem", color: G.brun }}>Profil relationnel</div>
                   <button onClick={() => { setShowWizard(false); setWStep(1); }} style={{ background: "#f4f4f2", border: "none", borderRadius: "50%", width: 30, height: 30, cursor: "pointer", color: "#999" }}>✕</button>
@@ -17673,9 +17779,9 @@ function MatchRequestButton({ auth, onShowPremium }: { auth: Auth; onShowPremium
               <div style={{ display: "flex", gap: 10, padding: "14px 20px", borderTop: `1px solid ${G.gris}`, flexShrink: 0 }}>
                 {wStep > 1 && <button onClick={() => setWStep(1)} style={{ flex: "0 0 auto", background: G.creme, color: "#555", border: `1.5px solid ${G.gris}`, borderRadius: 12, padding: "12px 18px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>Précédent</button>}
                 {wStep < 2 ? (
-                  <button onClick={() => canNext && setWStep(2)} disabled={!canNext} style={{ flex: 1, background: canNext ? "#8A8A87" : "#d8d8d5", color: "#fff", border: "none", borderRadius: 12, padding: "12px", fontSize: "0.88rem", fontWeight: 800, cursor: canNext ? "pointer" : "not-allowed" }}>Suivant</button>
+                  <button onClick={() => canNext && setWStep(2)} disabled={!canNext} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: canNext ? `linear-gradient(135deg,${G.rouge},${G.rougeDark})` : "#d8d8d5", color: "#fff", border: "none", borderRadius: 50, padding: "13px", fontSize: "0.88rem", fontWeight: 700, cursor: canNext ? "pointer" : "not-allowed", boxShadow: canNext ? "0 6px 18px rgba(192,57,43,0.3)" : "none" }}>Suivant <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></button>
                 ) : (
-                  <button onClick={saveRel} disabled={savingRel || !canNext} style={{ flex: 1, background: (savingRel || !canNext) ? "rgba(39,174,96,0.5)" : "linear-gradient(135deg,#27ae60,#1e8449)", color: "#fff", border: "none", borderRadius: 12, padding: "12px", fontSize: "0.88rem", fontWeight: 800, cursor: (savingRel || !canNext) ? "not-allowed" : "pointer" }}>{savingRel ? "Enregistrement…" : "Enregistrer mon profil"}</button>
+                  <button onClick={saveRel} disabled={savingRel || !canNext} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: (savingRel || !canNext) ? "#e0a89f" : `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: "#fff", border: "none", borderRadius: 50, padding: "13px", fontSize: "0.88rem", fontWeight: 700, cursor: (savingRel || !canNext) ? "not-allowed" : "pointer", boxShadow: (savingRel || !canNext) ? "none" : "0 6px 18px rgba(192,57,43,0.3)" }}>{savingRel ? "Enregistrement…" : <>Enregistrer mon profil <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg></>}</button>
                 )}
               </div>
             </div>
