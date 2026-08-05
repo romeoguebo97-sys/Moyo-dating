@@ -1056,25 +1056,25 @@ function MobileMoneyPayment({ amount, description, onSubmit, onCancel }: { amoun
 
   if (step === "choose") {
     return (
-      <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 99000, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
-        <div className="moyo-sheet-in" style={{ background: "#f6f6f7", width: "100%", maxWidth: 460, maxHeight: "92vh", display: "flex", flexDirection: "column", overscrollBehavior: "contain" }}>
-          <div style={{ background: G.brun, padding: "calc(env(safe-area-inset-top) + 16px) 18px 14px", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <div style={{ color: "#fff", fontWeight: 800, fontSize: "1.05rem" }}>Paiement</div>
-            <div onClick={onCancel} style={{ cursor: "pointer", background: "rgba(255,255,255,0.2)", borderRadius: "50%", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 700 }}>✕</div>
-          </div>
-          <div style={{ padding: 16 }}>
-            <div style={{ background: G.blanc, borderRadius: 16, padding: 16, marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
-              <div style={{ fontSize: "0.82rem", color: "#666" }}>{description}</div>
-              <div style={{ fontSize: "1.35rem", fontWeight: 800, color: G.brun, marginTop: 4 }}>{amount.toLocaleString("fr-FR")} FCFA</div>
+      <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 99000, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
+        <div onClick={e => e.stopPropagation()} className="moyo-sheet-in" style={{ background: "#FCFBF8", width: "100%", maxWidth: 460, height: "100%", maxHeight: "100vh", overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y", boxShadow: "0 30px 80px rgba(0,0,0,0.4)", position: "relative", padding: "calc(env(safe-area-inset-top) + 18px) 20px 16px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", marginBottom: 18 }}>
+            <div onClick={onCancel} style={{ cursor: "pointer", background: "#eceae5", borderRadius: "50%", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#777" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
             </div>
-            <div style={{ fontSize: "0.82rem", fontWeight: 700, color: G.brun, marginBottom: 8 }}>Choisis ton opérateur Mobile Money</div>
-            {(["MTN", "Airtel"] as const).map(op => (
-              <div key={op} onClick={() => { setOperator(op); setStep("pay"); }} style={{ display: "flex", alignItems: "center", gap: 12, padding: 14, background: G.blanc, borderRadius: 14, marginBottom: 10, cursor: "pointer", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
-                {op === "MTN" ? mtnLogo(20) : airtelLogo(24)}
-                <div style={{ fontWeight: 700, fontSize: "0.9rem", color: G.brun }}>{op === "MTN" ? "MTN MoMo" : "Airtel Money"}</div>
-              </div>
-            ))}
           </div>
+          <div style={{ background: G.blanc, borderRadius: 16, padding: 16, marginBottom: 20, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
+            <div style={{ fontSize: "0.82rem", color: "#666" }}>{description}</div>
+            <div style={{ fontSize: "1.35rem", fontWeight: 800, color: G.brun, marginTop: 4 }}>{amount.toLocaleString("fr-FR")} FCFA</div>
+          </div>
+          <div style={{ fontSize: "1.2rem", fontWeight: 800, color: G.brun, marginBottom: 18 }}>Comment veux-tu payer ?</div>
+          <div style={{ textAlign: "center", fontSize: "0.66rem", fontWeight: 800, color: "#a8a8a8", letterSpacing: 1, marginBottom: 7 }}>PAYEZ AVEC</div>
+          <button onClick={() => { setOperator("MTN"); setStep("pay"); }} style={{ width: "100%", background: "#FFCC00", color: G.brun, border: "none", borderRadius: 14, padding: "13px", fontSize: "1rem", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 8 }}>
+            {mtnLogo(18)} MTN MoMo
+          </button>
+          <button onClick={() => { setOperator("Airtel"); setStep("pay"); }} style={{ width: "100%", background: G.blanc, color: "#FF0100", border: "2px solid #FF0100", borderRadius: 14, padding: "11px", fontSize: "1rem", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 12 }}>
+            {airtelLogo(20)} Airtel Money
+          </button>
         </div>
       </div>
     );
@@ -1083,7 +1083,7 @@ function MobileMoneyPayment({ amount, description, onSubmit, onCancel }: { amoun
   if (step === "pay" && operator) {
     return (
       <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 99000, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
-        <div className="moyo-sheet-in" style={{ background: "#f6f6f7", width: "100%", maxWidth: 460, maxHeight: "92vh", display: "flex", flexDirection: "column", overscrollBehavior: "contain" }}>
+        <div className="moyo-sheet-in" style={{ background: "#f6f6f7", width: "100%", maxWidth: 460, height: "100%", maxHeight: "100vh", display: "flex", flexDirection: "column", overscrollBehavior: "contain" }}>
           <div style={{ background: OP.main, padding: "calc(env(safe-area-inset-top) + 16px) 18px 14px", flexShrink: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <div onClick={() => setStep("choose")} style={{ cursor: "pointer", background: OP.onColor === "#fff" ? "rgba(255,255,255,0.22)" : "rgba(0,0,0,0.1)", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -1128,7 +1128,7 @@ function MobileMoneyPayment({ amount, description, onSubmit, onCancel }: { amoun
     };
     return (
       <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 99000, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
-        <div className="moyo-sheet-in" style={{ background: "#f6f6f7", width: "100%", maxWidth: 460, maxHeight: "92vh", display: "flex", flexDirection: "column", overscrollBehavior: "contain" }}>
+        <div className="moyo-sheet-in" style={{ background: "#f6f6f7", width: "100%", maxWidth: 460, height: "100%", maxHeight: "100vh", display: "flex", flexDirection: "column", overscrollBehavior: "contain" }}>
           <div style={{ background: OP.main, padding: "calc(env(safe-area-inset-top) + 16px) 18px 14px", flexShrink: 0, display: "flex", alignItems: "center", gap: 12 }}>
             <div onClick={() => setStep("pay")} style={{ cursor: "pointer", background: OP.onColor === "#fff" ? "rgba(255,255,255,0.22)" : "rgba(0,0,0,0.1)", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={OP.onColor} strokeWidth="2.5" strokeLinecap="round"><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" /></svg>
@@ -1469,6 +1469,9 @@ function EventsButton({ auth }: { auth: Auth }) {
   const regStatusInfo = (s: string) => s === "confirmed" ? { label: "Confirmé", color: "#27ae60" } : s === "pending_payment" ? { label: "Paiement en attente", color: "#b9770e" } : s === "attended" ? { label: "Présent", color: G.vert } : { label: s, color: "#999" };
 
   if (!FEATURE_EVENTS) return null;
+  const icCal = <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>;
+  const icPin = <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>;
+  const icUsers = <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>;
 
   return (<>
     <div onClick={() => { setOpen(true); setView("browse"); loadEvents(); }} style={{ background: G.blanc, borderRadius: 18, padding: "15px 18px", boxShadow: "0 2px 10px rgba(0,0,0,0.06)", border: `1.5px solid rgba(192,57,43,0.18)`, marginTop: 0, cursor: "pointer" }}>
@@ -1513,8 +1516,8 @@ function EventsButton({ auth }: { auth: Auth }) {
                     </div>
                     <div style={{ padding: 14 }}>
                       <div style={{ fontWeight: 800, fontSize: "0.92rem", color: G.brun, marginBottom: 4 }}>{e.title}</div>
-                      <div style={{ fontSize: "0.76rem", color: "#888", display: "flex", alignItems: "center", gap: 5, marginBottom: 2 }}>📅 {new Date(e.event_date).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })}</div>
-                      {e.location_name && <div style={{ fontSize: "0.76rem", color: "#888", display: "flex", alignItems: "center", gap: 5, marginBottom: 10 }}>📍 {e.location_name}{e.city ? `, ${e.city}` : ""}</div>}
+                      <div style={{ fontSize: "0.76rem", color: "#888", display: "flex", alignItems: "center", gap: 5, marginBottom: 2 }}>{icCal} {new Date(e.event_date).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })}</div>
+                      {e.location_name && <div style={{ fontSize: "0.76rem", color: "#888", display: "flex", alignItems: "center", gap: 5, marginBottom: 10 }}>{icPin} {e.location_name}{e.city ? `, ${e.city}` : ""}</div>}
                       <div style={{ fontWeight: 800, fontSize: "0.9rem", color: G.rouge }}>{e.price > 0 ? `${e.price.toLocaleString("fr-FR")} FCFA` : "Gratuit"}</div>
                     </div>
                   </div>
@@ -1537,16 +1540,37 @@ function EventsButton({ auth }: { auth: Auth }) {
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
                 Retour à la liste
               </div>
-              {selected.cover_image_url && <div style={{ height: 140, borderRadius: 14, background: `url(${selected.cover_image_url}) center/cover`, marginBottom: 14 }} />}
-              <div style={{ fontWeight: 800, fontSize: "1.05rem", color: G.brun, marginBottom: 10 }}>{selected.title}</div>
+              {selected.cover_image_url && <div style={{ height: 150, borderRadius: 14, background: `url(${selected.cover_image_url}) center/cover`, marginBottom: 14 }} />}
+              <span style={{ display: "inline-block", background: "rgba(192,57,43,0.08)", color: G.rouge, fontSize: "0.66rem", fontWeight: 800, letterSpacing: "0.03em", padding: "3px 10px", borderRadius: 6, marginBottom: 10 }}>ÉVÉNEMENT</span>
+              <div style={{ fontWeight: 900, fontSize: "1.1rem", color: G.brun, marginBottom: 12 }}>{selected.title}</div>
               {selected.description && <div style={{ fontSize: "0.82rem", color: "#666", lineHeight: 1.6, marginBottom: 14 }}>{selected.description}</div>}
-              <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.82rem", color: "#555" }}>📅 {new Date(selected.event_date).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })}</div>
-                {selected.location_name && <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.82rem", color: "#555" }}>📍 {selected.location_name}{selected.city ? `, ${selected.city}` : ""}</div>}
-                <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.82rem", color: "#555" }}>👥 {spotsLeft(selected) !== null ? `${spotsLeft(selected)} places restantes` : "Places disponibles"}</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.8rem", color: "#555", marginBottom: 8 }}>
+                {icCal} {new Date(selected.event_date).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })} {new Date(selected.event_date).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+              </div>
+              {selected.location_name && (
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: "0.8rem", color: "#555", marginBottom: 14 }}>
+                  {icPin}
+                  <div>
+                    <div style={{ fontWeight: 700 }}>{selected.city || selected.location_name}</div>
+                    {selected.city && <div style={{ color: "#999", fontSize: "0.76rem" }}>{selected.location_name}</div>}
+                  </div>
+                </div>
+              )}
+              <div style={{ borderTop: "1px solid #f1f1f1", paddingTop: 12, marginBottom: 18, display: "flex", flexDirection: "column", gap: 10 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.8rem", color: "#888" }}>{icUsers} Capacité</div>
+                  <div style={{ fontWeight: 700, fontSize: "0.85rem", color: G.brun }}>{spotsLeft(selected) !== null ? `${spotsLeft(selected)} places` : "Illimitée"}</div>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.8rem", color: "#888" }}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M20.59 13.41 13.42 20.6a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82Z" /><circle cx="7" cy="7" r="1" /></svg>
+                    Prix
+                  </div>
+                  <div style={{ fontWeight: 700, fontSize: "0.85rem", color: G.brun }}>{selected.price > 0 ? `${selected.price.toLocaleString("fr-FR")} FCFA` : "Gratuit"}</div>
+                </div>
               </div>
               {err && <div style={{ background: "rgba(231,76,60,0.08)", border: "1.5px solid #e74c3c", borderRadius: 10, padding: "10px 12px", marginBottom: 12, fontSize: "0.8rem", color: "#c0392b", lineHeight: 1.5 }}>{err}</div>}
-              <button onClick={() => selected.price > 0 ? setPayView(true) : registerFree()} disabled={sending} style={{ width: "100%", background: sending ? "#c4c4c1" : "#8A8A87", color: "#fff", border: "none", borderRadius: 12, padding: "14px", fontSize: "0.92rem", fontWeight: 800, cursor: sending ? "not-allowed" : "pointer" }}>{sending ? "Envoi…" : selected.price > 0 ? `S'inscrire — ${selected.price.toLocaleString("fr-FR")} FCFA` : "S'inscrire gratuitement"}</button>
+              <button onClick={() => selected.price > 0 ? setPayView(true) : registerFree()} disabled={sending} style={{ width: "100%", background: sending ? "#c4c4c1" : "#8A8A87", color: "#fff", border: "none", borderRadius: 12, padding: "14px", fontSize: "0.92rem", fontWeight: 800, cursor: sending ? "not-allowed" : "pointer" }}>{sending ? "Envoi…" : selected.price > 0 ? `S'inscrire : ${selected.price.toLocaleString("fr-FR")} FCFA` : "S'inscrire gratuitement"}</button>
             </>)}
           </div>
         )}
@@ -1561,8 +1585,8 @@ function EventsButton({ auth }: { auth: Auth }) {
                     <span style={{ fontWeight: 700, color: G.brun, fontSize: "0.88rem" }}>{ev?.title || "Événement"}</span>
                     <span style={{ background: si.color + "1a", color: si.color, borderRadius: 50, padding: "3px 10px", fontSize: "0.7rem", fontWeight: 700 }}>{si.label}</span>
                   </div>
-                  {ev?.event_date && <div style={{ fontSize: "0.78rem", color: "#888" }}>📅 {new Date(ev.event_date).toLocaleDateString("fr-FR", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })}</div>}
-                  {ev?.location_name && <div style={{ fontSize: "0.78rem", color: "#888" }}>📍 {ev.location_name}{ev.city ? `, ${ev.city}` : ""}</div>}
+                  {ev?.event_date && <div style={{ fontSize: "0.78rem", color: "#888", display: "flex", alignItems: "center", gap: 5 }}>{icCal} {new Date(ev.event_date).toLocaleDateString("fr-FR", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })}</div>}
+                  {ev?.location_name && <div style={{ fontSize: "0.78rem", color: "#888", display: "flex", alignItems: "center", gap: 5 }}>{icPin} {ev.location_name}{ev.city ? `, ${ev.city}` : ""}</div>}
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8, gap: 8 }}>
                     <div style={{ fontSize: "0.68rem", color: "#aaa" }}>Inscrit le {new Date(r.registered_at).toLocaleDateString("fr-FR")}</div>
                     {r.status !== "attended" && <button onClick={() => setConfirmCancel(r)} style={{ background: "rgba(231,76,60,0.08)", border: "1.5px solid rgba(231,76,60,0.25)", borderRadius: 50, padding: "5px 12px", fontSize: "0.68rem", fontWeight: 700, color: "#e74c3c", cursor: "pointer", flexShrink: 0 }}>Annuler</button>}
@@ -17395,7 +17419,7 @@ function MatchRequestButton({ auth, onShowPremium }: { auth: Auth; onShowPremium
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
       </div>
       <div id="moyo-appointment-card"><AppointmentsButton auth={auth} onShowPremium={onShowPremium} /></div>
-      <div style={{ marginTop: 14 }}><EventsButton auth={auth} /></div>
+      <EventsButton auth={auth} />
       {/* ── Modal confirmation suppression du profil relationnel ── */}
       {showDeleteRel && (
         <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10004, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={() => !deletingRel && setShowDeleteRel(false)}>
