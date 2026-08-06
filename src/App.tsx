@@ -15056,6 +15056,15 @@ export function Messages({ auth, onUnreadCount, onShowPremium, onShowGiftPremium
                 </a>
               </div>
             );
+          })() : statusPreview.link_url.startsWith("app:") ? (() => {
+            const destKey = statusPreview.link_url!.slice(4);
+            const dest = CAROUSEL_DESTINATIONS[destKey] || { tab: destKey || "profile", flag: undefined as string | undefined, flagValue: undefined as string | undefined };
+            return (
+              <button onClick={e => { e.stopPropagation(); globalNavigate(dest.tab, dest.flag, dest.flagValue); }} style={{ position: "absolute", left: 18, right: 18, bottom: 92, zIndex: 6, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: G.rouge, color: "#fff", border: "none", borderRadius: 14, padding: "13px 16px", fontWeight: 800, fontSize: "0.9rem", boxShadow: "0 8px 24px rgba(0,0,0,0.3)", cursor: "pointer" }}>
+                En savoir plus
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
+              </button>
+            );
           })() : (
             <a href={statusPreview.link_url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ position: "absolute", left: 18, right: 18, bottom: 92, zIndex: 6, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: G.rouge, color: "#fff", textDecoration: "none", borderRadius: 14, padding: "13px 16px", fontWeight: 800, fontSize: "0.9rem", boxShadow: "0 8px 24px rgba(0,0,0,0.3)" }}>
               En savoir plus
@@ -21445,7 +21454,7 @@ export default function App() {
     (async () => {
       try {
         const [settingRows, profileRows] = await Promise.all([
-          sb.query<{ key: string; value: string }>(auth.token, "app_settings", `?key=in.(phone_completion_prompt_enabled,verification_prompt_enabled,premium_nudge_enabled,premium_nudge_target,premium_nudge_message,promo_active,promo_price_fcfa,promo_expires_at,promo_target,promo_message,ambassador_nudge_enabled,ambassador_nudge_target,ambassador_nudge_message)&select=key,value`),
+          sb.query<{ key: string; value: string }>(auth.token, "app_settings", `?key=in.(phone_completion_prompt_enabled,verification_prompt_enabled,premium_nudge_enabled,premium_nudge_target,premium_nudge_message,promo_active,promo_price_fcfa,promo_expires_at,promo_target,promo_message,ambassador_nudge_enabled,ambassador_nudge_target,ambassador_nudge_message,events_nudge_enabled,events_nudge_target,events_nudge_message)&select=key,value`),
           sb.query<{ phone: string | null; age?: number; gender?: string; is_verified?: boolean; is_premium?: boolean; is_ambassador?: boolean; created_at?: string; last_seen?: string; city?: string }>(auth.token, "profiles", `?id=eq.${auth.userId}&select=phone,age,gender,is_verified,is_premium,is_ambassador,created_at,last_seen,city`),
         ]);
         const settings: Record<string, string> = {};
@@ -21544,6 +21553,27 @@ export default function App() {
             if (lastSeen !== today) {
               setAmbassadorNudgeMessage(settings["ambassador_nudge_message"] || "Gagne de l'argent en recommandant Moyo Dating à ton entourage. Chaque personne qui s'abonne au Premium grâce à toi te rapporte une vraie commission, versée par Mobile Money.");
               setAmbassadorNudgeOpen(true);
+              localStorage.setItem(seenKey, today);
+            }
+          }
+        } else if (FEATURE_EVENTS && settings["events_nudge_enabled"] === "true") {
+          // Une seule fenêtre à la fois : la campagne Événements ne se déclenche que si ni la
+          // relance Premium ni la campagne Ambassadeur ne se sont déjà déclenchées ci-dessus.
+          const target = settings["events_nudge_target"] || "all";
+          const matchesTarget =
+            target === "all" ? true :
+            target === "femmes" ? me.gender === "Femme" :
+            target === "hommes" ? me.gender === "Homme" :
+            target === "nouveaux" ? (me.created_at ? (Date.now() - new Date(me.created_at).getTime()) < 7 * 24 * 3600 * 1000 : false) :
+            target === "inactifs" ? (me.last_seen ? (Date.now() - new Date(me.last_seen).getTime()) > 14 * 24 * 3600 * 1000 : false) :
+            true;
+          if (matchesTarget) {
+            const seenKey = `moyo_events_nudge_seen_${auth.userId}`;
+            const lastSeen = localStorage.getItem(seenKey);
+            const today = new Date().toDateString();
+            if (lastSeen !== today) {
+              setEventsNudgeMessage(settings["events_nudge_message"] || "Rencontre d'autres membres Moyo Dating en vrai ! Découvre nos prochains événements et réserve ta place.");
+              setEventsNudgeOpen(true);
               localStorage.setItem(seenKey, today);
             }
           }
@@ -21871,37 +21901,54 @@ export default function App() {
     })()}
 
     {ambassadorNudgeOpen && !phonePromptOpen && !verifyPromptOpen && !superPromoOpen && !premiumNudgeOpen && !eventsNudgeOpen && (() => {
-      const brand = "#8B0D2F";
+      const brand = G.rouge;
       return (
         <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 19000, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
-          <div onClick={e => e.stopPropagation()} className="moyo-sheet-in" style={{ background: "#FCFBF8", borderRadius: 0, width: "100%", maxWidth: 460, height: "100%", maxHeight: "100vh", overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y", boxShadow: "0 30px 80px rgba(0,0,0,0.4)", position: "relative", display: "flex", flexDirection: "column", justifyContent: "center", padding: "calc(env(safe-area-inset-top) + 18px) 22px calc(env(safe-area-inset-bottom) + 26px)" }}>
-            <div onClick={() => setAmbassadorNudgeOpen(false)} style={{ position: "fixed", top: "calc(env(safe-area-inset-top) + 16px)", right: "max(16px, calc((100vw - 460px) / 2 + 16px))", cursor: "pointer", background: "#eceae5", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 19001 }}>
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#777" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-            </div>
-            <div style={{ display: "flex", justifyContent: "center", marginBottom: 14 }}>
-              <div style={{ width: 54, height: 54, borderRadius: "50%", background: "rgba(139,13,47,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <svg width="27" height="27" viewBox="0 0 24 24" fill="none" stroke={brand} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>
+          <div onClick={e => e.stopPropagation()} className="moyo-sheet-in" style={{ background: "#fff", borderRadius: 0, width: "100%", maxWidth: 460, height: "100%", maxHeight: "100vh", overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y", boxShadow: "0 30px 80px rgba(0,0,0,0.4)", position: "relative" }}>
+            <div style={{ background: G.cremeDark, padding: "calc(env(safe-area-inset-top) + 18px) 22px 22px" }}>
+              <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 2 }}>
+                <div onClick={() => setAmbassadorNudgeOpen(false)} style={{ cursor: "pointer", background: "#fff", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                </div>
+              </div>
+              <div style={{ position: "relative", display: "flex", justifyContent: "center", alignItems: "center", height: 108, marginBottom: 4 }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="#D4A843" style={{ position: "absolute", left: "26%", top: 6 }}><path d="M12 2l1.5 6.5L20 10l-6.5 1.5L12 18l-1.5-6.5L4 10l6.5-1.5z" /></svg>
+                <div style={{ position: "absolute", bottom: 6, right: "22%", width: 8, height: 8, borderRadius: "50%", border: `2px solid ${brand}` }} />
+                <div style={{ width: 74, height: 74, borderRadius: "50%", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke={brand} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="6" /><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11" /></svg>
+                </div>
+              </div>
+              <div style={{ textAlign: "center" }}>
+                <div style={{ fontSize: "1.35rem", fontWeight: 800, color: "#1a1a2e", lineHeight: 1.2 }}>Deviens</div>
+                <div style={{ fontSize: "1.35rem", fontWeight: 800, color: brand, lineHeight: 1.2 }}>Ambassadeur</div>
               </div>
             </div>
-            <div style={{ textAlign: "center", fontSize: "1.2rem", fontWeight: 800, color: "#1a1a2e", lineHeight: 1.2, marginBottom: 9, padding: "0 6px" }}>Deviens Ambassadeur</div>
-            <div style={{ textAlign: "center", fontSize: "0.87rem", color: "#8a8a8a", lineHeight: 1.5, marginBottom: 22, padding: "0 8px" }}>{ambassadorNudgeMessage}</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 22 }}>
-              {[
-                "Commission en argent sur chaque abonnement",
-                "Versement par Mobile Money, à ta demande",
-                "Aucune limite au nombre de filleuls",
-                "Premium à vie offert aux meilleurs ambassadeurs",
-              ].map((txt, i) => (
-                <div key={i} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <div style={{ width: 22, height: 22, borderRadius: "50%", background: "rgba(139,13,47,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={brand} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+
+            <div style={{ background: "#fff", padding: "20px 22px calc(env(safe-area-inset-bottom) + 24px)" }}>
+              <div style={{ textAlign: "center", fontSize: "0.85rem", color: "#666", lineHeight: 1.55, marginBottom: 20 }}>{ambassadorNudgeMessage}</div>
+              <div style={{ marginBottom: 20 }}>
+                {[
+                  [<><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></>, "Commission en argent sur chaque abonnement"],
+                  [<><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></>, "Versement par Mobile Money, à ta demande"],
+                  [<><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></>, "Aucune limite au nombre de filleuls"],
+                  [<><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></>, "Premium à vie offert aux meilleurs ambassadeurs"],
+                ].map(([iconPath, txt], i, arr) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 0", borderBottom: i < arr.length - 1 ? "1px solid #f0f0f0" : "none" }}>
+                    <div style={{ width: 40, height: 40, borderRadius: 12, background: G.cremeDark, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={brand} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{iconPath as any}</svg>
+                    </div>
+                    <span style={{ fontSize: "0.87rem", color: "#2a2a2a", fontWeight: 700, lineHeight: 1.3 }}>{txt as any}</span>
                   </div>
-                  <span style={{ fontSize: "0.85rem", color: "#3a2e2e", fontWeight: 600 }}>{txt}</span>
-                </div>
-              ))}
+                ))}
+              </div>
+              <button onClick={() => { setAmbassadorNudgeOpen(false); try { sessionStorage.setItem("moyo_open_ambassador_request", "1"); } catch {} setTab("profile"); }} style={{ width: "100%", background: `linear-gradient(135deg,${brand},${G.rougeDark})`, border: "none", borderRadius: 50, padding: "8px 8px 8px 26px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", marginBottom: 14, boxShadow: `0 10px 26px rgba(192,57,43,0.35)` }}>
+                <span style={{ color: "#fff", fontSize: "1.02rem", fontWeight: 800 }}>En savoir plus</span>
+                <span style={{ width: 42, height: 42, borderRadius: "50%", background: G.cremeDark, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={brand} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
+                </span>
+              </button>
+              <button onClick={() => setAmbassadorNudgeOpen(false)} style={{ width: "100%", background: "none", border: "none", color: "#9a9a9a", fontSize: "0.85rem", fontWeight: 600, cursor: "pointer", padding: "4px 12px", textDecoration: "underline", textUnderlineOffset: 3 }}>Peut-être plus tard</button>
             </div>
-            <Btn variant="primary" style={{ width: "100%", marginBottom: 12 }} onClick={() => { setAmbassadorNudgeOpen(false); try { sessionStorage.setItem("moyo_open_ambassador_request", "1"); } catch {} setTab("profile"); }}>Je deviens Ambassadeur →</Btn>
-            <button onClick={() => setAmbassadorNudgeOpen(false)} style={{ width: "100%", background: "none", border: "none", color: "#999", fontSize: "0.85rem", fontWeight: 600, cursor: "pointer", padding: "8px 12px" }}>Peut-être plus tard</button>
           </div>
         </div>
       );
@@ -21911,34 +21958,52 @@ export default function App() {
       const brand = G.rouge;
       return (
         <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 19000, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
-          <div onClick={e => e.stopPropagation()} className="moyo-sheet-in" style={{ background: "#FCFBF8", borderRadius: 0, width: "100%", maxWidth: 460, height: "100%", maxHeight: "100vh", overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y", boxShadow: "0 30px 80px rgba(0,0,0,0.4)", position: "relative", display: "flex", flexDirection: "column", justifyContent: "center", padding: "calc(env(safe-area-inset-top) + 18px) 22px calc(env(safe-area-inset-bottom) + 26px)" }}>
-            <div onClick={() => setEventsNudgeOpen(false)} style={{ position: "fixed", top: "calc(env(safe-area-inset-top) + 16px)", right: "max(16px, calc((100vw - 460px) / 2 + 16px))", cursor: "pointer", background: "#eceae5", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 19001 }}>
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#777" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-            </div>
-            <div style={{ display: "flex", justifyContent: "center", marginBottom: 14 }}>
-              <div style={{ width: 54, height: 54, borderRadius: "50%", background: "rgba(192,57,43,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <svg width="27" height="27" viewBox="0 0 24 24" fill="none" stroke={brand} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></svg>
+          <div onClick={e => e.stopPropagation()} className="moyo-sheet-in" style={{ background: "#fff", borderRadius: 0, width: "100%", maxWidth: 460, height: "100%", maxHeight: "100vh", overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y", boxShadow: "0 30px 80px rgba(0,0,0,0.4)", position: "relative" }}>
+            <div style={{ background: G.cremeDark, padding: "calc(env(safe-area-inset-top) + 18px) 22px 22px" }}>
+              <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 2 }}>
+                <div onClick={() => setEventsNudgeOpen(false)} style={{ cursor: "pointer", background: "#fff", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                </div>
+              </div>
+              <div style={{ position: "relative", display: "flex", justifyContent: "center", alignItems: "center", height: 108, marginBottom: 4 }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="#D4A843" style={{ position: "absolute", left: "26%", top: 6 }}><path d="M12 2l1.5 6.5L20 10l-6.5 1.5L12 18l-1.5-6.5L4 10l6.5-1.5z" /></svg>
+                <div style={{ position: "absolute", bottom: 6, right: "22%", width: 8, height: 8, borderRadius: "50%", border: `2px solid ${brand}` }} />
+                <div style={{ width: 74, height: 74, borderRadius: "50%", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke={brand} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01" /></svg>
+                </div>
+              </div>
+              <div style={{ textAlign: "center" }}>
+                <div style={{ fontSize: "1.35rem", fontWeight: 800, color: "#1a1a2e", lineHeight: 1.2 }}>Événements</div>
+                <div style={{ fontSize: "1.35rem", fontWeight: 800, color: brand, lineHeight: 1.2 }}>Moyo Dating</div>
               </div>
             </div>
-            <div style={{ textAlign: "center", fontSize: "1.2rem", fontWeight: 800, color: "#1a1a2e", lineHeight: 1.2, marginBottom: 9, padding: "0 6px" }}>Événements Moyo Dating</div>
-            <div style={{ textAlign: "center", fontSize: "0.87rem", color: "#8a8a8a", lineHeight: 1.5, marginBottom: 22, padding: "0 8px" }}>{eventsNudgeMessage}</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 22 }}>
-              {[
-                "Rencontrez d'autres membres en vrai",
-                "Soirées et sorties organisées par Moyo",
-                "Places limitées, réservation en quelques secondes",
-                "Suivez vos inscriptions directement dans l'app",
-              ].map((txt, i) => (
-                <div key={i} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <div style={{ width: 22, height: 22, borderRadius: "50%", background: "rgba(192,57,43,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={brand} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+
+            <div style={{ background: "#fff", padding: "20px 22px calc(env(safe-area-inset-bottom) + 24px)" }}>
+              <div style={{ textAlign: "center", fontSize: "0.85rem", color: "#666", lineHeight: 1.55, marginBottom: 20 }}>{eventsNudgeMessage}</div>
+              <div style={{ marginBottom: 20 }}>
+                {[
+                  [<><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></>, "Rencontrez d'autres membres en vrai"],
+                  [<path d="M8 22h8M12 15v7M5 2h14l-2 8a5 5 0 0 1-10 0z"/>, "Soirées et sorties organisées par Moyo"],
+                  [<><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"/><line x1="13" y1="5" x2="13" y2="19" strokeDasharray="1 3"/></>, "Places limitées, réservation en quelques secondes"],
+                  [<><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></>, "Suivez vos inscriptions directement dans l'app"],
+                ].map(([iconPath, txt], i, arr) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 0", borderBottom: i < arr.length - 1 ? "1px solid #f0f0f0" : "none" }}>
+                    <div style={{ width: 40, height: 40, borderRadius: 12, background: G.cremeDark, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={brand} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{iconPath as any}</svg>
+                    </div>
+                    <span style={{ fontSize: "0.87rem", color: "#2a2a2a", fontWeight: 700, lineHeight: 1.3 }}>{txt as any}</span>
                   </div>
-                  <span style={{ fontSize: "0.85rem", color: "#3a2e2e", fontWeight: 600 }}>{txt}</span>
-                </div>
-              ))}
+                ))}
+              </div>
+
+              <button onClick={() => { setEventsNudgeOpen(false); try { sessionStorage.setItem("moyo_open_events", "1"); } catch {} setTab("profile"); }} style={{ width: "100%", background: `linear-gradient(135deg,${brand},#922B21)`, border: "none", borderRadius: 50, padding: "8px 8px 8px 26px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", marginBottom: 14, boxShadow: "0 10px 26px rgba(192,57,43,0.35)" }}>
+                <span style={{ color: "#fff", fontSize: "1.02rem", fontWeight: 800 }}>Voir les événements</span>
+                <span style={{ width: 42, height: 42, borderRadius: "50%", background: G.cremeDark, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={brand} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
+                </span>
+              </button>
+              <button onClick={() => setEventsNudgeOpen(false)} style={{ width: "100%", background: "none", border: "none", color: "#9a9a9a", fontSize: "0.88rem", fontWeight: 600, cursor: "pointer", padding: "4px 12px", textDecoration: "underline", textUnderlineOffset: 3 }}>Peut-être plus tard</button>
             </div>
-            <Btn variant="primary" style={{ width: "100%", marginBottom: 12 }} onClick={() => { setEventsNudgeOpen(false); try { sessionStorage.setItem("moyo_open_events", "1"); } catch {} setTab("profile"); }}>Voir les événements →</Btn>
-            <button onClick={() => setEventsNudgeOpen(false)} style={{ width: "100%", background: "none", border: "none", color: "#999", fontSize: "0.85rem", fontWeight: 600, cursor: "pointer", padding: "8px 12px" }}>Peut-être plus tard</button>
           </div>
         </div>
       );

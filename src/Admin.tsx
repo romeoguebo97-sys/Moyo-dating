@@ -9155,7 +9155,8 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
   const [stCaption, setStCaption] = useState("");
   const [stSponsored, setStSponsored] = useState(false);
   const [stLink, setStLink] = useState("");
-  const [stCtaType, setStCtaType] = useState<"none" | "link" | "phone">("none");
+  const [stCtaType, setStCtaType] = useState<"none" | "link" | "phone" | "app">("none");
+  const [stAppDest, setStAppDest] = useState("");
   const [stPhone, setStPhone] = useState("");
   const [stDurationHours, setStDurationHours] = useState(""); // vide = 24h par défaut
   const [stPublishing, setStPublishing] = useState(false);
@@ -9202,12 +9203,15 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
       const durationH = parseFloat(stDurationHours);
       const effectiveHours = durationH > 0 ? durationH : 24;
       const expires_at = new Date(Date.now() + effectiveHours * 60 * 60 * 1000).toISOString();
-      // CTA : soit un lien (« En savoir plus »), soit un numéro stocké en tel: (bouton « Contacter » = WhatsApp + appel)
+      // CTA : soit un lien (« En savoir plus »), soit un numéro stocké en tel: (bouton « Contacter » = WhatsApp + appel),
+      // soit une destination dans l'app (même registre que le carrousel Découvrir, préfixe "app:").
       const phoneClean = stPhone.trim().replace(/[^\d+]/g, "");
       const linkUrl = stCtaType === "phone"
         ? (phoneClean ? `tel:${phoneClean}` : null)
         : stCtaType === "link"
         ? (stLink.trim() || null)
+        : stCtaType === "app"
+        ? (stAppDest ? `app:${stAppDest}` : null)
         : null;
       await sb.insert<StatusPost>(auth.token, "statuses", {
         user_id: auth.userId, image_url: path, image_path: path,
@@ -9215,7 +9219,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
         link_url: linkUrl, expires_at,
       });
       showToast(`Statut Moyo Dating publié pour ${effectiveHours}h.`, "success");
-      setStFile(null); setStPreview(null); setStCaption(""); setStSponsored(false); setStLink(""); setStCtaType("none"); setStPhone(""); setStDurationHours("");
+      setStFile(null); setStPreview(null); setStCaption(""); setStSponsored(false); setStLink(""); setStCtaType("none"); setStPhone(""); setStDurationHours(""); setStAppDest("");
       if (stFileRef.current) stFileRef.current.value = "";
       loadOfficialStatuses();
     } catch {
@@ -15238,10 +15242,18 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
 
                 <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#777", marginBottom: 6 }}>Bouton d'action (optionnel)</div>
                 <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
-                  {([["none", "Aucun"], ["link", "Lien"], ["phone", "Numéro"]] as ["none" | "link" | "phone", string][]).map(([val, lbl]) => (
+                  {([["none", "Aucun"], ["link", "Lien"], ["phone", "Numéro"], ["app", "Dans l'app"]] as ["none" | "link" | "phone" | "app", string][]).map(([val, lbl]) => (
                     <button key={val} type="button" onClick={() => setStCtaType(val)} style={{ flex: 1, padding: "9px", borderRadius: 10, border: `1.5px solid ${stCtaType === val ? G.rouge : G.gris}`, background: stCtaType === val ? "rgba(192,57,43,0.08)" : "#fff", color: stCtaType === val ? G.rouge : "#666", fontWeight: 700, fontSize: "0.78rem", cursor: "pointer" }}>{lbl}</button>
                   ))}
                 </div>
+                {stCtaType === "app" && (
+                  <select value={stAppDest} onChange={e => setStAppDest(e.target.value)} style={{ width: "100%", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 12, padding: "12px", fontSize: "0.85rem", outline: "none", marginBottom: 10, background: "#fff" }}>
+                    <option value="">Choisir une destination</option>
+                    {Object.entries(CAROUSEL_DESTINATIONS).map(([key, d]) => (
+                      <option key={key} value={key}>{d.label}</option>
+                    ))}
+                  </select>
+                )}
                 {stCtaType === "link" && (
                   <div style={{ position: "relative", marginBottom: 10 }}>
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
