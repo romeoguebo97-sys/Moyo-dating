@@ -16607,7 +16607,7 @@ function AmbassadorCard({ auth, status, onRequested }: { auth: Auth; status: "no
 
   return (
     <>
-      <div onClick={() => status === "none" && setShowInfo(true)} className="moyo-tap" style={{ background: G.blanc, borderRadius: 18, padding: "15px 18px", cursor: status === "none" ? "pointer" : "default", boxShadow: "0 2px 10px rgba(0,0,0,0.06)", display: "flex", alignItems: "center", gap: 14, border: "1.5px solid rgba(142,68,173,0.2)" }}>
+      <div onClick={() => (status === "none" || status === "pending") && setShowInfo(true)} className="moyo-tap" style={{ background: G.blanc, borderRadius: 18, padding: "15px 18px", cursor: (status === "none" || status === "pending") ? "pointer" : "default", boxShadow: "0 2px 10px rgba(0,0,0,0.06)", display: "flex", alignItems: "center", gap: 14, border: "1.5px solid rgba(142,68,173,0.2)" }}>
         <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(142,68,173,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>
         </div>
@@ -16617,17 +16617,63 @@ function AmbassadorCard({ auth, status, onRequested }: { auth: Auth; status: "no
         </div>
         {status === "none" && <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>}
       </div>
-      {showInfo && (
-        <div className="moyo-backdrop" onClick={() => setShowInfo(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10001, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
-          <div className="moyo-sheet-in" onClick={e => e.stopPropagation()} style={{ background: G.blanc, borderRadius: "24px 24px 0 0", width: "100%", maxWidth: 500, padding: "24px 22px 32px" }}>
-            <div style={{ fontWeight: 900, fontSize: "1.1rem", color: G.brun, marginBottom: 10 }}>Devenir Ambassadeur Moyo Dating</div>
-            <p style={{ fontSize: "0.85rem", color: "#555", lineHeight: 1.6, marginBottom: 10 }}>Contrairement au parrainage classique (jours Premium offerts), l'Ambassadeur touche une <strong>commission en argent</strong> sur chaque abonnement souscrit par ses filleuls.</p>
-            <p style={{ fontSize: "0.85rem", color: "#555", lineHeight: 1.6, marginBottom: 20 }}>Votre demande sera examinée par notre équipe. Si elle est acceptée, un contrat est mis en place et vous pourrez suivre vos gains directement depuis cet écran. Aucun Premium n'est offert à l'acceptation : après un mois d'activité, si vos résultats le justifient, notre équipe peut vous offrir le Premium à vie.</p>
-            <button onClick={sendRequest} disabled={requesting} style={{ width: "100%", background: G.rouge, color: "#fff", border: "none", borderRadius: 50, padding: "14px", fontSize: "0.9rem", fontWeight: 800, cursor: requesting ? "not-allowed" : "pointer", marginBottom: 10 }}>{requesting ? "Envoi..." : "Envoyer ma demande"}</button>
-            <button onClick={() => setShowInfo(false)} style={{ width: "100%", background: "none", border: "none", color: "#999", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer", padding: "8px" }}>Annuler</button>
+      {showInfo && (() => {
+        const brand = "#8e44ad";
+        return (
+          <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 10001, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
+            <div className="moyo-sheet-in" style={{ background: "#fff", borderRadius: 0, width: "100%", maxWidth: 460, height: "100%", maxHeight: "100vh", overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y", boxShadow: "0 30px 80px rgba(0,0,0,0.4)", position: "relative" }}>
+              <div style={{ background: G.cremeDark, padding: "calc(env(safe-area-inset-top) + 18px) 22px 18px" }}>
+                <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 2 }}>
+                  <div onClick={() => setShowInfo(false)} style={{ cursor: "pointer", background: "#fff", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                  </div>
+                </div>
+                <div style={{ position: "relative", display: "flex", justifyContent: "center", alignItems: "center", height: 104, marginBottom: 4 }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="#D4A843" style={{ position: "absolute", left: "26%", top: 6 }}><path d="M12 2l1.5 6.5L20 10l-6.5 1.5L12 18l-1.5-6.5L4 10l6.5-1.5z" /></svg>
+                  <div style={{ position: "absolute", bottom: 8, right: "20%", width: 8, height: 8, borderRadius: "50%", border: `2px solid ${brand}` }} />
+                  <div style={{ width: 72, height: 72, borderRadius: "50%", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    {status === "pending" ? (
+                      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke={brand} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    ) : (
+                      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke={brand} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>
+                    )}
+                  </div>
+                </div>
+                <div style={{ textAlign: "center" }}>
+                  {status === "pending" ? (<>
+                    <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "#1a1a2e", lineHeight: 1.2 }}>Demande</div>
+                    <div style={{ fontSize: "1.2rem", fontWeight: 800, color: brand, lineHeight: 1.2 }}>en cours de traitement</div>
+                  </>) : (<>
+                    <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "#1a1a2e", lineHeight: 1.2 }}>Devenir</div>
+                    <div style={{ fontSize: "1.2rem", fontWeight: 800, color: brand, lineHeight: 1.2 }}>Ambassadeur Moyo</div>
+                  </>)}
+                </div>
+              </div>
+
+              <div style={{ padding: "20px 22px calc(env(safe-area-inset-bottom) + 24px)" }}>
+                {status === "pending" ? (
+                  <>
+                    <p style={{ fontSize: "0.87rem", color: "#555", lineHeight: 1.65, marginBottom: 22, textAlign: "center" }}>Ta demande pour devenir Ambassadeur est en cours de traitement. Notre équipe l'examine et te tiendra informé·e dès qu'une décision sera prise.</p>
+                    <button onClick={() => setShowInfo(false)} style={{ width: "100%", background: "none", border: `1.5px solid ${G.gris}`, color: "#666", borderRadius: 50, padding: "13px", fontSize: "0.9rem", fontWeight: 700, cursor: "pointer" }}>Fermer</button>
+                  </>
+                ) : (
+                  <>
+                    <p style={{ fontSize: "0.85rem", color: "#555", lineHeight: 1.6, marginBottom: 14, textAlign: "center" }}>Contrairement au parrainage classique (jours Premium offerts), l'Ambassadeur touche une <strong>commission en argent</strong> sur chaque abonnement souscrit par ses filleuls.</p>
+                    <p style={{ fontSize: "0.85rem", color: "#555", lineHeight: 1.6, marginBottom: 22, textAlign: "center" }}>Votre demande sera examinée par notre équipe. Si elle est acceptée, un contrat est mis en place et vous pourrez suivre vos gains directement depuis cet écran. Aucun Premium n'est offert à l'acceptation : après un mois d'activité, si vos résultats le justifient, notre équipe peut vous offrir le Premium à vie.</p>
+                    <button onClick={sendRequest} disabled={requesting} style={{ width: "100%", background: requesting ? "#c9a8d6" : `linear-gradient(135deg,${brand},#6c2f85)`, border: "none", borderRadius: 50, padding: "8px 8px 8px 26px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: requesting ? "not-allowed" : "pointer", marginBottom: 14, boxShadow: `0 10px 26px rgba(142,68,173,0.3)` }}>
+                      <span style={{ color: "#fff", fontSize: "1rem", fontWeight: 800 }}>{requesting ? "Envoi…" : "Envoyer ma demande"}</span>
+                      <span style={{ width: 42, height: 42, borderRadius: "50%", background: G.cremeDark, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={brand} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
+                      </span>
+                    </button>
+                    <button onClick={() => setShowInfo(false)} style={{ width: "100%", background: "none", border: "none", color: "#9a9a9a", fontSize: "0.85rem", fontWeight: 600, cursor: "pointer", padding: "4px 12px", textDecoration: "underline", textUnderlineOffset: 3 }}>Annuler</button>
+                  </>
+                )}
+              </div>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </>
   );
 }
