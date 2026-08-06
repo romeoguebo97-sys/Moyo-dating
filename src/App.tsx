@@ -5196,32 +5196,61 @@ function About({ onBack }: { onBack: () => void }) {
 function PrivacyNoticeModal({ gender, onClose }: { gender?: string; onClose: () => void }) {
   const [step, setStep] = useState<1 | 2>(1);
   const hasStep2 = !!PRIVACY_NOTICE_STEP2_TEXT.trim();
+  const brand = G.rouge;
   return (
-    <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-      <div className="moyo-card-in" style={{ background: G.blanc, maxHeight: "85vh", overflowY: "auto", borderRadius: 22, width: "100%", maxWidth: 360, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}>
-        <div style={{ background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, padding: "24px 20px 18px", textAlign: "center" }}>
-          <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
-            {step === 1 ? (
-              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-            ) : (
-              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
-            )}
+    <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 10000, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
+      <div className="moyo-sheet-in" style={{ background: "#fff", borderRadius: 0, width: "100%", maxWidth: 460, height: "100%", maxHeight: "100vh", overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y", boxShadow: "0 30px 80px rgba(0,0,0,0.4)", position: "relative" }}>
+        <div style={{ background: G.cremeDark, padding: "calc(env(safe-area-inset-top) + 18px) 22px 18px" }}>
+          {hasStep2 && <div style={{ textAlign: "center", marginBottom: 2 }}><span style={{ fontSize: "0.62rem", fontWeight: 800, color: "#999", letterSpacing: "0.5px" }}>ÉTAPE {step} SUR 2</span></div>}
+          <div style={{ position: "relative", display: "flex", justifyContent: "center", alignItems: "center", height: 100, marginBottom: 4 }}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="#D4A843" style={{ position: "absolute", left: "26%", top: 6 }}><path d="M12 2l1.5 6.5L20 10l-6.5 1.5L12 18l-1.5-6.5L4 10l6.5-1.5z" /></svg>
+            <div style={{ position: "absolute", bottom: 6, right: "22%", width: 8, height: 8, borderRadius: "50%", border: `2px solid ${brand}` }} />
+            <div style={{ width: 68, height: 68, borderRadius: "50%", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              {step === 1 ? (
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={brand} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              ) : (
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={brand} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
+              )}
+            </div>
           </div>
-          <div style={{ color: "#fff", fontWeight: 800, fontSize: "1.08rem" }}>{step === 1 ? "Ta confidentialité, notre priorité" : "Bon à savoir"}</div>
-          {hasStep2 && <div style={{ color: "rgba(255,255,255,0.75)", fontSize: "0.72rem", marginTop: 6, fontWeight: 600 }}>Étape {step} sur 2</div>}
+          <div style={{ textAlign: "center" }}>
+            {step === 1 ? (<>
+              <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "#1a1a2e", lineHeight: 1.2 }}>Ta confidentialité,</div>
+              <div style={{ fontSize: "1.2rem", fontWeight: 800, color: brand, lineHeight: 1.2 }}>notre priorité</div>
+            </>) : (<>
+              <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "#1a1a2e", lineHeight: 1.2 }}>Bon à</div>
+              <div style={{ fontSize: "1.2rem", fontWeight: 800, color: brand, lineHeight: 1.2 }}>savoir</div>
+            </>)}
+          </div>
         </div>
-        <div style={{ padding: "22px 22px 24px" }}>
+
+        <div style={{ padding: "20px 22px calc(env(safe-area-inset-bottom) + 24px)" }}>
           {step === 1 ? (
             <>
-              {PRIVACY_NOTICE_STEP1_TEXT.split("\n\n").map((para, i) => (
-                <p key={i} style={{ fontSize: i === PRIVACY_NOTICE_STEP1_TEXT.split("\n\n").length - 1 ? "0.78rem" : "0.87rem", color: i === PRIVACY_NOTICE_STEP1_TEXT.split("\n\n").length - 1 ? "#999" : "#444", lineHeight: 1.65, marginBottom: 14 }}>{para}</p>
+              {PRIVACY_NOTICE_STEP1_TEXT.split("\n\n").map((para, i, arr) => (
+                <p key={i} style={{ fontSize: i === arr.length - 1 ? "0.78rem" : "0.87rem", color: i === arr.length - 1 ? "#999" : "#555", lineHeight: 1.65, marginBottom: 14, textAlign: "center" }}>{para}</p>
               ))}
-              <Btn variant="primary" onClick={() => hasStep2 ? setStep(2) : onClose()} style={{ width: "100%" }}>{hasStep2 ? "Suivant" : "J'ai compris"}</Btn>
+              <div style={{ height: 6 }} />
+              <button onClick={() => hasStep2 ? setStep(2) : onClose()} style={{ width: "100%", background: `linear-gradient(135deg,${brand},${G.rougeDark})`, border: "none", borderRadius: 50, padding: "8px 8px 8px 26px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", boxShadow: `0 10px 26px rgba(192,57,43,0.3)` }}>
+                <span style={{ color: "#fff", fontSize: "1.02rem", fontWeight: 800 }}>{hasStep2 ? "Suivant" : "J'ai compris"}</span>
+                <span style={{ width: 42, height: 42, borderRadius: "50%", background: G.cremeDark, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  {hasStep2 ? (
+                    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={brand} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
+                  ) : (
+                    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={brand} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                  )}
+                </span>
+              </button>
             </>
           ) : (
             <>
-              <p style={{ fontSize: "0.87rem", color: "#444", lineHeight: 1.65, marginBottom: 20 }}>{PRIVACY_NOTICE_STEP2_TEXT}</p>
-              <Btn variant="primary" onClick={onClose} style={{ width: "100%" }}>J'ai compris</Btn>
+              <p style={{ fontSize: "0.87rem", color: "#555", lineHeight: 1.65, marginBottom: 22, textAlign: "center" }}>{PRIVACY_NOTICE_STEP2_TEXT}</p>
+              <button onClick={onClose} style={{ width: "100%", background: `linear-gradient(135deg,${brand},${G.rougeDark})`, border: "none", borderRadius: 50, padding: "8px 8px 8px 26px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", boxShadow: `0 10px 26px rgba(192,57,43,0.3)` }}>
+                <span style={{ color: "#fff", fontSize: "1.02rem", fontWeight: 800 }}>J'ai compris</span>
+                <span style={{ width: 42, height: 42, borderRadius: "50%", background: G.cremeDark, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={brand} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                </span>
+              </button>
             </>
           )}
         </div>
@@ -21783,80 +21812,148 @@ export default function App() {
     {pendingBroadcast && !pendingWarning && <UserWarningModal warning={{ id: pendingBroadcast.id, warning_number: 0, reason: pendingBroadcast.message }} onAcknowledge={() => { localStorage.setItem(`moyo_broadcast_seen_${auth!.userId}`, new Date().toISOString()); setPendingBroadcast(null); }} />}
 
     {/* ── Fenêtre bloquante : numéro de téléphone manquant (priorité maximale, ne peut pas être fermée) ── */}
-    {phonePromptOpen && (
-      <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 20000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-        <div style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 340, textAlign: "center" }}>
-          <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(192,57,43,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={G.rouge} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+    {phonePromptOpen && (() => {
+      const brand = G.rouge;
+      return (
+        <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 20000, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
+          <div className="moyo-sheet-in" style={{ background: "#fff", borderRadius: 0, width: "100%", maxWidth: 460, height: "100%", maxHeight: "100vh", overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y", boxShadow: "0 30px 80px rgba(0,0,0,0.4)", position: "relative" }}>
+            <div style={{ background: G.cremeDark, padding: "calc(env(safe-area-inset-top) + 18px) 22px 18px" }}>
+              <div style={{ position: "relative", display: "flex", justifyContent: "center", alignItems: "center", height: 104, marginBottom: 4 }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="#D4A843" style={{ position: "absolute", left: "26%", top: 6 }}><path d="M12 2l1.5 6.5L20 10l-6.5 1.5L12 18l-1.5-6.5L4 10l6.5-1.5z" /></svg>
+                <div style={{ position: "absolute", bottom: 8, right: "20%", width: 8, height: 8, borderRadius: "50%", border: `2px solid ${brand}` }} />
+                <div style={{ width: 72, height: 72, borderRadius: "50%", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke={brand} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                </div>
+              </div>
+              <div style={{ textAlign: "center" }}>
+                <div style={{ fontSize: "1.25rem", fontWeight: 800, color: "#1a1a2e", lineHeight: 1.2 }}>Ton profil</div>
+                <div style={{ fontSize: "1.25rem", fontWeight: 800, color: brand, lineHeight: 1.2 }}>est incomplet</div>
+              </div>
+            </div>
+
+            <div style={{ padding: "20px 22px calc(env(safe-area-inset-bottom) + 24px)" }}>
+              <div style={{ textAlign: "center", fontSize: "0.85rem", color: "#666", lineHeight: 1.55, marginBottom: 20 }}>Renseigne ton numéro de téléphone pour continuer à utiliser Moyo Dating.</div>
+              <div style={{ marginBottom: 16 }}>
+                <PhoneCountryField value={phonePromptValue} onChange={(v, valid) => { setPhonePromptValue(v); setPhonePromptValid(valid); }} required autoFocus />
+              </div>
+              <button onClick={async () => {
+                const v = phonePromptValue.trim();
+                if (!v || !auth) return;
+                setPhonePromptSaving(true);
+                try {
+                  await sb.update(auth.token, "profiles", auth.userId, { phone: v });
+                  setPhonePromptOpen(false);
+                } catch {}
+                setPhonePromptSaving(false);
+              }} disabled={!phonePromptValue.trim() || !phonePromptValid || phonePromptSaving} style={{ width: "100%", background: (!phonePromptValue.trim() || !phonePromptValid || phonePromptSaving) ? "#e0a89f" : `linear-gradient(135deg,${brand},${G.rougeDark})`, border: "none", borderRadius: 50, padding: "8px 8px 8px 26px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: (!phonePromptValue.trim() || !phonePromptValid || phonePromptSaving) ? "not-allowed" : "pointer", boxShadow: `0 10px 26px rgba(192,57,43,0.3)` }}>
+                <span style={{ color: "#fff", fontSize: "1.02rem", fontWeight: 800 }}>{phonePromptSaving ? "Envoi…" : "Enregistrer"}</span>
+                <span style={{ width: 42, height: 42, borderRadius: "50%", background: G.cremeDark, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={brand} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
+                </span>
+              </button>
+            </div>
           </div>
-          <h3 style={{ fontSize: "1.15rem", fontWeight: 800, color: "#111", marginBottom: 8 }}>Ton profil est incomplet</h3>
-          <p style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.6, marginBottom: 18 }}>Renseigne ton numéro de téléphone pour continuer à utiliser Moyo Dating.</p>
-          <PhoneCountryField value={phonePromptValue} onChange={(v, valid) => { setPhonePromptValue(v); setPhonePromptValid(valid); }} required autoFocus />
-          <Btn variant="primary" loading={phonePromptSaving} disabled={!phonePromptValue.trim() || !phonePromptValid} style={{ width: "100%" }} onClick={async () => {
-            const v = phonePromptValue.trim();
-            if (!v || !auth) return;
-            setPhonePromptSaving(true);
-            try {
-              await sb.update(auth.token, "profiles", auth.userId, { phone: v });
-              setPhonePromptOpen(false);
-            } catch {}
-            setPhonePromptSaving(false);
-          }}>Enregistrer →</Btn>
         </div>
-      </div>
-    )}
+      );
+    })()}
 
     {/* ── Fenêtre : demande de vérification du compte (se ferme une fois la demande envoyée) ── */}
-    {verifyPromptOpen && !phonePromptOpen && (
-      <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 20000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-        <div style={{ background: G.blanc, borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 340, textAlign: "center" }}>
-          <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(26,115,232,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="#1a73e8" stroke="none"><path d="M9 12l2 2 4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>
+    {verifyPromptOpen && !phonePromptOpen && (() => {
+      const brand = G.rouge;
+      return (
+        <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 20000, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
+          <div className="moyo-sheet-in" style={{ background: "#fff", borderRadius: 0, width: "100%", maxWidth: 460, height: "100%", maxHeight: "100vh", overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y", boxShadow: "0 30px 80px rgba(0,0,0,0.4)", position: "relative" }}>
+            <div style={{ background: G.cremeDark, padding: "calc(env(safe-area-inset-top) + 18px) 22px 18px" }}>
+              <div style={{ position: "relative", display: "flex", justifyContent: "center", alignItems: "center", height: 104, marginBottom: 4 }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="#D4A843" style={{ position: "absolute", left: "26%", top: 6 }}><path d="M12 2l1.5 6.5L20 10l-6.5 1.5L12 18l-1.5-6.5L4 10l6.5-1.5z" /></svg>
+                <div style={{ position: "absolute", bottom: 8, right: "20%", width: 8, height: 8, borderRadius: "50%", border: `2px solid ${brand}` }} />
+                <div style={{ width: 72, height: 72, borderRadius: "50%", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke={brand} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>
+                </div>
+              </div>
+              <div style={{ textAlign: "center" }}>
+                <div style={{ fontSize: "1.25rem", fontWeight: 800, color: "#1a1a2e", lineHeight: 1.2 }}>Fais certifier</div>
+                <div style={{ fontSize: "1.25rem", fontWeight: 800, color: brand, lineHeight: 1.2 }}>ton compte</div>
+              </div>
+            </div>
+
+            <div style={{ padding: "20px 22px calc(env(safe-area-inset-bottom) + 24px)" }}>
+              <div style={{ textAlign: "center", fontSize: "0.85rem", color: "#666", lineHeight: 1.55, marginBottom: 20 }}>C'est gratuit. Un profil certifié rassure les autres membres, car il a été vérifié par l'équipe Moyo.</div>
+              <div style={{ marginBottom: 20 }}>
+                {[
+                  [<><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></>, "Vérifié par l'équipe Moyo"],
+                  [<><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></>, "Badge vérifié sur ton profil"],
+                  [<><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/><path d="M8.5 12.5l2 2 5-5"/></>, "Plus de confiance, plus de matchs"],
+                ].map(([iconPath, txt], i, arr) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 0", borderBottom: i < arr.length - 1 ? "1px solid #f0f0f0" : "none" }}>
+                    <div style={{ width: 40, height: 40, borderRadius: 12, background: G.cremeDark, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={brand} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{iconPath as any}</svg>
+                    </div>
+                    <span style={{ fontSize: "0.87rem", color: "#2a2a2a", fontWeight: 700, lineHeight: 1.3 }}>{txt as any}</span>
+                  </div>
+                ))}
+              </div>
+              <a href={`https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent(`Bonjour, je souhaite faire vérifier mon compte Moyo Dating.\n\n👤 Nom : ${auth.name}\n🎂 Âge : ${verifyPromptMe.age} ans\n⚥ Genre : ${verifyPromptMe.gender}\n📧 Email : ${auth.email}\n\nMerci !`)}`} target="_blank" rel="noopener noreferrer" onClick={() => setVerifyPromptOpen(false)} style={{ textDecoration: "none", display: "block" }}>
+                <div style={{ width: "100%", boxSizing: "border-box", background: `linear-gradient(135deg,${brand},${G.rougeDark})`, borderRadius: 50, padding: "8px 8px 8px 26px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", boxShadow: `0 10px 26px rgba(192,57,43,0.3)` }}>
+                  <span style={{ color: "#fff", fontSize: "0.95rem", fontWeight: 800 }}>Faire certifier mon compte</span>
+                  <span style={{ width: 42, height: 42, borderRadius: "50%", background: G.cremeDark, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={brand} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
+                  </span>
+                </div>
+              </a>
+            </div>
           </div>
-          <h3 style={{ fontSize: "1.15rem", fontWeight: 800, color: "#111", marginBottom: 8 }}>Fais certifier ton compte</h3>
-          <p style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.6, marginBottom: 18 }}>C'est gratuit. Un profil certifié rassure les autres membres, car il a été vérifié par l'équipe Moyo. Tu inspires davantage confiance et augmentes tes chances de faire de belles rencontres.</p>
-          <a href={`https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent(`Bonjour, je souhaite faire vérifier mon compte Moyo Dating.\n\n👤 Nom : ${auth.name}\n🎂 Âge : ${verifyPromptMe.age} ans\n⚥ Genre : ${verifyPromptMe.gender}\n📧 Email : ${auth.email}\n\nMerci !`)}`} target="_blank" rel="noopener noreferrer" onClick={() => setVerifyPromptOpen(false)} style={{ textDecoration: "none", display: "block" }}>
-            <Btn variant="primary" style={{ width: "100%" }}>Faire certifier mon compte (gratuit) →</Btn>
-          </a>
         </div>
-      </div>
-    )}
+      );
+    })()}
 
     {/* ── Fenêtre : Super Promo (offre 1 mois à prix réduit, ciblée, une fois par jour max) ── */}
     {superPromoOpen && superPromoData && !phonePromptOpen && !verifyPromptOpen && (() => {
+      const brand = G.rouge;
       const msLeft = superPromoData.expiresAt ? new Date(superPromoData.expiresAt).getTime() - Date.now() : null;
       const daysLeft = msLeft !== null && msLeft > 0 ? Math.floor(msLeft / (24 * 3600 * 1000)) : null;
       const hoursLeft = msLeft !== null && msLeft > 0 ? Math.floor((msLeft % (24 * 3600 * 1000)) / (3600 * 1000)) : null;
       const pct = PREMIUM_PRICE_FCFA > 0 ? Math.floor((1 - superPromoData.price / PREMIUM_PRICE_FCFA) * 100) : 0;
+      const closePromo = () => { setSuperPromoOpen(false); logPromoInteraction("ignored", superPromoData.price, auth.token); };
       return (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 20500, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-          <div style={{ width: "100%", maxWidth: 320, borderRadius: 28, padding: 3, background: `linear-gradient(160deg,${G.rouge},${G.rougeDark})` }}>
-            <div style={{ background: G.creme, borderRadius: 26, padding: "26px 22px", textAlign: "center", position: "relative" }}>
-              <button onClick={() => { setSuperPromoOpen(false); logPromoInteraction("ignored", superPromoData.price, auth.token); }} aria-label="Fermer" style={{ position: "absolute", top: 12, right: 12, background: "none", border: "none", color: G.brunLight, opacity: 0.5, cursor: "pointer", padding: 4 }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+        <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 20500, display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain", touchAction: "none" }}>
+          <div className="moyo-sheet-in" style={{ background: "#fff", borderRadius: 0, width: "100%", maxWidth: 460, height: "100%", maxHeight: "100vh", overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y", boxShadow: "0 30px 80px rgba(0,0,0,0.4)", position: "relative" }}>
+            <div style={{ background: G.cremeDark, padding: "calc(env(safe-area-inset-top) + 18px) 22px 18px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 2 }}>
+                {daysLeft !== null ? (
+                  <span style={{ fontSize: "0.68rem", fontWeight: 800, color: G.rougeDark, background: "rgba(192,57,43,0.1)", borderRadius: 999, padding: "5px 10px", letterSpacing: "0.3px" }}>{daysLeft}J {hoursLeft}H RESTANTES</span>
+                ) : <span />}
+                <div onClick={closePromo} style={{ cursor: "pointer", background: "#fff", borderRadius: "50%", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                </div>
+              </div>
+              <div style={{ position: "relative", display: "flex", justifyContent: "center", alignItems: "center", height: 100, marginBottom: 4 }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="#D4A843" style={{ position: "absolute", left: "26%", top: 4 }}><path d="M12 2l1.5 6.5L20 10l-6.5 1.5L12 18l-1.5-6.5L4 10l6.5-1.5z" /></svg>
+                <div style={{ position: "absolute", bottom: 4, right: "22%", width: 8, height: 8, borderRadius: "50%", border: `2px solid ${brand}` }} />
+                <div style={{ width: 70, height: 70, borderRadius: "50%", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke={brand} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: "rotate(-8deg)" }}><path d="M3 11l18-5v12L3 14v-3z" /><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6" /></svg>
+                </div>
+              </div>
+              <div style={{ textAlign: "center" }}>
+                <div style={{ fontSize: "1.35rem", fontWeight: 800, color: "#1a1a2e", lineHeight: 1.2 }}>Super promo</div>
+                <div style={{ fontSize: "1.35rem", fontWeight: 800, color: brand, lineHeight: 1.2 }}>Premium</div>
+              </div>
+            </div>
+
+            <div style={{ padding: "20px 22px calc(env(safe-area-inset-bottom) + 24px)" }}>
+              <div style={{ textAlign: "center", fontSize: "0.85rem", color: "#666", lineHeight: 1.55, marginBottom: 18 }}>{superPromoData.message}</div>
+              <div style={{ background: G.cremeDark, borderRadius: 14, padding: "14px 12px", textAlign: "center", marginBottom: 20 }}>
+                <div style={{ fontSize: "1.5rem", fontWeight: 800, color: brand, letterSpacing: "-0.5px" }}>{superPromoData.price.toLocaleString("fr-FR")} FCFA</div>
+                <div style={{ fontSize: "0.82rem", color: "#999", textDecoration: "line-through", marginBottom: 6 }}>{PREMIUM_PRICE_FCFA.toLocaleString("fr-FR")} FCFA</div>
+                {pct > 0 && <span style={{ display: "inline-block", fontSize: "0.7rem", fontWeight: 700, color: "#1a5c3a", background: "rgba(26,92,58,0.1)", padding: "4px 12px", borderRadius: 999 }}>-{pct}% ce mois-ci</span>}
+              </div>
+              <button onClick={() => { setSuperPromoOpen(false); setActivePromo({ price: superPromoData.price, expiresAt: superPromoData.expiresAt }); showPremium("Super promo Premium"); logPromoInteraction("clicked", superPromoData.price, auth.token); }} style={{ width: "100%", background: `linear-gradient(135deg,${brand},${G.rougeDark})`, border: "none", borderRadius: 50, padding: "8px 8px 8px 26px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", marginBottom: 14, boxShadow: `0 10px 26px rgba(192,57,43,0.3)` }}>
+                <span style={{ color: "#fff", fontSize: "1.02rem", fontWeight: 800 }}>J'en profite</span>
+                <span style={{ width: 42, height: 42, borderRadius: "50%", background: G.cremeDark, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={brand} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
+                </span>
               </button>
-              {daysLeft !== null && (
-                <div style={{ display: "inline-block", fontSize: "0.68rem", fontWeight: 700, color: G.rougeDark, background: "rgba(192,57,43,0.1)", borderRadius: 999, padding: "5px 12px", marginBottom: 14, letterSpacing: "0.3px" }}>
-                  OFFRE LIMITÉE · SE TERMINE DANS {daysLeft}J {hoursLeft}H
-                </div>
-              )}
-              <div style={{ position: "relative", width: 92, height: 92, margin: "4px auto 16px" }}>
-                <div style={{ position: "absolute", inset: 0, borderRadius: "50%", background: "rgba(192,57,43,0.12)" }} />
-                <div style={{ position: "absolute", inset: 12, borderRadius: "50%", background: "rgba(192,57,43,0.18)" }} />
-                <div style={{ position: "absolute", inset: 20, borderRadius: "50%", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: "rotate(-8deg)" }}><path d="M3 11l18-5v12L3 14v-3z" /><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6" /></svg>
-                </div>
-              </div>
-              <h3 style={{ margin: "0 0 2px", fontSize: "1.7rem", fontWeight: 800, color: G.brun, lineHeight: 1.1, letterSpacing: "-0.5px" }}>Super promo</h3>
-              <h3 style={{ margin: "0 0 14px", fontSize: "1.8rem", fontWeight: 800, color: G.rouge, lineHeight: 1.1, letterSpacing: "-0.5px" }}>Premium</h3>
-              <p style={{ fontSize: "0.82rem", color: G.brunLight, opacity: 0.85, margin: "0 auto 20px", maxWidth: 220, lineHeight: 1.6 }}>{superPromoData.message}</p>
-              <div style={{ background: G.blanc, border: `1px solid ${G.gris}`, borderRadius: 16, padding: "18px 16px", marginBottom: 20 }}>
-                <div style={{ fontSize: "1.9rem", fontWeight: 800, color: G.rouge, letterSpacing: "-0.5px" }}>{superPromoData.price.toLocaleString("fr-FR")} FCFA</div>
-                <div style={{ fontSize: "0.82rem", color: "#9a9086", textDecoration: "line-through", marginBottom: 8 }}>{PREMIUM_PRICE_FCFA.toLocaleString("fr-FR")} FCFA</div>
-                {pct > 0 && <span style={{ display: "inline-block", fontSize: "0.7rem", fontWeight: 600, color: "#1a5c3a", background: "rgba(26,92,58,0.1)", padding: "4px 12px", borderRadius: 999 }}>-{pct}% ce mois-ci</span>}
-              </div>
-              <button onClick={() => { setSuperPromoOpen(false); setActivePromo({ price: superPromoData.price, expiresAt: superPromoData.expiresAt }); showPremium("Super promo Premium"); logPromoInteraction("clicked", superPromoData.price, auth.token); }} style={{ width: "100%", background: `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, color: "#fff", border: "none", padding: 14, fontSize: "0.9rem", fontWeight: 700, borderRadius: 999, marginBottom: 10, cursor: "pointer" }}>J'en profite</button>
-              <button onClick={() => { setSuperPromoOpen(false); logPromoInteraction("ignored", superPromoData.price, auth.token); }} style={{ background: "none", border: "none", color: G.brunLight, opacity: 0.55, fontSize: "0.78rem", padding: 4, cursor: "pointer" }}>Plus tard</button>
+              <button onClick={closePromo} style={{ width: "100%", background: "none", border: "none", color: "#9a9a9a", fontSize: "0.85rem", fontWeight: 600, cursor: "pointer", padding: "4px 12px", textDecoration: "underline", textUnderlineOffset: 3 }}>Plus tard</button>
             </div>
           </div>
         </div>
