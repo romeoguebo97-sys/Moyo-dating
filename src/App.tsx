@@ -2176,6 +2176,7 @@ const GLOBAL_CSS = `
   div,section,nav,header,footer{max-width:100%;box-sizing:border-box}
   @keyframes fadeUp{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
   @keyframes moyoPromoMarquee{0%{transform:translateX(100%)}100%{transform:translateX(-100%)}}
+  @-webkit-keyframes moyoPromoMarquee{0%{-webkit-transform:translateX(100%)}100%{-webkit-transform:translateX(-100%)}}
   @keyframes fadeIn{from{opacity:0}to{opacity:1}}
   @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
   /* Défilement automatique des avantages Premium : règle injectée de façon persistante depuis le
@@ -6569,7 +6570,7 @@ function BotWidget({ onClose, auth }: { onClose: () => void; auth: Auth }) {
 
   return (
     <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 9998, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={onClose}>
-      <div className="moyo-sheet-in" style={{ background: G.cremeDark, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 500, maxHeight: "80vh", display: "flex", flexDirection: "column", overflow: "hidden" }} onClick={e => e.stopPropagation()}>
+      <div className="moyo-sheet-in" style={{ background: G.cremeDark, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 500, minHeight: "50vh", maxHeight: "80vh", display: "flex", flexDirection: "column", overflow: "hidden", paddingBottom: "env(safe-area-inset-bottom)" }} onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div style={{ background: G.cremeDark, padding: "16px 20px", display: "flex", alignItems: "center", gap: 12 }}>
           <div style={{ width: 38, height: 38, borderRadius: "50%", background: G.blanc, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -6591,24 +6592,24 @@ function BotWidget({ onClose, auth }: { onClose: () => void; auth: Auth }) {
 
         {/* Home */}
         {mode === "home" && (
-          <div style={{ padding: "16px 16px 20px", display: "flex", flexDirection: "column", gap: 10 }}>
-            <p style={{ fontSize: "0.85rem", color: G.brunLight, marginBottom: 4 }}>Que puis-je faire pour toi ?</p>
-            <div onClick={() => setMode("chat")} style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px", background: G.blanc, borderRadius: 16, cursor: "pointer" }}>
-              <div style={{ width: 38, height: 38, borderRadius: "50%", background: G.cremeDark, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.brunLight} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <div style={{ flex: 1, padding: "20px 16px", display: "flex", flexDirection: "column", gap: 14, justifyContent: "center" }}>
+            <p style={{ fontSize: "0.9rem", color: G.brunLight, marginBottom: 4 }}>Que puis-je faire pour toi ?</p>
+            <div onClick={() => setMode("chat")} style={{ display: "flex", alignItems: "center", gap: 14, padding: "18px", background: G.blanc, borderRadius: 16, cursor: "pointer" }}>
+              <div style={{ width: 44, height: 44, borderRadius: "50%", background: G.cremeDark, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.brunLight} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
               </div>
               <div>
-                <div style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>Besoin d'aide</div>
-                <div style={{ fontSize: "0.75rem", color: G.brunLight }}>Pose ta question, je réponds instantanément</div>
+                <div style={{ fontWeight: 700, fontSize: "0.92rem", color: G.brun }}>Besoin d'aide</div>
+                <div style={{ fontSize: "0.78rem", color: G.brunLight, marginTop: 2 }}>Pose ta question, je réponds instantanément</div>
               </div>
             </div>
-            <div onClick={() => setMode("report")} style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px", background: G.blanc, borderRadius: 16, cursor: "pointer" }}>
-              <div style={{ width: 38, height: 38, borderRadius: "50%", background: G.cremeDark, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={G.brunLight} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <div onClick={() => setMode("report")} style={{ display: "flex", alignItems: "center", gap: 14, padding: "18px", background: G.blanc, borderRadius: 16, cursor: "pointer" }}>
+              <div style={{ width: 44, height: 44, borderRadius: "50%", background: G.cremeDark, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={G.brunLight} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
               </div>
               <div>
-                <div style={{ fontWeight: 700, fontSize: "0.88rem", color: G.brun }}>Contacter notre équipe</div>
-                <div style={{ fontSize: "0.75rem", color: G.brunLight }}>Écrire directement à l’assistance Moyo</div>
+                <div style={{ fontWeight: 700, fontSize: "0.92rem", color: G.brun }}>Contacter notre équipe</div>
+                <div style={{ fontSize: "0.78rem", color: G.brunLight, marginTop: 2 }}>Écrire directement à l’assistance Moyo</div>
               </div>
             </div>
           </div>
@@ -9374,13 +9375,13 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMes
       {/* ── En-tête ── */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8, marginBottom: 14 }}>
         {promoInfo && (
-          <div onClick={onOpenPromoPayment} style={{ flex: 1, display: "flex", alignItems: "center", gap: 8, background: "#FFFBF0", border: "1.5px solid #EED9A8", borderRadius: 50, padding: "8px 12px", overflow: "hidden", cursor: "pointer", minWidth: 0 }}>
-            <span style={{ fontSize: "0.66rem", fontWeight: 800, color: "#B8860B", whiteSpace: "nowrap", flexShrink: 0 }}>✨ SUPER PROMO</span>
-            <div style={{ width: 1, height: 14, background: "#EED9A8", flexShrink: 0 }} />
-            <div style={{ flex: 1, overflow: "hidden", position: "relative", height: 16, minWidth: 0 }}>
-              <span style={{ position: "absolute", whiteSpace: "nowrap", fontSize: "0.72rem", fontWeight: 700, color: "#8B6914", animation: "moyoPromoMarquee 20s linear infinite" }}>-{promoInfo.pct}% sur votre abonnement Premium · {promoInfo.message}</span>
+          <div onClick={onOpenPromoPayment} style={{ flex: 1, display: "flex", alignItems: "center", gap: 8, background: G.blanc, border: `2px solid ${G.gris}`, borderRadius: 50, padding: "4px 12px", overflow: "hidden", cursor: "pointer", minWidth: 0 }}>
+            <span style={{ fontSize: "0.62rem", fontWeight: 800, color: "#B8860B", whiteSpace: "nowrap", flexShrink: 0 }}>✨ PROMO</span>
+            <div style={{ width: 1, height: 12, background: G.gris, flexShrink: 0 }} />
+            <div style={{ flex: 1, overflow: "hidden", position: "relative", height: 14, minWidth: 0 }}>
+              <span style={{ position: "absolute", left: 0, top: 0, whiteSpace: "nowrap", fontSize: "0.7rem", fontWeight: 700, color: "var(--c-pill-fg)", animation: "moyoPromoMarquee 20s linear infinite", WebkitAnimation: "moyoPromoMarquee 20s linear infinite", willChange: "transform" }}>-{promoInfo.pct}% sur votre abonnement Premium · {promoInfo.message}</span>
             </div>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#B8860B" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><polyline points="9 18 15 12 9 6" /></svg>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><polyline points="9 18 15 12 9 6" /></svg>
           </div>
         )}
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -9400,9 +9401,9 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMes
         <>
           {/* 1. Bandeau compteur — toujours visible (affiche 0 si aucun like en attente) */}
           {likesSubTab === "sent" ? (
-            <div style={{ background: `linear-gradient(135deg,${G.or},#B8860B)`, borderRadius: 14, padding: "13px 16px", marginBottom: 14, color: "#111", display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ background: isTrulyPremium ? `linear-gradient(135deg,${G.or},#B8860B)` : `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, borderRadius: 14, padding: "13px 16px", marginBottom: 14, color: isTrulyPremium ? "#111" : G.blanc, display: "flex", alignItems: "center", gap: 12 }}>
               <div style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.25)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="#111" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill={isTrulyPremium ? "#111" : "white"} stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 700, fontSize: "0.9rem" }}>{visibleSentLikes.length > 0 ? `Tu as liké ${visibleSentLikes.length} profil${visibleSentLikes.length > 1 ? "s" : ""}` : "Tu n'as encore liké personne"}</div>
@@ -9432,12 +9433,6 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMes
                 {isTrulyPremium ? "Historique complet activé" : "Passe Premium pour découvrir leur identité"}
               </div>
             </div>
-            {!isPremiumReal && receivedCount > 0 && (
-              <div style={{ background: "rgba(255,255,255,0.25)", borderRadius: "50%", width: 32, height: 32,
-                display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "0.95rem" }}>
-                {receivedCount > 9 ? "9+" : receivedCount}
-              </div>
-            )}
           </div>
           )}
 
@@ -9586,9 +9581,9 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMes
         <>
           {/* 1. Bandeau compteur */}
           {visitorsSubTab === "visited" ? (
-            <div style={{ background: `linear-gradient(135deg,${G.or},#B8860B)`, borderRadius: 14, padding: "13px 16px", marginBottom: 14, color: "#111", display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ background: isTrulyPremium ? `linear-gradient(135deg,${G.or},#B8860B)` : `linear-gradient(135deg,${G.rouge},${G.rougeDark})`, borderRadius: 14, padding: "13px 16px", marginBottom: 14, color: isTrulyPremium ? "#111" : G.blanc, display: "flex", alignItems: "center", gap: 12 }}>
               <div style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.25)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#111" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={isTrulyPremium ? "#111" : "white"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 700, fontSize: "0.9rem" }}>{visitedProfiles.length > 0 ? `Tu as consulté ${visitedProfiles.length} profil${visitedProfiles.length > 1 ? "s" : ""}` : "Tu n'as encore consulté aucun profil"}</div>
@@ -9620,12 +9615,6 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMes
                 {isTrulyPremium ? "Historique complet activé" : "Passe Premium pour voir qui"}
               </div>
             </div>
-            {!isPremiumReal && viewsCount > 0 && (
-              <div style={{ background: "rgba(255,255,255,0.25)", borderRadius: "50%", width: 32, height: 32,
-                display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "0.95rem" }}>
-                {viewsCount > 9 ? "9+" : viewsCount}
-              </div>
-            )}
           </div>
           )}
 
@@ -10060,13 +10049,13 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
   return <div style={{ padding: "12px 16px 16px" }}>
     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
       {promoInfo && (
-        <div onClick={onOpenPromoPayment} style={{ flex: 1, display: "flex", alignItems: "center", gap: 8, background: "#FFFBF0", border: "1.5px solid #EED9A8", borderRadius: 50, padding: "8px 12px", overflow: "hidden", cursor: "pointer", minWidth: 0 }}>
-          <span style={{ fontSize: "0.66rem", fontWeight: 800, color: "#B8860B", whiteSpace: "nowrap", flexShrink: 0 }}>✨ SUPER PROMO</span>
-          <div style={{ width: 1, height: 14, background: "#EED9A8", flexShrink: 0 }} />
-          <div style={{ flex: 1, overflow: "hidden", position: "relative", height: 16, minWidth: 0 }}>
-            <span style={{ position: "absolute", whiteSpace: "nowrap", fontSize: "0.72rem", fontWeight: 700, color: "#8B6914", animation: "moyoPromoMarquee 20s linear infinite" }}>-{promoInfo.pct}% sur votre abonnement Premium · {promoInfo.message}</span>
+        <div onClick={onOpenPromoPayment} style={{ flex: 1, display: "flex", alignItems: "center", gap: 8, background: G.blanc, border: `2px solid ${G.gris}`, borderRadius: 50, padding: "4px 12px", overflow: "hidden", cursor: "pointer", minWidth: 0 }}>
+          <span style={{ fontSize: "0.62rem", fontWeight: 800, color: "#B8860B", whiteSpace: "nowrap", flexShrink: 0 }}>✨ PROMO</span>
+          <div style={{ width: 1, height: 12, background: G.gris, flexShrink: 0 }} />
+          <div style={{ flex: 1, overflow: "hidden", position: "relative", height: 14, minWidth: 0 }}>
+            <span style={{ position: "absolute", left: 0, top: 0, whiteSpace: "nowrap", fontSize: "0.7rem", fontWeight: 700, color: "var(--c-pill-fg)", animation: "moyoPromoMarquee 20s linear infinite", WebkitAnimation: "moyoPromoMarquee 20s linear infinite", willChange: "transform" }}>-{promoInfo.pct}% sur votre abonnement Premium · {promoInfo.message}</span>
           </div>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#B8860B" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><polyline points="9 18 15 12 9 6" /></svg>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><polyline points="9 18 15 12 9 6" /></svg>
         </div>
       )}
       <div onClick={() => setViewMode(v => v === "card" ? "list" : "card")} style={{ background: G.blanc, color: "var(--c-pill-fg)", border: `2px solid ${G.gris}`, borderRadius: 50, padding: "4px 12px", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}>{viewMode === "card" ? "≡ Liste" : "⊞ Carte"}</div>
