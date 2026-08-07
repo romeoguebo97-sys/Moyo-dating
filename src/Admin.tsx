@@ -7937,6 +7937,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
   const [promoGender, setPromoGender] = useState<"all" | "femmes" | "hommes">("all");
   const [promoPlan, setPromoPlan] = useState<"all" | "nouveaux" | "gratuit">("all");
   const [promoMessage, setPromoMessage] = useState("1 mois d'accès complet à Moyo Dating, à prix réduit.");
+  const [promoBannerText, setPromoBannerText] = useState("Profite de cette offre avant qu'elle ne se termine !");
   const [promoCount, setPromoCount] = useState<number | null>(null);
   const [promoCountLoading, setPromoCountLoading] = useState(false);
   const [promoSaving, setPromoSaving] = useState(false);
@@ -7951,7 +7952,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
     if (!auth) return;
     (async () => {
       try {
-        const r = await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(promo_price_fcfa,promo_expires_at,promo_target,promo_message,promo_start,promo_history)&select=key,value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(promo_price_fcfa,promo_expires_at,promo_target,promo_message,promo_banner_text,promo_start,promo_history)&select=key,value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
         const rows = await r.json().catch(() => []);
         const map: Record<string, string> = {};
         (Array.isArray(rows) ? rows : []).forEach((row: any) => { map[row.key] = row.value; });
@@ -7968,6 +7969,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
           if (p === "nouveaux" || p === "gratuit" || p === "all") setPromoPlan(p);
         }
         if (map["promo_message"]) setPromoMessage(map["promo_message"]);
+        if (map["promo_banner_text"]) setPromoBannerText(map["promo_banner_text"]);
         if (map["promo_start"]) setPromoStart(map["promo_start"]);
         if (map["promo_history"]) { try { const p = JSON.parse(map["promo_history"]); if (Array.isArray(p)) setPromoHistory(p); } catch {} }
       } catch {}
@@ -8023,6 +8025,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
         saveSetting("promo_expires_at", endISO, auth.token),
         saveSetting("promo_target", `${promoGender}|${promoPlan}`, auth.token),
         saveSetting("promo_message", promoMessage, auth.token),
+        saveSetting("promo_banner_text", promoBannerText, auth.token),
         saveSetting("promo_start", startISO, auth.token),
         onSetAutoShortcut("promo_active", true),
       ]);
@@ -15621,6 +15624,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                   <div style={{ flex: "1 1 320px", minWidth: 0 }}>
                     <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#999", marginBottom: 8 }}>Message affiché sur l'écran</div>
                     <textarea value={promoMessage} onChange={e => setPromoMessage(e.target.value)} rows={5} style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.85rem", fontFamily: "inherit", resize: "vertical" }} />
+                    <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#999", margin: "14px 0 8px" }}>Texte de la bannière (défile en haut de Likes/Vues)</div>
+                    <input value={promoBannerText} onChange={e => setPromoBannerText(e.target.value)} maxLength={120} style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${G.gris}`, fontSize: "0.85rem", fontFamily: "inherit" }} />
                   </div>
                 </div>
 
