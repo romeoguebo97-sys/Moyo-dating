@@ -8999,6 +8999,35 @@ const EmptyState = memo(function EmptyState({ icon, title, subtitle }: { icon: R
   );
 });
 
+// ── Défilement de texte piloté en JavaScript (requestAnimationFrame), sans dépendre d'une
+//    règle CSS @keyframes externe qui pourrait être absente selon l'écran où le composant est
+//    monté (c'était la cause du bandeau promo qui restait figé). Fonctionne à coup sûr, peu
+//    importe où ce composant est utilisé dans l'app. ──
+function MarqueeText({ text, style }: { text: string; style?: React.CSSProperties }) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const textRef = useRef<HTMLSpanElement | null>(null);
+  useEffect(() => {
+    let raf = 0;
+    let x = containerRef.current?.offsetWidth || 300;
+    const speed = 0.45; // pixels par frame ≈ défilement lisible, ni trop lent ni trop rapide
+    const step = () => {
+      const containerWidth = containerRef.current?.offsetWidth || 300;
+      const textWidth = textRef.current?.offsetWidth || 0;
+      x -= speed;
+      if (x < -textWidth) x = containerWidth;
+      if (textRef.current) textRef.current.style.transform = `translateX(${x}px)`;
+      raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [text]);
+  return (
+    <div ref={containerRef} style={{ flex: 1, overflow: "hidden", position: "relative", height: 14, minWidth: 0, ...style }}>
+      <span ref={textRef} style={{ position: "absolute", left: 0, top: 0, whiteSpace: "nowrap", fontSize: "0.7rem", fontWeight: 700, color: "var(--c-pill-fg)" }}>{text}</span>
+    </div>
+  );
+}
+
 function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMessages, onGoDiscover, onMatch, promoInfo, onOpenPromoPayment }: { auth: Auth; onShowPremium: (r: string) => void; mode?: "likes" | "visitors"; onBadgeUpdate?: () => void; onGoMessages?: (partnerId?: string) => void; onGoDiscover?: () => void; onMatch?: (p: Profile) => void; promoInfo?: { pct: number; message: string } | null; onOpenPromoPayment?: () => void }) {
   // ── Sub-tab state ──
   const [likesSubTab, setLikesSubTab] = useState<"received" | "sent">("received");
@@ -9378,9 +9407,7 @@ function LikesPage({ auth, onShowPremium, mode = "likes", onBadgeUpdate, onGoMes
           <div onClick={onOpenPromoPayment} style={{ flex: 1, display: "flex", alignItems: "center", gap: 8, background: G.blanc, border: `2px solid ${G.gris}`, borderRadius: 50, padding: "4px 12px", overflow: "hidden", cursor: "pointer", minWidth: 0 }}>
             <span style={{ fontSize: "0.62rem", fontWeight: 800, color: "#B8860B", whiteSpace: "nowrap", flexShrink: 0 }}>✨ PROMO</span>
             <div style={{ width: 1, height: 12, background: G.gris, flexShrink: 0 }} />
-            <div style={{ flex: 1, overflow: "hidden", position: "relative", height: 14, minWidth: 0 }}>
-              <span style={{ position: "absolute", left: 0, top: 0, whiteSpace: "nowrap", fontSize: "0.7rem", fontWeight: 700, color: "var(--c-pill-fg)", animation: "moyoPromoMarquee 20s linear infinite", WebkitAnimation: "moyoPromoMarquee 20s linear infinite", willChange: "transform" }}>-{promoInfo.pct}% sur votre abonnement Premium · {promoInfo.message}</span>
-            </div>
+            <MarqueeText text={`-${promoInfo.pct}% sur votre abonnement Premium · ${promoInfo.message}`} />
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><polyline points="9 18 15 12 9 6" /></svg>
           </div>
         )}
@@ -10052,9 +10079,7 @@ function Matches({ auth, onShowPremium, onNotifCount, onGoMessages, onUnmatchSta
         <div onClick={onOpenPromoPayment} style={{ flex: 1, display: "flex", alignItems: "center", gap: 8, background: G.blanc, border: `2px solid ${G.gris}`, borderRadius: 50, padding: "4px 12px", overflow: "hidden", cursor: "pointer", minWidth: 0 }}>
           <span style={{ fontSize: "0.62rem", fontWeight: 800, color: "#B8860B", whiteSpace: "nowrap", flexShrink: 0 }}>✨ PROMO</span>
           <div style={{ width: 1, height: 12, background: G.gris, flexShrink: 0 }} />
-          <div style={{ flex: 1, overflow: "hidden", position: "relative", height: 14, minWidth: 0 }}>
-            <span style={{ position: "absolute", left: 0, top: 0, whiteSpace: "nowrap", fontSize: "0.7rem", fontWeight: 700, color: "var(--c-pill-fg)", animation: "moyoPromoMarquee 20s linear infinite", WebkitAnimation: "moyoPromoMarquee 20s linear infinite", willChange: "transform" }}>-{promoInfo.pct}% sur votre abonnement Premium · {promoInfo.message}</span>
-          </div>
+          <MarqueeText text={`-${promoInfo.pct}% sur votre abonnement Premium · ${promoInfo.message}`} />
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><polyline points="9 18 15 12 9 6" /></svg>
         </div>
       )}
