@@ -21031,6 +21031,10 @@ export default function App() {
           } else if (typeof w.reason === "string" && w.reason.startsWith("[PHONE_NUDGE]")) {
             setPhonePromptOpen(true);
             fetch(`${SUPABASE_URL}/rest/v1/user_warnings?id=eq.${w.id}`, { method: "PATCH", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json" }, body: JSON.stringify({ acknowledged: true }) }).catch(() => {});
+          } else if (typeof w.reason === "string" && w.reason.startsWith("[VERIFY_NUDGE]")) {
+            sb.query<{ age: number; gender: string }>(auth.token, "profiles", `?id=eq.${auth.userId}&select=age,gender`).then(res => { if (res[0]) setVerifyPromptMe({ age: res[0].age, gender: res[0].gender }); });
+            setVerifyPromptOpen(true);
+            fetch(`${SUPABASE_URL}/rest/v1/user_warnings?id=eq.${w.id}`, { method: "PATCH", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json" }, body: JSON.stringify({ acknowledged: true }) }).catch(() => {});
           } else if (typeof w.reason === "string" && w.reason.startsWith("[AMBASSADOR_NUDGE]")) {
             setAmbassadorNudgeMessage(w.reason.replace("[AMBASSADOR_NUDGE]", "").trim() || "Gagne de l'argent en recommandant Moyo Dating à ton entourage. Chaque personne qui s'abonne au Premium grâce à toi te rapporte une vraie commission, versée par Mobile Money.");
             setAmbassadorNudgeOpen(true);
@@ -21458,6 +21462,10 @@ export default function App() {
             fetch(`${SUPABASE_URL}/rest/v1/user_warnings?id=eq.${w.id}`, { method: "PATCH", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json" }, body: JSON.stringify({ acknowledged: true }) }).catch(() => {});
           } else if (typeof w.reason === "string" && w.reason.startsWith("[PHONE_NUDGE]")) {
             setPhonePromptOpen(true);
+            fetch(`${SUPABASE_URL}/rest/v1/user_warnings?id=eq.${w.id}`, { method: "PATCH", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json" }, body: JSON.stringify({ acknowledged: true }) }).catch(() => {});
+          } else if (typeof w.reason === "string" && w.reason.startsWith("[VERIFY_NUDGE]")) {
+            sb.query<{ age: number; gender: string }>(auth.token, "profiles", `?id=eq.${auth.userId}&select=age,gender`).then(res => { if (res[0]) setVerifyPromptMe({ age: res[0].age, gender: res[0].gender }); });
+            setVerifyPromptOpen(true);
             fetch(`${SUPABASE_URL}/rest/v1/user_warnings?id=eq.${w.id}`, { method: "PATCH", headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Content-Type": "application/json" }, body: JSON.stringify({ acknowledged: true }) }).catch(() => {});
           } else if (typeof w.reason === "string" && w.reason.startsWith("[AMBASSADOR_NUDGE]")) {
             setAmbassadorNudgeMessage(w.reason.replace("[AMBASSADOR_NUDGE]", "").trim() || "Gagne de l'argent en recommandant Moyo Dating à ton entourage. Chaque personne qui s'abonne au Premium grâce à toi te rapporte une vraie commission, versée par Mobile Money.");

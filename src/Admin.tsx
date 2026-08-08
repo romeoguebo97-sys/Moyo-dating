@@ -3143,7 +3143,7 @@ export function CropModal({ src, onConfirm, onCancel }: { src: string; onConfirm
   };
 
   return (
-    <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 9000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+    <div className="moyo-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 10500, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
       <div className="moyo-card-in" style={{ background: G.blanc, maxHeight: "85vh", overflowY: "auto", borderRadius: 24, padding: "24px 20px", width: "100%", maxWidth: 520, textAlign: "center" }}>
         <div style={{ fontWeight: 700, fontSize: "1rem", marginBottom: 6, color: "#111" }}>Cadrer ta photo</div>
         <div style={{ fontSize: "0.78rem", color: "#888", marginBottom: 16 }}>Glisse pour repositionner · Pince pour zoomer</div>
@@ -6422,7 +6422,7 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
   // ── Vue & tri utilisateurs admin ──
   const [usersViewMode, setUsersViewMode] = useState<"grid" | "list">("grid");
   const [usersSort, setUsersSort] = useState<"created_at.desc" | "created_at.asc" | "name.asc" | "name.desc" | "last_seen.desc" | "age.asc" | "age.desc" | "online" | "premium" | "lifetime" | "admin" | "verified" | "banned" | "male" | "female">("created_at.desc");
-  type UserFilterKey = "admin" | "premium" | "verified" | "banned" | "ambassador" | "male" | "female" | "online" | "recent";
+  type UserFilterKey = "admin" | "premium" | "verified" | "banned" | "ambassador" | "male" | "female" | "online" | "recent" | "online5h" | "online24h" | "inactive30" | "inactive90";
   const [usersFilters, setUsersFilters] = useState<Set<UserFilterKey>>(new Set());
   const [adminViewedProfile, setAdminViewedProfile] = useState<Profile | null>(null);
   // ── Édition du numéro de téléphone depuis la fiche admin : certains membres n'arrivent pas à
@@ -6430,7 +6430,10 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
   const [editingUserPhone, setEditingUserPhone] = useState(false);
   const [userPhoneDraft, setUserPhoneDraft] = useState("");
   const [savingUserPhone, setSavingUserPhone] = useState(false);
-  useEffect(() => { setEditingUserPhone(false); setUserPhoneDraft(adminViewedProfile?.phone || ""); }, [adminViewedProfile?.id]);
+  const [editingUserBio, setEditingUserBio] = useState(false);
+  const [userBioDraft, setUserBioDraft] = useState("");
+  const [savingUserBio, setSavingUserBio] = useState(false);
+  useEffect(() => { setEditingUserPhone(false); setUserPhoneDraft(adminViewedProfile?.phone || ""); setEditingUserBio(false); setUserBioDraft(adminViewedProfile?.bio || ""); }, [adminViewedProfile?.id]);
   const saveUserPhone = async () => {
     if (!adminViewedProfile) return;
     setSavingUserPhone(true);
@@ -6446,6 +6449,23 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
       showToast("Numéro de téléphone enregistré.", "success");
     } catch { showToast("Erreur lors de l'enregistrement.", "error"); }
     setSavingUserPhone(false);
+  };
+  const saveUserBio = async () => {
+    if (!adminViewedProfile) return;
+    setSavingUserBio(true);
+    try {
+      const newBio = userBioDraft.trim() || null;
+      await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${adminViewedProfile.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}`, "Prefer": "return=minimal" },
+        body: JSON.stringify({ bio: newBio }),
+      });
+      setAdminViewedProfile(prev => prev ? { ...prev, bio: newBio } as any : prev);
+      logAdminAction(auth.token, auth.userId, auth.name, "Bio corrigée manuellement par l'admin", adminViewedProfile.id);
+      setEditingUserBio(false);
+      showToast("Bio enregistrée.", "success");
+    } catch { showToast("Erreur lors de l'enregistrement.", "error"); }
+    setSavingUserBio(false);
   };
   const openAdminProfile = async (userId: string) => {
     try {
@@ -8244,24 +8264,30 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
       "{nom}, quelqu'un pense à vous en ce moment sur Moyo Dating !\n\nVous avez {matchs} match(s) et proposition(s) en attente — ne les laissez pas filer !\n\nReconnectez-vous dès maintenant :\n\nVotre adresse e-mail : {email}\nMot de passe : inchangé. En cas d'oubli, nous pouvons le réinitialiser.\n\ndating.moyo-congo.com",
     ];
     const [inactiveTemplates, setInactiveTemplates] = useState<string[]>(DEFAULT_INACTIVE_TEMPLATES);
+    const [inactiveTemplatesFetched, setInactiveTemplatesFetched] = useState(false);
     const [inactiveTemplateIndex, setInactiveTemplateIndex] = useState(0);
     const [inactiveTemplateEditing, setInactiveTemplateEditing] = useState<number | null>(null);
     const [inactiveTemplateDraft, setInactiveTemplateDraft] = useState("");
-    const loadInactiveTemplates = async () => {
-      if (!auth) return;
+    const loadInactiveTemplates = async (): Promise<string[]> => {
+      if (!auth) return DEFAULT_INACTIVE_TEMPLATES;
       try {
         const r = await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(inactive_reminder_template_1,inactive_reminder_template_2,inactive_reminder_template_3)&select=key,value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
         const data = await r.json().catch(() => []);
         if (Array.isArray(data) && data.length > 0) {
           const map: Record<string, string> = {};
           data.forEach((d: any) => { map[d.key] = d.value; });
-          setInactiveTemplates([
+          const loaded = [
             map["inactive_reminder_template_1"] || DEFAULT_INACTIVE_TEMPLATES[0],
             map["inactive_reminder_template_2"] || DEFAULT_INACTIVE_TEMPLATES[1],
             map["inactive_reminder_template_3"] || DEFAULT_INACTIVE_TEMPLATES[2],
-          ]);
+          ];
+          setInactiveTemplates(loaded);
+          setInactiveTemplatesFetched(true);
+          return loaded;
         }
       } catch {}
+      setInactiveTemplatesFetched(true);
+      return DEFAULT_INACTIVE_TEMPLATES;
     };
     const saveInactiveTemplate = async (index: number) => {
       if (!auth) return;
@@ -8272,9 +8298,33 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
     };
     // Ouvre WhatsApp avec le modèle sélectionné (vraies infos de la personne), marque la relance
     // en base (pour ne pas la reproposer avant le délai de repos) et la retire de la liste.
-    const sendInactiveReminder = (u: AdminProfile) => {
-      const pending = inactivePendingLikes[u.id] || 0;
-      const msg = (inactiveTemplates[inactiveTemplateIndex] || DEFAULT_INACTIVE_TEMPLATES[0])
+    // ── Même calcul que la liste en masse ci-dessus (likes reçus non encore transformés en match),
+    //    mais pour un seul membre à la fois — utilisé quand on relance depuis Gérer, où ce membre
+    //    n'a pas forcément été chargé dans la liste globale des inactifs. ──
+    const fetchPendingLikesForUser = async (userId: string): Promise<number> => {
+      if (!auth) return 0;
+      try {
+        const H = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` };
+        const [likesRaw, matchesRaw] = await Promise.all([
+          fetch(`${SUPABASE_URL}/rest/v1/likes?to_user=eq.${userId}&select=from_user,to_user&limit=2000`, { headers: H }).then(r => r.json()).catch(() => []),
+          fetch(`${SUPABASE_URL}/rest/v1/matches?or=(user1.eq.${userId},user2.eq.${userId})&select=user1,user2&limit=2000`, { headers: H }).then(r => r.json()).catch(() => []),
+        ]);
+        const matchedPairs = new Set((Array.isArray(matchesRaw) ? matchesRaw : []).map((m: any) => [m.user1, m.user2].sort().join("_")));
+        let count = 0;
+        (Array.isArray(likesRaw) ? likesRaw : []).forEach((l: any) => {
+          if (!l.to_user || !l.from_user) return;
+          const pairKey = [l.from_user, l.to_user].sort().join("_");
+          if (!matchedPairs.has(pairKey)) count++;
+        });
+        return count;
+      } catch { return 0; }
+    };
+    const sendInactiveReminder = async (u: AdminProfile, pendingOverride?: number) => {
+      let pending = pendingOverride !== undefined ? pendingOverride : inactivePendingLikes[u.id];
+      if (pending === undefined) pending = await fetchPendingLikesForUser(u.id);
+      let templates = inactiveTemplates;
+      if (!inactiveTemplatesFetched) templates = await loadInactiveTemplates();
+      const msg = (templates[inactiveTemplateIndex] || DEFAULT_INACTIVE_TEMPLATES[0])
         .replace(/\{nom\}/g, u.name)
         .replace(/\{matchs\}/g, String(pending))
         .replace(/\{email\}/g, u.email || "—");
@@ -8294,24 +8344,30 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
       "{nom}, ne laisse pas filer tes {matchs} match(s) sur Moyo Dating ! Connexion : {email} (mdp inchangé). dating.moyo-congo.com",
     ];
     const [inactiveSmsTemplates, setInactiveSmsTemplates] = useState<string[]>(DEFAULT_INACTIVE_SMS_TEMPLATES);
+    const [inactiveSmsTemplatesFetched, setInactiveSmsTemplatesFetched] = useState(false);
     const [inactiveSmsTemplateIndex, setInactiveSmsTemplateIndex] = useState(0);
     const [inactiveSmsTemplateEditing, setInactiveSmsTemplateEditing] = useState<number | null>(null);
     const [inactiveSmsTemplateDraft, setInactiveSmsTemplateDraft] = useState("");
-    const loadInactiveSmsTemplates = async () => {
-      if (!auth) return;
+    const loadInactiveSmsTemplates = async (): Promise<string[]> => {
+      if (!auth) return DEFAULT_INACTIVE_SMS_TEMPLATES;
       try {
         const r = await fetch(`${SUPABASE_URL}/rest/v1/app_settings?key=in.(inactive_sms_template_1,inactive_sms_template_2,inactive_sms_template_3)&select=key,value`, { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${auth.token}` } });
         const data = await r.json().catch(() => []);
         if (Array.isArray(data) && data.length > 0) {
           const map: Record<string, string> = {};
           data.forEach((d: any) => { map[d.key] = d.value; });
-          setInactiveSmsTemplates([
+          const loaded = [
             map["inactive_sms_template_1"] || DEFAULT_INACTIVE_SMS_TEMPLATES[0],
             map["inactive_sms_template_2"] || DEFAULT_INACTIVE_SMS_TEMPLATES[1],
             map["inactive_sms_template_3"] || DEFAULT_INACTIVE_SMS_TEMPLATES[2],
-          ]);
+          ];
+          setInactiveSmsTemplates(loaded);
+          setInactiveSmsTemplatesFetched(true);
+          return loaded;
         }
       } catch {}
+      setInactiveSmsTemplatesFetched(true);
+      return DEFAULT_INACTIVE_SMS_TEMPLATES;
     };
     const saveInactiveSmsTemplate = async (index: number) => {
       if (!auth) return;
@@ -8320,9 +8376,12 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
       setInactiveSmsTemplates(list => list.map((t, i) => i === index ? value : t));
       setInactiveSmsTemplateEditing(null);
     };
-    const sendInactiveSms = (u: AdminProfile) => {
-      const pending = inactivePendingLikes[u.id] || 0;
-      const msg = (inactiveSmsTemplates[inactiveSmsTemplateIndex] || DEFAULT_INACTIVE_SMS_TEMPLATES[0])
+    const sendInactiveSms = async (u: AdminProfile, pendingOverride?: number) => {
+      let pending = pendingOverride !== undefined ? pendingOverride : inactivePendingLikes[u.id];
+      if (pending === undefined) pending = await fetchPendingLikesForUser(u.id);
+      let templates = inactiveSmsTemplates;
+      if (!inactiveSmsTemplatesFetched) templates = await loadInactiveSmsTemplates();
+      const msg = (templates[inactiveSmsTemplateIndex] || DEFAULT_INACTIVE_SMS_TEMPLATES[0])
         .replace(/\{nom\}/g, u.name)
         .replace(/\{matchs\}/g, String(pending))
         .replace(/\{email\}/g, u.email || "—");
@@ -9623,9 +9682,10 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
         notifyUser(u.id, "photo_improved", "📸 Photo améliorée", "Notre équipe a mis à jour ta photo de profil.");
         showToast("Photo remplacée avec succès.", "success");
       } else {
-        showToast("Échec de l'envoi de la photo.", "error");
+        const errBody = await r.json().catch(() => null);
+        showToast(`Échec de l'envoi de la photo : ${r.status} ${errBody?.message || errBody?.error || r.statusText}`, "error");
       }
-    } catch { showToast("Erreur lors du remplacement de la photo.", "error"); }
+    } catch (e: any) { showToast(`Erreur lors du remplacement de la photo : ${e?.message || "inconnue"}`, "error"); }
     setPhotoReplaceTargetId(null);
     photoReplaceForUserRef.current = null;
   };
@@ -9997,6 +10057,10 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
       // côté serveur, donc valables sur toutes les pages, pas seulement celle affichée.
       const onlineThreshold = new Date(Date.now() - 5 * 60 * 1000).toISOString(); // 5 min, comme ailleurs dans l'app
       const recentThreshold = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString(); // 7 jours
+      const online5hThreshold = new Date(Date.now() - 5 * 3600 * 1000).toISOString();
+      const online24hThreshold = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+      const inactive30Threshold = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
+      const inactive90Threshold = new Date(Date.now() - 90 * 24 * 3600 * 1000).toISOString();
       const filterClauses: Record<string, string> = {
         admin: "is_admin=eq.true",
         premium: "is_premium=eq.true",
@@ -10007,6 +10071,10 @@ function Admin({ auth, onBack, onBadgeCount, autoShortcuts, onToggleAutoShortcut
         female: "gender=eq.Femme",
         online: `last_seen=gte.${onlineThreshold}`,
         recent: `last_seen=gte.${recentThreshold}`,
+        online5h: `last_seen=gte.${online5hThreshold}`,
+        online24h: `last_seen=gte.${online24hThreshold}`,
+        inactive30: `last_seen=lt.${inactive30Threshold}`,
+        inactive90: `last_seen=lt.${inactive90Threshold}`,
       };
       const filterQs = Array.from(filters).map(f => `&${filterClauses[f]}`).join("");
       // Les comptes Ambassadeur sans profil de rencontre (account_type=ambassador_only) ont leur
@@ -12256,9 +12324,9 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                           inactive, pour relancer directement ce membre depuis sa fiche sans passer par
                           la liste globale des inactifs. */}
                       <Row label="WhatsApp" color="#27ae60" desc="Relancer ce membre par WhatsApp (mêmes modèles que Marketing → Relance inactive)." disabled={isLoading || !u.phone}
-                        onClick={() => { if (!u.phone) { showToast("Ce membre n'a pas de numéro de téléphone renseigné.", "error"); return; } if (inactiveTemplates.length === 0 || !inactiveTemplates[0]) loadInactiveTemplates(); sendInactiveReminder(u); }} />
+                        onClick={() => { if (!u.phone) { showToast("Ce membre n'a pas de numéro de téléphone renseigné.", "error"); return; } sendInactiveReminder(u); }} />
                       <Row label="SMS" color="#16a085" desc="Relancer ce membre par SMS (mêmes modèles que Marketing → Relance inactive)." disabled={isLoading || !u.phone}
-                        onClick={() => { if (!u.phone) { showToast("Ce membre n'a pas de numéro de téléphone renseigné.", "error"); return; } if (inactiveSmsTemplates.length === 0 || !inactiveSmsTemplates[0]) loadInactiveSmsTemplates(); sendInactiveSms(u); }} />
+                        onClick={() => { if (!u.phone) { showToast("Ce membre n'a pas de numéro de téléphone renseigné.", "error"); return; } sendInactiveSms(u); }} />
                       <Row label={photoReplaceTargetId === u.id ? "…" : "Photo"} color="#16a085" desc="Remplacer la photo de profil de ce membre (recadrage inclus)." disabled={isLoading || cannotModerate || photoReplaceTargetId === u.id}
                         onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } triggerPhotoReplace(u); }} />
                       {/* Lien de paiement unique — pour les gens bannis ou qui n'arrivent pas à
@@ -12311,6 +12379,8 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                               onClick={() => sendNudge("PROMO_NUDGE", "Une promotion vous attend !", "La promotion")} />
                             <Row label="Profil incomplet" color="#2980b9" desc={u.phone ? "Ce membre a déjà renseigné son téléphone." : "Afficher à ce membre l'écran lui demandant son numéro de téléphone."} disabled={isLoading || !!u.phone}
                               onClick={() => sendNudge("PHONE_NUDGE", "Complète ton profil !", "La demande de téléphone")} />
+                            <Row label="Inciter à certifier son compte" color="#1a73e8" desc={(u as any).is_verified ? "Déjà certifié, action non pertinente pour ce membre." : "Afficher à ce membre l'écran l'invitant à faire certifier son compte."} disabled={isLoading || !!(u as any).is_verified}
+                              onClick={() => sendNudge("VERIFY_NUDGE", "C'est gratuit. Un profil certifié rassure les autres membres.", "L'incitation à la certification")} />
                             <Row label="Inciter à devenir Ambassadeur" color="#8B0D2F" desc={(u as any).is_ambassador ? "Déjà Ambassadeur, action non pertinente pour ce membre." : "Afficher à ce membre l'écran de la campagne Ambassadeur."} disabled={isLoading || !!(u as any).is_ambassador}
                               onClick={() => sendNudge("AMBASSADOR_NUDGE", "Gagne de l'argent en recommandant Moyo Dating à ton entourage. Chaque personne qui s'abonne au Premium grâce à toi te rapporte une vraie commission, versée par Mobile Money.", "La campagne Ambassadeur")} />
                             <Row label="Inciter aux Événements" color="#C0392B" desc="Afficher à ce membre l'écran des événements à venir." disabled={isLoading}
@@ -13049,7 +13119,23 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                     {adminViewedProfile.is_verified && <span style={{ background: "rgba(26,92,58,0.1)", color: G.vert, borderRadius: 50, padding: "3px 10px", fontSize: "0.72rem", fontWeight: 700 }}>✓ Vérifié</span>}
                     {adminViewedProfile.is_admin && <span style={{ background: "rgba(231,76,60,0.1)", color: G.rouge, borderRadius: 50, padding: "3px 10px", fontSize: "0.72rem", fontWeight: 700 }}>⚙ Admin</span>}
                   </div>
-                  {adminViewedProfile.bio && <div style={{ marginBottom: 12 }}><div style={{ fontSize: "0.7rem", fontWeight: 700, color: "#aaa", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>Bio</div><div style={{ fontSize: "0.88rem", color: "#333", lineHeight: 1.6 }}>{adminViewedProfile.bio}</div></div>}
+                  <div style={{ marginBottom: 12 }}>
+                    <div style={{ fontSize: "0.7rem", fontWeight: 700, color: "#aaa", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>Bio</div>
+                    {editingUserBio ? (
+                      <div>
+                        <textarea autoFocus value={userBioDraft} onChange={e => setUserBioDraft(e.target.value)} rows={4} style={{ width: "100%", boxSizing: "border-box", border: `1.5px solid ${G.gris}`, borderRadius: 10, padding: "8px 10px", fontSize: "0.85rem", outline: "none", fontFamily: "inherit", resize: "vertical", marginBottom: 6 }} />
+                        <div style={{ display: "flex", gap: 6 }}>
+                          <button onClick={saveUserBio} disabled={savingUserBio} style={{ background: G.rouge, color: "#fff", border: "none", borderRadius: 10, padding: "8px 14px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer" }}>{savingUserBio ? "…" : "Enregistrer"}</button>
+                          <button onClick={() => { setEditingUserBio(false); setUserBioDraft(adminViewedProfile.bio || ""); }} style={{ background: "#F0F0F0", color: "#666", border: "none", borderRadius: 10, padding: "8px 14px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer" }}>Annuler</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div onClick={() => setEditingUserBio(true)} style={{ background: "#F8F8F8", borderRadius: 10, padding: "8px 12px", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8, cursor: "pointer" }}>
+                        <span style={{ fontSize: "0.88rem", color: adminViewedProfile.bio ? "#333" : "#bbb", lineHeight: 1.6 }}>{adminViewedProfile.bio || "Non renseignée — cliquer pour ajouter"}</span>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 2 }}><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                      </div>
+                    )}
+                  </div>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                     {adminViewedProfile.religion && <div style={{ background: "#F8F8F8", borderRadius: 10, padding: "8px 12px" }}><div style={{ fontSize: "0.65rem", color: "#aaa", fontWeight: 700, textTransform: "uppercase" }}>Religion</div><div style={{ fontSize: "0.83rem", fontWeight: 600, color: "#333", marginTop: 2 }}>{adminViewedProfile.religion}</div></div>}
                     {adminViewedProfile.profession && <div style={{ background: "#F8F8F8", borderRadius: 10, padding: "8px 12px" }}><div style={{ fontSize: "0.65rem", color: "#aaa", fontWeight: 700, textTransform: "uppercase" }}>Profession</div><div style={{ fontSize: "0.83rem", fontWeight: 600, color: "#333", marginTop: 2 }}>{adminViewedProfile.profession}</div></div>}
@@ -13317,7 +13403,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                affichée. ── */}
           <div style={{ background: G.blanc, borderRadius: 18, padding: "16px 20px", marginBottom: 12, boxShadow: "0 2px 12px rgba(44,26,14,0.06)" }}>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
-            {([["admin", IcoShield, "Admin"], ["premium", IcoStar, "Premium"], ["verified", IcoCheck, "Vérifiés"], ["banned", IcoBan, "Bannis"], ["ambassador", IcoAward, "Ambassadeurs"], ["male", IcoMale, "Hommes"], ["female", IcoFemale, "Femmes"], ["online", IcoDot, "En ligne"], ["recent", IcoClock, "Actif < 7j"]] as [UserFilterKey, () => React.ReactElement, string][]).map(([key, Ico, label]) => (
+            {([["admin", IcoShield, "Admin"], ["premium", IcoStar, "Premium"], ["verified", IcoCheck, "Vérifiés"], ["banned", IcoBan, "Bannis"], ["ambassador", IcoAward, "Ambassadeurs"], ["male", IcoMale, "Hommes"], ["female", IcoFemale, "Femmes"], ["online", IcoDot, "En ligne"], ["online5h", IcoDot, "En ligne < 5h"], ["online24h", IcoDot, "En ligne < 24h"], ["recent", IcoClock, "Actif < 7j"], ["inactive30", IcoClock, "Inactif > 30j"], ["inactive90", IcoClock, "Inactif > 90j"]] as [UserFilterKey, () => React.ReactElement, string][]).map(([key, Ico, label]) => (
               <div key={label} onClick={() => {
                   const next = new Set(usersFilters);
                   if (next.has(key)) next.delete(key); else next.add(key);
@@ -13328,7 +13414,7 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                 {label}
               </div>
             ))}
-            {usersFilters.size > 0 && <div onClick={() => { const empty = new Set<any>(); setUsersFilters(empty); setUserPage(0); loadUsers(userSearch, 0, usersSort, userSearchEmail, empty, userSearchPhone); }} style={{ fontSize: "0.76rem", color: "#999", fontWeight: 600, cursor: "pointer", padding: "5px 9px", textDecoration: "underline" }}>Tout afficher</div>}
+            {usersFilters.size > 0 && <Btn variant="ghost" onClick={() => { const empty = new Set<any>(); setUsersFilters(empty); setUserPage(0); loadUsers(userSearch, 0, usersSort, userSearchEmail, empty, userSearchPhone); }} style={{ padding: "7px 14px", fontSize: "0.76rem" }}>Tout afficher</Btn>}
           </div>
           </div>
 
