@@ -43,10 +43,12 @@ function affiliateCommissionForAmount(amount: number, customPercent?: number | n
   return Math.round(amount * pct / 100);
 }
 function planLabelForAmount(amount: number): string {
-  if (amount >= PREMIUM_PRICE_2MONTH_FCFA) return "2 mois";
-  if (amount >= PREMIUM_PRICE_FCFA) return "1 mois";
-  if (amount >= PREMIUM_PRICE_WEEK_FCFA) return "1 semaine";
-  return "?";
+  if (amount === PREMIUM_PRICE_2MONTH_FCFA) return "2 mois";
+  if (amount === PREMIUM_PRICE_FCFA) return "1 mois";
+  if (amount === PREMIUM_PRICE_WEEK_FCFA) return "1 semaine";
+  // Ne correspond exactement à aucun prix officiel actuel : très probablement un paiement
+  // via une Super promo (passée ou en cours), qui casse toujours le prix normal d'un des paliers.
+  return "Super promo";
 }
 
 function DateTimeModal({ title, initialISO, confirmLabel, onConfirm, onClose }: { title: string; initialISO?: string; confirmLabel?: string; onConfirm: (iso: string) => void; onClose: () => void }) {
@@ -3835,6 +3837,7 @@ function PaymentCard({ p, isPending, isApproved, isRejected, onActivate, onRejec
               {p.promo_code_used && <span style={{ background: "rgba(142,68,173,0.12)", color: "#8e44ad", borderRadius: 50, padding: "2px 8px", fontSize: "0.65rem", fontWeight: 700 }}>Code promo : {p.promo_code_used}</span>}
               {p.kind === "appointment" && <span style={{ background: "rgba(26,92,58,0.12)", color: G.vert, borderRadius: 50, padding: "2px 8px", fontSize: "0.65rem", fontWeight: 700 }}>🗓 Rendez-vous agence</span>}
               {p.kind === "event" && <span style={{ background: "rgba(192,57,43,0.12)", color: G.rouge, borderRadius: 50, padding: "2px 8px", fontSize: "0.65rem", fontWeight: 700 }}>🎉 Événement{p.event_registrations?.events?.title ? ` : ${p.event_registrations.events.title}` : ""}</span>}
+              {!p.kind && p.amount > 0 && p.amount !== PREMIUM_PRICE_FCFA && p.amount !== PREMIUM_PRICE_WEEK_FCFA && p.amount !== PREMIUM_PRICE_2MONTH_FCFA && <span style={{ background: "rgba(212,168,67,0.18)", color: "#8B6914", borderRadius: 50, padding: "2px 8px", fontSize: "0.65rem", fontWeight: 800 }}>🏷️ Super Promo</span>}
             </div>
             <div style={{ fontSize: "0.7rem", color: "#888" }}>{new Date(p.created_at).toLocaleString("fr-FR")} · {formatMoney(p.amount, paymentCurrency(p))}</div>
             <div style={{ fontSize: "0.62rem", color: "#bbb", fontFamily: "monospace", marginTop: 2 }}>{p.user_id}</div>
@@ -12249,6 +12252,13 @@ CREATE POLICY "Admin can delete reports" ON public.reports FOR DELETE TO authent
                         onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } setMsgModal({ user: u }); setMsgText(""); setMsgHistory([]); loadMsgHistory(u.id); }} />
                       <Row label="Mail" color="#8e44ad" desc="Envoyer un email à ce membre." disabled={isLoading || cannotModerate}
                         onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } setMailModal({ user: u }); setMailHistory([]); setMailTab("modeles"); loadMailHistory(u.id); }} />
+                      {/* Relance WhatsApp/SMS — mêmes modèles et même fonction que Marketing → Relance
+                          inactive, pour relancer directement ce membre depuis sa fiche sans passer par
+                          la liste globale des inactifs. */}
+                      <Row label="WhatsApp" color="#27ae60" desc="Relancer ce membre par WhatsApp (mêmes modèles que Marketing → Relance inactive)." disabled={isLoading || !u.phone}
+                        onClick={() => { if (!u.phone) { showToast("Ce membre n'a pas de numéro de téléphone renseigné.", "error"); return; } if (inactiveTemplates.length === 0 || !inactiveTemplates[0]) loadInactiveTemplates(); sendInactiveReminder(u); }} />
+                      <Row label="SMS" color="#16a085" desc="Relancer ce membre par SMS (mêmes modèles que Marketing → Relance inactive)." disabled={isLoading || !u.phone}
+                        onClick={() => { if (!u.phone) { showToast("Ce membre n'a pas de numéro de téléphone renseigné.", "error"); return; } if (inactiveSmsTemplates.length === 0 || !inactiveSmsTemplates[0]) loadInactiveSmsTemplates(); sendInactiveSms(u); }} />
                       <Row label={photoReplaceTargetId === u.id ? "…" : "Photo"} color="#16a085" desc="Remplacer la photo de profil de ce membre (recadrage inclus)." disabled={isLoading || cannotModerate || photoReplaceTargetId === u.id}
                         onClick={() => { if (cannotModerate) { showToast("Action réservée au Super Admin pour ce compte.", "error"); return; } triggerPhotoReplace(u); }} />
                       {/* Lien de paiement unique — pour les gens bannis ou qui n'arrivent pas à
